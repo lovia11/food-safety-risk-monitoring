@@ -1,0 +1,211 @@
+"""Small read-only HTTP API for the future local web demo.
+
+This intentionally uses only Python's standard library.  It exposes generated
+run snapshots and files, but cannot start or mutate collection tasks yet.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import mimetypes
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import unquote, urlparse
+
+from src.runtime import read_json
+
+
+def resolve_run_root(output_root: Path, run_id: str) -> Path:
+    output_root = output_root.resolve()
+    if not run_id or run_id in {".", ".."} or "/" in run_id or "\\" in run_id:
+        raise ValueError("invalid run id")
+    run_root = (output_root / run_id).resolve()
+    if run_root.parent != output_root:
+        raise ValueError("run path escapes output root")
+    return run_root
+
+
+def resolve_run_file(run_root: Path, relative_path: str) -> Path:
+    run_root = run_root.resolve()
+    relative_path = unquote(relative_path).replace("\\", "/").lstrip("/")
+    if not relative_path:
+        raise ValueError("empty file path")
+    destination = (run_root / relative_path).resolve()
+    if destination == run_root or not destination.is_relative_to(run_root):
+        raise ValueError("file path escapes run root")
+    return destination
+
+
+def resolve_web_file(web_root: Path, relative_path: str) -> Path:
+    web_root = web_root.resolve()
+    relative_path = unquote(relative_path).replace("\\", "/").lstrip("/")
+    relative_path = relative_path or "index.html"
+    destination = (web_root / relative_path).resolve()
+    if not destination.is_relative_to(web_root):
+        raise ValueError("file path escapes web root")
+    return destination
+
+
+def list_run_snapshots(output_root: Path) -> list[dict[str, Any]]:
+    output_root = output_root.resolve()
+    if not output_root.exists():
+        return []
+    runs = []
+    for run_root in output_root.iterdir():
+        snapshot_path = run_root / "web_snapshot.json"
+        if not run_root.is_dir() or not snapshot_path.exists():
+            continue
+        try:
+            snapshot = read_json(snapshot_path)
+        except (OSError, ValueError, TypeError):
+            continue
+        runs.append(
+            {
+                "id": run_root.name,
+                "generatedAt": snapshot.get("generatedAt"),
+                "task": snapshot.get("task") or {},
+                "statistics": snapshot.get("statistics") or {},
+                "url": f"/api/runs/{run_root.name}",
+            }
+        )
+    runs.sort(key=lambda item: str(item.get("generatedAt") or ""), reverse=True)
+    return runs
+
+
+def create_handler(
+    output_root: Path, web_root: Path = Path("web")
+) -> type[BaseHTTPRequestHandler]:
+    resolved_output = output_root.resolve()
+    resolved_web = web_root.resolve()
+
+    class LocalApiHandler(BaseHTTPRequestHandler):
+        server_version = "TaobaoRiskMVP/1.0"
+
+        def _common_headers(self, content_type: str, length: int) -> None:
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(length))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-store")
+
+        def _json(self, status: int, payload: Any) -> None:
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self._common_headers("application/json; charset=utf-8", len(body))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _error(self, status: int, code: str, message: str) -> None:
+            self._json(status, {"error": {"code": code, "message": message}})
+
+        def _send_file(self, destination: Path) -> None:
+            body = destination.read_bytes()
+            content_type = mimetypes.guess_type(destination.name)[0]
+            if content_type is None:
+                content_type = "application/octet-stream"
+            if content_type.startswith("text/") or content_type in {
+                "application/json",
+                "application/javascript",
+            }:
+                content_type += "; charset=utf-8"
+            self.send_response(200)
+            self._common_headers(content_type, len(body))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib handler API
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+
+        def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
+            path = urlparse(self.path).path
+            if not path.startswith("/api/"):
+                try:
+                    destination = resolve_web_file(
+                        resolved_web, "index.html" if path == "/" else path
+                    )
+                except ValueError:
+                    self._error(400, "invalid_web_path", "页面路径不合法")
+                    return
+                if not destination.is_file():
+                    self._error(404, "page_not_found", "页面文件不存在")
+                    return
+                self._send_file(destination)
+                return
+            if path == "/api/health":
+                self._json(200, {"status": "ok", "service": "taobao-risk-mvp"})
+                return
+            if path == "/api/runs":
+                self._json(200, {"runs": list_run_snapshots(resolved_output)})
+                return
+            parts = [unquote(item) for item in path.split("/") if item]
+            if len(parts) < 3 or parts[:2] != ["api", "runs"]:
+                self._error(404, "not_found", "接口不存在")
+                return
+            run_id = parts[2]
+            try:
+                run_root = resolve_run_root(resolved_output, run_id)
+            except ValueError:
+                self._error(400, "invalid_run_id", "运行编号不合法")
+                return
+            if not run_root.is_dir():
+                self._error(404, "run_not_found", "运行目录不存在")
+                return
+            if len(parts) == 3:
+                snapshot_path = run_root / "web_snapshot.json"
+                if not snapshot_path.exists():
+                    self._error(404, "snapshot_not_found", "该任务还没有网页快照")
+                    return
+                try:
+                    self._json(200, read_json(snapshot_path))
+                except (OSError, ValueError, TypeError):
+                    self._error(500, "invalid_snapshot", "网页快照无法读取")
+                return
+            if len(parts) >= 5 and parts[3] == "files":
+                relative_path = "/".join(parts[4:])
+                try:
+                    destination = resolve_run_file(run_root, relative_path)
+                except ValueError:
+                    self._error(400, "invalid_file_path", "文件路径不合法")
+                    return
+                if not destination.is_file():
+                    self._error(404, "file_not_found", "文件不存在")
+                    return
+                self._send_file(destination)
+                return
+            self._error(404, "not_found", "接口不存在")
+
+        def log_message(self, format: str, *args: Any) -> None:
+            print(f"[local-api] {self.address_string()} - {format % args}")
+
+    return LocalApiHandler
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="启动本地只读结果接口")
+    parser.add_argument("--output-root", type=Path, default=Path("output"))
+    parser.add_argument("--web-root", type=Path, default=Path("web"))
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8765)
+    args = parser.parse_args(argv)
+    server = ThreadingHTTPServer(
+        (args.host, args.port), create_handler(args.output_root, args.web_root)
+    )
+    print(f"本地展示页面：http://{args.host}:{args.port}/")
+    print(f"本地结果接口：http://{args.host}:{args.port}/api/health")
+    print("按 Ctrl+C 停止")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("本地结果接口已停止")
+    finally:
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,5 @@
+# PaddlePaddle CPU inference engine follows the official PaddleOCR quick start.
+paddlepaddle==3.2.0
+paddleocr>=3.0,<4
+Pillow>=10,<13
+

@@ -1,0 +1,2 @@
+-r requirements-phase1.txt
+-r requirements-ocr.txt

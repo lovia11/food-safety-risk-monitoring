@@ -1,0 +1,189 @@
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from src.main import PipelineOptions, ProductStatus, StandalonePipeline, initial_state
+from src.runtime import read_json, write_json
+
+
+class StandalonePipelineResumeTest(unittest.TestCase):
+    def test_candidate_and_detail_limits_have_separate_semantics(self):
+        options = PipelineOptions(
+            keyword="酸枣仁",
+            candidate_limit=50,
+            detail_limit=10,
+        )
+        self.assertEqual(options.requested_candidate_limit, 50)
+        self.assertEqual(options.requested_detail_limit, 10)
+        self.assertEqual(
+            PipelineOptions(keyword="酸枣仁", limit=20).requested_candidate_limit,
+            20,
+        )
+
+    def test_detail_collection_processes_only_first_detail_limit_candidates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir)
+            candidates = [
+                {
+                    "product_id": str(index),
+                    "product_url": f"https://item.taobao.com/item.htm?id={index}",
+                    "rank": index,
+                }
+                for index in range(1, 6)
+            ]
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="酸枣仁",
+                    candidate_limit=5,
+                    detail_limit=2,
+                    output_root=output_root,
+                    run_id="limit_test",
+                    product_delay_seconds=0,
+                )
+            )
+            pipeline.search_payload = {"keyword": "酸枣仁", "candidates": candidates}
+            pipeline.state_by_id = {
+                item["product_id"]: initial_state(item) for item in candidates
+            }
+            collected_roots = [
+                pipeline.products_root / "1",
+                pipeline.products_root / "2",
+            ]
+            with patch("src.main.PhaseOneCollector") as collector:
+                collector.return_value.collect_in_context.side_effect = collected_roots
+                pipeline._collect_details(object(), candidates)
+            self.assertEqual(collector.call_count, 2)
+            self.assertEqual(set(pipeline.prepared_roots), {"1", "2"})
+            self.assertEqual(
+                pipeline.state_by_id["3"]["status"], ProductStatus.PENDING
+            )
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+    def test_resume_discovers_only_products_with_real_meta(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir)
+            run_root = output_root / "resume_run"
+            product_root = run_root / "products" / "123"
+            product_root.mkdir(parents=True)
+            candidate = {
+                "product_id": "123",
+                "product_url": "https://item.taobao.com/item.htm?id=123",
+                "rank": 1,
+            }
+            write_json(
+                run_root / "search" / "search_candidates.json",
+                {"keyword": "酸枣仁", "candidates": [candidate]},
+            )
+            write_json(
+                run_root / "batch_state.json",
+                [
+                    {
+                        "product_id": "123",
+                        "rank": 1,
+                        "status": ProductStatus.DETAIL_COLLECTED,
+                        "attempts": 1,
+                        "errors": [],
+                    }
+                ],
+            )
+            write_json(product_root / "meta.json", {"productId": "123", "imageCount": 1})
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="酸枣仁",
+                    output_root=output_root,
+                    run_id="resume_run",
+                )
+            )
+            expected = {"run_root": run_root}
+            with patch.object(pipeline, "_process_products") as process:
+                with patch.object(pipeline, "_write_outputs", return_value=expected):
+                    outputs = pipeline.resume_processing()
+            self.assertEqual(outputs, expected)
+            self.assertEqual(pipeline.prepared_roots, {"123": product_root})
+            process.assert_called_once_with()
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_detail_resume_skips_product_with_verified_meta(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir)
+            product_root = output_root / "run" / "products" / "123"
+            write_json(product_root / "meta.json", {"productId": "123"})
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="酸枣仁",
+                    output_root=output_root,
+                    run_id="run",
+                    detail_limit=1,
+                )
+            )
+            pipeline.state_by_id = {
+                "123": {
+                    "product_id": "123",
+                    "rank": 1,
+                    "status": ProductStatus.SUCCESS,
+                    "attempts": 1,
+                    "errors": [],
+                }
+            }
+            candidate = {
+                "product_id": "123",
+                "product_url": "https://item.taobao.com/item.htm?id=123",
+                "rank": 1,
+            }
+            with patch("src.main.PhaseOneCollector") as collector:
+                pipeline._collect_details(object(), [candidate])
+            collector.assert_not_called()
+            self.assertEqual(pipeline.prepared_roots, {"123": product_root})
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_interruption_leaves_collected_product_resumable(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir)
+            product_root = output_root / "run" / "products" / "123"
+            write_json(product_root / "meta.json", {"productId": "123", "imageCount": 1})
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="酸枣仁",
+                    output_root=output_root,
+                    run_id="run",
+                )
+            )
+            candidate = {
+                "keyword": "酸枣仁",
+                "product_id": "123",
+                "product_name": "真实商品",
+                "product_url": "https://item.taobao.com/item.htm?id=123",
+                "rank": 1,
+            }
+            pipeline.search_payload = {
+                "keyword": "酸枣仁",
+                "candidates": [candidate],
+            }
+            pipeline.state_by_id = {
+                "123": {
+                    "product_id": "123",
+                    "rank": 1,
+                    "status": ProductStatus.PROCESSING,
+                    "attempts": 1,
+                    "errors": [],
+                }
+            }
+            pipeline.mark_interrupted()
+            state = read_json(pipeline.state_path)[0]
+            snapshot = read_json(pipeline.run_root / "web_snapshot.json")
+            self.assertEqual(state["status"], ProductStatus.DETAIL_COLLECTED)
+            self.assertEqual(snapshot["task"]["stage"], "interrupted")
+            self.assertTrue(snapshot["task"]["terminal"])
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+
+if __name__ == "__main__":
+    unittest.main()

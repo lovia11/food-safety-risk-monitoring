@@ -1,0 +1,31 @@
+.venv/
+.browser-profile/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+
+# Runtime evidence and local browser state are generated per machine.
+output/
+*.log
+
+# PaddleOCR/PaddleX models and other downloaded model caches.
+.paddleocr/
+.paddlex/
+models/
+model_cache/
+
+# A complete saved webpage creates a large resource folder; keep the HTML
+# regression fixture but not its downloaded scripts and images.
+manual_input/taobao_search_files/
+
+# Local demo recordings are deliverables, not source code.
+*.mp4
+
+# Local secrets and editor/OS metadata.
+.env
+.env.*
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
