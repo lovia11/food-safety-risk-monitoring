@@ -4,6 +4,8 @@
 
 当前版本：v0.5（Monitoring & Discovery Foundation）
 
+当前开发增量：v0.6-A Reference Data Foundation（已实现并完成离线验证，尚未创建版本 tag）
+
 当前分支：`main`
 
 当前功能基线提交：`2ffafd749cd20dcdde0346f953c6e8e9a9c67472`（`Establish Monitoring Target and Discovery Foundation v0.5`）
@@ -35,9 +37,10 @@
 | Web 创建、轮询、恢复任务；单活动任务 409 保护 | 已真实 Web E2E 验证 | `src/task_runtime.py`、`src/local_api.py` |
 | SQLite 业务索引与人工复核状态持久化 | 已实现并通过离线/重启测试 | `src/data_store.py` |
 | MonitorTarget、多 SearchQuery、跨 Query 去重与 CandidateHit | 已真实 Web E2E 验证 | `src/discovery.py`、`src/data_store.py` |
+| development/reference 数据集分离、来源校验与幂等导入 | 已实现并通过离线测试 | `src/data_store.py`、`config/monitor_targets.*.json` |
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
 
-当前测试集共有 81 项，2026-09-02 在 v0.5 功能基线及其 documentation-only 后继工作树上执行 `python -m unittest discover -s tests -q`，结果为 `81/81 OK`。仓库实际 HEAD 可用 `git rev-parse HEAD` 查看；文档提交不构成新业务版本。
+当前测试集共有 96 项；v0.6-A 的全量结果见本轮最终验收记录。v0.5 稳定 tag 仍保留 81 项测试的原始基线，v0.6-A 没有创建新 tag。
 
 ## 3. 当前架构
 
@@ -52,7 +55,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 ### 3.2 数据分层
 
 - `output/<run_id>/` 是原始运行事实与可追溯证据的主存储：搜索 HTML/截图/诊断、详情 HTML、Network 响应、原图、OCR、`analysis.json`、日志及批次报告均保留在此。
-- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 2。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测对象、搜索词和候选命中关系。
+- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 3。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测数据集及其来源、监测对象、搜索词和候选命中关系。旧 version 2 数据库会由现有轻量机制原位升级。
 - SQLite 不替代原始证据文件。数据库可从历史 `output` 幂等重建，重复导入不会复制记录，也不会覆盖已经保存的人工复核备注。
 - `.browser-profile/`、`output/`、`data/*.db`、`.venv/` 与 OCR 模型缓存均不提交 Git。
 
@@ -60,6 +63,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 
 当前表为：
 
+- `monitor_datasets`：数据集身份、版本、状态、来源与核验时间；
 - `tasks`：一次 Quick 或 Monitor 运行；
 - `products`：按淘宝商品 ID 维护的稳定商品身份；
 - `product_snapshots`：某商品在某任务中的一次页面快照；
@@ -93,6 +97,8 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 - SearchQuery 2：`酸枣仁茶`（product_form）。
 
 该配置明确是 `development_seed`，只用于工程开发与真实流程验收，不是官方完整食药同源目录，也不是最终搜索词体系。
+
+`config/monitor_targets.reference.json` 是正式数据入口，但当前为 `reference_pending` 且 `targets` 为空：项目尚未导入完整权威目录，也没有把开发种子升级成正式数据。只有补齐来源名称、来源引用、核验时间并通过校验的数据集才能标记为 `verified_reference`。
 
 多 Query 按 `order` 串行执行。候选以 `product_id` 跨 Query 去重，首次有效出现决定合并列表顺序；顺序首先由 Query 顺序决定，再由 Query 内排名决定。前 `detail_limit` 个唯一候选进入详情链。即使同一商品被多个 Query 命中，所有来源仍作为多条 CandidateHit 保留，供后续解释召回来源。
 
@@ -140,7 +146,7 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 - OCR 在 CPU 上耗时明显，识别范围受详情图筛选和图像质量影响；未做性能优化或质量模型评估。
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
-- MonitorTarget 只有开发种子，没有权威完整监测对象数据集和正式维护界面。
+- 正式 reference dataset 的结构、校验、SQLite 来源追踪与导入机制已经具备，但当前文件没有已核验 target；完整权威监测对象目录和维护界面仍不存在。
 - Product 列表 API/前端尚无正式分页；MonitorTarget 维度的商品筛选尚未实现。
 
 ## 9. 下一阶段候选事项（尚未实现）
@@ -155,7 +161,7 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 - `UI-03`：整体 UI/UX 优化；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
-- 建立经过来源核验的正式 MonitorTarget 数据集；
+- 核验权威来源并向正式 reference dataset 导入真实 MonitorTarget 记录；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `monitoring-discovery-v0.5` 视为当前稳定回退基线。

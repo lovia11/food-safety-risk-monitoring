@@ -105,6 +105,11 @@ class LocalApiHelpersTest(unittest.TestCase):
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     targets = json.load(response)["targets"]
                 self.assertEqual(targets[0]["standard_name"], "酸枣仁")
+                self.assertEqual(targets[0]["dataset_status"], "development_seed")
+                self.assertEqual(
+                    targets[0]["dataset"]["dataset_id"],
+                    "monitor-targets-development",
+                )
                 monitor_body = json.dumps(
                     {
                         "task_type": "monitor",

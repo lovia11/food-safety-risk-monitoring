@@ -9,7 +9,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -19,7 +21,25 @@ from src.runtime import iso_now, read_json
 REVIEW_STATUSES = {"pending", "recommend_follow_up", "no_further_action"}
 TARGET_TYPES = {"food_medicine", "health_food"}
 QUERY_TYPES = {"base", "product_form"}
-SCHEMA_VERSION = 2
+DATASET_STATUSES = {"development_seed", "reference_pending", "verified_reference"}
+DEFAULT_MONITOR_CONFIG_PATHS = (
+    Path("config/monitor_targets.development.json"),
+    Path("config/monitor_targets.reference.json"),
+)
+SCHEMA_VERSION = 3
+
+_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_DATASET_FIELDS = (
+    "dataset_id",
+    "dataset_version",
+    "dataset_status",
+    "source_name",
+    "source_reference",
+    "source_date",
+    "collected_at",
+    "verified_at",
+    "targets",
+)
 
 
 class DataStoreError(RuntimeError):
@@ -32,6 +52,10 @@ class SnapshotNotFoundError(DataStoreError):
 
 class ReviewValidationError(DataStoreError):
     """A review update contains an unsupported value."""
+
+
+class MonitorConfigValidationError(DataStoreError):
+    """A MonitorTarget dataset is incomplete or internally inconsistent."""
 
 
 def _json_text(value: Any, default: Any) -> str:
@@ -59,6 +83,248 @@ def _read_optional_json(path: Path, default: Any) -> Any:
         return read_json(path) if path.is_file() else default
     except (OSError, ValueError, TypeError):
         return default
+
+
+def _required_text(value: Any, field: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise MonitorConfigValidationError(f"{field}不能为空")
+    return text
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _identifier(value: Any, field: str) -> str:
+    text = _required_text(value, field)
+    if not _IDENTIFIER_PATTERN.fullmatch(text):
+        raise MonitorConfigValidationError(
+            f"{field}只能包含字母、数字、点、下划线、冒号和连字符"
+        )
+    return text
+
+
+def _optional_iso_date(value: Any, field: str) -> str | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        raise MonitorConfigValidationError(f"{field}必须使用YYYY-MM-DD格式")
+    try:
+        date.fromisoformat(text)
+    except ValueError as error:
+        raise MonitorConfigValidationError(f"{field}不是有效日期：{text}") from error
+    return text
+
+
+def _optional_iso_datetime(value: Any, field: str) -> str | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    try:
+        datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise MonitorConfigValidationError(f"{field}不是有效ISO时间：{text}") from error
+    return text
+
+
+def _boolean(value: Any, field: str, *, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise MonitorConfigValidationError(f"{field}必须是布尔值")
+    return value
+
+
+def validate_monitor_config(payload: Any) -> dict[str, Any]:
+    """Validate and normalize one development or reference MonitorTarget dataset."""
+
+    if not isinstance(payload, dict):
+        raise MonitorConfigValidationError("监测数据集根节点必须是JSON对象")
+    missing = [field for field in _DATASET_FIELDS if field not in payload]
+    if missing:
+        raise MonitorConfigValidationError(
+            f"监测数据集缺少字段：{', '.join(missing)}"
+        )
+    schema_version = payload.get("schema_version")
+    if (
+        not isinstance(schema_version, int)
+        or isinstance(schema_version, bool)
+        or schema_version < 1
+    ):
+        raise MonitorConfigValidationError("schema_version必须是正整数")
+
+    dataset_id = _identifier(payload.get("dataset_id"), "dataset_id")
+    dataset_version = _required_text(payload.get("dataset_version"), "dataset_version")
+    dataset_status = _required_text(payload.get("dataset_status"), "dataset_status")
+    if dataset_status not in DATASET_STATUSES:
+        raise MonitorConfigValidationError(
+            f"不支持的dataset_status：{dataset_status}"
+        )
+    dataset_source_name = _optional_text(payload.get("source_name"))
+    dataset_source_reference = _optional_text(payload.get("source_reference"))
+    dataset_source_date = _optional_iso_date(payload.get("source_date"), "source_date")
+    collected_at = _optional_iso_datetime(payload.get("collected_at"), "collected_at")
+    verified_at = _optional_iso_datetime(payload.get("verified_at"), "verified_at")
+
+    if dataset_status in {"development_seed", "verified_reference"}:
+        if not dataset_source_name:
+            raise MonitorConfigValidationError(
+                f"{dataset_status}数据集必须包含source_name"
+            )
+        if not dataset_source_reference:
+            raise MonitorConfigValidationError(
+                f"{dataset_status}数据集必须包含source_reference"
+            )
+    if dataset_status == "verified_reference" and not verified_at:
+        raise MonitorConfigValidationError(
+            "verified_reference数据集必须包含verified_at"
+        )
+
+    raw_targets = payload.get("targets")
+    if not isinstance(raw_targets, list):
+        raise MonitorConfigValidationError("targets必须是数组")
+    if dataset_status == "reference_pending" and raw_targets:
+        raise MonitorConfigValidationError(
+            "reference_pending数据集不能包含未经核验的MonitorTarget"
+        )
+    if dataset_status == "verified_reference" and not raw_targets:
+        raise MonitorConfigValidationError(
+            "verified_reference数据集必须至少包含一个已核验MonitorTarget"
+        )
+
+    normalized_targets: list[dict[str, Any]] = []
+    target_ids: set[str] = set()
+    query_ids: set[str] = set()
+    for target_position, target in enumerate(raw_targets, start=1):
+        if not isinstance(target, dict):
+            raise MonitorConfigValidationError(
+                f"targets[{target_position}]必须是JSON对象"
+            )
+        target_id = _identifier(
+            target.get("target_id"), f"targets[{target_position}].target_id"
+        )
+        if target_id in target_ids:
+            raise MonitorConfigValidationError(f"target_id重复：{target_id}")
+        target_ids.add(target_id)
+        standard_name = _required_text(
+            target.get("standard_name"),
+            f"MonitorTarget {target_id} 的standard_name",
+        )
+        target_type = _required_text(
+            target.get("target_type"), f"MonitorTarget {target_id} 的target_type"
+        )
+        if target_type not in TARGET_TYPES:
+            raise MonitorConfigValidationError(f"不支持的target_type：{target_type}")
+
+        source_name = _optional_text(target.get("source_name")) or dataset_source_name
+        source_reference = (
+            _optional_text(target.get("source_reference"))
+            or dataset_source_reference
+        )
+        raw_source_date = target.get("source_date")
+        source_date = _optional_iso_date(
+            raw_source_date if raw_source_date is not None else dataset_source_date,
+            f"MonitorTarget {target_id} 的source_date",
+        )
+        if not source_name or not source_reference:
+            raise MonitorConfigValidationError(
+                f"MonitorTarget {target_id} 必须具有可追踪的来源名称和引用"
+            )
+
+        raw_queries = target.get("queries")
+        if not isinstance(raw_queries, list) or not raw_queries:
+            raise MonitorConfigValidationError(
+                f"MonitorTarget {target_id} 必须至少包含一个SearchQuery"
+            )
+        normalized_queries: list[dict[str, Any]] = []
+        query_orders: set[int] = set()
+        for query_position, query in enumerate(raw_queries, start=1):
+            if not isinstance(query, dict):
+                raise MonitorConfigValidationError(
+                    f"MonitorTarget {target_id} 的queries[{query_position}]必须是JSON对象"
+                )
+            query_target_id = _optional_text(query.get("target_id"))
+            if query_target_id is not None and query_target_id != target_id:
+                raise MonitorConfigValidationError(
+                    f"SearchQuery的target_id不存在或与所属MonitorTarget不一致：{query_target_id}"
+                )
+            query_id = _identifier(
+                query.get("query_id"),
+                f"MonitorTarget {target_id} 的query_id",
+            )
+            if query_id in query_ids:
+                raise MonitorConfigValidationError(f"query_id重复：{query_id}")
+            query_ids.add(query_id)
+            query_text = _required_text(
+                query.get("query_text"), f"SearchQuery {query_id} 的query_text"
+            )
+            query_type = _required_text(
+                query.get("query_type"), f"SearchQuery {query_id} 的query_type"
+            )
+            if query_type not in QUERY_TYPES:
+                raise MonitorConfigValidationError(
+                    f"不支持的query_type：{query_type}"
+                )
+            query_order = query.get("order")
+            if (
+                not isinstance(query_order, int)
+                or isinstance(query_order, bool)
+                or query_order < 1
+            ):
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 的order必须是正整数"
+                )
+            if query_order in query_orders:
+                raise MonitorConfigValidationError(
+                    f"MonitorTarget {target_id} 的SearchQuery order重复：{query_order}"
+                )
+            query_orders.add(query_order)
+            normalized_queries.append(
+                {
+                    "query_id": query_id,
+                    "target_id": target_id,
+                    "query_text": query_text,
+                    "query_type": query_type,
+                    "order": query_order,
+                    "enabled": _boolean(
+                        query.get("enabled"), f"SearchQuery {query_id} 的enabled"
+                    ),
+                }
+            )
+
+        normalized_targets.append(
+            {
+                "target_id": target_id,
+                "standard_name": standard_name,
+                "target_type": target_type,
+                "source_name": source_name,
+                "source_reference": source_reference,
+                "source_date": source_date,
+                "enabled": _boolean(
+                    target.get("enabled"), f"MonitorTarget {target_id} 的enabled"
+                ),
+                "queries": normalized_queries,
+            }
+        )
+
+    return {
+        "schema_version": schema_version,
+        "dataset_id": dataset_id,
+        "dataset_version": dataset_version,
+        "dataset_status": dataset_status,
+        "source_name": dataset_source_name,
+        "source_reference": dataset_source_reference,
+        "source_date": dataset_source_date,
+        "collected_at": collected_at,
+        "verified_at": verified_at,
+        "description": str(payload.get("description") or "").strip(),
+        "targets": normalized_targets,
+    }
 
 
 class DataStore:
@@ -156,8 +422,26 @@ class DataStore:
                 CREATE INDEX IF NOT EXISTS idx_reviews_status
                     ON reviews(review_status);
 
+                CREATE TABLE IF NOT EXISTS monitor_datasets (
+                    dataset_id TEXT PRIMARY KEY,
+                    dataset_version TEXT NOT NULL,
+                    dataset_status TEXT NOT NULL
+                        CHECK(dataset_status IN (
+                            'development_seed', 'reference_pending', 'verified_reference'
+                        )),
+                    source_name TEXT,
+                    source_reference TEXT,
+                    source_date TEXT,
+                    collected_at TEXT,
+                    verified_at TEXT,
+                    description TEXT NOT NULL DEFAULT '',
+                    imported_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS monitor_targets (
                     target_id TEXT PRIMARY KEY,
+                    dataset_id TEXT REFERENCES monitor_datasets(dataset_id),
                     standard_name TEXT NOT NULL,
                     target_type TEXT NOT NULL,
                     source_name TEXT NOT NULL,
@@ -201,6 +485,12 @@ class DataStore:
             self._ensure_column(connection, "tasks", "task_type", "TEXT NOT NULL DEFAULT 'quick'")
             self._ensure_column(connection, "tasks", "target_id", "TEXT")
             self._ensure_column(connection, "tasks", "per_query_candidate_limit", "INTEGER")
+            self._ensure_column(
+                connection,
+                "monitor_targets",
+                "dataset_id",
+                "TEXT REFERENCES monitor_datasets(dataset_id)",
+            )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     @staticmethod
@@ -214,28 +504,88 @@ class DataStore:
             connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def import_monitor_config(self, config_path: Path) -> dict[str, int]:
-        payload = read_json(config_path)
-        targets = [
-            item for item in (payload.get("targets") or []) if isinstance(item, dict)
-        ]
+        payload = validate_monitor_config(read_json(config_path))
+        targets = payload["targets"]
         target_count = 0
         query_count = 0
         now = iso_now()
         with self._connect() as connection:
+            existing_dataset = connection.execute(
+                "SELECT dataset_status FROM monitor_datasets WHERE dataset_id = ?",
+                (payload["dataset_id"],),
+            ).fetchone()
+            if existing_dataset is not None:
+                previous_status = str(existing_dataset["dataset_status"])
+                next_status = str(payload["dataset_status"])
+                allowed_transition = (
+                    previous_status == next_status
+                    or (
+                        previous_status == "reference_pending"
+                        and next_status == "verified_reference"
+                    )
+                )
+                if not allowed_transition:
+                    raise MonitorConfigValidationError(
+                        f"数据集 {payload['dataset_id']} 不能从"
+                        f" {previous_status} 自动变更为 {next_status}"
+                    )
+            connection.execute(
+                """
+                INSERT INTO monitor_datasets (
+                    dataset_id, dataset_version, dataset_status, source_name,
+                    source_reference, source_date, collected_at, verified_at,
+                    description, imported_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(dataset_id) DO UPDATE SET
+                    dataset_version=excluded.dataset_version,
+                    dataset_status=excluded.dataset_status,
+                    source_name=excluded.source_name,
+                    source_reference=excluded.source_reference,
+                    source_date=excluded.source_date,
+                    collected_at=excluded.collected_at,
+                    verified_at=excluded.verified_at,
+                    description=excluded.description,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    payload["dataset_id"],
+                    payload["dataset_version"],
+                    payload["dataset_status"],
+                    payload["source_name"],
+                    payload["source_reference"],
+                    payload["source_date"],
+                    payload["collected_at"],
+                    payload["verified_at"],
+                    payload["description"],
+                    now,
+                    now,
+                ),
+            )
             for target in targets:
                 target_id = str(target.get("target_id") or "").strip()
                 target_type = str(target.get("target_type") or "").strip()
-                if not target_id or not str(target.get("standard_name") or "").strip():
-                    raise ValueError("MonitorTarget必须包含target_id和standard_name")
-                if target_type not in TARGET_TYPES:
-                    raise ValueError(f"不支持的target_type：{target_type}")
+                existing_target = connection.execute(
+                    "SELECT dataset_id FROM monitor_targets WHERE target_id = ?",
+                    (target_id,),
+                ).fetchone()
+                if (
+                    existing_target is not None
+                    and existing_target["dataset_id"] is not None
+                    and existing_target["dataset_id"] != payload["dataset_id"]
+                ):
+                    raise MonitorConfigValidationError(
+                        f"target_id {target_id} 已属于数据集"
+                        f" {existing_target['dataset_id']}，不能自动转入"
+                        f" {payload['dataset_id']}"
+                    )
                 connection.execute(
                     """
                     INSERT INTO monitor_targets (
-                        target_id, standard_name, target_type, source_name,
-                        source_reference, source_date, enabled, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        target_id, dataset_id, standard_name, target_type,
+                        source_name, source_reference, source_date, enabled, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(target_id) DO UPDATE SET
+                        dataset_id=excluded.dataset_id,
                         standard_name=excluded.standard_name,
                         target_type=excluded.target_type,
                         source_name=excluded.source_name,
@@ -246,6 +596,7 @@ class DataStore:
                     """,
                     (
                         target_id,
+                        payload["dataset_id"],
                         str(target.get("standard_name") or "").strip(),
                         target_type,
                         str(target.get("source_name") or ""),
@@ -256,16 +607,22 @@ class DataStore:
                     ),
                 )
                 target_count += 1
-                for position, query in enumerate(target.get("queries") or [], start=1):
-                    if not isinstance(query, dict):
-                        continue
+                for query in target["queries"]:
                     query_id = str(query.get("query_id") or "").strip()
                     query_text = str(query.get("query_text") or "").strip()
-                    query_type = str(query.get("query_type") or "base").strip()
-                    if not query_id or not query_text:
-                        raise ValueError("SearchQuery必须包含query_id和query_text")
-                    if query_type not in QUERY_TYPES:
-                        raise ValueError(f"不支持的query_type：{query_type}")
+                    query_type = str(query.get("query_type") or "").strip()
+                    existing_query = connection.execute(
+                        "SELECT target_id FROM search_queries WHERE query_id = ?",
+                        (query_id,),
+                    ).fetchone()
+                    if (
+                        existing_query is not None
+                        and existing_query["target_id"] != target_id
+                    ):
+                        raise MonitorConfigValidationError(
+                            f"query_id {query_id} 已属于MonitorTarget"
+                            f" {existing_query['target_id']}，不能改绑到 {target_id}"
+                        )
                     connection.execute(
                         """
                         INSERT INTO search_queries (
@@ -285,19 +642,30 @@ class DataStore:
                             target_id,
                             query_text,
                             query_type,
-                            int(query.get("order") or position),
+                            query["order"],
                             1 if query.get("enabled", True) else 0,
                             now,
                         ),
                     )
                     query_count += 1
-        return {"targets": target_count, "queries": query_count}
+        return {"datasets": 1, "targets": target_count, "queries": query_count}
 
     def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
         where = " WHERE t.enabled = 1" if enabled_only else ""
         with self._connect() as connection:
             targets = connection.execute(
-                "SELECT t.* FROM monitor_targets t" + where + " ORDER BY t.standard_name, t.target_id"
+                """
+                SELECT t.*, d.dataset_version, d.dataset_status,
+                       d.source_name AS dataset_source_name,
+                       d.source_reference AS dataset_source_reference,
+                       d.source_date AS dataset_source_date,
+                       d.collected_at AS dataset_collected_at,
+                       d.verified_at AS dataset_verified_at
+                FROM monitor_targets t
+                LEFT JOIN monitor_datasets d ON d.dataset_id = t.dataset_id
+                """
+                + where
+                + " ORDER BY t.standard_name, t.target_id"
             ).fetchall()
             query_rows = connection.execute(
                 "SELECT * FROM search_queries ORDER BY target_id, query_order, query_id"
@@ -317,12 +685,25 @@ class DataStore:
         return [
             {
                 "target_id": row["target_id"],
+                "dataset_id": row["dataset_id"],
+                "dataset_version": row["dataset_version"],
+                "dataset_status": row["dataset_status"],
                 "standard_name": row["standard_name"],
                 "target_type": row["target_type"],
                 "source_name": row["source_name"],
                 "source_reference": row["source_reference"],
                 "source_date": row["source_date"],
                 "enabled": bool(row["enabled"]),
+                "dataset": {
+                    "dataset_id": row["dataset_id"],
+                    "dataset_version": row["dataset_version"],
+                    "dataset_status": row["dataset_status"],
+                    "source_name": row["dataset_source_name"],
+                    "source_reference": row["dataset_source_reference"],
+                    "source_date": row["dataset_source_date"],
+                    "collected_at": row["dataset_collected_at"],
+                    "verified_at": row["dataset_verified_at"],
+                },
                 "queries": by_target.get(str(row["target_id"]), []),
             }
             for row in targets
@@ -800,6 +1181,7 @@ class DataStore:
                     "product_snapshots",
                     "evidence",
                     "reviews",
+                    "monitor_datasets",
                     "monitor_targets",
                     "search_queries",
                     "candidate_hits",
@@ -814,20 +1196,37 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--monitor-config",
         type=Path,
-        default=Path("config/monitor_targets.development.json"),
+        action="append",
+        dest="monitor_configs",
+        help="可重复指定；默认导入development与reference数据集",
     )
     parser.add_argument("--run-id")
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
     store.initialize()
-    if args.monitor_config.is_file():
-        store.import_monitor_config(args.monitor_config)
+    monitor_configs = args.monitor_configs or list(DEFAULT_MONITOR_CONFIG_PATHS)
+    monitor_imports = []
+    for monitor_config in monitor_configs:
+        if not monitor_config.is_file():
+            if args.monitor_configs:
+                raise FileNotFoundError(f"监测数据集不存在：{monitor_config}")
+            continue
+        monitor_imports.append(store.import_monitor_config(monitor_config))
     result = (
         store.import_run((args.output_root / args.run_id).resolve())
         if args.run_id
         else store.import_all_runs()
     )
-    print(json.dumps({"result": result, "counts": store.table_counts()}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "monitor_imports": monitor_imports,
+                "result": result,
+                "counts": store.table_counts(),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

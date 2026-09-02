@@ -5,6 +5,7 @@
 ## 1. Current Version
 
 - 产品/代码基线版本：**v0.5 — Monitoring & Discovery Foundation**。
+- 当前开发增量：**v0.6-A — Reference Data Foundation** 已实现并完成离线验证，尚未创建 tag；稳定回退基线仍是 v0.5。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -147,7 +148,7 @@ Web 任务阶段包括 `initializing`、`searching`、`collecting_details`、`pr
 核心关系：
 
 ```text
-MonitorTarget 1 ── N SearchQuery
+MonitorDataset 1 ── N MonitorTarget 1 ── N SearchQuery
 Task          1 ── N CandidateHit N ── 1 Product
 Task          1 ── N ProductSnapshot N ── 1 Product
 ProductSnapshot 1 ── N Evidence
@@ -158,11 +159,12 @@ ProductSnapshot 1 ── 1 Review
 - `ProductSnapshot` 表示某个 Task 中该商品的采集与分析状态；
 - `Evidence` 和 `Review` 都属于 Snapshot，因为页面、规则和人工结论具有时间性；
 - `CandidateHit` 表示检索来源，不等同于详情已采集；
+- `MonitorDataset` 保存 development/reference 数据集身份、版本和来源；`MonitorTarget` 保存目标级来源并关联所属数据集；
 - Monitor 任务可能有 19 个候选，但只有前 2 个 Snapshot 完成详情/OCR，其余保持待采集状态，这是正常且必须如实展示的状态。
 
 ## 11. SQLite Tables
 
-当前 `SCHEMA_VERSION = 2`，表如下：
+当前 `SCHEMA_VERSION = 3`，旧 version 2 数据库通过项目现有轻量 schema 机制升级。表如下：
 
 | 表 | 关键字段/约束 | 用途 |
 | --- | --- | --- |
@@ -171,7 +173,8 @@ ProductSnapshot 1 ── 1 Review
 | `product_snapshots` | `snapshot_id` PK、`UNIQUE(task_id, product_id)` | 某任务的商品页面与分析快照 |
 | `evidence` | `evidence_id` PK、`UNIQUE(snapshot_id, ordinal)` | 结构化证据及来源 |
 | `reviews` | `snapshot_id` PK、状态 CHECK | 人工复核最新状态/备注 |
-| `monitor_targets` | `target_id` PK、来源、启用状态 | 标准监测对象 |
+| `monitor_datasets` | `dataset_id` PK、version、status、source、timestamps | development/reference 数据集 provenance |
+| `monitor_targets` | `target_id` PK、`dataset_id`、目标级来源、启用状态 | 标准监测对象 |
 | `search_queries` | `query_id` PK、`UNIQUE(target_id, query_text)`、order | 对象下的有序搜索表达 |
 | `candidate_hits` | `hit_id` PK、`UNIQUE(task_id, product_id, query_id)` | Query 对商品的命中来源 |
 
@@ -209,6 +212,8 @@ ProductSnapshot 1 ── 1 Review
 | GET | `/api/snapshots/{snapshot_id}` | 快照、Evidence 与 Review |
 | PUT | `/api/snapshots/{snapshot_id}/review` | 更新人工复核状态和备注 |
 
+`GET /api/monitor-targets` 与单对象接口保持原路径；每个 target 现在额外返回 `dataset_id`、`dataset_version`、`dataset_status` 和完整 `dataset` provenance，不需要新增 API。启动服务或运行 `src.data_store` 时，`--monitor-config` 可以重复指定；未指定时依次导入 development 与 reference 配置。
+
 Quick 创建示例：
 
 ```json
@@ -240,7 +245,9 @@ Monitor 创建示例：
 
 ## 14. MonitorTarget / SearchQuery / CandidateHit Mechanism
 
-当前开发种子在 `config/monitor_targets.development.json`：一个 `酸枣仁` MonitorTarget，两个 Query：`酸枣仁` 和 `酸枣仁茶`。
+当前开发种子在 `config/monitor_targets.development.json`：一个 `酸枣仁` MonitorTarget，两个 Query：`酸枣仁` 和 `酸枣仁茶`。它始终标记为 `development_seed`。
+
+正式入口为 `config/monitor_targets.reference.json`。当前文件标记为 `reference_pending` 且不含 target，表示机制已经建立但权威记录尚未导入。经过来源核验的数据必须使用 `verified_reference`，提供 dataset ID/version、来源名称、来源引用和 `verified_at`；系统不会把 development seed 静默升级或转移到正式数据集。
 
 机制约束：
 
@@ -265,7 +272,11 @@ Monitor 创建示例：
 
 ### `config/monitor_targets.development.json`
 
-当前 schema version 1、`dataset_status=development_seed`。只能作为开发验证样本，不能在论文或 UI 中称为官方完整目录。未来引入权威数据时应保留来源名称、引用、日期和版本。
+当前 schema version 2、`dataset_status=development_seed`。只能作为开发验证样本，不能在论文或 UI 中称为官方完整目录。
+
+### `config/monitor_targets.reference.json`
+
+正式 reference dataset 入口。当前 `dataset_status=reference_pending`、`dataset_version=0`、`targets=[]`，没有伪造任何权威记录。未来只能把已核验且具有来源 metadata 的记录写入，并在核验完成后改为 `verified_reference`。
 
 ### `.gitignore`
 
@@ -279,7 +290,7 @@ Monitor 创建示例：
 
 ## 16. Tests
 
-当前 v0.5 有 81 项 `unittest`，本次文档工作前已在当前 checkout 实际运行：`Ran 81 tests ... OK`。
+当前共有 96 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A 新增 15 项，覆盖数据集区分、来源保存、校验、幂等导入、旧 SQLite 升级和现有 Monitor Task 兼容。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -299,6 +310,7 @@ Monitor 创建示例：
 - 任务参数、单活动任务、失败、恢复和服务重启；
 - SQLite 初始化、幂等导入、多快照、Evidence、Review 持久化；
 - Monitor 配置顺序、CandidateHit 幂等/重开、跨 Query 去重；
+- development/reference 数据集状态、来源 provenance、非法正式来源拒绝、target/query 唯一与关联、SQLite v2→v3 升级；
 - API 路径安全和前后端业务接口。
 
 测试默认离线，不应在单元测试中访问淘宝。修改 Collector 核心时，离线测试通过仍不等于真实页面通过，必须增加最小真实 smoke/E2E。
@@ -341,6 +353,7 @@ Monitor 创建示例：
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
+- 正式 reference 文件目前是空的 `reference_pending` 数据集；没有导入完整权威目录。
 - 多 Query 仍把所有唯一候选按固定 first-hit 顺序送入详情，没有质量评分、地区平衡或随机抽样。
 - 页面结构诊断有覆盖率告警，但缺少详情模板分型、选择器版本和自动回归样本管理。
 - 历史 run 的字段存在版本差异，导入层做兼容；删除旧兼容逻辑前必须用保留 run 回归。
@@ -360,7 +373,7 @@ Monitor 创建示例：
 | `UI-03` | 整体 UI/UX 优化 | 不得制造虚假统计或结论性风险标签 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
-| `DATASET-01` | 正式权威 MonitorTarget 数据集 | 需来源核验、版本、日期与引用，不复用 development seed 名义 |
+| `DATASET-01` | 导入正式权威 MonitorTarget 记录 | 数据机制已具备；仍需核验来源、版本、日期与引用，不复用 development seed 名义 |
 | `RISK-01` | 风险识别质量评估与提升 | 先建设人工标注样本和指标，再讨论复杂模型 |
 | `REVIEW-01` | 复核历史/审计 | 当前只有最新状态，未来按真实业务需求设计 |
 
@@ -396,10 +409,10 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 2. 运行 `git log --oneline --decorate -10` 与 `git tag -n`，确认当前 HEAD 和四个稳定基线；
 3. 阅读 `PROJECT_STATUS.md`、本文件、`docs/DEVELOPMENT_HISTORY.md`、`docs/output_inventory.md`；
 4. 阅读需求涉及模块及对应测试，不先做大规模重构；
-5. 检查 `config/effect_keywords.json` 和 `config/monitor_targets.development.json` 的来源边界；
+5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 对照 `output/20260902T192913_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、两份 Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行 81 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 96 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

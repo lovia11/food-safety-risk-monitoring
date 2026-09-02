@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "dataset_id": "food-medicine-reference",
+  "dataset_version": "0",
+  "dataset_status": "reference_pending",
+  "source_name": null,
+  "source_reference": null,
+  "source_date": null,
+  "collected_at": null,
+  "verified_at": null,
+  "description": "正式reference dataset占位文件。当前尚未导入经过权威来源核验的MonitorTarget；核验来源后才能改为verified_reference并添加记录。",
+  "targets": []
+}

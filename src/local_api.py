@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from src.data_store import (
+    DEFAULT_MONITOR_CONFIG_PATHS,
     DataStore,
     ReviewValidationError,
     SnapshotNotFoundError,
@@ -87,7 +88,7 @@ def create_handler(
     web_root: Path = Path("web"),
     task_manager: TaskManager | None = None,
     data_store: DataStore | None = None,
-    monitor_config: Path | None = Path("config/monitor_targets.development.json"),
+    monitor_config: Path | tuple[Path, ...] | list[Path] | None = DEFAULT_MONITOR_CONFIG_PATHS,
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
@@ -95,8 +96,16 @@ def create_handler(
         resolved_output.parent / "data" / "app.db", resolved_output
     )
     store.initialize()
-    if monitor_config is not None and monitor_config.is_file():
-        store.import_monitor_config(monitor_config)
+    monitor_configs = (
+        []
+        if monitor_config is None
+        else [monitor_config]
+        if isinstance(monitor_config, Path)
+        else list(monitor_config)
+    )
+    for config_path in monitor_configs:
+        if config_path.is_file():
+            store.import_monitor_config(config_path)
     store.import_all_runs()
     manager = task_manager or TaskManager(
         resolved_output,
@@ -385,7 +394,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--monitor-config",
         type=Path,
-        default=Path("config/monitor_targets.development.json"),
+        action="append",
+        dest="monitor_configs",
+        help="可重复指定；默认导入development与reference数据集",
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
@@ -404,8 +415,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
     store.initialize()
-    if args.monitor_config.is_file():
-        store.import_monitor_config(args.monitor_config)
+    monitor_configs = args.monitor_configs or list(DEFAULT_MONITOR_CONFIG_PATHS)
+    for monitor_config in monitor_configs:
+        if not monitor_config.is_file():
+            if args.monitor_configs:
+                raise FileNotFoundError(f"监测数据集不存在：{monitor_config}")
+            continue
+        store.import_monitor_config(monitor_config)
     imported = store.import_all_runs()
     manager = TaskManager(
         args.output_root,
@@ -428,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
             args.web_root,
             manager,
             store,
-            args.monitor_config,
+            None,
         ),
     )
     server.daemon_threads = True

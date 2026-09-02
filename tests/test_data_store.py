@@ -131,19 +131,29 @@ class DataStoreTest(unittest.TestCase):
                 "product_snapshots",
                 "evidence",
                 "reviews",
+                "monitor_datasets",
                 "monitor_targets",
                 "search_queries",
                 "candidate_hits",
             }
             <= tables
         )
-        self.assertEqual(version, 2)
+        self.assertEqual(version, 3)
 
     def _import_monitor_seed(self):
         config = self.root / "monitor_targets.json"
         write_json(
             config,
             {
+                "schema_version": 2,
+                "dataset_id": "test-development-dataset",
+                "dataset_version": "1",
+                "dataset_status": "development_seed",
+                "source_name": "开发种子",
+                "source_reference": "仅用于开发验证",
+                "source_date": None,
+                "collected_at": None,
+                "verified_at": None,
                 "targets": [
                     {
                         "target_id": "target-1",
@@ -176,9 +186,13 @@ class DataStoreTest(unittest.TestCase):
         return self.store.import_monitor_config(config)
 
     def test_monitor_target_and_queries_preserve_configured_order(self):
-        self.assertEqual(self._import_monitor_seed(), {"targets": 1, "queries": 2})
+        self.assertEqual(
+            self._import_monitor_seed(),
+            {"datasets": 1, "targets": 1, "queries": 2},
+        )
         target = self.store.get_monitor_target("target-1")
         self.assertEqual(target["standard_name"], "酸枣仁")
+        self.assertEqual(target["dataset_status"], "development_seed")
         self.assertEqual(
             [item["query_text"] for item in target["queries"]],
             ["酸枣仁", "酸枣仁茶"],

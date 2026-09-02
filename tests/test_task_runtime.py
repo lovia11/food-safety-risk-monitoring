@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from src.data_store import DataStore
 from src.runtime import write_json
 from src.task_runtime import (
     ActiveTaskError,
@@ -12,6 +13,9 @@ from src.task_runtime import (
     validate_task_request,
 )
 from src.web_contract import write_web_snapshot
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def write_completed_snapshot(options, review_required=False):
@@ -155,6 +159,41 @@ class TaskRuntimeTest(unittest.TestCase):
             request = created["runtime"]["request"]
             self.assertEqual(request["taskType"], "monitor")
             self.assertEqual(request["targetName"], "酸枣仁")
+
+    def test_monitor_task_reads_current_development_dataset(self):
+        captured = []
+
+        class MonitorPipeline(SuccessfulPipeline):
+            def __init__(self, options):
+                super().__init__(options)
+                captured.append(options)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            store = DataStore(root / "app.db", root / "output")
+            store.initialize()
+            store.import_monitor_config(
+                PROJECT_ROOT / "config" / "monitor_targets.development.json"
+            )
+            manager = TaskManager(
+                root / "output",
+                pipeline_factory=MonitorPipeline,
+                monitor_target_provider=store.get_monitor_target,
+            )
+            manager.create_task(
+                {
+                    "task_type": "monitor",
+                    "target_id": "dev-food-medicine-suanzaoren",
+                    "per_query_candidate_limit": 10,
+                    "detail_limit": 2,
+                }
+            )
+            self.assertTrue(manager.wait_for_idle())
+            self.assertEqual(captured[0].keyword, "酸枣仁")
+            self.assertEqual(
+                [query["query_text"] for query in captured[0].search_queries],
+                ["酸枣仁", "酸枣仁茶"],
+            )
 
     def test_task_completes_and_can_be_read(self):
         with tempfile.TemporaryDirectory() as temporary:
