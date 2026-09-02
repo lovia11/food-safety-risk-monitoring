@@ -5,7 +5,7 @@
 ## 1. Current Version
 
 - 产品/代码基线版本：**v0.5 — Monitoring & Discovery Foundation**。
-- 当前开发增量：**v0.6-B — Verified Food-Medicine Reference Dataset** 已实现并完成离线验证，尚未创建 tag；稳定回退基线仍是 v0.5。
+- 当前开发增量：**v0.6-C1 — SearchQuery Policy & Pilot Validation** 已实现并完成真实 search-only 验证，尚未创建 tag；稳定回退基线仍是 v0.5。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -125,7 +125,7 @@ Pipeline 启动项目 Chrome，先访问淘宝首页建立正常页面会话，�
 
 ### 9.2 Monitor Task
 
-`POST /api/tasks` 提交 `task_type=monitor`、`target_id`、`per_query_candidate_limit`、`detail_limit`。服务从 SQLite 读取启用的 MonitorTarget 和有序 SearchQuery，并把完整快照冻结到 `task_request.json`。
+`POST /api/tasks` 提交 `task_type=monitor`、`target_id`、`per_query_candidate_limit`、`detail_limit`。服务从 SQLite 读取启用的 MonitorTarget，并且只执行 `enabled=true`、`validation_status=search_validated` 的有序 SearchQuery，随后把完整快照冻结到 `task_request.json`。
 
 `DiscoveryCoordinator` 串行调用既有 `LiveSearchCollector`。每个 Query 有独立目录：
 
@@ -175,7 +175,7 @@ ProductSnapshot 1 ── 1 Review
 | `reviews` | `snapshot_id` PK、状态 CHECK | 人工复核最新状态/备注 |
 | `monitor_datasets` | `dataset_id` PK、version、status、source、timestamps | development/reference 数据集 provenance |
 | `monitor_targets` | `target_id` PK、`dataset_id`、目标级来源、启用状态 | 标准监测对象 |
-| `search_queries` | `query_id` PK、`UNIQUE(target_id, query_text)`、order | 对象下的有序搜索表达 |
+| `search_queries` | `query_id` PK、`UNIQUE(target_id, query_text)`、order、query_source、validation_status、query_note | 对象下的有序搜索表达与验证依据（SQLite schema v4） |
 | `candidate_hits` | `hit_id` PK、`UNIQUE(task_id, product_id, query_id)` | Query 对商品的命中来源 |
 
 人工复核状态只允许：`pending`、`recommend_follow_up`、`no_further_action`。
@@ -249,7 +249,7 @@ Monitor 创建示例：
 
 正式入口为 `config/monitor_targets.reference.json`。当前为 `verified_reference`、版本 `2024.08`，按首次纳入来源收录国家卫生健康委 2002 年 87 项、2019 年 6 项、2023 年 9 项和 2024 年 4 项，共 106 个 MonitorTarget；2025 年官方答复用于核验总数。2019 年新增 6 项仅作为香辛料和调味品使用。系统不会把 development seed 静默升级或转移到正式数据集。
 
-这 106 个正式对象全部 `enabled=false` 且 `queries=[]`。这是有意的安全边界：官方目录能证明对象身份，但不能直接证明适合淘宝检索的商品形态词。后续必须单独配置、审核和验证 SearchQuery，再分批启用；不要为追求覆盖率凭空生成“茶、粉、膏”等搜索词。
+v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石斛、化橘红 6 个 Pilot，共执行 9 次真实淘宝 search-only。最终启用前五者；当归虽可召回，但结果几乎全为中药材/饮片且有官方食用限制，继续停用。其余 100 个正式对象仍 `enabled=false`、`queries=[]`。完整结果见 `docs/search_query_pilot_v0.6-c1.md` 和两个对应 output run。
 
 机制约束：
 
@@ -278,7 +278,7 @@ Monitor 创建示例：
 
 ### `config/monitor_targets.reference.json`
 
-正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。数据当前全部停用且没有 SearchQuery；开发种子仍单独保存在 development 文件中。
+正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。6 个 Pilot 共配置 9 个已验证 Query，5 个对象启用；其余 100 项无 Query 且停用。开发种子仍单独保存在 development 文件中。
 
 ### `.gitignore`
 
@@ -292,7 +292,7 @@ Monitor 创建示例：
 
 ## 16. Tests
 
-当前共有 107 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A 新增 15 项，v0.6-B 新增 11 项，覆盖 106 项目录完整性、87/6/9/4 来源分组、来源字段、幂等导入、SQLite 数量、API provenance、开发种子隔离和无 Query 正式对象的安全处理。
+当前共有 118 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-C1 新增 11 项，覆盖 Query 来源/验证状态、官方别名、启用约束、SQLite v3→v4、search-only编排、API metadata 和开发/正式数据隔离。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -355,7 +355,7 @@ Monitor 创建示例：
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
-- 正式 reference 文件已有 106 项已核验对象，但全部停用且没有经业务验证的 SearchQuery，暂不能直接创建正式 Monitor Task。
+- 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。该 Pilot 仅验证搜索，不等于详情/OCR/风险分析已对每个正式对象完成 E2E。
 - 多 Query 仍把所有唯一候选按固定 first-hit 顺序送入详情，没有质量评分、地区平衡或随机抽样。
 - 页面结构诊断有覆盖率告警，但缺少详情模板分型、选择器版本和自动回归样本管理。
 - 历史 run 的字段存在版本差异，导入层做兼容；删除旧兼容逻辑前必须用保留 run 回归。
@@ -375,7 +375,7 @@ Monitor 创建示例：
 | `UI-03` | 整体 UI/UX 优化 | 不得制造虚假统计或结论性风险标签 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
-| `QUERY-01` | 为正式 MonitorTarget 建立 SearchQuery | 106 项正式对象已导入；搜索词需单独审核、验证并分批启用，不复用 development seed 名义 |
+| `QUERY-02` | v0.6-C2扩大正式 SearchQuery | 先评估Pilot质量与产品场景判别，再设计下一批；禁止按常识批量扩词或用功效词改变候选池 |
 | `RISK-01` | 风险识别质量评估与提升 | 先建设人工标注样本和指标，再讨论复杂模型 |
 | `REVIEW-01` | 复核历史/审计 | 当前只有最新状态，未来按真实业务需求设计 |
 
@@ -414,7 +414,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 对照 `output/20260902T192913_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、两份 Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 107 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 118 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

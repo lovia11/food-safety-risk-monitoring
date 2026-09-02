@@ -4,7 +4,7 @@
 
 当前版本：v0.5（Monitoring & Discovery Foundation）
 
-当前开发增量：v0.6-B Verified Food-Medicine Reference Dataset（已实现并完成离线验证，尚未创建版本 tag）
+当前开发增量：v0.6-C1 SearchQuery Policy & Pilot Validation（已实现并完成真实 search-only 验证，尚未创建版本 tag）
 
 当前分支：`main`
 
@@ -38,9 +38,10 @@
 | SQLite 业务索引与人工复核状态持久化 | 已实现并通过离线/重启测试 | `src/data_store.py` |
 | MonitorTarget、多 SearchQuery、跨 Query 去重与 CandidateHit | 已真实 Web E2E 验证 | `src/discovery.py`、`src/data_store.py` |
 | development/reference 数据集分离、106 项正式食药物质、来源校验与幂等导入 | 已实现并通过离线测试 | `src/data_store.py`、`config/monitor_targets.*.json` |
+| SearchQuery 来源/验证状态、6对象Pilot与search-only验证记录 | 已真实搜索验证 | `src/search_query_validation.py`、`docs/search_query_pilot_v0.6-c1.md` |
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
 
-当前测试集共有 107 项；v0.6-B 的全量结果见本轮最终验收记录。v0.5 稳定 tag 仍保留 81 项测试的原始基线，v0.6-A/v0.6-B 均没有创建新 tag。
+当前测试集共有 118 项；v0.6-C1 的全量结果见本轮最终验收记录。v0.5 稳定 tag 仍保留 81 项测试的原始基线，本轮没有创建 v0.6 tag。
 
 ## 3. 当前架构
 
@@ -70,7 +71,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 - `evidence`：属于某个 ProductSnapshot 的结构化证据；
 - `reviews`：属于某个 ProductSnapshot 的人工复核最新状态与备注；
 - `monitor_targets`：被监测的标准对象；
-- `search_queries`：某 MonitorTarget 下按确定顺序执行的搜索表达；
+- `search_queries`：某 MonitorTarget 下按确定顺序执行的搜索表达，并保存 query_source、validation_status、query_note（SQLite schema v4）；
 - `candidate_hits`：某任务中“哪个 Query、以什么排名命中哪个商品”的来源事实。
 
 Evidence 和 Review 归属于 ProductSnapshot，而不是永久归属于 Product。原因是淘宝页面内容、规则结果和人工判断都可能随采集时间变化。同一 Product 可以拥有多个任务快照。
@@ -98,7 +99,9 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 
 该配置明确是 `development_seed`，只用于工程开发与真实流程验收，不是官方完整食药同源目录，也不是最终搜索词体系。
 
-`config/monitor_targets.reference.json` 已标记为 `verified_reference`（版本 `2024.08`），包含国家卫生健康委 2002 年基础 87 项、2019 年新增 6 项、2023 年新增 9 项和 2024 年新增 4 项，共 106 个 MonitorTarget；2025 年官方答复用于核验总数。每个对象都指向首次纳入它的官方文件。2019 年新增 6 项保留“仅作为香辛料和调味品使用”的适用边界。正式对象全部默认停用、暂不配置 SearchQuery，避免未经验证的淘宝搜索扩展；开发用酸枣仁种子仍以独立 ID 和数据集存在。
+`config/monitor_targets.reference.json` 已标记为 `verified_reference`（版本 `2024.08`），包含国家卫生健康委 2002 年基础 87 项、2019 年新增 6 项、2023 年新增 9 项和 2024 年新增 4 项，共 106 个 MonitorTarget；2025 年官方答复用于核验总数。每个对象都指向首次纳入它的官方文件。2019 年新增 6 项保留“仅作为香辛料和调味品使用”的适用边界。
+
+v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only 验证。当前正式启用 5 个对象：酸枣仁、茯苓、龙眼肉（桂圆）、铁皮石斛、化橘红；当归 Query 虽能稳定召回，但前 10 条几乎都是中药材/饮片，结合“仅作为香辛料和调味品使用”的限制继续停用。其余 100 项无 Query 且停用。`query_source` 区分 standard_name、official_alias、observed_product_form、manual；只有 `validation_status=search_validated` 且 Query 启用时才可进入 Monitor Task。开发酸枣仁仍以独立 ID 和数据集存在。
 
 多 Query 按 `order` 串行执行。候选以 `product_id` 跨 Query 去重，首次有效出现决定合并列表顺序；顺序首先由 Query 顺序决定，再由 Query 内排名决定。前 `detail_limit` 个唯一候选进入详情链。即使同一商品被多个 Query 命中，所有来源仍作为多条 CandidateHit 保留，供后续解释召回来源。
 
@@ -146,7 +149,7 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 - OCR 在 CPU 上耗时明显，识别范围受详情图筛选和图像质量影响；未做性能优化或质量模型评估。
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
-- 正式 reference dataset 已包含 106 项已核验对象并可追踪首次纳入来源，但正式对象尚未启用，也没有经业务验证的 SearchQuery；数据维护界面仍不存在。
+- 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；其余 100 项仍无 Query。Pilot 仅验证搜索阶段，尚未对这 5 个正式对象逐一执行详情/OCR/分析 E2E。
 - Product 列表 API/前端尚无正式分页；MonitorTarget 维度的商品筛选尚未实现。
 
 ## 9. 下一阶段候选事项（尚未实现）
@@ -161,7 +164,7 @@ v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子�
 - `UI-03`：整体 UI/UX 优化；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
-- 为正式 MonitorTarget 设计、审核并验证 SearchQuery 后，再分批启用监测对象；
+- v0.6-C2：评估 Pilot 质量与产品场景判别，再决定下一批正式 MonitorTarget 的 Query 设计和分批启用；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `monitoring-discovery-v0.5` 视为当前稳定回退基线。

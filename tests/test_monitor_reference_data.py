@@ -49,6 +49,9 @@ def verified_dataset(
                         "target_id": target_id,
                         "query_text": "已核验测试对象",
                         "query_type": "base",
+                        "query_source": "standard_name",
+                        "validation_status": "search_validated",
+                        "query_note": "离线测试中的已验证基础词。",
                         "order": 1,
                         "enabled": True,
                     }
@@ -84,13 +87,13 @@ class MonitorReferenceDataTest(unittest.TestCase):
             ["酸枣仁", "酸枣仁茶"],
         )
 
-    def test_verified_reference_file_imports_all_disabled_targets(self):
+    def test_verified_reference_file_imports_targets_and_pilot_queries(self):
         result = self.store.import_monitor_config(REFERENCE_CONFIG)
-        self.assertEqual(result, {"datasets": 1, "targets": 106, "queries": 0})
+        self.assertEqual(result, {"datasets": 1, "targets": 106, "queries": 9})
         self.assertEqual(self.store.table_counts()["monitor_datasets"], 1)
         targets = self.store.list_monitor_targets()
         self.assertEqual(len(targets), 106)
-        self.assertTrue(all(not target["enabled"] for target in targets))
+        self.assertEqual(sum(target["enabled"] for target in targets), 5)
         self.assertTrue(
             all(target["dataset_status"] == "verified_reference" for target in targets)
         )
@@ -256,7 +259,7 @@ class MonitorReferenceDataTest(unittest.TestCase):
             legacy_name = connection.execute(
                 "SELECT standard_name FROM monitor_targets WHERE target_id='legacy-target'"
             ).fetchone()[0]
-        self.assertEqual(version, 3)
+        self.assertEqual(version, 4)
         self.assertIn("dataset_id", columns)
         self.assertEqual(legacy_name, "旧监测对象")
 

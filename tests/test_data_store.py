@@ -138,7 +138,7 @@ class DataStoreTest(unittest.TestCase):
             }
             <= tables
         )
-        self.assertEqual(version, 3)
+        self.assertEqual(version, 4)
 
     def _import_monitor_seed(self):
         config = self.root / "monitor_targets.json"
@@ -169,6 +169,9 @@ class DataStoreTest(unittest.TestCase):
                                 "query_id": "query-base",
                                 "query_text": "酸枣仁",
                                 "query_type": "base",
+                                "query_source": "standard_name",
+                                "validation_status": "search_validated",
+                                "query_note": "离线测试中的已验证基础词。",
                                 "order": 1,
                                 "enabled": True,
                             },
@@ -176,6 +179,9 @@ class DataStoreTest(unittest.TestCase):
                                 "query_id": "query-tea",
                                 "query_text": "酸枣仁茶",
                                 "query_type": "product_form",
+                                "query_source": "observed_product_form",
+                                "validation_status": "search_validated",
+                                "query_note": "离线测试中观察到的产品形态。",
                                 "order": 2,
                                 "enabled": True,
                             },

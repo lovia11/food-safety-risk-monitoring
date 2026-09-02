@@ -316,6 +316,7 @@ class TaskManager:
                 item
                 for item in (target.get("queries") or [])
                 if item.get("enabled", True)
+                and item.get("validation_status") == "search_validated"
             ]
             queries.sort(
                 key=lambda item: (

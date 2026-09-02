@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "dataset_id": "monitor-targets-development",
   "dataset_version": "1",
   "dataset_status": "development_seed",
@@ -24,6 +24,9 @@
           "query_id": "dev-suanzaoren-base",
           "query_text": "酸枣仁",
           "query_type": "base",
+          "query_source": "standard_name",
+          "validation_status": "search_validated",
+          "query_note": "development seed；已在output/20260902T192913_task的真实淘宝Monitor E2E中验证。",
           "order": 1,
           "enabled": true
         },
@@ -31,6 +34,9 @@
           "query_id": "dev-suanzaoren-tea",
           "query_text": "酸枣仁茶",
           "query_type": "product_form",
+          "query_source": "observed_product_form",
+          "validation_status": "search_validated",
+          "query_note": "development seed；产品形态来自早期真实酸枣仁搜索结果，并在output/20260902T192913_task中复验。",
           "order": 2,
           "enabled": true
         }

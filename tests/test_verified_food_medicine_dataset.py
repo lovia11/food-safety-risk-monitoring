@@ -122,9 +122,24 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 self.assertTrue(target["source_name"].strip())
                 self.assertEqual(target["source_date"], EXPECTED_DATES[source_reference])
 
-    def test_reference_targets_are_disabled_and_queryless(self):
-        self.assertTrue(all(target["enabled"] is False for target in self.targets))
-        self.assertTrue(all(target["queries"] == [] for target in self.targets))
+    def test_only_search_validated_pilots_are_enabled_and_nonpilots_are_queryless(self):
+        pilot_targets = [target for target in self.targets if target["queries"]]
+        self.assertEqual(len(pilot_targets), 6)
+        self.assertEqual(sum(len(target["queries"]) for target in pilot_targets), 9)
+        self.assertEqual(
+            {target["standard_name"] for target in self.targets if target["enabled"]},
+            {"酸枣仁", "茯苓", "龙眼肉（桂圆）", "铁皮石斛", "化橘红"},
+        )
+        self.assertTrue(
+            all(
+                query["validation_status"] == "search_validated"
+                for target in pilot_targets
+                for query in target["queries"]
+            )
+        )
+        danggui = next(target for target in pilot_targets if target["standard_name"] == "当归")
+        self.assertFalse(danggui["enabled"])
+        self.assertFalse(danggui["queries"][0]["enabled"])
         self.assertIn("仅作为香辛料和调味品使用", self.payload["description"])
 
     def test_development_seed_is_independent_and_acid_jujube_is_not_overwritten(self):
@@ -137,7 +152,11 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
         self.assertNotEqual(development["dataset_id"], self.payload["dataset_id"])
         self.assertNotEqual(development_target["target_id"], reference_target["target_id"])
         self.assertEqual(len(development_target["queries"]), 2)
-        self.assertEqual(reference_target["queries"], [])
+        self.assertEqual(
+            [query["query_text"] for query in reference_target["queries"]],
+            ["酸枣仁", "酸枣仁茶"],
+        )
+        self.assertTrue(all(query["enabled"] for query in reference_target["queries"]))
 
     def test_reference_import_is_idempotent_and_sqlite_has_106_targets(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -145,7 +164,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             first = store.import_monitor_config(REFERENCE_CONFIG)
             first_counts = store.table_counts()
             second = store.import_monitor_config(REFERENCE_CONFIG)
-            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 0})
+            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 9})
             self.assertEqual(second, first)
             self.assertEqual(store.table_counts(), first_counts)
             self.assertEqual(len(store.list_monitor_targets()), 106)
@@ -168,7 +187,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             ]
             self.assertEqual(len(formal), 106)
             self.assertEqual(len(development), 1)
-            self.assertEqual(store.table_counts()["search_queries"], 2)
+            self.assertEqual(store.table_counts()["search_queries"], 11)
 
     def test_api_exposes_provenance_and_hides_disabled_targets_from_task_list(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -196,10 +215,18 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             try:
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     listed = json.load(response)
-                self.assertEqual(listed["count"], 1)
+                self.assertEqual(listed["count"], 6)
                 self.assertEqual(
-                    listed["targets"][0]["target_id"],
+                    {target["standard_name"] for target in listed["targets"]},
+                    {"酸枣仁", "茯苓", "龙眼肉（桂圆）", "铁皮石斛", "化橘红"},
+                )
+                self.assertIn(
                     "dev-food-medicine-suanzaoren",
+                    {target["target_id"] for target in listed["targets"]},
+                )
+                self.assertNotIn(
+                    "food-medicine-2019-001",
+                    {target["target_id"] for target in listed["targets"]},
                 )
                 with urlopen(
                     f"{base}/api/monitor-targets/food-medicine-2002-078"
@@ -207,6 +234,11 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                     target = json.load(response)
                 self.assertEqual(target["standard_name"], "酸枣仁")
                 self.assertEqual(target["source_reference"], BASE_2002_URL)
+                self.assertEqual(target["queries"][0]["query_source"], "standard_name")
+                self.assertIn(
+                    target["queries"][0]["validation_status"],
+                    {"search_validated"},
+                )
                 self.assertEqual(target["dataset"]["dataset_version"], "2024.08")
                 self.assertEqual(
                     target["dataset"]["dataset_status"], "verified_reference"
@@ -230,7 +262,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 manager.create_task(
                     {
                         "task_type": "monitor",
-                        "target_id": "food-medicine-2002-078",
+                        "target_id": "food-medicine-2002-001",
                         "per_query_candidate_limit": 10,
                         "detail_limit": 2,
                     }

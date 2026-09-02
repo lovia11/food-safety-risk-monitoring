@@ -104,16 +104,23 @@ class LocalApiHelpersTest(unittest.TestCase):
 
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     targets = json.load(response)["targets"]
-                self.assertEqual(targets[0]["standard_name"], "酸枣仁")
-                self.assertEqual(targets[0]["dataset_status"], "development_seed")
+                development_target = next(
+                    target
+                    for target in targets
+                    if target["target_id"] == "dev-food-medicine-suanzaoren"
+                )
+                self.assertEqual(development_target["standard_name"], "酸枣仁")
                 self.assertEqual(
-                    targets[0]["dataset"]["dataset_id"],
+                    development_target["dataset_status"], "development_seed"
+                )
+                self.assertEqual(
+                    development_target["dataset"]["dataset_id"],
                     "monitor-targets-development",
                 )
                 monitor_body = json.dumps(
                     {
                         "task_type": "monitor",
-                        "target_id": targets[0]["target_id"],
+                        "target_id": development_target["target_id"],
                         "per_query_candidate_limit": 10,
                         "detail_limit": 2,
                     }

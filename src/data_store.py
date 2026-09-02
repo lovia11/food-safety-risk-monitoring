@@ -21,12 +21,19 @@ from src.runtime import iso_now, read_json
 REVIEW_STATUSES = {"pending", "recommend_follow_up", "no_further_action"}
 TARGET_TYPES = {"food_medicine", "health_food"}
 QUERY_TYPES = {"base", "product_form"}
+QUERY_SOURCES = {
+    "standard_name",
+    "official_alias",
+    "observed_product_form",
+    "manual",
+}
+QUERY_VALIDATION_STATUSES = {"unvalidated", "search_validated"}
 DATASET_STATUSES = {"development_seed", "reference_pending", "verified_reference"}
 DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
     Path("config/monitor_targets.reference.json"),
 )
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -138,6 +145,21 @@ def _boolean(value: Any, field: str, *, default: bool = True) -> bool:
     if not isinstance(value, bool):
         raise MonitorConfigValidationError(f"{field}必须是布尔值")
     return value
+
+
+def _official_name_parts(standard_name: str) -> tuple[str, set[str]]:
+    """Return the official primary name and literal parenthesized name parts."""
+
+    match = re.fullmatch(r"\s*([^（）]+?)\s*（([^（）]+)）\s*", standard_name)
+    if not match:
+        return standard_name, set()
+    primary = match.group(1).strip()
+    aliases = {
+        item.strip()
+        for item in re.split(r"[、，,]", match.group(2))
+        if item.strip()
+    }
+    return primary, aliases
 
 
 def validate_monitor_config(payload: Any) -> dict[str, Any]:
@@ -296,6 +318,47 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
                 raise MonitorConfigValidationError(
                     f"不支持的query_type：{query_type}"
                 )
+            query_source = _required_text(
+                query.get("query_source"),
+                f"SearchQuery {query_id} 的query_source",
+            )
+            if query_source not in QUERY_SOURCES:
+                raise MonitorConfigValidationError(
+                    f"不支持的query_source：{query_source}"
+                )
+            validation_status = _required_text(
+                query.get("validation_status"),
+                f"SearchQuery {query_id} 的validation_status",
+            )
+            if validation_status not in QUERY_VALIDATION_STATUSES:
+                raise MonitorConfigValidationError(
+                    f"不支持的validation_status：{validation_status}"
+                )
+            query_note = _optional_text(query.get("query_note"))
+            primary_name, official_aliases = _official_name_parts(standard_name)
+            if query_source == "standard_name" and query_text not in {
+                standard_name,
+                primary_name,
+            }:
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 标记为standard_name时必须使用官方标准名称"
+                )
+            if query_source == "official_alias" and query_text not in official_aliases:
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 的official_alias未出现在官方名称括号中"
+                )
+            if query_source in {"standard_name", "official_alias"} and query_type != "base":
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 的{query_source}必须使用base类型"
+                )
+            if query_source == "observed_product_form" and query_type != "product_form":
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 的observed_product_form必须使用product_form类型"
+                )
+            if query_source in {"observed_product_form", "manual"} and not query_note:
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 的{query_source}必须记录query_note"
+                )
             query_order = query.get("order")
             if (
                 not isinstance(query_order, int)
@@ -310,17 +373,34 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
                     f"MonitorTarget {target_id} 的SearchQuery order重复：{query_order}"
                 )
             query_orders.add(query_order)
+            query_enabled = _boolean(
+                query.get("enabled"), f"SearchQuery {query_id} 的enabled"
+            )
+            if query_enabled and validation_status != "search_validated":
+                raise MonitorConfigValidationError(
+                    f"SearchQuery {query_id} 未经search_validated不能启用"
+                )
             normalized_queries.append(
                 {
                     "query_id": query_id,
                     "target_id": target_id,
                     "query_text": query_text,
                     "query_type": query_type,
+                    "query_source": query_source,
+                    "validation_status": validation_status,
+                    "query_note": query_note,
                     "order": query_order,
-                    "enabled": _boolean(
-                        query.get("enabled"), f"SearchQuery {query_id} 的enabled"
-                    ),
+                    "enabled": query_enabled,
                 }
+            )
+
+        if target_enabled and not any(
+            query["enabled"]
+            and query["validation_status"] == "search_validated"
+            for query in normalized_queries
+        ):
+            raise MonitorConfigValidationError(
+                f"启用的MonitorTarget {target_id} 必须至少有一个已验证且启用的SearchQuery"
             )
 
         normalized_targets.append(
@@ -482,6 +562,9 @@ class DataStore:
                         ON DELETE CASCADE,
                     query_text TEXT NOT NULL,
                     query_type TEXT NOT NULL,
+                    query_source TEXT NOT NULL DEFAULT 'manual',
+                    validation_status TEXT NOT NULL DEFAULT 'unvalidated',
+                    query_note TEXT NOT NULL DEFAULT '',
                     query_order INTEGER NOT NULL,
                     enabled INTEGER NOT NULL DEFAULT 1,
                     updated_at TEXT NOT NULL,
@@ -515,6 +598,24 @@ class DataStore:
                 "monitor_targets",
                 "dataset_id",
                 "TEXT REFERENCES monitor_datasets(dataset_id)",
+            )
+            self._ensure_column(
+                connection,
+                "search_queries",
+                "query_source",
+                "TEXT NOT NULL DEFAULT 'manual'",
+            )
+            self._ensure_column(
+                connection,
+                "search_queries",
+                "validation_status",
+                "TEXT NOT NULL DEFAULT 'unvalidated'",
+            )
+            self._ensure_column(
+                connection,
+                "search_queries",
+                "query_note",
+                "TEXT NOT NULL DEFAULT ''",
             )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
@@ -652,12 +753,16 @@ class DataStore:
                         """
                         INSERT INTO search_queries (
                             query_id, target_id, query_text, query_type,
+                            query_source, validation_status, query_note,
                             query_order, enabled, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(query_id) DO UPDATE SET
                             target_id=excluded.target_id,
                             query_text=excluded.query_text,
                             query_type=excluded.query_type,
+                            query_source=excluded.query_source,
+                            validation_status=excluded.validation_status,
+                            query_note=excluded.query_note,
                             query_order=excluded.query_order,
                             enabled=excluded.enabled,
                             updated_at=excluded.updated_at
@@ -667,6 +772,9 @@ class DataStore:
                             target_id,
                             query_text,
                             query_type,
+                            query["query_source"],
+                            query["validation_status"],
+                            query.get("query_note") or "",
                             query["order"],
                             1 if query.get("enabled", True) else 0,
                             now,
@@ -704,6 +812,9 @@ class DataStore:
                     "target_id": row["target_id"],
                     "query_text": row["query_text"],
                     "query_type": row["query_type"],
+                    "query_source": row["query_source"],
+                    "validation_status": row["validation_status"],
+                    "query_note": row["query_note"],
                     "order": row["query_order"],
                     "enabled": bool(row["enabled"]),
                 }
