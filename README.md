@@ -15,8 +15,8 @@
 | 功效规则、证据来源与推荐区排除 | `src/phase3_analysis.py` | 已在真实商品上验证 |
 | 统一命令行、状态隔离、断点续跑 | `main.py` / `src/main.py` | 已验证 |
 | 网页数据快照 | `src/web_contract.py` | 已对真实运行目录验证 |
-| 本地只读结果 API | `src/local_api.py` | 已对快照和真实图片验证 |
-| 本地 Web MVP | `web/index.html` / `web/styles.css` / `web/app.js` | 已接入真实批次、图片、OCR、证据和日志 |
+| 本地任务与业务 API | `src/local_api.py` / `src/data_store.py` | 已接入任务、商品快照、Evidence 与人工复核 |
+| 本地 Web MVP | `web/index.html` / `web/styles.css` / `web/app.js` | 已接入真实批次、图片、OCR、证据、日志和人工复核 |
 
 项目代码不依赖 Codex、ChatGPT 桌面应用、Codex Browser 或 Chrome 控制插件。页面出现登录或滑块验证时由用户在项目打开的可见浏览器中手动完成；项目不破解验证码。
 
@@ -99,6 +99,12 @@ products/<商品ID>/
 
 `batch_state.json`、`products.json` 和 `web_snapshot.json` 使用原子替换写入，网页轮询不会读取到半截 JSON。
 
+本地业务索引默认位于 `data/app.db`。它使用标准库 SQLite 保存 Task、Product、ProductSnapshot、Evidence 与 Review 的结构化字段；原始图片、网页、Network、OCR 全文和日志仍保留在 `output`。数据库文件不提交 Git，可通过以下命令从历史运行幂等重建：
+
+```powershell
+.\.venv\Scripts\python.exe -m src.data_store --output-root output --database data\app.db
+```
+
 ## Collector Baseline v0.2 诊断信息
 
 每次实时搜索都会生成 `search/search_diagnostics.json`，记录：
@@ -152,6 +158,10 @@ http://127.0.0.1:8765/
 - `GET http://127.0.0.1:8765/api/tasks`：任务列表和当前活动任务；
 - `GET http://127.0.0.1:8765/api/tasks/<task_id>`：轮询任务状态与最新结果；
 - `POST http://127.0.0.1:8765/api/tasks/<task_id>/resume`：恢复具有完整断点文件的中断或失败任务。
+- `GET http://127.0.0.1:8765/api/products`：查询已索引商品，可按关键词、任务、功效和复核状态筛选；
+- `GET http://127.0.0.1:8765/api/products/<product_id>/snapshots`：查看同一淘宝商品的历次采集快照；
+- `GET http://127.0.0.1:8765/api/snapshots/<snapshot_id>`：查看商品快照及结构化 Evidence；
+- `PUT http://127.0.0.1:8765/api/snapshots/<snapshot_id>/review`：保存该次商品快照的人工复核结论与备注。
 
 API 默认只绑定本机回环地址。Pipeline在受控后台线程中运行，HTTP创建请求不会等待整个采集过程结束；任务状态继续复用每个run中的 `web_snapshot.json`。
 

@@ -257,7 +257,7 @@ tbody tr:hover { background: #fbfdff; }
 .sample-badge { margin-bottom: 8px; padding: 4px 8px; display: inline-block; border-radius: 5px; color: #6556c8; background: var(--purple-soft); font-size: 10px; }
 .judgment-grid { display: grid; grid-template-columns: minmax(410px, .85fr) minmax(560px, 1.35fr); gap: 16px; }
 .judgment-left { display: grid; align-content: start; gap: 16px; }
-.analysis-card, .evidence-card, .gallery-card { padding: 18px 19px; }
+.analysis-card, .evidence-card, .gallery-card, .review-card { padding: 18px 19px; }
 .analysis-alert { padding: 15px 16px; display: flex; gap: 12px; border: 1px solid #ffd9b3; border-radius: 8px; background: #fff9f2; }
 .analysis-alert.info { border-color: #cfe3ff; background: #f5f9ff; }
 .analysis-alert.neutral { border-color: #e0e5eb; background: #f7f8fa; }
@@ -282,6 +282,16 @@ tbody tr:hover { background: #fbfdff; }
 .evidence-keywords { margin-top: 5px; color: var(--orange); font-size: 9px; }
 .ugc-notice { margin-top: 11px; padding: 9px 10px; border-left: 3px solid #8b7af3; color: #655f7d; background: #f8f7ff; font-size: 10px; }
 .empty-evidence { padding: 28px 10px; color: #8a96a5; text-align: center; }
+.review-panel-content { display: grid; gap: 12px; }
+.review-panel-content label { display: grid; gap: 6px; color: #53647a; font-size: 11px; }
+.review-panel-content select, .review-panel-content textarea { width: 100%; padding: 9px 10px; border: 1px solid #dbe2eb; border-radius: 6px; color: #34445b; background: #fff; font: inherit; }
+.review-panel-content select { height: 38px; padding-top: 0; padding-bottom: 0; }
+.review-panel-content textarea { min-height: 88px; resize: vertical; line-height: 1.6; }
+.review-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.review-saved-at { color: #8793a3; font-size: 9px; }
+.review-message { min-height: 16px; margin: 0; color: #68778a; font-size: 10px; }
+.review-message.error { color: var(--red); }
+.review-message.success { color: var(--green); }
 .gallery-main { height: 440px; display: grid; grid-template-columns: 76px 1fr; gap: 11px; }
 .gallery-thumbs { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; scrollbar-width: thin; }
 .thumb-button { width: 66px; height: 66px; padding: 2px; flex: 0 0 66px; border: 2px solid transparent; border-radius: 6px; background: #f2f4f7; cursor: pointer; }

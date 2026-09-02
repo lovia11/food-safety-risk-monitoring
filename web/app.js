@@ -9,6 +9,8 @@ const appState = {
   selectedRun: null,
   selectedProduct: null,
   selectedImagePath: null,
+  businessSnapshot: null,
+  reviewLoadToken: 0,
   pollTimer: null,
   filters: { query: "", status: "all", region: "all", effect: "all", review: "all" },
 };
@@ -66,6 +68,21 @@ async function postJson(url, payload) {
     const error = new Error(body.error?.message || `请求失败：${response.status}`);
     error.code = body.error?.code;
     error.activeTaskId = body.error?.activeTaskId;
+    throw error;
+  }
+  return body;
+}
+
+async function putJson(url, payload) {
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(body.error?.message || `请求失败：${response.status}`);
+    error.code = body.error?.code;
     throw error;
   }
   return body;
@@ -417,6 +434,8 @@ function renderJudgment() {
     $("#galleryThumbs").innerHTML = "";
     $("#mainEvidenceImage").removeAttribute("src");
     $("#ocrText").textContent = "暂无OCR结果。";
+    appState.businessSnapshot = null;
+    renderReviewPanel();
     return;
   }
   const runId = snapshot.task.id;
@@ -459,6 +478,102 @@ function renderJudgment() {
   }).join("") : `<div class="empty-evidence">${analyzed ? "未发现配置词库中的明确功效证据" : "尚未生成风险证据"}</div>`;
   $("#ugcNotice").hidden = !evidence.some(item => item.content_origin === "user_generated");
   renderGallery(snapshot, product);
+  renderReviewPanel();
+}
+
+function reviewPresentation(status) {
+  if (status === "recommend_follow_up") return { label: "建议进一步关注", tone: "orange" };
+  if (status === "no_further_action") return { label: "暂不进一步关注", tone: "green" };
+  return { label: "待复核", tone: "gray" };
+}
+
+function renderReviewPanel() {
+  const target = $("#reviewPanelContent");
+  if (!target) return;
+  const selected = appState.businessSnapshot;
+  const matches = selected
+    && selected.taskId === appState.selectedRun
+    && selected.productId === appState.selectedProduct;
+  if (!appState.selectedRun || !appState.selectedProduct) {
+    $("#reviewStateBadge").className = "table-tag gray";
+    $("#reviewStateBadge").textContent = "待复核";
+    target.innerHTML = `<div class="empty-evidence">请选择商品后进行人工复核。</div>`;
+    return;
+  }
+  if (!matches) {
+    $("#reviewStateBadge").className = "table-tag gray";
+    $("#reviewStateBadge").textContent = "读取中";
+    target.innerHTML = `<div class="empty-evidence">正在读取复核记录…</div>`;
+    return;
+  }
+  const review = selected.review || { status: "pending", note: "", reviewedAt: null };
+  const presentation = reviewPresentation(review.status);
+  $("#reviewStateBadge").className = `table-tag ${presentation.tone}`;
+  $("#reviewStateBadge").textContent = presentation.label;
+  target.innerHTML = `
+    <label>复核结论
+      <select id="reviewStatusInput">
+        <option value="pending" ${review.status === "pending" ? "selected" : ""}>待复核</option>
+        <option value="recommend_follow_up" ${review.status === "recommend_follow_up" ? "selected" : ""}>建议进一步关注</option>
+        <option value="no_further_action" ${review.status === "no_further_action" ? "selected" : ""}>暂不进一步关注</option>
+      </select>
+    </label>
+    <label>复核备注
+      <textarea id="reviewNoteInput" maxlength="2000" placeholder="记录页面语境、资质核对或后续处理建议">${escapeHtml(review.note || "")}</textarea>
+    </label>
+    <p id="reviewMessage" class="review-message"></p>
+    <div class="review-actions">
+      <span class="review-saved-at">${review.reviewedAt ? `上次保存：${escapeHtml(formatDate(review.reviewedAt))}` : "尚未提交人工复核结论"}</span>
+      <button class="button button-primary" data-save-review="${escapeHtml(selected.snapshotId)}">保存复核结果</button>
+    </div>`;
+}
+
+async function loadSelectedBusinessSnapshot() {
+  const runId = appState.selectedRun;
+  const productId = appState.selectedProduct;
+  const token = ++appState.reviewLoadToken;
+  appState.businessSnapshot = null;
+  renderReviewPanel();
+  if (!runId || !productId) return;
+  try {
+    const collection = await fetchJson(`${API_ROOT}/products/${encodeURIComponent(productId)}/snapshots`);
+    const match = (collection.snapshots || []).find(item => item.taskId === runId);
+    if (!match) throw new Error("该商品尚未建立业务数据索引");
+    const detail = await fetchJson(`${API_ROOT}/snapshots/${encodeURIComponent(match.snapshotId)}`);
+    if (token !== appState.reviewLoadToken || runId !== appState.selectedRun || productId !== appState.selectedProduct) return;
+    appState.businessSnapshot = detail;
+    renderReviewPanel();
+  } catch (error) {
+    if (token !== appState.reviewLoadToken) return;
+    $("#reviewStateBadge").className = "table-tag gray";
+    $("#reviewStateBadge").textContent = "读取失败";
+    $("#reviewPanelContent").innerHTML = `<div class="empty-evidence">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function saveSelectedReview(snapshotId) {
+  const statusInput = $("#reviewStatusInput");
+  const noteInput = $("#reviewNoteInput");
+  const message = $("#reviewMessage");
+  if (!statusInput || !noteInput || !message) return;
+  message.textContent = "正在保存…";
+  message.className = "review-message";
+  try {
+    const result = await putJson(`${API_ROOT}/snapshots/${encodeURIComponent(snapshotId)}/review`, {
+      status: statusInput.value,
+      note: noteInput.value,
+    });
+    if (appState.businessSnapshot?.snapshotId === snapshotId) {
+      appState.businessSnapshot.review = result.review;
+    }
+    renderReviewPanel();
+    $("#reviewMessage").textContent = "复核结果已保存";
+    $("#reviewMessage").className = "review-message success";
+    showToast("人工复核结果已保存");
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = "review-message error";
+  }
 }
 
 function renderGallery(snapshot, product) {
@@ -686,7 +801,10 @@ async function resumeTask(taskId) {
 function activateView(viewName) {
   $$(".view").forEach(view => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   $$(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === viewName));
-  if (viewName === "judgment") renderJudgment();
+  if (viewName === "judgment") {
+    renderJudgment();
+    loadSelectedBusinessSnapshot();
+  }
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
@@ -712,7 +830,13 @@ function bindEvents() {
       appState.selectedRun = detailButton.dataset.runId;
       appState.selectedProduct = detailButton.dataset.viewProduct;
       appState.selectedImagePath = null;
+      appState.businessSnapshot = null;
       activateView("judgment");
+      return;
+    }
+    const reviewButton = event.target.closest("[data-save-review]");
+    if (reviewButton) {
+      saveSelectedReview(reviewButton.dataset.saveReview);
       return;
     }
     const thumb = event.target.closest("[data-image-path]");

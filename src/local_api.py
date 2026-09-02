@@ -8,8 +8,13 @@ import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
+from src.data_store import (
+    DataStore,
+    ReviewValidationError,
+    SnapshotNotFoundError,
+)
 from src.runtime import read_json
 from src.task_runtime import (
     ActiveTaskError,
@@ -81,10 +86,19 @@ def create_handler(
     output_root: Path,
     web_root: Path = Path("web"),
     task_manager: TaskManager | None = None,
+    data_store: DataStore | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
-    manager = task_manager or TaskManager(resolved_output)
+    store = data_store or DataStore(
+        resolved_output.parent / "data" / "app.db", resolved_output
+    )
+    store.initialize()
+    store.import_all_runs()
+    manager = task_manager or TaskManager(
+        resolved_output, task_indexer=store.import_run
+    )
+    manager.set_task_indexer(store.import_run)
 
     class LocalApiHandler(BaseHTTPRequestHandler):
         server_version = "TaobaoRiskMVP/1.1"
@@ -138,12 +152,13 @@ def create_handler(
         def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib handler API
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
-            path = urlparse(self.path).path
+            parsed = urlparse(self.path)
+            path = parsed.path
             if not path.startswith("/api/"):
                 try:
                     destination = resolve_web_file(
@@ -173,6 +188,43 @@ def create_handler(
                 )
                 return
             parts = [unquote(item) for item in path.split("/") if item]
+            if path == "/api/products":
+                query = parse_qs(parsed.query)
+                try:
+                    products = store.list_products(
+                        query=str((query.get("query") or [""])[0]).strip(),
+                        review_status=str(
+                            (query.get("review_status") or [""])[0]
+                        ).strip(),
+                        effect=str((query.get("effect") or [""])[0]).strip(),
+                        task_id=str((query.get("task_id") or [""])[0]).strip(),
+                    )
+                except ReviewValidationError as exc:
+                    self._error(400, "invalid_filter", str(exc))
+                    return
+                self._json(200, {"products": products, "count": len(products)})
+                return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "products"]
+                and parts[3] == "snapshots"
+            ):
+                snapshots = store.list_product_snapshots(parts[2])
+                self._json(
+                    200,
+                    {
+                        "productId": parts[2],
+                        "snapshots": snapshots,
+                        "count": len(snapshots),
+                    },
+                )
+                return
+            if len(parts) == 3 and parts[:2] == ["api", "snapshots"]:
+                try:
+                    self._json(200, store.get_snapshot(parts[2]))
+                except SnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                return
             if len(parts) == 3 and parts[:2] == ["api", "tasks"]:
                 try:
                     self._json(200, manager.get_task(parts[2]))
@@ -212,6 +264,36 @@ def create_handler(
                     self._error(404, "file_not_found", "文件不存在")
                     return
                 self._send_file(destination)
+                return
+            self._error(404, "not_found", "接口不存在")
+
+        def do_PUT(self) -> None:  # noqa: N802 - stdlib handler API
+            path = urlparse(self.path).path
+            parts = [unquote(item) for item in path.split("/") if item]
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "snapshots"]
+                and parts[3] == "review"
+            ):
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                if not isinstance(payload, dict):
+                    self._error(400, "invalid_review", "请求体必须是JSON对象")
+                    return
+                try:
+                    review = store.update_review(
+                        parts[2],
+                        str(payload.get("status") or ""),
+                        str(payload.get("note") or ""),
+                    )
+                except ReviewValidationError as exc:
+                    self._error(400, "invalid_review", str(exc))
+                    return
+                except SnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                    return
+                self._json(200, {"snapshotId": parts[2], "review": review})
                 return
             self._error(404, "not_found", "接口不存在")
 
@@ -269,6 +351,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="启动本地任务与结果服务")
     parser.add_argument("--output-root", type=Path, default=Path("output"))
     parser.add_argument("--web-root", type=Path, default=Path("web"))
+    parser.add_argument("--database", type=Path, default=Path("data/app.db"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile"))
@@ -284,6 +367,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
+    store = DataStore(args.database, args.output_root)
+    store.initialize()
+    imported = store.import_all_runs()
     manager = TaskManager(
         args.output_root,
         pipeline_defaults={
@@ -295,15 +381,20 @@ def main(argv: list[str] | None = None) -> int:
             "direct_browser": args.direct_browser,
             "verbose": args.verbose,
         },
+        task_indexer=store.import_run,
     )
     server = ThreadingHTTPServer(
         (args.host, args.port),
-        create_handler(args.output_root, args.web_root, manager),
+        create_handler(args.output_root, args.web_root, manager, store),
     )
     server.daemon_threads = True
     print(f"本地展示页面：http://{args.host}:{args.port}/")
     print(f"本地结果接口：http://{args.host}:{args.port}/api/health")
     print(f"任务创建接口：http://{args.host}:{args.port}/api/tasks")
+    print(
+        "业务数据索引："
+        f"{store.database_path}（发现 {imported['discovered']}，索引 {imported['imported']}）"
+    )
     print("按 Ctrl+C 停止")
     try:
         server.serve_forever()

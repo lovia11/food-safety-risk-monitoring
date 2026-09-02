@@ -9,6 +9,12 @@ __pycache__/
 output/
 *.log
 
+# Local SQLite business index (rebuildable from output run snapshots).
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+
 # PaddleOCR/PaddleX models and other downloaded model caches.
 .paddleocr/
 .paddlex/

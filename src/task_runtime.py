@@ -93,15 +93,32 @@ class TaskManager:
         output_root: Path,
         pipeline_factory: Callable[[PipelineOptions], Any] = StandalonePipeline,
         pipeline_defaults: dict[str, Any] | None = None,
+        task_indexer: Callable[[Path], Any] | None = None,
     ) -> None:
         self.output_root = output_root.resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
         self.pipeline_factory = pipeline_factory
         self.pipeline_defaults = dict(pipeline_defaults or {})
+        self.task_indexer = task_indexer
         self._lock = threading.RLock()
         self._active_task_id: str | None = None
         self._worker_thread: threading.Thread | None = None
         self._mark_stale_runtime_tasks_interrupted()
+
+    def set_task_indexer(self, task_indexer: Callable[[Path], Any] | None) -> None:
+        """Attach a best-effort business index without coupling the pipeline to SQLite."""
+
+        self.task_indexer = task_indexer
+
+    def _notify_index(self, run_root: Path) -> None:
+        if self.task_indexer is None or not (run_root / "web_snapshot.json").is_file():
+            return
+        try:
+            self.task_indexer(run_root)
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "任务状态已写入文件，但同步业务索引失败：%s", run_root
+            )
 
     @property
     def active_task_id(self) -> str | None:
@@ -183,6 +200,7 @@ class TaskManager:
             }
         )
         write_json(snapshot_path, snapshot)
+        self._notify_index(run_root)
 
     def _decorate_snapshot(self, run_root: Path, snapshot: dict[str, Any]) -> dict[str, Any]:
         request = self._read_request(run_root)
@@ -210,6 +228,7 @@ class TaskManager:
             snapshot = read_json(snapshot_path)
         except (OSError, ValueError, TypeError) as exc:
             raise TaskNotFoundError("任务状态快照无法读取") from exc
+        self._notify_index(run_root)
         return self._decorate_snapshot(run_root, snapshot)
 
     def list_tasks(self) -> list[dict[str, Any]]:
@@ -222,6 +241,7 @@ class TaskManager:
                 snapshot = read_json(snapshot_path)
             except (OSError, ValueError, TypeError):
                 continue
+            self._notify_index(run_root)
             decorated = self._decorate_snapshot(run_root, snapshot)
             tasks.append(
                 {
@@ -253,6 +273,7 @@ class TaskManager:
             }
             write_json(self._request_path(run_root), request_record)
             self._initial_snapshot(run_root, request, "任务已创建，正在启动采集流程")
+            self._notify_index(run_root)
             self._active_task_id = task_id
             self._worker_thread = threading.Thread(
                 target=self._run_new_task,
@@ -321,6 +342,7 @@ class TaskManager:
             pipeline = self.pipeline_factory(self._pipeline_options(task_id, request))
             self._attach_manual_action_status(pipeline, run_root)
             pipeline.run()
+            self._notify_index(run_root)
         except BaseException as exc:  # keep the HTTP service alive on worker failure
             self._record_failure(run_root, exc)
         finally:
@@ -427,6 +449,7 @@ class TaskManager:
             pipeline = self.pipeline_factory(options)
             self._attach_manual_action_status(pipeline, run_root)
             pipeline.resume_processing(collect_pending_details=True)
+            self._notify_index(run_root)
         except BaseException as exc:
             self._record_failure(run_root, exc)
         finally:
