@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from src.discovery import DiscoveryCoordinator
 from src.phase1_experiment import PhaseOneCollector
 from src.phase2_ocr import OCRRuntime, create_ocr_runtime, run_ocr
 from src.phase3_analysis import run_analysis
@@ -53,6 +54,11 @@ class PipelineOptions:
     detail_retries: int = 1
     skip_ocr: bool = False
     verbose: bool = False
+    task_type: str = "quick"
+    target_id: str | None = None
+    target_name: str | None = None
+    search_queries: tuple[dict[str, Any], ...] = ()
+    per_query_candidate_limit: int | None = None
 
     @property
     def requested_candidate_limit(self) -> int:
@@ -63,6 +69,14 @@ class PipelineOptions:
         return (
             self.detail_limit
             if self.detail_limit is not None
+            else self.requested_candidate_limit
+        )
+
+    @property
+    def requested_per_query_candidate_limit(self) -> int:
+        return (
+            self.per_query_candidate_limit
+            if self.per_query_candidate_limit is not None
             else self.requested_candidate_limit
         )
 
@@ -99,6 +113,13 @@ class StandalonePipeline:
             raise ValueError("candidate_limit必须大于0")
         if options.detail_limit is not None and options.detail_limit < 1:
             raise ValueError("detail_limit必须大于0")
+        if options.task_type not in {"quick", "monitor"}:
+            raise ValueError("task_type必须是quick或monitor")
+        if options.task_type == "monitor":
+            if not options.target_id or not options.search_queries:
+                raise ValueError("Monitor Task必须包含target_id和SearchQuery")
+            if options.requested_per_query_candidate_limit < 1:
+                raise ValueError("per_query_candidate_limit必须大于0")
         if options.detail_retries < 0:
             raise ValueError("detail_retries不能小于0")
         self.options = options
@@ -199,6 +220,9 @@ class StandalonePipeline:
         payload["generated_at"] = iso_now()
         payload["resolved_candidate_limit"] = self.options.requested_candidate_limit
         payload["resolved_detail_limit"] = self.options.requested_detail_limit
+        payload["resolved_per_query_candidate_limit"] = (
+            self.options.requested_per_query_candidate_limit
+        )
         write_json(self.run_root / "run_config.json", payload)
 
     def _collect_details(
@@ -431,9 +455,12 @@ class StandalonePipeline:
         self._write_run_config()
         self.update_web_status("searching", "浏览器已启动，正在搜索淘宝商品")
         self.logger.info(
-            "standalone全流程开始：keyword=%s, candidate_limit=%s, detail_limit=%s",
+            "standalone全流程开始：type=%s, keyword=%s, candidate_limit=%s, detail_limit=%s",
+            self.options.task_type,
             self.options.keyword,
-            self.options.requested_candidate_limit,
+            self.options.requested_per_query_candidate_limit
+            if self.options.task_type == "monitor"
+            else self.options.requested_candidate_limit,
             self.options.requested_detail_limit,
         )
         try:
@@ -463,16 +490,38 @@ class StandalonePipeline:
             )
             context = browser_session.context
             try:
-                search_payload = LiveSearchCollector(
-                    context=context,
-                    run_root=self.run_root,
-                    logger=self.logger,
-                    non_interactive=self.options.non_interactive,
-                ).collect(
-                    self.options.keyword,
-                    candidate_limit=self.options.requested_candidate_limit,
-                    detail_limit=self.options.requested_detail_limit,
-                )
+                if self.options.task_type == "monitor":
+                    self.update_web_status(
+                        "searching", "正在按监测对象配置串行执行多个淘宝搜索词"
+                    )
+                    search_payload = DiscoveryCoordinator(
+                        context=context,
+                        run_root=self.run_root,
+                        logger=self.logger,
+                        non_interactive=self.options.non_interactive,
+                    ).discover(
+                        target={
+                            "target_id": self.options.target_id,
+                            "standard_name": self.options.target_name
+                            or self.options.keyword,
+                        },
+                        queries=list(self.options.search_queries),
+                        per_query_candidate_limit=(
+                            self.options.requested_per_query_candidate_limit
+                        ),
+                        detail_limit=self.options.requested_detail_limit,
+                    )
+                else:
+                    search_payload = LiveSearchCollector(
+                        context=context,
+                        run_root=self.run_root,
+                        logger=self.logger,
+                        non_interactive=self.options.non_interactive,
+                    ).collect(
+                        self.options.keyword,
+                        candidate_limit=self.options.requested_candidate_limit,
+                        detail_limit=self.options.requested_detail_limit,
+                    )
                 self.search_payload = search_payload
                 self.state_by_id = {
                     str(candidate["product_id"]): initial_state(candidate)

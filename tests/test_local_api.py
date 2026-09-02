@@ -101,6 +101,30 @@ class LocalApiHelpersTest(unittest.TestCase):
                 with urlopen(f"{base}/api/runs") as response:
                     run_list = json.load(response)
                 self.assertIn(task_id, [item["id"] for item in run_list["runs"]])
+
+                with urlopen(f"{base}/api/monitor-targets") as response:
+                    targets = json.load(response)["targets"]
+                self.assertEqual(targets[0]["standard_name"], "酸枣仁")
+                monitor_body = json.dumps(
+                    {
+                        "task_type": "monitor",
+                        "target_id": targets[0]["target_id"],
+                        "per_query_candidate_limit": 10,
+                        "detail_limit": 2,
+                    }
+                ).encode("utf-8")
+                monitor_request = Request(
+                    f"{base}/api/tasks",
+                    data=monitor_body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urlopen(monitor_request) as response:
+                    monitor_created = json.load(response)
+                self.assertTrue(manager.wait_for_idle())
+                self.assertEqual(
+                    monitor_created["runtime"]["request"]["taskType"], "monitor"
+                )
             finally:
                 server.shutdown()
                 server.server_close()

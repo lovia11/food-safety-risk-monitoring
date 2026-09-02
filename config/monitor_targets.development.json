@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "dataset_status": "development_seed",
+  "description": "仅用于工程开发与真实流程验收，不代表官方完整食药同源目录或最终搜索词体系。",
+  "targets": [
+    {
+      "target_id": "dev-food-medicine-suanzaoren",
+      "standard_name": "酸枣仁",
+      "target_type": "food_medicine",
+      "source_name": "development_seed",
+      "source_reference": "项目开发测试对象；完整权威来源待后续单独核验",
+      "source_date": null,
+      "enabled": true,
+      "queries": [
+        {
+          "query_id": "dev-suanzaoren-base",
+          "query_text": "酸枣仁",
+          "query_type": "base",
+          "order": 1,
+          "enabled": true
+        },
+        {
+          "query_id": "dev-suanzaoren-tea",
+          "query_text": "酸枣仁茶",
+          "query_type": "product_form",
+          "order": 2,
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

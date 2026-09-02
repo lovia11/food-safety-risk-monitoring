@@ -146,10 +146,18 @@
               <div class="card-heading"><div><h2>新建采集任务</h2></div></div>
               <label>任务名称<input id="taskNameInput" type="text" value="酸枣仁助眠专项采集"></label>
               <label>目标平台<select><option selected>淘宝</option></select></label>
+              <label>任务模式<select id="taskModeInput"><option value="quick">快速任务（单搜索词）</option><option value="monitor">监测任务（对象词组）</option></select></label>
               <label>食品类型<div class="preset-box"><span>酸枣仁 ×</span><span>百合 ×</span><span>茯苓 ×</span></div></label>
               <label>功效关键词<div class="preset-box"><span>助眠 ×</span><span>安神 ×</span><span>改善睡眠 ×</span></div></label>
-              <label>搜索关键词<input id="taskKeywordInput" type="text" value="酸枣仁" maxlength="80"></label>
-              <label>候选商品数量<input id="candidateLimitInput" type="number" value="10" min="1" max="50"></label>
+              <div id="quickTaskFields">
+                <label>搜索关键词<input id="taskKeywordInput" type="text" value="酸枣仁" maxlength="80"></label>
+                <label>候选商品数量<input id="candidateLimitInput" type="number" value="10" min="1" max="50"></label>
+              </div>
+              <div id="monitorTaskFields" hidden>
+                <label>监测对象<select id="monitorTargetInput"></select></label>
+                <label>已配置搜索词<div id="monitorQueryPreview" class="query-preview">正在读取监测对象配置…</div></label>
+                <label>每个搜索词候选数量<input id="perQueryCandidateLimitInput" type="number" value="10" min="1" max="50"></label>
+              </div>
               <label>详情采集数量<input id="detailLimitInput" type="number" value="2" min="1" max="50"></label>
               <label>任务说明<textarea rows="3">优先采集食药同源类商品，筛查商品页面中的功效宣传表达。</textarea></label>
               <p id="taskFormMessage" class="task-form-message" role="status"></p>
@@ -162,6 +170,7 @@
           </div>
         </div>
         <article class="card task-process-wide"><div class="card-heading"><div><h2>任务执行流程</h2><p>当前酸枣仁任务的实际处理进度</p></div></div><div id="taskFlow" class="process-flow task-flow-wide"></div></article>
+        <article id="discoveryDiagnostics" class="card discovery-card" hidden><div class="card-heading"><div><h2>候选发现诊断</h2><p>按搜索词保留结果数量、停止原因与合并情况</p></div></div><div id="discoverySummary" class="discovery-summary"></div><div class="table-wrap"><table><thead><tr><th>执行顺序</th><th>搜索词</th><th>命中候选</th><th>页面商品卡片</th><th>停止原因</th></tr></thead><tbody id="discoveryQueryBody"></tbody></table></div></article>
         <article class="card task-output-card"><div class="card-heading"><div><h2>本次任务输出内容</h2></div></div><div class="task-output-grid"><div><span class="output-icon blue">▣</span><div><h3>商品列表</h3><p>商品名称、店铺、地区与采集状态</p></div></div><div><span class="output-icon green">▧</span><div><h3>原始详情图</h3><p>商品详情页原始图片与页面截图</p></div></div><div><span class="output-icon purple">OCR</span><div><h3>OCR结果</h3><p>识别详情图文字并保留对应关系</p></div></div><div><span class="output-icon orange">!</span><div><h3>风险分析</h3><p>规则命中、证据来源与复核建议</p></div></div></div></article>
         <article class="card log-card" id="runLogs"><details><summary><span>运行日志</span><span>run.log</span></summary><pre id="logContent">正在读取日志…</pre></details></article>
       </section>

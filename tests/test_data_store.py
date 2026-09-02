@@ -113,7 +113,8 @@ class DataStoreTest(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_initializes_schema_and_version(self):
-        with sqlite3.connect(self.store.database_path) as connection:
+        connection = sqlite3.connect(self.store.database_path)
+        try:
             tables = {
                 row[0]
                 for row in connection.execute(
@@ -121,11 +122,108 @@ class DataStoreTest(unittest.TestCase):
                 )
             }
             version = connection.execute("PRAGMA user_version").fetchone()[0]
+        finally:
+            connection.close()
         self.assertTrue(
-            {"tasks", "products", "product_snapshots", "evidence", "reviews"}
+            {
+                "tasks",
+                "products",
+                "product_snapshots",
+                "evidence",
+                "reviews",
+                "monitor_targets",
+                "search_queries",
+                "candidate_hits",
+            }
             <= tables
         )
-        self.assertEqual(version, 1)
+        self.assertEqual(version, 2)
+
+    def _import_monitor_seed(self):
+        config = self.root / "monitor_targets.json"
+        write_json(
+            config,
+            {
+                "targets": [
+                    {
+                        "target_id": "target-1",
+                        "standard_name": "酸枣仁",
+                        "target_type": "food_medicine",
+                        "source_name": "开发种子",
+                        "source_reference": "仅用于开发验证",
+                        "source_date": None,
+                        "enabled": True,
+                        "queries": [
+                            {
+                                "query_id": "query-base",
+                                "query_text": "酸枣仁",
+                                "query_type": "base",
+                                "order": 1,
+                                "enabled": True,
+                            },
+                            {
+                                "query_id": "query-tea",
+                                "query_text": "酸枣仁茶",
+                                "query_type": "product_form",
+                                "order": 2,
+                                "enabled": True,
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+        return self.store.import_monitor_config(config)
+
+    def test_monitor_target_and_queries_preserve_configured_order(self):
+        self.assertEqual(self._import_monitor_seed(), {"targets": 1, "queries": 2})
+        target = self.store.get_monitor_target("target-1")
+        self.assertEqual(target["standard_name"], "酸枣仁")
+        self.assertEqual(
+            [item["query_text"] for item in target["queries"]],
+            ["酸枣仁", "酸枣仁茶"],
+        )
+
+    def test_candidate_hits_are_idempotent_and_survive_reopen(self):
+        self._import_monitor_seed()
+        run_root = create_run(self.output_root, "monitor_run")
+        request = read_json(run_root / "task_request.json")
+        request.update(
+            {
+                "task_type": "monitor",
+                "target_id": "target-1",
+                "per_query_candidate_limit": 10,
+            }
+        )
+        write_json(run_root / "task_request.json", request)
+        write_json(
+            run_root / "search" / "discovery_summary.json",
+            {
+                "candidate_hits": [
+                    {
+                        "product_id": "123",
+                        "query_id": "query-base",
+                        "query_text": "酸枣仁",
+                        "rank": 1,
+                        "discovered_at": "2026-09-02T10:00:00+08:00",
+                    },
+                    {
+                        "product_id": "123",
+                        "query_id": "query-tea",
+                        "query_text": "酸枣仁茶",
+                        "rank": 2,
+                        "discovered_at": "2026-09-02T10:01:00+08:00",
+                    },
+                ]
+            },
+        )
+        self.store.import_run(run_root)
+        self.store.import_run(run_root)
+        self.assertEqual(self.store.table_counts()["candidate_hits"], 2)
+        reopened = DataStore(self.store.database_path, self.output_root)
+        reopened.initialize()
+        hits = reopened.list_candidate_hits("monitor_run")
+        self.assertEqual([item["queryText"] for item in hits], ["酸枣仁", "酸枣仁茶"])
 
     def test_imports_task_fields(self):
         self.store.import_run(create_run(self.output_root, "run_a"))

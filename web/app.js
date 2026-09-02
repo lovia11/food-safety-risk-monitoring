@@ -12,6 +12,7 @@ const appState = {
   businessSnapshot: null,
   reviewLoadToken: 0,
   pollTimer: null,
+  monitorTargets: [],
   filters: { query: "", status: "all", region: "all", effect: "all", review: "all" },
 };
 
@@ -647,10 +648,59 @@ function renderTaskPage() {
     const percent = Math.min(100, Math.round(value / total * 100));
     const createdAt = snapshot.runtime?.createdAt || snapshot.generatedAt;
     const resume = snapshot.runtime?.resumable ? `<button class="text-button" data-resume-task="${escapeHtml(snapshot.task.id)}">恢复</button>` : "";
-    return `<tr><td>${escapeHtml(snapshot.task.keyword || "未命名")}采集任务<small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(snapshot.task.keyword || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
+    const request = snapshot.runtime?.request || {};
+    const queryLabel = request.taskType === "monitor"
+      ? (request.searchQueries || []).map(item => item.query_text).join("、")
+      : snapshot.task.keyword;
+    const taskLabel = request.taskType === "monitor" ? `${request.targetName || snapshot.task.keyword}监测任务` : `${snapshot.task.keyword || "未命名"}采集任务`;
+    return `<tr><td>${escapeHtml(taskLabel)}<small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(queryLabel || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
   }).join("");
   renderFlow($("#taskFlow"));
+  renderDiscoveryDiagnostics();
   syncTaskFormState();
+}
+
+function renderDiscoveryDiagnostics() {
+  const card = $("#discoveryDiagnostics");
+  const discovery = appState.current?.discovery;
+  card.hidden = !discovery;
+  if (!discovery) return;
+  const summaries = [
+    ["搜索词命中", discovery.rawHits || 0],
+    ["去重后候选", discovery.uniqueCandidates || 0],
+    ["进入详情采集", discovery.selectedForDetail || 0],
+  ];
+  $("#discoverySummary").innerHTML = summaries.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+  $("#discoveryQueryBody").innerHTML = (discovery.queryResults || []).map((item, index) => `<tr><td>${escapeHtml(item.order || index + 1)}</td><td>${escapeHtml(item.query_text || "—")}</td><td>${escapeHtml(item.candidate_count || 0)}</td><td>${escapeHtml(item.raw_card_count || 0)}</td><td>${escapeHtml(item.stop_reason || "—")}</td></tr>`).join("");
+}
+
+function selectedMonitorTarget() {
+  const targetId = $("#monitorTargetInput")?.value;
+  return appState.monitorTargets.find(item => item.target_id === targetId) || null;
+}
+
+function renderMonitorTargetOptions(preferredTargetId = "") {
+  const select = $("#monitorTargetInput");
+  if (!select) return;
+  select.innerHTML = appState.monitorTargets.map(item => `<option value="${escapeHtml(item.target_id)}">${escapeHtml(item.standard_name)}</option>`).join("");
+  if (preferredTargetId && appState.monitorTargets.some(item => item.target_id === preferredTargetId)) select.value = preferredTargetId;
+  const target = selectedMonitorTarget();
+  $("#monitorQueryPreview").innerHTML = target
+    ? (target.queries || []).filter(item => item.enabled).map(item => `<span>${escapeHtml(item.query_text)}</span>`).join("")
+    : "暂无可用监测对象";
+}
+
+function syncTaskMode() {
+  const monitor = $("#taskModeInput").value === "monitor";
+  $("#quickTaskFields").hidden = monitor;
+  $("#monitorTaskFields").hidden = !monitor;
+  if (monitor) renderMonitorTargetOptions($("#monitorTargetInput").value);
+}
+
+async function loadMonitorTargets() {
+  const payload = await fetchJson(`${API_ROOT}/monitor-targets`);
+  appState.monitorTargets = payload.targets || [];
+  renderMonitorTargetOptions();
 }
 
 async function loadRunLog() {
@@ -679,7 +729,7 @@ function syncTaskFormState() {
   const activeMeta = appState.runs.find(item => item.runtime?.active);
   const active = Boolean(activeMeta || appState.current?.runtime?.active);
   $("#startTaskButton").disabled = active;
-  ["#taskKeywordInput", "#candidateLimitInput", "#detailLimitInput"].forEach(selector => { $(selector).disabled = active; });
+  ["#taskModeInput", "#taskKeywordInput", "#candidateLimitInput", "#monitorTargetInput", "#perQueryCandidateLimitInput", "#detailLimitInput"].forEach(selector => { $(selector).disabled = active; });
   if (active) {
     const task = appState.current?.runtime?.active ? appState.current.task : activeMeta?.task;
     setTaskFormMessage(task?.message || "采集任务正在后台运行", "", "runtime");
@@ -742,17 +792,25 @@ async function pollTask(taskId) {
 }
 
 async function startTask() {
-  const keyword = $("#taskKeywordInput").value.trim();
-  const candidateLimit = Number.parseInt($("#candidateLimitInput").value, 10);
+  const taskType = $("#taskModeInput").value;
   const detailLimit = Number.parseInt($("#detailLimitInput").value, 10);
   setTaskFormMessage("正在创建任务…", "", "runtime");
   $("#startTaskButton").disabled = true;
   try {
-    const snapshot = await postJson(`${API_ROOT}/tasks`, {
-      keyword,
-      candidate_limit: candidateLimit,
-      detail_limit: detailLimit,
-    });
+    const payload = taskType === "monitor"
+      ? {
+          task_type: "monitor",
+          target_id: $("#monitorTargetInput").value,
+          per_query_candidate_limit: Number.parseInt($("#perQueryCandidateLimitInput").value, 10),
+          detail_limit: detailLimit,
+        }
+      : {
+          task_type: "quick",
+          keyword: $("#taskKeywordInput").value.trim(),
+          candidate_limit: Number.parseInt($("#candidateLimitInput").value, 10),
+          detail_limit: detailLimit,
+        };
+    const snapshot = await postJson(`${API_ROOT}/tasks`, payload);
     appState.current = snapshot;
     appState.selectedRun = null;
     appState.selectedProduct = null;
@@ -867,11 +925,16 @@ function bindEvents() {
     $("#runLogs").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("#focusNewTask").addEventListener("click", () => $("#newTaskForm").scrollIntoView({ behavior: "smooth", block: "start" }));
+  $("#taskModeInput").addEventListener("change", syncTaskMode);
+  $("#monitorTargetInput").addEventListener("change", () => renderMonitorTargetOptions($("#monitorTargetInput").value));
   $("#saveTaskDraft").addEventListener("click", () => {
     localStorage.setItem("risk-monitor-task-draft", JSON.stringify({
       name: $("#taskNameInput").value,
+      taskType: $("#taskModeInput").value,
       keyword: $("#taskKeywordInput").value,
       candidateLimit: $("#candidateLimitInput").value,
+      targetId: $("#monitorTargetInput").value,
+      perQueryCandidateLimit: $("#perQueryCandidateLimitInput").value,
       detailLimit: $("#detailLimitInput").value,
       savedAt: new Date().toISOString(),
     }));
@@ -908,9 +971,11 @@ function renderAll() {
 
 async function init() {
   try {
+    await loadMonitorTargets();
     await refreshRunData();
     renderAll();
     bindEvents();
+    syncTaskMode();
     $("#loadingState").hidden = true;
     $("#appContent").hidden = false;
     if (appState.current.runtime?.active) pollTask(appState.current.task.id);

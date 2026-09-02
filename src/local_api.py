@@ -87,6 +87,7 @@ def create_handler(
     web_root: Path = Path("web"),
     task_manager: TaskManager | None = None,
     data_store: DataStore | None = None,
+    monitor_config: Path | None = Path("config/monitor_targets.development.json"),
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
@@ -94,11 +95,16 @@ def create_handler(
         resolved_output.parent / "data" / "app.db", resolved_output
     )
     store.initialize()
+    if monitor_config is not None and monitor_config.is_file():
+        store.import_monitor_config(monitor_config)
     store.import_all_runs()
     manager = task_manager or TaskManager(
-        resolved_output, task_indexer=store.import_run
+        resolved_output,
+        task_indexer=store.import_run,
+        monitor_target_provider=store.get_monitor_target,
     )
     manager.set_task_indexer(store.import_run)
+    manager.monitor_target_provider = store.get_monitor_target
 
     class LocalApiHandler(BaseHTTPRequestHandler):
         server_version = "TaobaoRiskMVP/1.1"
@@ -187,7 +193,18 @@ def create_handler(
                     },
                 )
                 return
+            if path == "/api/monitor-targets":
+                targets = store.list_monitor_targets(enabled_only=True)
+                self._json(200, {"targets": targets, "count": len(targets)})
+                return
             parts = [unquote(item) for item in path.split("/") if item]
+            if len(parts) == 3 and parts[:2] == ["api", "monitor-targets"]:
+                target = store.get_monitor_target(parts[2])
+                if target is None:
+                    self._error(404, "monitor_target_not_found", "监测对象不存在")
+                else:
+                    self._json(200, target)
+                return
             if path == "/api/products":
                 query = parse_qs(parsed.query)
                 try:
@@ -230,6 +247,19 @@ def create_handler(
                     self._json(200, manager.get_task(parts[2]))
                 except TaskNotFoundError as exc:
                     self._error(404, "task_not_found", str(exc))
+                return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "tasks"]
+                and parts[3] == "candidate-hits"
+            ):
+                try:
+                    manager.get_task(parts[2])
+                except TaskNotFoundError as exc:
+                    self._error(404, "task_not_found", str(exc))
+                    return
+                hits = store.list_candidate_hits(parts[2])
+                self._json(200, {"taskId": parts[2], "hits": hits, "count": len(hits)})
                 return
             if len(parts) < 3 or parts[:2] != ["api", "runs"]:
                 self._error(404, "not_found", "接口不存在")
@@ -352,6 +382,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-root", type=Path, default=Path("output"))
     parser.add_argument("--web-root", type=Path, default=Path("web"))
     parser.add_argument("--database", type=Path, default=Path("data/app.db"))
+    parser.add_argument(
+        "--monitor-config",
+        type=Path,
+        default=Path("config/monitor_targets.development.json"),
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile"))
@@ -369,6 +404,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
     store.initialize()
+    if args.monitor_config.is_file():
+        store.import_monitor_config(args.monitor_config)
     imported = store.import_all_runs()
     manager = TaskManager(
         args.output_root,
@@ -382,10 +419,17 @@ def main(argv: list[str] | None = None) -> int:
             "verbose": args.verbose,
         },
         task_indexer=store.import_run,
+        monitor_target_provider=store.get_monitor_target,
     )
     server = ThreadingHTTPServer(
         (args.host, args.port),
-        create_handler(args.output_root, args.web_root, manager, store),
+        create_handler(
+            args.output_root,
+            args.web_root,
+            manager,
+            store,
+            args.monitor_config,
+        ),
     )
     server.daemon_threads = True
     print(f"本地展示页面：http://{args.host}:{args.port}/")

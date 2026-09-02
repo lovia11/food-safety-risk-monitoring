@@ -80,6 +80,82 @@ class TaskRuntimeTest(unittest.TestCase):
             with self.subTest(payload=payload), self.assertRaises(TaskValidationError):
                 validate_task_request(payload)
 
+    def test_valid_monitor_task_request(self):
+        self.assertEqual(
+            validate_task_request(
+                {
+                    "task_type": "monitor",
+                    "target_id": "target-1",
+                    "per_query_candidate_limit": 10,
+                    "detail_limit": 2,
+                }
+            ),
+            {
+                "task_type": "monitor",
+                "target_id": "target-1",
+                "per_query_candidate_limit": 10,
+                "detail_limit": 2,
+            },
+        )
+
+    def test_monitor_task_freezes_queries_and_calls_existing_pipeline(self):
+        captured = []
+
+        class MonitorPipeline(SuccessfulPipeline):
+            def __init__(self, options):
+                super().__init__(options)
+                captured.append(options)
+
+        target = {
+            "target_id": "target-1",
+            "standard_name": "酸枣仁",
+            "target_type": "food_medicine",
+            "enabled": True,
+            "queries": [
+                {
+                    "query_id": "tea",
+                    "query_text": "酸枣仁茶",
+                    "query_type": "product_form",
+                    "order": 2,
+                    "enabled": True,
+                },
+                {
+                    "query_id": "base",
+                    "query_text": "酸枣仁",
+                    "query_type": "base",
+                    "order": 1,
+                    "enabled": True,
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            manager = TaskManager(
+                Path(temporary),
+                pipeline_factory=MonitorPipeline,
+                monitor_target_provider=lambda target_id: target
+                if target_id == "target-1"
+                else None,
+            )
+            created = manager.create_task(
+                {
+                    "task_type": "monitor",
+                    "target_id": "target-1",
+                    "per_query_candidate_limit": 10,
+                    "detail_limit": 2,
+                }
+            )
+            self.assertTrue(manager.wait_for_idle())
+            self.assertEqual(captured[0].task_type, "monitor")
+            self.assertEqual(captured[0].keyword, "酸枣仁")
+            self.assertEqual(captured[0].per_query_candidate_limit, 10)
+            self.assertEqual(
+                [item["query_text"] for item in captured[0].search_queries],
+                ["酸枣仁", "酸枣仁茶"],
+            )
+            request = created["runtime"]["request"]
+            self.assertEqual(request["taskType"], "monitor")
+            self.assertEqual(request["targetName"], "酸枣仁")
+
     def test_task_completes_and_can_be_read(self):
         with tempfile.TemporaryDirectory() as temporary:
             manager = TaskManager(Path(temporary), pipeline_factory=SuccessfulPipeline)

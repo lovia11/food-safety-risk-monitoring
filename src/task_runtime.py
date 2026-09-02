@@ -43,11 +43,6 @@ class TaskNotResumableError(RuntimeError):
 def validate_task_request(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise TaskValidationError("请求体必须是JSON对象")
-    keyword = str(payload.get("keyword") or "").strip()
-    if not keyword:
-        raise TaskValidationError("keyword不能为空")
-    if len(keyword) > MAX_KEYWORD_LENGTH:
-        raise TaskValidationError(f"keyword不能超过{MAX_KEYWORD_LENGTH}个字符")
 
     def positive_integer(name: str) -> int:
         value = payload.get(name)
@@ -59,15 +54,39 @@ def validate_task_request(payload: Any) -> dict[str, Any]:
             )
         return value
 
+    task_type = str(payload.get("task_type") or "quick").strip()
+    if task_type not in {"quick", "monitor"}:
+        raise TaskValidationError("task_type必须是quick或monitor")
+    if task_type == "monitor":
+        target_id = str(payload.get("target_id") or "").strip()
+        if not target_id:
+            raise TaskValidationError("Monitor Task必须选择target_id")
+        return {
+            "task_type": "monitor",
+            "target_id": target_id,
+            "per_query_candidate_limit": positive_integer(
+                "per_query_candidate_limit"
+            ),
+            "detail_limit": positive_integer("detail_limit"),
+        }
+
+    keyword = str(payload.get("keyword") or "").strip()
+    if not keyword:
+        raise TaskValidationError("keyword不能为空")
+    if len(keyword) > MAX_KEYWORD_LENGTH:
+        raise TaskValidationError(f"keyword不能超过{MAX_KEYWORD_LENGTH}个字符")
     candidate_limit = positive_integer("candidate_limit")
     detail_limit = positive_integer("detail_limit")
     if detail_limit > candidate_limit:
         raise TaskValidationError("detail_limit不能大于candidate_limit")
-    return {
+    result = {
         "keyword": keyword,
         "candidate_limit": candidate_limit,
         "detail_limit": detail_limit,
     }
+    if "task_type" in payload:
+        result["task_type"] = "quick"
+    return result
 
 
 class _ManualActionStatusHandler(logging.Handler):
@@ -94,12 +113,14 @@ class TaskManager:
         pipeline_factory: Callable[[PipelineOptions], Any] = StandalonePipeline,
         pipeline_defaults: dict[str, Any] | None = None,
         task_indexer: Callable[[Path], Any] | None = None,
+        monitor_target_provider: Callable[[str], dict[str, Any] | None] | None = None,
     ) -> None:
         self.output_root = output_root.resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
         self.pipeline_factory = pipeline_factory
         self.pipeline_defaults = dict(pipeline_defaults or {})
         self.task_indexer = task_indexer
+        self.monitor_target_provider = monitor_target_provider
         self._lock = threading.RLock()
         self._active_task_id: str | None = None
         self._worker_thread: threading.Thread | None = None
@@ -212,11 +233,38 @@ class TaskManager:
             "resumable": self._is_resumable(run_root, stage),
             "createdAt": request.get("created_at"),
             "request": {
+                "taskType": request.get("task_type") or "quick",
                 "keyword": request.get("keyword"),
                 "candidateLimit": request.get("candidate_limit"),
                 "detailLimit": request.get("detail_limit"),
+                "targetId": request.get("target_id"),
+                "targetName": request.get("target_name"),
+                "perQueryCandidateLimit": request.get(
+                    "per_query_candidate_limit"
+                ),
+                "searchQueries": request.get("search_queries") or [],
             },
         }
+        discovery = run_root / "search" / "discovery_summary.json"
+        if discovery.is_file():
+            try:
+                payload = read_json(discovery)
+            except (OSError, ValueError, TypeError):
+                payload = {}
+            if isinstance(payload, dict):
+                decorated["discovery"] = {
+                    "targetId": payload.get("target_id"),
+                    "targetName": payload.get("target_name"),
+                    "perQueryCandidateLimit": payload.get(
+                        "per_query_candidate_limit"
+                    ),
+                    "detailLimit": payload.get("detail_limit"),
+                    "rawHits": payload.get("candidate_hit_count")
+                    or len(payload.get("candidate_hits") or []),
+                    "uniqueCandidates": payload.get("deduplicated_count") or 0,
+                    "selectedForDetail": payload.get("selected_for_detail") or 0,
+                    "queryResults": payload.get("query_results") or [],
+                }
         return decorated
 
     def get_task(self, task_id: str) -> dict[str, Any]:
@@ -258,6 +306,35 @@ class TaskManager:
 
     def create_task(self, payload: Any) -> dict[str, Any]:
         request = validate_task_request(payload)
+        if request.get("task_type") == "monitor":
+            if self.monitor_target_provider is None:
+                raise TaskValidationError("本地服务尚未配置MonitorTarget数据源")
+            target = self.monitor_target_provider(str(request["target_id"]))
+            if not target or not target.get("enabled"):
+                raise TaskValidationError("MonitorTarget不存在或未启用")
+            queries = [
+                item
+                for item in (target.get("queries") or [])
+                if item.get("enabled", True)
+            ]
+            queries.sort(
+                key=lambda item: (
+                    int(item.get("order") or 0),
+                    str(item.get("query_id") or ""),
+                )
+            )
+            if not queries:
+                raise TaskValidationError("MonitorTarget没有启用的SearchQuery")
+            request.update(
+                {
+                    "keyword": str(target.get("standard_name") or ""),
+                    "target_name": str(target.get("standard_name") or ""),
+                    "monitor_target": target,
+                    "search_queries": queries,
+                }
+            )
+        else:
+            request.setdefault("task_type", "quick")
         with self._lock:
             active = self.active_task_id
             if active:
@@ -287,14 +364,27 @@ class TaskManager:
     def _pipeline_options(
         self, task_id: str, request: dict[str, Any]
     ) -> PipelineOptions:
+        monitor = request.get("task_type") == "monitor"
+        candidate_limit = int(
+            request.get("per_query_candidate_limit")
+            if monitor
+            else request["candidate_limit"]
+        )
         values: dict[str, Any] = {
             "keyword": request["keyword"],
-            "limit": request["candidate_limit"],
-            "candidate_limit": request["candidate_limit"],
+            "limit": candidate_limit,
+            "candidate_limit": candidate_limit,
             "detail_limit": request["detail_limit"],
             "output_root": self.output_root,
             "run_id": task_id,
             "skip_ocr": False,
+            "task_type": request.get("task_type") or "quick",
+            "target_id": request.get("target_id"),
+            "target_name": request.get("target_name"),
+            "search_queries": tuple(request.get("search_queries") or []),
+            "per_query_candidate_limit": request.get(
+                "per_query_candidate_limit"
+            ),
         }
         values.update(self.pipeline_defaults)
         # Public task creation must always run the complete pipeline.
@@ -399,6 +489,14 @@ class TaskManager:
             "detail_retries": int(config.get("detail_retries") or 1),
             "skip_ocr": False,
             "verbose": bool(config.get("verbose", False)),
+            "task_type": str(config.get("task_type") or "quick"),
+            "target_id": config.get("target_id"),
+            "target_name": config.get("target_name"),
+            "search_queries": tuple(config.get("search_queries") or []),
+            "per_query_candidate_limit": config.get(
+                "resolved_per_query_candidate_limit"
+            )
+            or config.get("per_query_candidate_limit"),
         }
         values.update(self.pipeline_defaults)
         values["keyword"] = str(config.get("keyword") or "")

@@ -17,7 +17,9 @@ from src.runtime import iso_now, read_json
 
 
 REVIEW_STATUSES = {"pending", "recommend_follow_up", "no_further_action"}
-SCHEMA_VERSION = 1
+TARGET_TYPES = {"food_medicine", "health_food"}
+QUERY_TYPES = {"base", "product_form"}
+SCHEMA_VERSION = 2
 
 
 class DataStoreError(RuntimeError):
@@ -153,9 +155,188 @@ class DataStore:
                     ON evidence(snapshot_id, ordinal);
                 CREATE INDEX IF NOT EXISTS idx_reviews_status
                     ON reviews(review_status);
+
+                CREATE TABLE IF NOT EXISTS monitor_targets (
+                    target_id TEXT PRIMARY KEY,
+                    standard_name TEXT NOT NULL,
+                    target_type TEXT NOT NULL,
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    source_date TEXT,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS search_queries (
+                    query_id TEXT PRIMARY KEY,
+                    target_id TEXT NOT NULL REFERENCES monitor_targets(target_id)
+                        ON DELETE CASCADE,
+                    query_text TEXT NOT NULL,
+                    query_type TEXT NOT NULL,
+                    query_order INTEGER NOT NULL,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(target_id, query_text)
+                );
+
+                CREATE TABLE IF NOT EXISTS candidate_hits (
+                    hit_id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
+                    product_id TEXT NOT NULL REFERENCES products(taobao_product_id),
+                    query_id TEXT NOT NULL REFERENCES search_queries(query_id),
+                    query_text TEXT NOT NULL,
+                    rank INTEGER,
+                    discovered_at TEXT NOT NULL,
+                    UNIQUE(task_id, product_id, query_id)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_queries_target
+                    ON search_queries(target_id, query_order);
+                CREATE INDEX IF NOT EXISTS idx_hits_task
+                    ON candidate_hits(task_id, query_id, rank);
+                CREATE INDEX IF NOT EXISTS idx_hits_product
+                    ON candidate_hits(product_id, discovered_at);
                 """
             )
+            self._ensure_column(connection, "tasks", "task_type", "TEXT NOT NULL DEFAULT 'quick'")
+            self._ensure_column(connection, "tasks", "target_id", "TEXT")
+            self._ensure_column(connection, "tasks", "per_query_candidate_limit", "INTEGER")
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+    @staticmethod
+    def _ensure_column(
+        connection: sqlite3.Connection, table: str, column: str, definition: str
+    ) -> None:
+        columns = {
+            str(row[1]) for row in connection.execute(f"PRAGMA table_info({table})")
+        }
+        if column not in columns:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    def import_monitor_config(self, config_path: Path) -> dict[str, int]:
+        payload = read_json(config_path)
+        targets = [
+            item for item in (payload.get("targets") or []) if isinstance(item, dict)
+        ]
+        target_count = 0
+        query_count = 0
+        now = iso_now()
+        with self._connect() as connection:
+            for target in targets:
+                target_id = str(target.get("target_id") or "").strip()
+                target_type = str(target.get("target_type") or "").strip()
+                if not target_id or not str(target.get("standard_name") or "").strip():
+                    raise ValueError("MonitorTarget必须包含target_id和standard_name")
+                if target_type not in TARGET_TYPES:
+                    raise ValueError(f"不支持的target_type：{target_type}")
+                connection.execute(
+                    """
+                    INSERT INTO monitor_targets (
+                        target_id, standard_name, target_type, source_name,
+                        source_reference, source_date, enabled, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(target_id) DO UPDATE SET
+                        standard_name=excluded.standard_name,
+                        target_type=excluded.target_type,
+                        source_name=excluded.source_name,
+                        source_reference=excluded.source_reference,
+                        source_date=excluded.source_date,
+                        enabled=excluded.enabled,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        target_id,
+                        str(target.get("standard_name") or "").strip(),
+                        target_type,
+                        str(target.get("source_name") or ""),
+                        str(target.get("source_reference") or ""),
+                        target.get("source_date"),
+                        1 if target.get("enabled", True) else 0,
+                        now,
+                    ),
+                )
+                target_count += 1
+                for position, query in enumerate(target.get("queries") or [], start=1):
+                    if not isinstance(query, dict):
+                        continue
+                    query_id = str(query.get("query_id") or "").strip()
+                    query_text = str(query.get("query_text") or "").strip()
+                    query_type = str(query.get("query_type") or "base").strip()
+                    if not query_id or not query_text:
+                        raise ValueError("SearchQuery必须包含query_id和query_text")
+                    if query_type not in QUERY_TYPES:
+                        raise ValueError(f"不支持的query_type：{query_type}")
+                    connection.execute(
+                        """
+                        INSERT INTO search_queries (
+                            query_id, target_id, query_text, query_type,
+                            query_order, enabled, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(query_id) DO UPDATE SET
+                            target_id=excluded.target_id,
+                            query_text=excluded.query_text,
+                            query_type=excluded.query_type,
+                            query_order=excluded.query_order,
+                            enabled=excluded.enabled,
+                            updated_at=excluded.updated_at
+                        """,
+                        (
+                            query_id,
+                            target_id,
+                            query_text,
+                            query_type,
+                            int(query.get("order") or position),
+                            1 if query.get("enabled", True) else 0,
+                            now,
+                        ),
+                    )
+                    query_count += 1
+        return {"targets": target_count, "queries": query_count}
+
+    def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+        where = " WHERE t.enabled = 1" if enabled_only else ""
+        with self._connect() as connection:
+            targets = connection.execute(
+                "SELECT t.* FROM monitor_targets t" + where + " ORDER BY t.standard_name, t.target_id"
+            ).fetchall()
+            query_rows = connection.execute(
+                "SELECT * FROM search_queries ORDER BY target_id, query_order, query_id"
+            ).fetchall()
+        by_target: dict[str, list[dict[str, Any]]] = {}
+        for row in query_rows:
+            by_target.setdefault(str(row["target_id"]), []).append(
+                {
+                    "query_id": row["query_id"],
+                    "target_id": row["target_id"],
+                    "query_text": row["query_text"],
+                    "query_type": row["query_type"],
+                    "order": row["query_order"],
+                    "enabled": bool(row["enabled"]),
+                }
+            )
+        return [
+            {
+                "target_id": row["target_id"],
+                "standard_name": row["standard_name"],
+                "target_type": row["target_type"],
+                "source_name": row["source_name"],
+                "source_reference": row["source_reference"],
+                "source_date": row["source_date"],
+                "enabled": bool(row["enabled"]),
+                "queries": by_target.get(str(row["target_id"]), []),
+            }
+            for row in targets
+        ]
+
+    def get_monitor_target(self, target_id: str) -> dict[str, Any] | None:
+        return next(
+            (
+                item
+                for item in self.list_monitor_targets()
+                if item["target_id"] == target_id
+            ),
+            None,
+        )
 
     def import_all_runs(self) -> dict[str, int]:
         result = {"discovered": 0, "imported": 0, "skipped": 0}
@@ -203,6 +384,13 @@ class DataStore:
             or config.get("resolved_detail_limit")
             or config.get("detail_limit")
         )
+        task_type = str(request.get("task_type") or config.get("task_type") or "quick")
+        target_id = request.get("target_id") or config.get("target_id")
+        per_query_candidate_limit = (
+            request.get("per_query_candidate_limit")
+            or config.get("per_query_candidate_limit")
+            or config.get("resolved_per_query_candidate_limit")
+        )
         products = [
             item for item in (snapshot.get("products") or []) if isinstance(item, dict)
         ]
@@ -212,8 +400,9 @@ class DataStore:
                 """
                 INSERT INTO tasks (
                     task_id, keyword, candidate_limit, detail_limit, stage,
-                    created_at, started_at, completed_at, run_path, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_at, started_at, completed_at, run_path, updated_at,
+                    task_type, target_id, per_query_candidate_limit
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(task_id) DO UPDATE SET
                     keyword=excluded.keyword,
                     candidate_limit=COALESCE(excluded.candidate_limit, tasks.candidate_limit),
@@ -223,7 +412,13 @@ class DataStore:
                     started_at=COALESCE(tasks.started_at, excluded.started_at),
                     completed_at=excluded.completed_at,
                     run_path=excluded.run_path,
-                    updated_at=excluded.updated_at
+                    updated_at=excluded.updated_at,
+                    task_type=excluded.task_type,
+                    target_id=excluded.target_id,
+                    per_query_candidate_limit=COALESCE(
+                        excluded.per_query_candidate_limit,
+                        tasks.per_query_candidate_limit
+                    )
                 """,
                 (
                     task_id,
@@ -236,6 +431,11 @@ class DataStore:
                     generated_at if terminal else None,
                     run_root.name,
                     generated_at,
+                    task_type,
+                    target_id,
+                    int(per_query_candidate_limit)
+                    if per_query_candidate_limit is not None
+                    else None,
                 ),
             )
             for product in products:
@@ -350,10 +550,61 @@ class DataStore:
                         ),
                     )
                 imported_evidence += len(evidence_items)
+            discovery = _read_optional_json(
+                run_root / "search" / "discovery_summary.json", {}
+            )
+            if not isinstance(discovery, dict):
+                discovery = {}
+            for item in discovery.get("candidate_hits") or []:
+                if not isinstance(item, dict):
+                    continue
+                product_id = str(item.get("product_id") or "").strip()
+                query_id = str(item.get("query_id") or "").strip()
+                if not product_id or not query_id:
+                    continue
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO products (
+                        taobao_product_id, first_seen_at, updated_at
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (
+                        product_id,
+                        item.get("discovered_at") or generated_at,
+                        generated_at,
+                    ),
+                )
+                hit_id = hashlib.sha256(
+                    f"{task_id}\0{product_id}\0{query_id}".encode("utf-8")
+                ).hexdigest()[:24]
+                connection.execute(
+                    """
+                    INSERT INTO candidate_hits (
+                        hit_id, task_id, product_id, query_id, query_text,
+                        rank, discovered_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(task_id, product_id, query_id) DO UPDATE SET
+                        query_text=excluded.query_text,
+                        rank=excluded.rank,
+                        discovered_at=excluded.discovered_at
+                    """,
+                    (
+                        f"hit_{hit_id}",
+                        task_id,
+                        product_id,
+                        query_id,
+                        str(item.get("query_text") or ""),
+                        item.get("rank"),
+                        str(item.get("discovered_at") or generated_at),
+                    ),
+                )
         return {
             "tasks": 1,
             "products": len(products),
             "evidence": imported_evidence,
+            "candidate_hits": len(
+                (discovery.get("candidate_hits") or []) if isinstance(discovery, dict) else []
+            ),
         }
 
     @staticmethod
@@ -512,11 +763,47 @@ class DataStore:
             )
         return self.get_snapshot(snapshot_id)["review"]
 
+    def list_candidate_hits(self, task_id: str) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT h.*, q.query_type, q.query_order
+                FROM candidate_hits h
+                JOIN search_queries q ON q.query_id = h.query_id
+                WHERE h.task_id = ?
+                ORDER BY q.query_order, COALESCE(h.rank, 1000000000), h.product_id
+                """,
+                (task_id,),
+            ).fetchall()
+        return [
+            {
+                "hitId": row["hit_id"],
+                "taskId": row["task_id"],
+                "productId": row["product_id"],
+                "queryId": row["query_id"],
+                "queryText": row["query_text"],
+                "queryType": row["query_type"],
+                "queryOrder": row["query_order"],
+                "rank": row["rank"],
+                "discoveredAt": row["discovered_at"],
+            }
+            for row in rows
+        ]
+
     def table_counts(self) -> dict[str, int]:
         with self._connect() as connection:
             return {
                 table: int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-                for table in ("tasks", "products", "product_snapshots", "evidence", "reviews")
+                for table in (
+                    "tasks",
+                    "products",
+                    "product_snapshots",
+                    "evidence",
+                    "reviews",
+                    "monitor_targets",
+                    "search_queries",
+                    "candidate_hits",
+                )
             }
 
 
@@ -524,10 +811,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="索引已有运行结果到本地SQLite")
     parser.add_argument("--output-root", type=Path, default=Path("output"))
     parser.add_argument("--database", type=Path, default=Path("data/app.db"))
+    parser.add_argument(
+        "--monitor-config",
+        type=Path,
+        default=Path("config/monitor_targets.development.json"),
+    )
     parser.add_argument("--run-id")
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
     store.initialize()
+    if args.monitor_config.is_file():
+        store.import_monitor_config(args.monitor_config)
     result = (
         store.import_run((args.output_root / args.run_id).resolve())
         if args.run_id
