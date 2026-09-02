@@ -1,174 +1,161 @@
-# 当前项目进度报告
+# 项目当前状态
 
-更新时间：2026-08-28
+更新时间：2026-09-02
+
+当前版本：v0.5（Monitoring & Discovery Foundation）
+
+当前分支：`main`
+
+当前功能基线提交：`2ffafd749cd20dcdde0346f953c6e8e9a9c67472`（`Establish Monitoring Target and Discovery Foundation v0.5`）
+稳定标签：`collector-baseline-v0.2`、`task-runtime-v0.3`、`data-review-v0.4`、`monitoring-discovery-v0.5`
 
 ## 1. 当前结论
 
-项目已经完成核心技术链路的真实可行性验证：关闭 Codex 后，用户可以在普通终端运行项目代码，由本地 Python + Playwright 启动 Chrome，搜索真实淘宝商品，批量打开详情、自动滚动、采集 DOM/Network 图片和文本，并继续执行 PaddleOCR、规则分析和结果保存。
+项目已经从单次技术验证发展为可重复运行的本地工程化 MVP。目前真实验证过的完整主链是：
 
-准确阶段定位是：
+> Web 或命令行创建任务 → 项目自行启动可见 Chrome → 淘宝真实搜索 → 候选提取与去重 → 商品详情采集 → DOM 归属的详情原图 → PaddleOCR → 配置化功效线索分析 → Evidence → 文件输出、SQLite 索引与 Web 展示。
 
-> **独立采集与分析链路已跑通，正在进入稳定性完善和简易 Web 接入阶段。**
+项目不依赖 Codex、ChatGPT 桌面应用或浏览器控制插件才能运行。淘宝要求登录或人工验证时，程序只暂停并提示用户在项目打开的可见浏览器中处理，不破解验证码，也不绕过平台安全控制。
 
-这不代表已经完成最终毕设系统。当前还缺少正式页面、从网页启动任务的后端接口、数据库、更多页面模板回归和词库扩充。
+当前版本的结论仅适用于已经验证的小规模、低并发、本机运行场景。它不代表大规模爬取能力，也不代表系统可以认定违法、验证功效真实性或检测实际非法添加物。
 
-## 2. 本次真实验收证据
+## 2. 当前已完成能力
 
-运行目录：`output/20260828_cdp_smoke2`
-
-| 指标 | 结果 |
-| --- | ---: |
-| 搜索关键词 | 酸枣仁 |
-| 搜索页识别商品 | 46 |
-| 商品 ID 去重后 | 46 |
-| 入选候选 | 10 |
-| 完成真实详情采集 | 10 |
-| 详情采集失败 | 0 |
-| 保存当前商品详情原图 | 176 |
-| 完整 OCR + 分析商品 | 至少 1 |
-
-后续批量 OCR 在技术验证成功后由用户主动停止，因此其余商品只记作 `detail_collected`，不能声称 10 个商品都完成了端到端分析。已成功商品保留真实 OCR manifest、`analysis.json` 和报告；中止后可以断点续跑。
-
-## 3. 已实现模块
-
-| 模块 | 文件 | 状态 |
+| 能力 | 当前状态 | 主要实现 |
 | --- | --- | --- |
-| Chrome/CDP 启动、浏览器发现、登录状态复用 | `src/taobao_live.py` | 已真实验证 |
-| 淘宝实时搜索、滚动、卡片提取和商品去重 | `src/taobao_live.py` | 已真实验证 |
-| 商品详情打开、图文详情定位 | `src/phase1_experiment.py` | 已真实验证 |
-| DOM 详情图关联、Network 响应记录/补取 | `src/phase1_experiment.py` | 已真实验证 |
-| 详情原图、页面截图、DOM 文本和 manifest | `src/phase1_experiment.py` | 已真实验证 |
-| PaddleOCR CPU 与逐图容错 | `src/phase2_ocr.py` | 已真实验证 |
-| 功效规则、证据路径、来源与内容归属 | `src/phase3_analysis.py` | 已真实验证 |
-| 推荐商品内容排除 | `src/phase3_analysis.py` | 已真实验证 |
-| 统一 CLI、逐商品状态、失败隔离和断点续跑 | `src/main.py` | 已真实验证 |
-| CSV、JSON、Markdown 批次输出 | `src/phase5_batch.py` | 已验证 |
-| 网页数据契约和实时进度快照 | `src/web_contract.py` | 已实现并离线验证 |
-| 本地只读结果 API | `src/local_api.py` | 已使用真实快照/图片验证 |
-| 页面设计稿 | `ui/` | 图片存在，尚未代码接入 |
+| 可见 Chrome/CDP 启动、独立持久化 profile | 已真实验证 | `src/taobao_live.py` |
+| 淘宝首页正常搜索流程、搜索卡片解析、去重与 Search Diagnostics | 已真实验证 | `src/taobao_live.py` |
+| `candidate_limit` 与 `detail_limit` 分离 | 已真实验证 | `src/main.py`、`src/taobao_live.py` |
+| 详情页打开、图文详情定位、内容边界感知滚动 | 已真实验证 | `src/phase1_experiment.py` |
+| DOM 详情图归属、Network 原图响应/补取、页面截图留证 | 已真实验证 | `src/phase1_experiment.py` |
+| PaddleOCR CPU 逐图识别、manifest 与文本/JSON 输出 | 已真实验证 | `src/phase2_ocr.py` |
+| 配置化功效词匹配、来源归属、推荐商品排除 | 已真实验证 | `src/phase3_analysis.py` |
+| Evidence、批次 JSON/CSV/Markdown、日志与 Web Snapshot | 已真实验证 | `src/phase3_analysis.py`、`src/phase5_batch.py`、`src/web_contract.py` |
+| 中断状态保存、详情/OCR 断点续跑、单商品失败隔离与重试 | 已实现并有真实/离线证据 | `src/main.py` |
+| Web 创建、轮询、恢复任务；单活动任务 409 保护 | 已真实 Web E2E 验证 | `src/task_runtime.py`、`src/local_api.py` |
+| SQLite 业务索引与人工复核状态持久化 | 已实现并通过离线/重启测试 | `src/data_store.py` |
+| MonitorTarget、多 SearchQuery、跨 Query 去重与 CandidateHit | 已真实 Web E2E 验证 | `src/discovery.py`、`src/data_store.py` |
+| 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
 
-## 4. 本轮为页面接入完成的改进
+当前测试集共有 81 项，2026-09-02 在 v0.5 功能基线及其 documentation-only 后继工作树上执行 `python -m unittest discover -s tests -q`，结果为 `81/81 OK`。仓库实际 HEAD 可用 `git rev-parse HEAD` 查看；文档提交不构成新业务版本。
 
-### 4.1 详情滚动优化
+## 3. 当前架构
 
-旧实现从图文详情开始后继续向整页底部滚动。真实 10 商品记录显示，最后一张详情图可能位于整页约 26%～88%，所以固定 70% 或 80% 会同时造成两类问题：部分商品过度滚动，个别长详情商品又可能漏图。
+### 3.1 运行链路
 
-新实现使用以下优先级：
+`src/local_api.py` 使用标准库 `ThreadingHTTPServer` 同时提供静态 Web 页面和本地 API。Web 创建任务后，`TaskManager` 在受控后台线程中调用已经冻结验证的 `StandalonePipeline`，HTTP 请求无需等待整个采集过程结束。
 
-1. 定位 `#imageTextInfo-container`；
-2. 监控详情容器底部；
-3. 监控详情图片总数、成功加载数、图片 URL 数和容器高度；
-4. 到达详情底部且内容连续稳定后停止；
-5. 找不到容器时，使用“本店推荐/猜你喜欢/看了又看”边界；
-6. 页面底部和 92% 比例只作为最后兜底；
-7. 始终保留最大滚动次数。
+Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task 先由 `DiscoveryCoordinator` 按配置顺序串行执行多个 `SearchQuery`，再合并候选并调用同一个详情/OCR/分析主链，没有重写 Collector。
 
-每件商品的 `meta.json` 会新增 `scrollStopReason` 和 `scrollStateCount`。该策略已通过单元测试，但修改后尚未重新访问真实淘宝商品，因此下一次单商品采集需要核对是否完整保存最后一张详情图。
+任务实时状态继续以 `output/<run_id>/web_snapshot.json` 为稳定契约，前端轮询读取。关键 JSON 使用“临时文件写完后原子替换”；Windows 短暂文件占用时会有限重试，避免 Web 读到半截 JSON。
 
-### 4.2 网页数据契约
+### 3.2 数据分层
 
-每次任务会生成 `web_snapshot.json`，包含：
+- `output/<run_id>/` 是原始运行事实与可追溯证据的主存储：搜索 HTML/截图/诊断、详情 HTML、Network 响应、原图、OCR、`analysis.json`、日志及批次报告均保留在此。
+- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 2。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测对象、搜索词和候选命中关系。
+- SQLite 不替代原始证据文件。数据库可从历史 `output` 幂等重建，重复导入不会复制记录，也不会覆盖已经保存的人工复核备注。
+- `.browser-profile/`、`output/`、`data/*.db`、`.venv/` 与 OCR 模型缓存均不提交 Git。
 
-- 任务编号、关键词、阶段、阶段中文名、提示消息；
-- 搜索数、入选数、详情完成数、分析完成数、原图和 OCR 数；
-- 线索商品、建议复核商品和失败商品数量；
-- 商品名称、店铺、地区、链接和状态展示；
-- 功效线索、风险理由、复核标记和证据详情；
-- 原图、截图、OCR 文本/JSON 和分析文件相对路径；
-- CSV、JSON、Markdown 和日志导出路径；
-- 统一免责声明。
+## 4. SQLite 与核心数据模型
 
-任务状态变化时会刷新快照。状态文件和网页快照采用临时文件写完后原子替换，方便页面轮询。
+当前表为：
 
-### 4.3 本地结果 API
+- `tasks`：一次 Quick 或 Monitor 运行；
+- `products`：按淘宝商品 ID 维护的稳定商品身份；
+- `product_snapshots`：某商品在某任务中的一次页面快照；
+- `evidence`：属于某个 ProductSnapshot 的结构化证据；
+- `reviews`：属于某个 ProductSnapshot 的人工复核最新状态与备注；
+- `monitor_targets`：被监测的标准对象；
+- `search_queries`：某 MonitorTarget 下按确定顺序执行的搜索表达；
+- `candidate_hits`：某任务中“哪个 Query、以什么排名命中哪个商品”的来源事实。
 
-`src/local_api.py` 不增加第三方依赖，只提供只读 GET 接口：
+Evidence 和 Review 归属于 ProductSnapshot，而不是永久归属于 Product。原因是淘宝页面内容、规则结果和人工判断都可能随采集时间变化。同一 Product 可以拥有多个任务快照。
 
-- `/api/health`；
-- `/api/runs`；
-- `/api/runs/<run_id>`；
-- `/api/runs/<run_id>/files/<relative_path>`。
+当前本机数据库在本次文档审计时可正常打开，索引了历史 run；表数量会随导入与新任务变化，因此不作为固定产品指标。
 
-接口只绑定 `127.0.0.1`，并校验运行目录和文件路径，禁止通过 `..` 访问输出目录之外的文件。已实际验证：健康检查、运行列表、10 商品快照和 56,354 字节的真实 WebP 图片均成功返回 HTTP 200。
+## 5. Web 任务运行能力
 
-## 5. 当前数据状态
+当前 Web 支持两种任务：
 
-主要状态码：
+- Quick Task：输入 `keyword`、`candidate_limit`、`detail_limit`；
+- Monitor Task：选择 `target_id`，输入 `per_query_candidate_limit` 和 `detail_limit`。创建时会把 MonitorTarget 及有序 SearchQuery 快照写入 `task_request.json`，避免运行中配置变化改变本次任务含义。
 
-- `pending_detail_collection`：待采集；
-- `collecting_detail`：详情采集中；
-- `detail_collected`：详情已保存，待 OCR/分析；
-- `processing_ocr_analysis`：OCR 与分析中；
-- `success`：端到端完成；
-- `failed_collection`：详情采集失败；
-- `failed_processing`：OCR 或分析失败。
+任务状态包括搜索、详情采集、OCR/分析、需要人工登录/验证、完成、带错误完成、失败和中断。服务重启时，未结束且由 Runtime 管理的任务会标记为 `interrupted`；具备 `run_config.json`、搜索候选和批次状态的任务可以恢复。
 
-用户中止任务时，已有 `meta.json` 的正在处理商品会恢复为 `detail_collected`，避免页面永久显示“处理中”，也方便下次续跑。
+当前只允许一个活动采集任务。第二个创建请求返回 HTTP 409，以防多个任务争用同一个浏览器 profile 和本机 OCR 资源。
 
-## 6. 网页当前可以直接展示的内容
+## 6. MonitorTarget / SearchQuery / CandidateHit
 
-建议第一版只做结果看板：
+v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子：
 
-1. 最近运行任务及阶段；
-2. 搜索、候选、详情、OCR、风险线索和失败统计；
-3. 商品列表及状态筛选；
-4. 商品详情原图画廊；
-5. OCR 质量、文本文件和结构化结果；
-6. 命中功效、证据原文、来源类型和人工复核建议；
-7. CSV、JSON、Markdown 和日志下载。
+- MonitorTarget：`酸枣仁`（`dev-food-medicine-suanzaoren`）；
+- SearchQuery 1：`酸枣仁`（base）；
+- SearchQuery 2：`酸枣仁茶`（product_form）。
 
-当前 API 是只读的。页面上的“新建任务、开始、停止、断点续跑”按钮应先做视觉与交互设计，后续再实现对应 POST 接口和后台子进程管理。
+该配置明确是 `development_seed`，只用于工程开发与真实流程验收，不是官方完整食药同源目录，也不是最终搜索词体系。
 
-## 7. 尚未完成及风险
+多 Query 按 `order` 串行执行。候选以 `product_id` 跨 Query 去重，首次有效出现决定合并列表顺序；顺序首先由 Query 顺序决定，再由 Query 内排名决定。前 `detail_limit` 个唯一候选进入详情链。即使同一商品被多个 Query 命中，所有来源仍作为多条 CandidateHit 保留，供后续解释召回来源。
 
-### P0：下一次真实回归
+## 7. 当前真实验收结果
 
-- 用 1 个商品验证新的容器感知滚动策略；
-- 对比优化前后的滚动次数、Network 响应数和原图完整性；
-- 验证淘宝/天猫不同详情模板下的停止条件；
-- 保留登录过期和滑块验证的人工处理提示。
+### v0.5 Monitor Web E2E
 
-### P1：网页任务控制
+运行目录：`output/20260902T192913_task`。该任务由 Web 创建，不是手工命令启动 Pipeline。
 
-- 新建任务 POST 接口；
-- 后台启动 CLI 子进程；
-- 停止任务与进程回收；
-- 日志增量读取或事件流；
-- 防止同时启动多个任务占用同一浏览器 profile。
+| 指标 | 实际结果 |
+| --- | ---: |
+| MonitorTarget | 酸枣仁 |
+| SearchQuery | 酸枣仁、酸枣仁茶 |
+| 每个 Query 请求候选 | 10 |
+| 两页实际可见卡片合计 | 92（各 46） |
+| CandidateHit | 20 |
+| 跨 Query 去重候选 | 19 |
+| 完成详情 | 2 |
+| 保存原始详情图 | 32 |
+| OCR 成功图片 | 27 |
+| 完成分析 | 2 |
+| 检测到配置词库线索/建议人工复核 | 2 |
+| Evidence | 8（分别 3、5） |
+| 失败商品 | 0 |
+| 运行时间 | 19:29:13—19:38:31，约 9 分 18 秒 |
 
-### P1：数据与分析完善
+两个 Query 均以 `candidate_limit_reached` 停止；两件详情均以 `detail_container_stable` 停止滚动。完整生成了 `products.json`、`products.csv`、`summary.md`、`web_snapshot.json`、合并候选、discovery summary 和两份独立 Search Diagnostics，Web 可查看商品、图片、OCR 与 Evidence。
 
-- 当前仍以文件目录为主，尚无 SQLite；
-- 功效词库只有助眠、降压、降脂、减脂和男性相关；
-- 规则命中无法识别所有隐含、反讽或复杂语义；
-- 用户评价/问答在不同页面模板下不保证完整获取；
-- 当前结果只适合辅助筛查，必须保留人工复核。
+同日第一次 Monitor 预检目录 `output/20260902T192644_task` 在 Playwright 创建子进程前因受限执行环境触发 `PermissionError: [WinError 5]`。它不是淘宝风控或 Collector 失败；在普通本地进程环境重新启动后，上述 E2E 完成。
 
-### P2：正式页面
+### 仍保留的基线证据
 
-- Dashboard；
-- 采集任务页；
-- 商品列表；
-- 商品证据详情；
-- 简单统计图表；
-- 词库查看/编辑后续再做。
+- `output/20260902T005526_task`：v0.3 Web E2E；10 个候选、2 件详情、37 张原图、30 张 OCR 成功图、2 件完成分析、0 失败，约 11 分 49 秒。
+- `output/20260901_collector_v02_e2e`：v0.2 CLI 完整 E2E；10 个候选、2 件详情、25 张原图、23 张 OCR 成功图、2 件完成分析、0 失败，约 7 分 18 秒。
+- `output/20260901_collector_v02_test_b`：请求 50 个候选，真实搜索页获得 46 个去重候选；采集 5 件详情、76 张原图。该 run 使用 `--skip-ocr`，不能视作完整 E2E。
+- `output/20260828_cdp_smoke2`：10 件详情、176 张原图，只有 1 件完整分析；后续 OCR 被用户停止，不能声称 10 件全部分析完成。
 
-## 8. MediaCrawler 关系
+## 8. 当前主要限制
 
-项目没有直接接入 MediaCrawler。当前淘宝搜索和详情逻辑由本项目自行实现，只参考了其“真实浏览器 + CDP”的架构思想。没有把 MediaCrawler 的站点实现或反检测代码直接作为项目依赖。
+- 只验证了小批量、串行、本机单用户运行；没有 100 商品、长期连续运行或并发吞吐结论。
+- 淘宝 DOM、类名、登录和平台风控均可能变化；Selector Health 只能告警，不能自动修复选择器。
+- 普通 Chrome 的淘宝登录状态不会自动等同于项目 `.browser-profile` 的登录状态；必须以项目打开的可见浏览器为准。
+- 任务需要人工验证时仍依赖服务终端按 Enter；Session UX 尚不完善，也没有任务取消接口。
+- 详情正文主要围绕当前观察到的 `#imageTextInfo-container`；不同淘宝/天猫模板仍需持续真实回归。
+- OCR 在 CPU 上耗时明显，识别范围受详情图筛选和图像质量影响；未做性能优化或质量模型评估。
+- 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
+- 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
+- MonitorTarget 只有开发种子，没有权威完整监测对象数据集和正式维护界面。
+- Product 列表 API/前端尚无正式分页；MonitorTarget 维度的商品筛选尚未实现。
 
-## 9. 老师汇报建议
+## 9. 下一阶段候选事项（尚未实现）
 
-可以准确表述为：
+优先级需要在下一轮需求确认后决定，本文件不代表已经排期：
 
-> 已完成独立技术链路验证。本地程序能够启动真实 Chrome，在人工登录后搜索淘宝商品，批量进入详情，结合 DOM 和 Network 保存当前商品详情原图；OCR、功效规则、证据来源和风险报告也已跑通。本次用“酸枣仁”搜索到 46 个商品，选择 10 个并全部完成详情采集，共保存 176 张原图，其中至少 1 个商品完整完成 OCR 和风险分析。目前正在优化详情区域的滚动停止条件，并把任务状态、商品结果、图片和风险证据整理成稳定的网页接口，下一步接入简易展示页面。
+- `GEO-01`：采集商品页面声明产地；
+- `GEO-02`：采集卖家所在省市；
+- `GEO-03`：候选商品按地区均衡选择；
+- `UI-01`：商品监测分页；
+- `UI-02`：按 MonitorTarget 筛选商品；
+- `UI-03`：整体 UI/UX 优化；
+- 改进人工登录/验证的 Session UX；
+- 增加安全的任务取消与状态恢复；
+- 建立经过来源核验的正式 MonitorTarget 数据集；
+- 以标注样本评估并提升 OCR/风险规则质量。
 
-不要表述为“10 个商品全部完成 OCR 与风险分析”，也不要把规则命中表述为违法认定。
-
-## 10. 下一步建议顺序
-
-1. 用 1 个真实商品回归新的滚动停止策略；
-2. 接入用户设计的简单页面，先完成只读结果看板；
-3. 增加从网页启动/停止/续跑任务；
-4. 完成 3～10 个商品的小批次 OCR 与分析验收；
-5. 再考虑 SQLite、统计和词库管理。
+继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `monitoring-discovery-v0.5` 视为当前稳定回退基线。
