@@ -1,15 +1,15 @@
 # 项目当前状态
 
-更新时间：2026-09-02
+更新时间：2026-09-03
 
-当前版本：v0.5（Monitoring & Discovery Foundation）
+当前版本：v0.6（Reference Data Foundation）
 
-当前开发增量：v0.6-C1 SearchQuery Policy & Pilot Validation（已实现并完成真实 search-only 验证，尚未创建版本 tag）
+当前开发增量：v0.6 已完成最终收口；冻结基线以 `reference-data-v0.6` tag 为准
 
 当前分支：`main`
 
-当前功能基线提交：`2ffafd749cd20dcdde0346f953c6e8e9a9c67472`（`Establish Monitoring Target and Discovery Foundation v0.5`）
-稳定标签：`collector-baseline-v0.2`、`task-runtime-v0.3`、`data-review-v0.4`、`monitoring-discovery-v0.5`
+v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6-C1`）
+稳定标签：`collector-baseline-v0.2`、`task-runtime-v0.3`、`data-review-v0.4`、`monitoring-discovery-v0.5`、`reference-data-v0.6`
 
 ## 1. 当前结论
 
@@ -41,7 +41,7 @@
 | SearchQuery 来源/验证状态、6对象Pilot与search-only验证记录 | 已真实搜索验证 | `src/search_query_validation.py`、`docs/search_query_pilot_v0.6-c1.md` |
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
 
-当前测试集共有 118 项；v0.6-C1 的全量结果见本轮最终验收记录。v0.5 稳定 tag 仍保留 81 项测试的原始基线，本轮没有创建 v0.6 tag。
+当前测试集共有 118 项；2026-09-03 在正式 Monitor Web E2E 完成后执行全量回归，结果为 `Ran 118 tests ... OK`。v0.5 稳定 tag 仍保留 81 项测试的原始基线，v0.6 由 `reference-data-v0.6` 冻结。
 
 ## 3. 当前架构
 
@@ -56,7 +56,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 ### 3.2 数据分层
 
 - `output/<run_id>/` 是原始运行事实与可追溯证据的主存储：搜索 HTML/截图/诊断、详情 HTML、Network 响应、原图、OCR、`analysis.json`、日志及批次报告均保留在此。
-- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 3。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测数据集及其来源、监测对象、搜索词和候选命中关系。旧 version 2 数据库会由现有轻量机制原位升级。
+- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 4。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测数据集及其来源、监测对象、搜索词和候选命中关系。旧 version 2/3 数据库会由现有轻量机制原位升级。
 - SQLite 不替代原始证据文件。数据库可从历史 `output` 幂等重建，重复导入不会复制记录，也不会覆盖已经保存的人工复核备注。
 - `.browser-profile/`、`output/`、`data/*.db`、`.venv/` 与 OCR 模型缓存均不提交 Git。
 
@@ -91,7 +91,7 @@ Evidence 和 Review 归属于 ProductSnapshot，而不是永久归属于 Product
 
 ## 6. MonitorTarget / SearchQuery / CandidateHit
 
-v0.5 当前使用 `config/monitor_targets.development.json` 中的开发种子：
+`config/monitor_targets.development.json` 中继续保留开发种子：
 
 - MonitorTarget：`酸枣仁`（`dev-food-medicine-suanzaoren`）；
 - SearchQuery 1：`酸枣仁`（base）；
@@ -106,6 +106,28 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 多 Query 按 `order` 串行执行。候选以 `product_id` 跨 Query 去重，首次有效出现决定合并列表顺序；顺序首先由 Query 顺序决定，再由 Query 内排名决定。前 `detail_limit` 个唯一候选进入详情链。即使同一商品被多个 Query 命中，所有来源仍作为多条 CandidateHit 保留，供后续解释召回来源。
 
 ## 7. 当前真实验收结果
+
+### v0.6 正式 Reference Monitor Web E2E
+
+运行目录：`output/20260903T014401_task`。该任务从 Web 页面选择正式 `verified_reference` 对象“铁皮石斛”创建，没有通过命令行绕过任务层。
+
+| 指标 | 实际结果 |
+| --- | ---: |
+| MonitorTarget | 铁皮石斛（`food-medicine-2023-003`） |
+| 数据集 | `food-medicine-reference` / `verified_reference` / `2024.08` |
+| SearchQuery | 铁皮石斛（`standard_name`、`search_validated`） |
+| 搜索页实际可见卡片 | 46 |
+| CandidateHit / 去重候选 | 5 / 5 |
+| 进入详情 / 详情成功 | 1 / 1 |
+| 保存原始详情图 | 31 |
+| OCR 成功图片 | 26 |
+| 完成分析 | 1 |
+| Evidence | 0（未发现配置词库中的明显功效表达） |
+| 失败 / 重试 | 0 / 0；详情尝试 1 次 |
+| 停止原因 | Query：`candidate_limit_reached`；Discovery：`all_queries_completed` |
+| 运行时间 | 01:44:01—01:54:08，约 10 分 7 秒 |
+
+任务未要求登录或验证码，未发生淘宝采集失败。Web 自动显示新任务、5 个候选和已完成商品；风险研判页可查看 31 张真实原图、26 张 OCR 结果以及 Evidence 为 0 的正常业务结论。SQLite 中存在对应 Task、5 条 CandidateHit、1 条 ProductSnapshot 和稳定 Product；历史 development 酸枣仁任务仍可读取。
 
 ### v0.5 Monitor Web E2E
 
@@ -149,7 +171,7 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - OCR 在 CPU 上耗时明显，识别范围受详情图筛选和图像质量影响；未做性能优化或质量模型评估。
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
-- 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；其余 100 项仍无 Query。Pilot 仅验证搜索阶段，尚未对这 5 个正式对象逐一执行详情/OCR/分析 E2E。
+- 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；剩余 101 项（包含已验证召回但因场景边界停用的当归）不能直接创建正式 Monitor Task。5 个已启用对象中，目前只有铁皮石斛完成了正式 verified target 的详情/OCR/分析 Web E2E。
 - Product 列表 API/前端尚无正式分页；MonitorTarget 维度的商品筛选尚未实现。
 
 ## 9. 下一阶段候选事项（尚未实现）
@@ -164,7 +186,7 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - `UI-03`：整体 UI/UX 优化；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
-- v0.6-C2：评估 Pilot 质量与产品场景判别，再决定下一批正式 MonitorTarget 的 Query 设计和分批启用；
+- 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `monitoring-discovery-v0.5` 视为当前稳定回退基线。
+继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `reference-data-v0.6` 视为当前整体稳定回退基线；修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。

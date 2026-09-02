@@ -1,11 +1,11 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述当前 v0.5 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述当前 v0.6 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 产品/代码基线版本：**v0.5 — Monitoring & Discovery Foundation**。
-- 当前开发增量：**v0.6-C1 — SearchQuery Policy & Pilot Validation** 已实现并完成真实 search-only 验证，尚未创建 tag；稳定回退基线仍是 v0.5。
+- 产品/代码基线版本：**v0.6 — Reference Data Foundation**。
+- v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；整体稳定回退基线为 `reference-data-v0.6`。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -14,14 +14,14 @@
 
 ## 2. Current Commit
 
-v0.5 冻结的功能代码基线为：
+v0.6-C1 的独立功能提交为：
 
 ```text
-2ffafd749cd20dcdde0346f953c6e8e9a9c67472
-Establish Monitoring Target and Discovery Foundation v0.5
+e8cf28d
+Validate SearchQuery Policy and Pilot Targets v0.6-C1
 ```
 
-本文件及另外两份项目文档会形成该基线之上的 documentation-only commit，因此接手时应执行 `git rev-parse HEAD` 查看仓库实际 HEAD。文档提交不代表新业务版本，也不改变 v0.5 功能基线。
+v0.6 最终收口提交由 `reference-data-v0.6` tag 指向。接手时应执行 `git rev-parse reference-data-v0.6` 与 `git rev-parse HEAD` 核对实际提交，不要依赖旧对话中的短哈希。
 
 ## 3. Stable Tags
 
@@ -31,8 +31,9 @@ Establish Monitoring Target and Discovery Foundation v0.5
 | `task-runtime-v0.3` | `6225635f28fe7767136baca4bd3d9d28ddce3efc` | Web 创建/运行/轮询任务基线 |
 | `data-review-v0.4` | `53f0b88638dcd0daea6ea59436c4e2cdc35af9f9` | SQLite 与人工复核基线 |
 | `monitoring-discovery-v0.5` | `2ffafd749cd20dcdde0346f953c6e8e9a9c67472` | MonitorTarget、多 Query 与 CandidateHit 基线 |
+| `reference-data-v0.6` | 以 `git rev-parse reference-data-v0.6` 为准 | 正式目录、来源追踪、Query 策略与 Pilot 验证基线 |
 
-修改 Collector 前先比较 `collector-baseline-v0.2`；修改当前整体系统前先比较 `monitoring-discovery-v0.5`。不要补造 v0.1 Git 历史。
+修改 Collector 前先比较 `collector-baseline-v0.2`；修改当前整体系统前先比较 `reference-data-v0.6`。不要补造 v0.1 Git 历史。
 
 ## 4. Project Goal
 
@@ -110,6 +111,7 @@ MonitorTarget/关键词
 | `src/task_runtime.py` | Web 任务校验、后台线程、单任务保护、恢复与状态装饰 | 高 |
 | `src/data_store.py` | SQLite schema、run 幂等导入、查询和人工复核 | 高 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
+| `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
 | `web/index.html` | 页面结构 | 中 |
 | `web/styles.css` | 视觉样式 | 低至中 |
@@ -164,7 +166,7 @@ ProductSnapshot 1 ── 1 Review
 
 ## 11. SQLite Tables
 
-当前 `SCHEMA_VERSION = 3`，旧 version 2 数据库通过项目现有轻量 schema 机制升级。表如下：
+当前 `SCHEMA_VERSION = 4`，旧 version 2/3 数据库通过项目现有轻量 schema 机制升级。表如下：
 
 | 表 | 关键字段/约束 | 用途 |
 | --- | --- | --- |
@@ -251,6 +253,8 @@ Monitor 创建示例：
 
 v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石斛、化橘红 6 个 Pilot，共执行 9 次真实淘宝 search-only。最终启用前五者；当归虽可召回，但结果几乎全为中药材/饮片且有官方食用限制，继续停用。其余 100 个正式对象仍 `enabled=false`、`queries=[]`。完整结果见 `docs/search_query_pilot_v0.6-c1.md` 和两个对应 output run。
 
+最终验收 run `20260903T014401_task` 从 Web 选择正式 `verified_reference` 铁皮石斛创建：5 个 CandidateHit、5 个唯一候选、1 件详情、31 张原图、26 张 OCR、1 件分析、0 Evidence、0 失败/重试。它证明正式 reference 对象能够进入完整系统；Evidence 为 0 是如实分析结果，不是验收缺陷。
+
 机制约束：
 
 1. Query 只执行 `enabled=true` 项，按 `order`、再按 `query_id` 稳定排序；
@@ -263,6 +267,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 8. 只有前 `detail_limit` 个唯一候选进入高成本详情/OCR链；
 9. 配置快照被冻结到任务请求，不能运行中悄悄改变既有任务含义；
 10. `search/search_candidates.json` 维持旧 Pipeline 兼容，`discovery_summary.json` 提供 Monitor 解释数据。
+11. 正式 Query 不能由模型按常识批量生成或启用；必须记录来源、场景依据、真实搜索验证状态和证据 run。
 
 不要把 CandidateHit 当作风险证据；它只解释商品为何被搜索召回。
 
@@ -278,7 +283,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ### `config/monitor_targets.reference.json`
 
-正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。6 个 Pilot 共配置 9 个已验证 Query，5 个对象启用；其余 100 项无 Query 且停用。开发种子仍单独保存在 development 文件中。
+正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。6 个 Pilot 共配置 9 个已验证 Query，5 个对象启用；其余 100 项无 Query 且停用，当归虽有已验证 Query 也因商品场景与官方适用边界继续停用。开发种子仍单独保存在 development 文件中。
 
 ### `.gitignore`
 
@@ -292,7 +297,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 118 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-C1 新增 11 项，覆盖 Query 来源/验证状态、官方别名、启用约束、SQLite v3→v4、search-only编排、API metadata 和开发/正式数据隔离。
+当前共有 118 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A/B/C1 合计增加 37 项，C1 相关增量覆盖 Query 来源/验证状态、官方别名、启用约束、SQLite v3→v4、search-only 编排、API metadata 和开发/正式数据隔离。2026-09-03 正式 E2E 完成后只运行一次全量回归，结果为 `Ran 118 tests ... OK`。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -329,6 +334,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `20260901_collector_v02_e2e` | v0.2 CLI E2E | 10 候选、2 详情、25 原图、23 OCR、2 分析、有 Evidence、0 失败，约 7:18 |
 | `20260902T005526_task` | v0.3 Web E2E | Web 创建；10 候选、2 详情、37 原图、30 OCR、2 分析、有 Evidence、0 失败，约 11:49 |
 | `20260902T192913_task` | v0.5 Monitor Web E2E | Web 创建；2 Query、20 hits、19 unique、2 详情、32 原图、27 OCR、2 分析、8 Evidence、0 失败，约 9:18 |
+| `20260903T014401_task` | v0.6 正式 Reference Monitor Web E2E | Web 选择 verified 铁皮石斛；1 Query、5 hits/5 unique、1 详情、31 原图、26 OCR、1 分析、0 Evidence、0 失败/重试，约 10:07 |
 
 `20260902T192644_task` 是受限执行环境阻止 Playwright 创建子进程的失败预检，不是淘宝 E2E。详见 `task_runtime_error.json`。
 
@@ -355,7 +361,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
-- 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。该 Pilot 仅验证搜索，不等于详情/OCR/风险分析已对每个正式对象完成 E2E。
+- 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
 - 多 Query 仍把所有唯一候选按固定 first-hit 顺序送入详情，没有质量评分、地区平衡或随机抽样。
 - 页面结构诊断有覆盖率告警，但缺少详情模板分型、选择器版本和自动回归样本管理。
 - 历史 run 的字段存在版本差异，导入层做兼容；删除旧兼容逻辑前必须用保留 run 回归。
@@ -375,7 +381,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `UI-03` | 整体 UI/UX 优化 | 不得制造虚假统计或结论性风险标签 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
-| `QUERY-02` | v0.6-C2扩大正式 SearchQuery | 先评估Pilot质量与产品场景判别，再设计下一批；禁止按常识批量扩词或用功效词改变候选池 |
+| `QUERY-02` | 后续分批扩大正式 SearchQuery | 按业务需要先评估产品场景，再设计和真实验证下一批；禁止按常识批量扩词或用功效词改变候选池 |
 | `RISK-01` | 风险识别质量评估与提升 | 先建设人工标注样本和指标，再讨论复杂模型 |
 | `REVIEW-01` | 复核历史/审计 | 当前只有最新状态，未来按真实业务需求设计 |
 
@@ -408,11 +414,11 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 新 AI 必须按以下顺序工作，不要仅凭 README 或旧对话猜测：
 
 1. 运行 `git status --short --branch`，确认分支、用户未提交改动和工作树边界；
-2. 运行 `git log --oneline --decorate -10` 与 `git tag -n`，确认当前 HEAD 和四个稳定基线；
+2. 运行 `git log --oneline --decorate -10` 与 `git tag -n`，确认当前 HEAD 和五个稳定基线；
 3. 阅读 `PROJECT_STATUS.md`、本文件、`docs/DEVELOPMENT_HISTORY.md`、`docs/output_inventory.md`；
 4. 阅读需求涉及模块及对应测试，不先做大规模重构；
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
-6. 对照 `output/20260902T192913_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、两份 Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；
+6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
 8. 运行当前 118 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；

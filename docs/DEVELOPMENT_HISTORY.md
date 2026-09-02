@@ -643,8 +643,11 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 | v0.3 | 58 | Task 参数、单活动任务、失败、恢复、API闭环 |
 | v0.4 | 75 | SQLite、幂等导入、多快照、Evidence、Review持久化 |
 | v0.5 | 81 | Monitor配置、CandidateHit、Discovery、多Query任务/API |
+| v0.6 | 118 | 正式数据集 provenance、106项来源映射、SearchQuery策略/验证、SQLite v4 |
 
 2026-09-02 文档整理前在 v0.5 当前 checkout 运行 `python -m unittest discover -s tests -q`，实际结果为 `Ran 81 tests ... OK`。
+
+2026-09-03 正式铁皮石斛 Monitor Web E2E 完成后只运行一次同一全量命令，实际结果为 `Ran 118 tests ... OK`。
 
 ### 11.3 主要真实运行
 
@@ -659,6 +662,7 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 | `20260902T005526_task` | v0.3 Web E2E | 10候选、2详情、37原图、30 OCR、2分析、有Evidence、0失败、约11:49 | Web任务闭环 |
 | `20260902T192644_task` | 环境预检失败 | Playwright子进程前 WinError 5 | 不是淘宝/Collector失败 |
 | `20260902T192913_task` | v0.5 Monitor Web E2E | 2 Query、20 hits、19 unique、2详情、32原图、27 OCR、2分析、8 Evidence、0失败、约9:18 | 多Query到Web闭环 |
+| `20260903T014401_task` | v0.6 正式 Reference Monitor Web E2E | verified铁皮石斛、1 Query、5 hits/5 unique、1详情、31原图、26 OCR、1分析、0 Evidence、0失败/重试、约10:07 | 正式reference对象贯通完整系统；无命中是正常业务结果 |
 
 历史输出保留原因见 `docs/output_inventory.md`。该文档生成于 v0.3，尚未列入后续 v0.5 run；本轮按要求只修改三份指定文档，因此没有同步改它。
 
@@ -700,7 +704,7 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 
 - SQLite 只有轻量 schema 演进，没有正式 migration framework；
 - Review 没有历史、审核人、权限和审计日志；
-- MonitorTarget 只有开发种子，暂无权威数据导入流程；
+- 正式 food_medicine reference dataset 已导入 106 项，但只有 5 项具备已验证且启用的 SearchQuery；目录完整不等于搜索策略完整；
 - 历史 run 字段版本不同，兼容导入逻辑不能随意删除；
 - `output` 未提交 Git，备份和归档策略尚未形成；
 - `docs/output_inventory.md` 与 README 部分状态滞后，需要后续独立文档维护轮次更新。
@@ -719,7 +723,7 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 | `UI-03` | 整体 UI/UX 优化 | 保持真实数字、来源和非结论性措辞 |
 | `SESSION-01` | 登录/验证交互改进 | 不绕过验证，减少终端依赖，明确等待/超时 |
 | `TASK-01` | 安全取消任务 | 正确回收浏览器、保存断点、处理 OCR 中断 |
-| `DATASET-01` | 正式 MonitorTarget 数据集 | 权威来源、版本、日期、引用和变更审计 |
+| `QUERY-02` | 后续分批扩大正式 SearchQuery | 按业务需要评估产品场景并真实验证，禁止模型按常识批量生成 Query |
 | `RISK-01` | 风险识别质量提升 | 先有人工标注集、指标和误报/漏报分析 |
 | `REVIEW-01` | Review 历史和审计 | 真实业务需要后再设计审核人、状态流和权限 |
 | `OPS-01` | output 备份/归档 | 保护原始证据，不能只保留 SQLite |
@@ -739,17 +743,19 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 5. **稳定核心逐层封装。** v0.2 冻结 Collector，v0.3 在外层做任务化，v0.4 做索引/复核，v0.5 做多 Query 发现，没有为新功能重写已验证主链。
 6. **文件证据与业务索引分层。** output 保留原始事实，SQLite 支持跨 run 查询和人工状态。
 7. **确定性多 Query 机制。** MonitorTarget、SearchQuery、CandidateHit 分离业务对象、检索表达和召回事实。
+8. **正式基础数据可追溯。** development seed 与 verified reference 分离，106 个正式对象逐条保留首次纳入的官方来源；Query 还必须单独记录来源与真实搜索验证状态。
 
 ### 14.2 可展示的真实数据
 
 答辩展示优先使用：
 
 - v0.5 `20260902T192913_task`：两个 Query、20 hits、19 unique、2 详情、32 原图、27 OCR、8 Evidence；
+- v0.6 `20260903T014401_task`：正式 verified 铁皮石斛对象、5 hits/5 unique、1 详情、31 原图、26 OCR、0 Evidence，展示“完整链路成功但没有风险命中”也是正常结果；
 - 商品 `702353081235`：只有 UGC 助眠线索，展示为什么必须区分来源；
 - 商品 `600949052422`：标题/OCR与 UGC 混合线索，展示 Evidence 结构；
 - v0.2 `test_b`：请求50、实际46、自然停止和一次重试，展示系统如实记录限制；
 - 早期单商品 108 Network 资源仅17个属详情，展示 DOM/Network 分工；
-- 81项离线测试与四个稳定 tag，展示工程回归过程。
+- 118 项离线测试与五个稳定 tag，展示工程回归过程。
 
 现场演示应准备历史 run 作为兜底。真实淘宝受登录、网络和风控影响，现场采集失败不等于离线结果页面无法展示；但也不能把历史数据伪装成刚刚实时采集。
 
@@ -801,6 +807,7 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 - 不能声称 OCR/规则具有已量化高准确率；
 - 不能把 2 件或 10 件样本推成全淘宝代表性结论；
 - 不能把 development seed 称为官方目录；
+- 不能把“106 个正式 MonitorTarget 已导入”称为“106 个对象都已具备可用搜索策略”；当前只有 5 个正式对象可直接 Monitor；
 - 不能把搜索卡片 region 称为商品产地；
 - 不能把 46 个候选写成平台全部相关商品；
 - 不能把跳过 OCR 的测试写成完整端到端；
@@ -815,7 +822,8 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 - 没有 MediaCrawler 代码被接入当前项目的证据；当前 Collector 是本项目实现；
 - 没有 100 商品单 Query 或长期无人值守运行证据；
 - 没有 OCR、规则或整体系统准确率/召回率评估；
-- 没有完整权威食药同源 MonitorTarget 数据集；
+- 已有 106 项正式 food_medicine 权威来源映射，但只有 5 项具备已验证并启用的 SearchQuery；剩余 101 项（包含停用的当归）尚不能直接 Monitor；
+- 只有铁皮石斛完成正式 verified target 的完整 Web E2E，其余 4 个已启用正式对象尚未逐一完成同等 E2E；
 - 没有 v0.4 专门新跑的真实淘宝 E2E；
 - 没有 v0.4 人工关闭并重启整个 Web 服务的独立验收记录，只有数据库重开自动化测试；
 - 没有证明所有淘宝/天猫详情模板和所有滚动 fallback 都通过真实验证；
@@ -823,3 +831,48 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 - 没有证据支持将当前页面地区字段解释为产地或卖家注册地。
 
 后续若补齐这些能力，应追加新的 run、测试、数据来源或验收记录，而不是改写过去。
+
+## 16. Reference Data Foundation v0.6
+
+v0.6 解决的不是“再抓更多商品”，而是正式监测对象和搜索策略能否说明来源、经受校验并安全进入现有 Monitor Pipeline。Collector、OCR、风险规则和 Web 主链没有为本版本重写。
+
+### 16.1 v0.6-A：Reference Dataset 与导入基础
+
+development seed 继续保存在 `config/monitor_targets.development.json`，用于工程回归；正式数据则进入独立的 `config/monitor_targets.reference.json`，使用 `dataset_status=verified_reference`。数据集和对象均保留 dataset/version/source/date/reference 等 provenance，正式数据缺少来源时会被拒绝。
+
+SQLite 在这一阶段升级为 schema v3，增加 `monitor_datasets` 与 MonitorTarget 的数据集关联。导入保持幂等，相同 `target_id` 不重复；对象不能在不同数据集之间被静默改绑。重新导入基础数据不会改写历史 Task 已冻结的 `task_request.json`，因此运行中或历史任务的查询含义不会随配置更新漂移。
+
+### 16.2 v0.6-B：106 项正式 food_medicine 目录
+
+正式目录按国家卫生健康委首次纳入文件逐项映射：2002 年 87 项、2019 年 6 项、2023 年 9 项、2024 年 4 项，共 106 项；2025 年官方答复只用于核验总数。2019 年当归等 6 项还保留“仅作为香辛料和调味品使用”的适用边界。
+
+这一阶段刻意没有让模型凭记忆生成“完整搜索词”。106 个对象先全部默认 disabled，没有业务与真实搜索依据的对象保持 `queries=[]`。这条约束非常重要：权威目录回答“监测什么”，SearchQuery 回答“在具体平台怎样检索”，二者不是同一份知识，不能因为标准名称存在就假装搜索策略已经验证。
+
+### 16.3 v0.6-C1：SearchQuery Policy 与 Pilot
+
+SQLite 升级为 schema v4，SearchQuery 增加：
+
+- `query_source`：区分 `standard_name`、`official_alias`、`observed_product_form`、`manual`；
+- `validation_status`：当前区分 `unvalidated` 与 `search_validated`；
+- `query_note`：记录来源说明、真实搜索表现和证据 run。
+
+Monitor Task 只接收 enabled target 下同时满足 `enabled=true` 与 `validation_status=search_validated` 的 Query。Query 顺序继续确定化，配置快照仍在任务创建时冻结。模型不能绕过这些字段按常识批量生成、启用或修改正式 Query。
+
+C1 选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石斛、化橘红 6 个 Pilot，共执行 9 次低频真实淘宝 search-only 验证。最终启用酸枣仁、茯苓、龙眼肉（桂圆）、铁皮石斛、化橘红 5 个正式对象。当归虽然前 10 条标题能够稳定包含当归，但结果几乎都是中药材/饮片，且其正式食品使用边界仅为香辛料和调味品，因此继续 disabled；不能把“召回相关”直接等同于“适合作为当前食品监测入口”。其余 100 项没有经 Pilot，继续 disabled 且无 Query。
+
+### 16.4 最终正式 Monitor Web E2E
+
+2026-09-03 从正常 Web“采集任务”页面选择 `food-medicine-2023-003` 铁皮石斛，设置每 Query 候选 5、详情 1，创建 `20260903T014401_task`。任务请求冻结了 `food-medicine-reference`、`verified_reference`、版本 `2024.08`、目标官方来源，以及 `standard_name/search_validated` Query“铁皮石斛”。
+
+真实结果为：搜索页识别 46 个卡片，保留 5 个 CandidateHit，去重后仍为 5；Query 因达到限制以 `candidate_limit_reached` 停止，整体 Discovery 以 `all_queries_completed` 完成。只有排名第 1 的商品进入高成本详情链，1/1 详情成功，保存 31 张原始详情图，26 张图片完成 OCR，分析完成且 Evidence 为 0。该结果未被替换或人为加入风险词：没有命中配置词库是正常业务结论，证明系统能够保存“无明显线索”，而不是只保留有风险的样本。
+
+任务从 01:44:01 运行至 01:54:08，约 10 分 7 秒；没有登录、验证码、失败或重试。SQLite 保存了 Task、5 条 CandidateHit、1 条 ProductSnapshot 和 Product，Evidence 表对该快照为 0；Web 自动显示新任务、候选商品、31 张原图、26 张 OCR 和无命中分析。历史 development 酸枣仁任务仍可读取。随后全量离线回归为 118/118 通过。
+
+### 16.5 v0.6 冻结后的准确口径
+
+- 106 个正式 MonitorTarget 已有权威来源映射，不等于 106 个都具备验证搜索策略；
+- 当前只有 5 个正式对象可直接创建 Monitor Task；
+- 剩余 101 项包含已做召回验证但因业务边界停用的当归，以及 100 项未配置 Query 的对象；
+- v0.6 不继续批量补齐，后续只在明确业务需求下分批设计、真实验证和启用；
+- development seed 继续存在，仅用于工程回归，不会自动升级成正式数据；
+- SearchQuery 不能由模型随意批量生成；来源、场景、真实搜索验证和启用决定必须能够追溯。
