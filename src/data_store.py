@@ -221,11 +221,21 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
         if target_type not in TARGET_TYPES:
             raise MonitorConfigValidationError(f"不支持的target_type：{target_type}")
 
-        source_name = _optional_text(target.get("source_name")) or dataset_source_name
-        source_reference = (
-            _optional_text(target.get("source_reference"))
-            or dataset_source_reference
+        target_dataset_id = _identifier(
+            target.get("dataset_id"), f"MonitorTarget {target_id} 的dataset_id"
         )
+        if target_dataset_id != dataset_id:
+            raise MonitorConfigValidationError(
+                f"MonitorTarget {target_id} 的dataset_id必须等于所属数据集 {dataset_id}"
+            )
+        target_enabled = _boolean(
+            target.get("enabled"), f"MonitorTarget {target_id} 的enabled"
+        )
+
+        target_source_name = _optional_text(target.get("source_name"))
+        target_source_reference = _optional_text(target.get("source_reference"))
+        source_name = target_source_name or dataset_source_name
+        source_reference = target_source_reference or dataset_source_reference
         raw_source_date = target.get("source_date")
         source_date = _optional_iso_date(
             raw_source_date if raw_source_date is not None else dataset_source_date,
@@ -235,11 +245,27 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
             raise MonitorConfigValidationError(
                 f"MonitorTarget {target_id} 必须具有可追踪的来源名称和引用"
             )
+        if dataset_status == "verified_reference" and (
+            not target_source_name
+            or not target_source_reference
+            or raw_source_date is None
+        ):
+            raise MonitorConfigValidationError(
+                f"verified_reference中的MonitorTarget {target_id} 必须独立记录"
+                "source_name、source_reference和source_date"
+            )
 
         raw_queries = target.get("queries")
-        if not isinstance(raw_queries, list) or not raw_queries:
+        if not isinstance(raw_queries, list):
             raise MonitorConfigValidationError(
-                f"MonitorTarget {target_id} 必须至少包含一个SearchQuery"
+                f"MonitorTarget {target_id} 的queries必须是数组"
+            )
+        if not raw_queries and not (
+            dataset_status == "verified_reference" and not target_enabled
+        ):
+            raise MonitorConfigValidationError(
+                f"MonitorTarget {target_id} 必须至少包含一个SearchQuery；"
+                "只有停用的verified_reference目标可以暂不配置Query"
             )
         normalized_queries: list[dict[str, Any]] = []
         query_orders: set[int] = set()
@@ -300,14 +326,13 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
         normalized_targets.append(
             {
                 "target_id": target_id,
+                "dataset_id": target_dataset_id,
                 "standard_name": standard_name,
                 "target_type": target_type,
                 "source_name": source_name,
                 "source_reference": source_reference,
                 "source_date": source_date,
-                "enabled": _boolean(
-                    target.get("enabled"), f"MonitorTarget {target_id} 的enabled"
-                ),
+                "enabled": target_enabled,
                 "queries": normalized_queries,
             }
         )
@@ -660,7 +685,8 @@ class DataStore:
                        d.source_reference AS dataset_source_reference,
                        d.source_date AS dataset_source_date,
                        d.collected_at AS dataset_collected_at,
-                       d.verified_at AS dataset_verified_at
+                       d.verified_at AS dataset_verified_at,
+                       d.description AS dataset_description
                 FROM monitor_targets t
                 LEFT JOIN monitor_datasets d ON d.dataset_id = t.dataset_id
                 """
@@ -703,6 +729,7 @@ class DataStore:
                     "source_date": row["dataset_source_date"],
                     "collected_at": row["dataset_collected_at"],
                     "verified_at": row["dataset_verified_at"],
+                    "description": row["dataset_description"],
                 },
                 "queries": by_target.get(str(row["target_id"]), []),
             }

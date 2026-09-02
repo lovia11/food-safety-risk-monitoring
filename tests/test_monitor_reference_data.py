@@ -36,8 +36,12 @@ def verified_dataset(
         "targets": [
             {
                 "target_id": target_id,
+                "dataset_id": dataset_id,
                 "standard_name": "已核验测试对象",
                 "target_type": "food_medicine",
+                "source_name": "测试用权威来源",
+                "source_reference": "https://example.test/reference-document",
+                "source_date": "2026-08-01",
                 "enabled": True,
                 "queries": [
                     {
@@ -80,11 +84,16 @@ class MonitorReferenceDataTest(unittest.TestCase):
             ["酸枣仁", "酸枣仁茶"],
         )
 
-    def test_pending_reference_file_imports_without_claiming_verified_targets(self):
+    def test_verified_reference_file_imports_all_disabled_targets(self):
         result = self.store.import_monitor_config(REFERENCE_CONFIG)
-        self.assertEqual(result, {"datasets": 1, "targets": 0, "queries": 0})
+        self.assertEqual(result, {"datasets": 1, "targets": 106, "queries": 0})
         self.assertEqual(self.store.table_counts()["monitor_datasets"], 1)
-        self.assertEqual(self.store.list_monitor_targets(), [])
+        targets = self.store.list_monitor_targets()
+        self.assertEqual(len(targets), 106)
+        self.assertTrue(all(not target["enabled"] for target in targets))
+        self.assertTrue(
+            all(target["dataset_status"] == "verified_reference" for target in targets)
+        )
 
     def test_verified_dataset_source_is_saved_and_returned(self):
         self.store.import_monitor_config(self._write_config(verified_dataset()))
@@ -192,7 +201,20 @@ class MonitorReferenceDataTest(unittest.TestCase):
         self.assertEqual(target["dataset_status"], "development_seed")
 
     def test_pending_reference_can_become_verified_after_records_are_supplied(self):
-        self.store.import_monitor_config(REFERENCE_CONFIG)
+        pending = {
+            "schema_version": 2,
+            "dataset_id": "food-medicine-reference",
+            "dataset_version": "0",
+            "dataset_status": "reference_pending",
+            "source_name": None,
+            "source_reference": None,
+            "source_date": None,
+            "collected_at": None,
+            "verified_at": None,
+            "description": "测试用待核验数据集。",
+            "targets": [],
+        }
+        self.store.import_monitor_config(self._write_config(pending, "pending.json"))
         verified = verified_dataset(dataset_id="food-medicine-reference")
         self.store.import_monitor_config(
             self._write_config(verified, "verified-reference.json")

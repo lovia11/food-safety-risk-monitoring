@@ -5,7 +5,7 @@
 ## 1. Current Version
 
 - 产品/代码基线版本：**v0.5 — Monitoring & Discovery Foundation**。
-- 当前开发增量：**v0.6-A — Reference Data Foundation** 已实现并完成离线验证，尚未创建 tag；稳定回退基线仍是 v0.5。
+- 当前开发增量：**v0.6-B — Verified Food-Medicine Reference Dataset** 已实现并完成离线验证，尚未创建 tag；稳定回退基线仍是 v0.5。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -247,7 +247,9 @@ Monitor 创建示例：
 
 当前开发种子在 `config/monitor_targets.development.json`：一个 `酸枣仁` MonitorTarget，两个 Query：`酸枣仁` 和 `酸枣仁茶`。它始终标记为 `development_seed`。
 
-正式入口为 `config/monitor_targets.reference.json`。当前文件标记为 `reference_pending` 且不含 target，表示机制已经建立但权威记录尚未导入。经过来源核验的数据必须使用 `verified_reference`，提供 dataset ID/version、来源名称、来源引用和 `verified_at`；系统不会把 development seed 静默升级或转移到正式数据集。
+正式入口为 `config/monitor_targets.reference.json`。当前为 `verified_reference`、版本 `2024.08`，按首次纳入来源收录国家卫生健康委 2002 年 87 项、2019 年 6 项、2023 年 9 项和 2024 年 4 项，共 106 个 MonitorTarget；2025 年官方答复用于核验总数。2019 年新增 6 项仅作为香辛料和调味品使用。系统不会把 development seed 静默升级或转移到正式数据集。
+
+这 106 个正式对象全部 `enabled=false` 且 `queries=[]`。这是有意的安全边界：官方目录能证明对象身份，但不能直接证明适合淘宝检索的商品形态词。后续必须单独配置、审核和验证 SearchQuery，再分批启用；不要为追求覆盖率凭空生成“茶、粉、膏”等搜索词。
 
 机制约束：
 
@@ -276,7 +278,7 @@ Monitor 创建示例：
 
 ### `config/monitor_targets.reference.json`
 
-正式 reference dataset 入口。当前 `dataset_status=reference_pending`、`dataset_version=0`、`targets=[]`，没有伪造任何权威记录。未来只能把已核验且具有来源 metadata 的记录写入，并在核验完成后改为 `verified_reference`。
+正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。数据当前全部停用且没有 SearchQuery；开发种子仍单独保存在 development 文件中。
 
 ### `.gitignore`
 
@@ -290,7 +292,7 @@ Monitor 创建示例：
 
 ## 16. Tests
 
-当前共有 96 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A 新增 15 项，覆盖数据集区分、来源保存、校验、幂等导入、旧 SQLite 升级和现有 Monitor Task 兼容。
+当前共有 107 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A 新增 15 项，v0.6-B 新增 11 项，覆盖 106 项目录完整性、87/6/9/4 来源分组、来源字段、幂等导入、SQLite 数量、API provenance、开发种子隔离和无 Query 正式对象的安全处理。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -353,7 +355,7 @@ Monitor 创建示例：
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
-- 正式 reference 文件目前是空的 `reference_pending` 数据集；没有导入完整权威目录。
+- 正式 reference 文件已有 106 项已核验对象，但全部停用且没有经业务验证的 SearchQuery，暂不能直接创建正式 Monitor Task。
 - 多 Query 仍把所有唯一候选按固定 first-hit 顺序送入详情，没有质量评分、地区平衡或随机抽样。
 - 页面结构诊断有覆盖率告警，但缺少详情模板分型、选择器版本和自动回归样本管理。
 - 历史 run 的字段存在版本差异，导入层做兼容；删除旧兼容逻辑前必须用保留 run 回归。
@@ -373,7 +375,7 @@ Monitor 创建示例：
 | `UI-03` | 整体 UI/UX 优化 | 不得制造虚假统计或结论性风险标签 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
-| `DATASET-01` | 导入正式权威 MonitorTarget 记录 | 数据机制已具备；仍需核验来源、版本、日期与引用，不复用 development seed 名义 |
+| `QUERY-01` | 为正式 MonitorTarget 建立 SearchQuery | 106 项正式对象已导入；搜索词需单独审核、验证并分批启用，不复用 development seed 名义 |
 | `RISK-01` | 风险识别质量评估与提升 | 先建设人工标注样本和指标，再讨论复杂模型 |
 | `REVIEW-01` | 复核历史/审计 | 当前只有最新状态，未来按真实业务需求设计 |
 
@@ -412,7 +414,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 对照 `output/20260902T192913_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、两份 Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 96 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 107 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

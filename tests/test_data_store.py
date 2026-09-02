@@ -157,6 +157,7 @@ class DataStoreTest(unittest.TestCase):
                 "targets": [
                     {
                         "target_id": "target-1",
+                        "dataset_id": "test-development-dataset",
                         "standard_name": "酸枣仁",
                         "target_type": "food_medicine",
                         "source_name": "开发种子",

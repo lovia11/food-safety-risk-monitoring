@@ -12,6 +12,7 @@
   "targets": [
     {
       "target_id": "dev-food-medicine-suanzaoren",
+      "dataset_id": "monitor-targets-development",
       "standard_name": "酸枣仁",
       "target_type": "food_medicine",
       "source_name": "development_seed",
