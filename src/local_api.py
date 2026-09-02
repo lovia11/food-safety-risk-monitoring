@@ -1,8 +1,4 @@
-"""Small read-only HTTP API for the future local web demo.
-
-This intentionally uses only Python's standard library.  It exposes generated
-run snapshots and files, but cannot start or mutate collection tasks yet.
-"""
+"""Small standard-library HTTP API for local task execution and result viewing."""
 
 from __future__ import annotations
 
@@ -15,6 +11,13 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from src.runtime import read_json
+from src.task_runtime import (
+    ActiveTaskError,
+    TaskManager,
+    TaskNotFoundError,
+    TaskNotResumableError,
+    TaskValidationError,
+)
 
 
 def resolve_run_root(output_root: Path, run_id: str) -> Path:
@@ -75,13 +78,16 @@ def list_run_snapshots(output_root: Path) -> list[dict[str, Any]]:
 
 
 def create_handler(
-    output_root: Path, web_root: Path = Path("web")
+    output_root: Path,
+    web_root: Path = Path("web"),
+    task_manager: TaskManager | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
+    manager = task_manager or TaskManager(resolved_output)
 
     class LocalApiHandler(BaseHTTPRequestHandler):
-        server_version = "TaobaoRiskMVP/1.0"
+        server_version = "TaobaoRiskMVP/1.1"
 
         def _common_headers(self, content_type: str, length: int) -> None:
             self.send_header("Content-Type", content_type)
@@ -98,6 +104,21 @@ def create_handler(
 
         def _error(self, status: int, code: str, message: str) -> None:
             self._json(status, {"error": {"code": code, "message": message}})
+
+        def _read_json_body(self) -> Any | None:
+            try:
+                length = int(self.headers.get("Content-Length") or "0")
+            except ValueError:
+                self._error(400, "invalid_content_length", "请求长度不合法")
+                return None
+            if length < 1 or length > 16 * 1024:
+                self._error(400, "invalid_request_size", "请求体不能为空且不能超过16KB")
+                return None
+            try:
+                return json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._error(400, "invalid_json", "请求体不是有效的UTF-8 JSON")
+                return None
 
         def _send_file(self, destination: Path) -> None:
             body = destination.read_bytes()
@@ -117,7 +138,7 @@ def create_handler(
         def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib handler API
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
@@ -142,7 +163,22 @@ def create_handler(
             if path == "/api/runs":
                 self._json(200, {"runs": list_run_snapshots(resolved_output)})
                 return
+            if path == "/api/tasks":
+                self._json(
+                    200,
+                    {
+                        "tasks": manager.list_tasks(),
+                        "activeTaskId": manager.active_task_id,
+                    },
+                )
+                return
             parts = [unquote(item) for item in path.split("/") if item]
+            if len(parts) == 3 and parts[:2] == ["api", "tasks"]:
+                try:
+                    self._json(200, manager.get_task(parts[2]))
+                except TaskNotFoundError as exc:
+                    self._error(404, "task_not_found", str(exc))
+                return
             if len(parts) < 3 or parts[:2] != ["api", "runs"]:
                 self._error(404, "not_found", "接口不存在")
                 return
@@ -179,6 +215,50 @@ def create_handler(
                 return
             self._error(404, "not_found", "接口不存在")
 
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+            path = urlparse(self.path).path
+            parts = [unquote(item) for item in path.split("/") if item]
+            if path == "/api/tasks":
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                try:
+                    self._json(202, manager.create_task(payload))
+                except TaskValidationError as exc:
+                    self._error(400, "invalid_task", str(exc))
+                except ActiveTaskError as exc:
+                    self._json(
+                        409,
+                        {
+                            "error": {
+                                "code": "active_task_exists",
+                                "message": str(exc),
+                                "activeTaskId": exc.task_id,
+                            }
+                        },
+                    )
+                return
+            if len(parts) == 4 and parts[:2] == ["api", "tasks"] and parts[3] == "resume":
+                try:
+                    self._json(202, manager.resume_task(parts[2]))
+                except TaskNotFoundError as exc:
+                    self._error(404, "task_not_found", str(exc))
+                except TaskNotResumableError as exc:
+                    self._error(409, "task_not_resumable", str(exc))
+                except ActiveTaskError as exc:
+                    self._json(
+                        409,
+                        {
+                            "error": {
+                                "code": "active_task_exists",
+                                "message": str(exc),
+                                "activeTaskId": exc.task_id,
+                            }
+                        },
+                    )
+                return
+            self._error(404, "not_found", "接口不存在")
+
         def log_message(self, format: str, *args: Any) -> None:
             print(f"[local-api] {self.address_string()} - {format % args}")
 
@@ -186,17 +266,44 @@ def create_handler(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="启动本地只读结果接口")
+    parser = argparse.ArgumentParser(description="启动本地任务与结果服务")
     parser.add_argument("--output-root", type=Path, default=Path("output"))
     parser.add_argument("--web-root", type=Path, default=Path("web"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
-    args = parser.parse_args(argv)
-    server = ThreadingHTTPServer(
-        (args.host, args.port), create_handler(args.output_root, args.web_root)
+    parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile"))
+    parser.add_argument("--channel", default="chrome")
+    parser.add_argument("--browser-mode", choices=("persistent", "cdp"), default="cdp")
+    parser.add_argument("--cdp-port", type=int, default=9222)
+    parser.add_argument("--browser-proxy")
+    parser.add_argument(
+        "--direct-browser",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="让采集浏览器绕过系统代理直连（默认启用）",
     )
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args(argv)
+    manager = TaskManager(
+        args.output_root,
+        pipeline_defaults={
+            "profile_dir": args.profile_dir,
+            "channel": args.channel,
+            "browser_mode": args.browser_mode,
+            "cdp_port": args.cdp_port,
+            "browser_proxy": args.browser_proxy,
+            "direct_browser": args.direct_browser,
+            "verbose": args.verbose,
+        },
+    )
+    server = ThreadingHTTPServer(
+        (args.host, args.port),
+        create_handler(args.output_root, args.web_root, manager),
+    )
+    server.daemon_threads = True
     print(f"本地展示页面：http://{args.host}:{args.port}/")
     print(f"本地结果接口：http://{args.host}:{args.port}/api/health")
+    print(f"任务创建接口：http://{args.host}:{args.port}/api/tasks")
     print("按 Ctrl+C 停止")
     try:
         server.serve_forever()

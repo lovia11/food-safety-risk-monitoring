@@ -5,7 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
+import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,11 +32,26 @@ def write_json(path: Path, value: Any) -> None:
     """
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8"
+    temporary = path.with_name(
+        f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
     )
-    temporary.replace(path)
+    try:
+        temporary.write_text(
+            json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        for attempt in range(20):
+            try:
+                temporary.replace(path)
+                return
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                # Windows can briefly lock the destination while an HTTP
+                # request is reading it. Retrying preserves atomic snapshots
+                # without exposing partially written JSON to the frontend.
+                time.sleep(0.01)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def read_json(path: Path) -> Any:

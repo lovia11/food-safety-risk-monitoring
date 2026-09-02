@@ -299,6 +299,10 @@ tbody tr:hover { background: #fbfdff; }
 .task-page-grid > div { min-width: 0; display: grid; align-content: start; gap: 16px; }
 .task-form-card, .process-card, .task-status-card, .task-overview-card, .task-record-card, .task-process-wide, .task-output-card, .log-card { padding: 19px 20px; }
 .task-form-card label { margin-bottom: 12px; }
+.task-form-message { min-height: 18px; margin: 2px 0 8px; color: #67768a; font-size: 11px; }
+.task-form-message.error { color: var(--red); }
+.task-form-message.success { color: var(--green); }
+.button:disabled { cursor: not-allowed; opacity: .58; }
 .task-form-card input, .task-form-card select, .task-form-card textarea { width: 100%; padding: 0 11px; border: 1px solid #dbe2eb; border-radius: 6px; color: #34445b; background: #fff; }
 .task-form-card select { height: 38px; }.task-form-card textarea { padding-top: 9px; resize: vertical; }
 .preset-box { min-height: 40px; padding: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; border: 1px solid #dbe2eb; border-radius: 6px; background: #fff; }

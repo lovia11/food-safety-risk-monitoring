@@ -144,9 +144,12 @@
               <label>目标平台<select><option selected>淘宝</option></select></label>
               <label>食品类型<div class="preset-box"><span>酸枣仁 ×</span><span>百合 ×</span><span>茯苓 ×</span></div></label>
               <label>功效关键词<div class="preset-box"><span>助眠 ×</span><span>安神 ×</span><span>改善睡眠 ×</span></div></label>
-              <label>采集数量<input type="number" value="10" min="1" max="50"></label>
+              <label>搜索关键词<input id="taskKeywordInput" type="text" value="酸枣仁" maxlength="80"></label>
+              <label>候选商品数量<input id="candidateLimitInput" type="number" value="10" min="1" max="50"></label>
+              <label>详情采集数量<input id="detailLimitInput" type="number" value="2" min="1" max="50"></label>
               <label>任务说明<textarea rows="3">优先采集食药同源类商品，筛查商品页面中的功效宣传表达。</textarea></label>
-              <div class="form-actions"><button id="saveTaskDraft" class="button button-secondary">保存草稿</button><button class="button button-primary" disabled title="执行接口待接入">立即启动</button></div>
+              <p id="taskFormMessage" class="task-form-message" role="status"></p>
+              <div class="form-actions"><button id="saveTaskDraft" class="button button-secondary">保存草稿</button><button id="startTaskButton" class="button button-primary">立即启动</button></div>
             </article>
           </div>
           <div>

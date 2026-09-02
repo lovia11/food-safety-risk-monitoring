@@ -1,9 +1,6 @@
 "use strict";
 
 const API_ROOT = "/api";
-const PREFERRED_CURRENT_RUN = "20260828_cdp_smoke2";
-const PREFERRED_HISTORY_RUN = "20260817T181659_batch";
-const PREFERRED_RISK_PRODUCT = "600949052422";
 
 const appState = {
   current: null,
@@ -12,6 +9,7 @@ const appState = {
   selectedRun: null,
   selectedProduct: null,
   selectedImagePath: null,
+  pollTimer: null,
   filters: { query: "", status: "all", region: "all", effect: "all", review: "all" },
 };
 
@@ -47,8 +45,30 @@ function assetUrl(runId, path) {
 
 async function fetchJson(url) {
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`请求失败：${response.status}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const error = new Error(payload.error?.message || `请求失败：${response.status}`);
+    error.code = payload.error?.code;
+    error.activeTaskId = payload.error?.activeTaskId;
+    throw error;
+  }
   return response.json();
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(body.error?.message || `请求失败：${response.status}`);
+    error.code = body.error?.code;
+    error.activeTaskId = body.error?.activeTaskId;
+    throw error;
+  }
+  return body;
 }
 
 function showToast(message) {
@@ -134,6 +154,8 @@ function taskPresentation(snapshot) {
   const stage = snapshot.task?.stage;
   if (stage === "completed") return { label: "已完成", tone: "green" };
   if (stage === "failed" || stage === "completed_with_errors") return { label: "失败", tone: "red" };
+  if (stage === "interrupted") return { label: "已中断", tone: "orange" };
+  if (stage === "manual_action_required") return { label: "需要人工操作", tone: "orange" };
   if (["searching", "collecting_details", "processing_ocr_analysis"].includes(stage)) return { label: "进行中", tone: "green" };
   return { label: "待继续", tone: "orange" };
 }
@@ -202,22 +224,40 @@ function renderOverviewDistributions() {
 
 function renderOverviewTasks() {
   const snapshots = allSnapshots();
-  $("#overviewTaskBody").innerHTML = snapshots.map((snapshot, index) => {
+  $("#overviewTaskBody").innerHTML = snapshots.map(snapshot => {
     const status = taskPresentation(snapshot);
     const stats = snapshot.statistics;
-    return `<tr><td>${index === 0 ? "酸枣仁专项采集" : "酸枣仁历史验证"}<small>${escapeHtml(snapshot.task.id)}</small></td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td>${stats.analyzedProducts}/${stats.selectedProducts}</td></tr>`;
+    return `<tr><td>${escapeHtml(snapshot.task.keyword || "未命名")}采集任务<small>${escapeHtml(snapshot.task.id)}</small></td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td>${stats.analyzedProducts}/${stats.selectedProducts}</td></tr>`;
   }).join("");
 }
 
-function flowData(stats) {
+function flowData(stats, stage = appState.current?.task?.stage) {
   const selected = stats.selectedProducts;
+  const stageOrder = {
+    initializing: 0,
+    searching: 0,
+    manual_action_required: 0,
+    collecting_details: 2,
+    processing_ocr_analysis: 4,
+    collection_completed: 6,
+    completed: 6,
+    completed_with_errors: 6,
+    interrupted: -1,
+    failed: -1,
+  };
+  const currentIndex = stageOrder[stage] ?? 0;
+  const stateFor = index => {
+    if (["failed", "interrupted"].includes(stage)) return index === Math.max(currentIndex, 0) ? "current" : index < currentIndex ? "done" : "pending";
+    if (index < currentIndex || currentIndex >= 6) return "done";
+    return index === currentIndex || (currentIndex === 4 && index === 5) ? "current" : "pending";
+  };
   return [
-    { label: "搜索商品", count: `发现 ${stats.searchRaw}`, state: "done" },
-    { label: "商品去重", count: `入选 ${selected}`, state: "done" },
-    { label: "详情采集", count: `${stats.detailCollectedProducts}/${selected}`, state: "done" },
-    { label: "原图保存", count: `${stats.originalImages} 张`, state: "done" },
-    { label: "OCR识别", count: `完成 ${stats.analyzedProducts}/${selected}`, state: "current" },
-    { label: "规则分析", count: `完成 ${stats.analyzedProducts}/${selected}`, state: "current" },
+    { label: "搜索商品", count: `发现 ${stats.searchRaw}`, state: stateFor(0) },
+    { label: "商品去重", count: `入选 ${selected}`, state: stateFor(1) },
+    { label: "详情采集", count: `${stats.detailCollectedProducts}/${selected}`, state: stateFor(2) },
+    { label: "原图保存", count: `${stats.originalImages} 张`, state: stateFor(3) },
+    { label: "OCR识别", count: `完成 ${stats.analyzedProducts}/${selected}`, state: stateFor(4) },
+    { label: "规则分析", count: `完成 ${stats.analyzedProducts}/${selected}`, state: stateFor(5) },
   ];
 }
 
@@ -319,7 +359,9 @@ function renderProductTable() {
   const entries = filteredProducts();
   const historicalCount = monitorProductEntries().filter(item => item.historical).length;
   $("#productTableBody").innerHTML = entries.map(({ snapshot, product }) => productRow(product, snapshot.task.id)).join("");
-  $("#productResultCount").textContent = `共 ${entries.length} 件；当前批次 ${appState.current.statistics.detailCollectedProducts} 件，历史已分析 ${historicalCount} 件`;
+  const currentTotal = appState.current.statistics.selectedProducts || appState.current.products.length;
+  const currentAnalyzed = appState.current.statistics.analyzedProducts || 0;
+  $("#productResultCount").textContent = `共 ${entries.length} 件；当前批次 ${currentTotal} 件，已分析 ${currentAnalyzed} 件，历史已分析 ${historicalCount} 件`;
   $("#productEmpty").hidden = entries.length > 0;
 }
 
@@ -330,7 +372,11 @@ function updateExportLinks() {
   $("#viewReport").href = assetUrl(runId, "summary.md");
 }
 
-function allSnapshots() { return [appState.current, appState.history].filter(Boolean); }
+function allSnapshots() {
+  const unique = new Map();
+  [appState.current, appState.history].filter(Boolean).forEach(snapshot => unique.set(snapshot.task.id, snapshot));
+  return [...unique.values()];
+}
 
 function findProduct(runId, productId) {
   const snapshot = allSnapshots().find(item => item.task.id === runId);
@@ -339,10 +385,18 @@ function findProduct(runId, productId) {
 }
 
 function defaultRiskSelection() {
-  const product = appState.history.products.find(item => item.id === PREFERRED_RISK_PRODUCT)
-    || appState.history.products.find(item => item.risk?.reviewRequired === true)
-    || appState.current.products[0];
-  const snapshot = appState.history.products.includes(product) ? appState.history : appState.current;
+  const snapshots = allSnapshots();
+  const existing = findProduct(appState.selectedRun, appState.selectedProduct);
+  if (existing.snapshot && existing.product) return;
+  const snapshot = snapshots.find(item => item.products.some(product => product.risk?.reviewRequired === true))
+    || snapshots.find(item => item.products.length);
+  const product = snapshot?.products.find(item => item.risk?.reviewRequired === true)
+    || snapshot?.products[0];
+  if (!snapshot || !product) {
+    appState.selectedRun = null;
+    appState.selectedProduct = null;
+    return;
+  }
   appState.selectedRun = snapshot.task.id;
   appState.selectedProduct = product.id;
   appState.selectedImagePath = null;
@@ -356,7 +410,15 @@ function evidenceKeywords(product) {
 
 function renderJudgment() {
   const { snapshot, product } = findProduct(appState.selectedRun, appState.selectedProduct);
-  if (!snapshot || !product) return;
+  if (!snapshot || !product) {
+    $("#judgmentHero").innerHTML = `<div class="empty-evidence">当前任务尚无可查看的商品结果。</div>`;
+    $("#analysisCard").innerHTML = `<div class="empty-evidence">任务产生商品分析结果后将在这里展示。</div>`;
+    $("#evidenceList").innerHTML = `<div class="empty-evidence">尚未生成风险证据。</div>`;
+    $("#galleryThumbs").innerHTML = "";
+    $("#mainEvidenceImage").removeAttribute("src");
+    $("#ocrText").textContent = "暂无OCR结果。";
+    return;
+  }
   const runId = snapshot.task.id;
   const isHistory = runId !== appState.current.task.id;
   const thumb = productThumb(product, runId);
@@ -446,13 +508,13 @@ async function selectGalleryImage(snapshot, product, path, refreshThumbs = true)
 }
 
 function renderTaskPage() {
-  const snapshots = allSnapshots();
+  const snapshots = appState.runs.length ? appState.runs : allSnapshots();
   const stateCounts = { running: 0, waiting: 0, completed: 0, failed: 0 };
   snapshots.forEach(snapshot => {
     const stage = snapshot.task?.stage;
     if (stage === "completed") stateCounts.completed += 1;
     else if (stage === "failed" || stage === "completed_with_errors") stateCounts.failed += 1;
-    else if (["searching", "collecting_details", "processing_ocr_analysis"].includes(stage)) stateCounts.running += 1;
+    else if (["searching", "collecting_details", "processing_ocr_analysis", "manual_action_required", "initializing"].includes(stage) && snapshot.runtime?.active) stateCounts.running += 1;
     else stateCounts.waiting += 1;
   });
   const stateCards = [
@@ -462,20 +524,25 @@ function renderTaskPage() {
     ["!", "失败", stateCounts.failed, "red"],
   ];
   $("#taskStateOverview").innerHTML = stateCards.map(([icon, label, count, tone]) => `<div class="task-state-item"><span class="task-state-icon ${tone}">${icon}</span><div><span>${label}</span><strong>${count}</strong></div></div>`).join("");
-  $("#taskRecordBody").innerHTML = snapshots.map((snapshot, index) => {
+  $("#taskRecordBody").innerHTML = snapshots.slice(0, 8).map(snapshot => {
     const stats = snapshot.statistics;
     const status = taskPresentation(snapshot);
     const total = Math.max(stats.selectedProducts || 0, 1);
     const value = stats.analyzedProducts || 0;
     const percent = Math.min(100, Math.round(value / total * 100));
-    const collectedTimes = snapshot.products.map(product => product.collectedAt).filter(Boolean).sort();
-    const createdAt = collectedTimes[0] || snapshot.generatedAt;
-    return `<tr><td>${index === 0 ? "酸枣仁专项采集" : "酸枣仁历史验证"}</td><td>${escapeHtml(snapshot.task.keyword || "酸枣仁")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><a class="text-button" href="${API_ROOT}/runs/${encodeURIComponent(snapshot.task.id)}" target="_blank">查看</a></td></tr>`;
+    const createdAt = snapshot.runtime?.createdAt || snapshot.generatedAt;
+    const resume = snapshot.runtime?.resumable ? `<button class="text-button" data-resume-task="${escapeHtml(snapshot.task.id)}">恢复</button>` : "";
+    return `<tr><td>${escapeHtml(snapshot.task.keyword || "未命名")}采集任务<small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(snapshot.task.keyword || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
   }).join("");
   renderFlow($("#taskFlow"));
+  syncTaskFormState();
 }
 
 async function loadRunLog() {
+  if (!appState.current?.task?.id) {
+    $("#logContent").textContent = "暂无运行日志。";
+    return;
+  }
   try {
     const response = await fetch(assetUrl(appState.current.task.id, "run.log"), { cache: "no-store" });
     if (!response.ok) throw new Error();
@@ -483,6 +550,136 @@ async function loadRunLog() {
     $("#logContent").textContent = lines.slice(-90).join("\n") || "日志为空。";
   } catch (_) {
     $("#logContent").textContent = "当前运行日志暂时无法读取。";
+  }
+}
+
+function setTaskFormMessage(message, tone = "", source = "user") {
+  const target = $("#taskFormMessage");
+  target.textContent = message || "";
+  target.className = `task-form-message ${tone}`.trim();
+  target.dataset.source = source;
+}
+
+function syncTaskFormState() {
+  const activeMeta = appState.runs.find(item => item.runtime?.active);
+  const active = Boolean(activeMeta || appState.current?.runtime?.active);
+  $("#startTaskButton").disabled = active;
+  ["#taskKeywordInput", "#candidateLimitInput", "#detailLimitInput"].forEach(selector => { $(selector).disabled = active; });
+  if (active) {
+    const task = appState.current?.runtime?.active ? appState.current.task : activeMeta?.task;
+    setTaskFormMessage(task?.message || "采集任务正在后台运行", "", "runtime");
+  } else if ($("#taskFormMessage").dataset.source === "runtime") {
+    setTaskFormMessage("", "", "user");
+  }
+}
+
+function upsertRunMeta(snapshot) {
+  const meta = {
+    id: snapshot.task.id,
+    generatedAt: snapshot.generatedAt,
+    task: snapshot.task,
+    statistics: snapshot.statistics,
+    runtime: snapshot.runtime || {},
+    url: `${API_ROOT}/tasks/${encodeURIComponent(snapshot.task.id)}`,
+  };
+  appState.runs = [meta, ...appState.runs.filter(item => item.id !== meta.id)]
+    .sort((a, b) => String(b.generatedAt || "").localeCompare(String(a.generatedAt || "")));
+}
+
+async function refreshRunData(preferredRunId = null) {
+  const taskList = await fetchJson(`${API_ROOT}/tasks`);
+  appState.runs = taskList.tasks || [];
+  const currentMeta = appState.runs.find(item => item.id === preferredRunId)
+    || appState.runs.find(item => item.runtime?.active)
+    || appState.runs[0];
+  if (!currentMeta) throw new Error("当前没有可展示的任务数据");
+  const historyMeta = appState.runs.find(item => item.id !== currentMeta.id && item.statistics?.clueProducts > 0);
+  appState.current = await fetchJson(currentMeta.url);
+  appState.history = historyMeta ? await fetchJson(historyMeta.url) : null;
+  defaultRiskSelection();
+}
+
+function stopTaskPolling() {
+  if (appState.pollTimer) clearTimeout(appState.pollTimer);
+  appState.pollTimer = null;
+}
+
+async function pollTask(taskId) {
+  stopTaskPolling();
+  try {
+    const snapshot = await fetchJson(`${API_ROOT}/tasks/${encodeURIComponent(taskId)}`);
+    appState.current = snapshot;
+    upsertRunMeta(snapshot);
+    renderAll();
+    if (snapshot.task.terminal) {
+      await refreshRunData(taskId);
+      renderAll();
+      const failed = ["failed", "completed_with_errors"].includes(snapshot.task.stage);
+      setTaskFormMessage(snapshot.task.message || snapshot.task.stageLabel, failed ? "error" : "success", "user");
+      if (!failed) showToast("采集任务已完成，结果已自动更新");
+      return;
+    }
+    appState.pollTimer = setTimeout(() => pollTask(taskId), 2000);
+  } catch (error) {
+    setTaskFormMessage(`状态更新失败：${error.message}`, "error", "user");
+    appState.pollTimer = setTimeout(() => pollTask(taskId), 4000);
+  }
+}
+
+async function startTask() {
+  const keyword = $("#taskKeywordInput").value.trim();
+  const candidateLimit = Number.parseInt($("#candidateLimitInput").value, 10);
+  const detailLimit = Number.parseInt($("#detailLimitInput").value, 10);
+  setTaskFormMessage("正在创建任务…", "", "runtime");
+  $("#startTaskButton").disabled = true;
+  try {
+    const snapshot = await postJson(`${API_ROOT}/tasks`, {
+      keyword,
+      candidate_limit: candidateLimit,
+      detail_limit: detailLimit,
+    });
+    appState.current = snapshot;
+    appState.selectedRun = null;
+    appState.selectedProduct = null;
+    appState.selectedImagePath = null;
+    upsertRunMeta(snapshot);
+    renderAll();
+    showToast("任务已创建，采集流程正在后台运行");
+    pollTask(snapshot.task.id);
+  } catch (error) {
+    setTaskFormMessage(error.message, "error", "user");
+    $("#startTaskButton").disabled = false;
+    if (error.activeTaskId) pollTask(error.activeTaskId);
+  }
+}
+
+async function openRun(taskId) {
+  try {
+    const snapshot = await fetchJson(`${API_ROOT}/tasks/${encodeURIComponent(taskId)}`);
+    appState.current = snapshot;
+    appState.selectedRun = null;
+    appState.selectedProduct = null;
+    appState.selectedImagePath = null;
+    upsertRunMeta(snapshot);
+    defaultRiskSelection();
+    renderAll();
+    if (snapshot.runtime?.active) pollTask(taskId);
+    activateView(snapshot.task.terminal ? "products" : "tasks");
+  } catch (error) {
+    showToast(`任务读取失败：${error.message}`);
+  }
+}
+
+async function resumeTask(taskId) {
+  setTaskFormMessage("正在恢复任务…", "", "runtime");
+  try {
+    const snapshot = await postJson(`${API_ROOT}/tasks/${encodeURIComponent(taskId)}/resume`);
+    appState.current = snapshot;
+    upsertRunMeta(snapshot);
+    renderAll();
+    pollTask(taskId);
+  } catch (error) {
+    setTaskFormMessage(error.message, "error", "user");
   }
 }
 
@@ -500,6 +697,16 @@ function bindEvents() {
   }));
   $$('[data-nav-target]').forEach(button => button.addEventListener("click", () => activateView(button.dataset.navTarget)));
   document.addEventListener("click", event => {
+    const runButton = event.target.closest("[data-open-run]");
+    if (runButton) {
+      openRun(runButton.dataset.openRun);
+      return;
+    }
+    const resumeButton = event.target.closest("[data-resume-task]");
+    if (resumeButton) {
+      resumeTask(resumeButton.dataset.resumeTask);
+      return;
+    }
     const detailButton = event.target.closest("[data-view-product]");
     if (detailButton) {
       appState.selectedRun = detailButton.dataset.runId;
@@ -537,9 +744,16 @@ function bindEvents() {
   });
   $("#focusNewTask").addEventListener("click", () => $("#newTaskForm").scrollIntoView({ behavior: "smooth", block: "start" }));
   $("#saveTaskDraft").addEventListener("click", () => {
-    localStorage.setItem("risk-monitor-task-draft", JSON.stringify({ name: $("#taskNameInput").value, savedAt: new Date().toISOString() }));
+    localStorage.setItem("risk-monitor-task-draft", JSON.stringify({
+      name: $("#taskNameInput").value,
+      keyword: $("#taskKeywordInput").value,
+      candidateLimit: $("#candidateLimitInput").value,
+      detailLimit: $("#detailLimitInput").value,
+      savedAt: new Date().toISOString(),
+    }));
     showToast("任务草稿已保存");
   });
+  $("#startTaskButton").addEventListener("click", startTask);
   $("#mainEvidenceImageButton").addEventListener("click", event => {
     const button = event.currentTarget;
     if (!button.dataset.fullImage) return;
@@ -570,22 +784,12 @@ function renderAll() {
 
 async function init() {
   try {
-    const runList = await fetchJson(`${API_ROOT}/runs`);
-    const runs = runList.runs || [];
-    appState.runs = runs;
-    const currentMeta = runs.find(item => item.id === PREFERRED_CURRENT_RUN)
-      || runs.find(item => item.statistics?.selectedProducts === 10 && item.statistics?.detailCollectedProducts === 10)
-      || runs[0];
-    const historyMeta = runs.find(item => item.id === PREFERRED_HISTORY_RUN)
-      || runs.find(item => item.statistics?.clueProducts > 0 && item.id !== currentMeta?.id);
-    if (!currentMeta || !historyMeta) throw new Error("缺少已生成的真实网页快照");
-    [appState.current, appState.history] = await Promise.all([
-      fetchJson(currentMeta.url), fetchJson(historyMeta.url),
-    ]);
+    await refreshRunData();
     renderAll();
     bindEvents();
     $("#loadingState").hidden = true;
     $("#appContent").hidden = false;
+    if (appState.current.runtime?.active) pollTask(appState.current.task.id);
   } catch (error) {
     $("#loadingState").innerHTML = `<div class="load-error"><strong>数据读取失败</strong><p>${escapeHtml(error.message)}</p><p>请确认结果服务可用后刷新页面。</p></div>`;
   }
