@@ -217,18 +217,41 @@ def create_handler(
             if path == "/api/products":
                 query = parse_qs(parsed.query)
                 try:
-                    products = store.list_products(
-                        query=str((query.get("query") or [""])[0]).strip(),
-                        review_status=str(
+                    page = int((query.get("page") or ["1"])[0])
+                    page_size = int((query.get("page_size") or ["20"])[0])
+                    if page <= 0:
+                        raise ValueError("page必须是正整数")
+                    if page_size <= 0 or page_size > 100:
+                        raise ValueError("page_size必须在1到100之间")
+                    filters = {
+                        "query": str((query.get("query") or [""])[0]).strip(),
+                        "review_status": str(
                             (query.get("review_status") or [""])[0]
                         ).strip(),
-                        effect=str((query.get("effect") or [""])[0]).strip(),
-                        task_id=str((query.get("task_id") or [""])[0]).strip(),
+                        "effect": str((query.get("effect") or [""])[0]).strip(),
+                        "task_id": str((query.get("task_id") or [""])[0]).strip(),
+                        "target_id": str(
+                            (query.get("target_id") or [""])[0]
+                        ).strip(),
+                    }
+                    total = store.count_products(**filters)
+                    products = store.list_products(
+                        **filters, page=page, page_size=page_size
                     )
-                except ReviewValidationError as exc:
+                except (ReviewValidationError, TypeError, ValueError) as exc:
                     self._error(400, "invalid_filter", str(exc))
                     return
-                self._json(200, {"products": products, "count": len(products)})
+                self._json(
+                    200,
+                    {
+                        "products": products,
+                        "count": len(products),
+                        "total": total,
+                        "page": page,
+                        "pageSize": page_size,
+                        "totalPages": (total + page_size - 1) // page_size,
+                    },
+                )
                 return
             if (
                 len(parts) == 4

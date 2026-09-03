@@ -26,18 +26,28 @@ def create_run(
     effect: str = "助眠",
     stage: str = "completed",
     collected_at: str = "2026-09-02T10:00:00+08:00",
+    target_id: str | None = None,
 ) -> Path:
     run_root = output_root / run_id
+    task_request = {
+        "task_id": run_id,
+        "keyword": "酸枣仁",
+        "candidate_limit": 10,
+        "detail_limit": 2,
+        "created_at": "2026-09-02T09:59:00+08:00",
+        "runtime_owned": True,
+    }
+    if target_id:
+        task_request.update(
+            {
+                "task_type": "monitor",
+                "target_id": target_id,
+                "per_query_candidate_limit": 10,
+            }
+        )
     write_json(
         run_root / "task_request.json",
-        {
-            "task_id": run_id,
-            "keyword": "酸枣仁",
-            "candidate_limit": 10,
-            "detail_limit": 2,
-            "created_at": "2026-09-02T09:59:00+08:00",
-            "runtime_owned": True,
-        },
+        task_request,
     )
     write_json(
         run_root / "products" / product_id / "meta.json",
@@ -140,8 +150,67 @@ class DataStoreTest(unittest.TestCase):
         )
         self.assertEqual(version, 4)
 
-    def _import_monitor_seed(self):
+    def _import_monitor_seed(self, *, include_second_target: bool = False):
         config = self.root / "monitor_targets.json"
+        targets = [
+            {
+                "target_id": "target-1",
+                "dataset_id": "test-development-dataset",
+                "standard_name": "酸枣仁",
+                "target_type": "food_medicine",
+                "source_name": "开发种子",
+                "source_reference": "仅用于开发验证",
+                "source_date": None,
+                "enabled": True,
+                "queries": [
+                    {
+                        "query_id": "query-base",
+                        "query_text": "酸枣仁",
+                        "query_type": "base",
+                        "query_source": "standard_name",
+                        "validation_status": "search_validated",
+                        "query_note": "离线测试中的已验证基础词。",
+                        "order": 1,
+                        "enabled": True,
+                    },
+                    {
+                        "query_id": "query-tea",
+                        "query_text": "酸枣仁茶",
+                        "query_type": "product_form",
+                        "query_source": "observed_product_form",
+                        "validation_status": "search_validated",
+                        "query_note": "离线测试中观察到的产品形态。",
+                        "order": 2,
+                        "enabled": True,
+                    },
+                ],
+            }
+        ]
+        if include_second_target:
+            targets.append(
+                {
+                    "target_id": "target-2",
+                    "dataset_id": "test-development-dataset",
+                    "standard_name": "茯苓",
+                    "target_type": "food_medicine",
+                    "source_name": "开发种子",
+                    "source_reference": "仅用于开发验证",
+                    "source_date": None,
+                    "enabled": True,
+                    "queries": [
+                        {
+                            "query_id": "query-fuling",
+                            "query_text": "茯苓",
+                            "query_type": "base",
+                            "query_source": "standard_name",
+                            "validation_status": "search_validated",
+                            "query_note": "离线测试中的第二个已验证基础词。",
+                            "order": 1,
+                            "enabled": True,
+                        }
+                    ],
+                }
+            )
         write_json(
             config,
             {
@@ -154,40 +223,7 @@ class DataStoreTest(unittest.TestCase):
                 "source_date": None,
                 "collected_at": None,
                 "verified_at": None,
-                "targets": [
-                    {
-                        "target_id": "target-1",
-                        "dataset_id": "test-development-dataset",
-                        "standard_name": "酸枣仁",
-                        "target_type": "food_medicine",
-                        "source_name": "开发种子",
-                        "source_reference": "仅用于开发验证",
-                        "source_date": None,
-                        "enabled": True,
-                        "queries": [
-                            {
-                                "query_id": "query-base",
-                                "query_text": "酸枣仁",
-                                "query_type": "base",
-                                "query_source": "standard_name",
-                                "validation_status": "search_validated",
-                                "query_note": "离线测试中的已验证基础词。",
-                                "order": 1,
-                                "enabled": True,
-                            },
-                            {
-                                "query_id": "query-tea",
-                                "query_text": "酸枣仁茶",
-                                "query_type": "product_form",
-                                "query_source": "observed_product_form",
-                                "validation_status": "search_validated",
-                                "query_note": "离线测试中观察到的产品形态。",
-                                "order": 2,
-                                "enabled": True,
-                            },
-                        ],
-                    }
-                ]
+                "targets": targets,
             },
         )
         return self.store.import_monitor_config(config)
@@ -348,6 +384,124 @@ class DataStoreTest(unittest.TestCase):
         )
         self.assertEqual([item["productId"] for item in filtered], ["123"])
         self.assertEqual(self.store.list_products(query="不存在"), [])
+
+    def test_product_query_uses_global_latest_snapshot_by_default(self):
+        self._import_monitor_seed(include_second_target=True)
+        self.store.import_run(
+            create_run(
+                self.output_root,
+                "run_target_1",
+                product_name="较早的酸枣仁快照",
+                collected_at="2026-09-02T10:00:00+08:00",
+                target_id="target-1",
+            )
+        )
+        self.store.import_run(
+            create_run(
+                self.output_root,
+                "run_target_2",
+                product_name="较新的茯苓快照",
+                collected_at="2026-09-03T10:00:00+08:00",
+                target_id="target-2",
+            )
+        )
+        product = self.store.list_products()[0]
+        self.assertEqual(product["productName"], "较新的茯苓快照")
+        self.assertEqual(product["targetId"], "target-2")
+        self.assertEqual(product["targetName"], "茯苓")
+
+    def test_product_query_paginates_with_stable_total(self):
+        for index in range(23):
+            self.store.import_run(
+                create_run(
+                    self.output_root,
+                    f"run_{index:02d}",
+                    product_id=f"product-{index:02d}",
+                    product_name=f"分页商品 {index:02d}",
+                    collected_at=f"2026-09-02T{index:02d}:00:00+08:00",
+                )
+            )
+        first = self.store.list_products(page=1, page_size=20)
+        second = self.store.list_products(page=2, page_size=20)
+        beyond = self.store.list_products(page=3, page_size=20)
+        self.assertEqual(len(first), 20)
+        self.assertEqual(len(second), 3)
+        self.assertEqual(beyond, [])
+        self.assertEqual(self.store.count_products(), 23)
+        self.assertTrue(set(item["productId"] for item in first).isdisjoint(
+            item["productId"] for item in second
+        ))
+
+    def test_target_filter_uses_latest_snapshot_within_target(self):
+        self._import_monitor_seed(include_second_target=True)
+        for run_id, name, collected_at, target_id in (
+            ("acid_old", "酸枣仁旧快照", "2026-09-01T10:00:00+08:00", "target-1"),
+            ("acid_new", "酸枣仁范围最新快照", "2026-09-02T10:00:00+08:00", "target-1"),
+            ("fuling_new", "全局最新茯苓快照", "2026-09-03T10:00:00+08:00", "target-2"),
+        ):
+            self.store.import_run(
+                create_run(
+                    self.output_root,
+                    run_id,
+                    product_name=name,
+                    collected_at=collected_at,
+                    target_id=target_id,
+                )
+            )
+        product = self.store.list_products(target_id="target-1")[0]
+        self.assertEqual(product["productName"], "酸枣仁范围最新快照")
+        self.assertEqual(product["targetId"], "target-1")
+        self.assertEqual(product["targetName"], "酸枣仁")
+        self.assertEqual(self.store.count_products(target_id="target-1"), 1)
+
+    def test_task_and_target_filters_are_combined(self):
+        self._import_monitor_seed(include_second_target=True)
+        self.store.import_run(
+            create_run(self.output_root, "acid_run", target_id="target-1")
+        )
+        self.assertEqual(
+            len(self.store.list_products(task_id="acid_run", target_id="target-1")),
+            1,
+        )
+        self.assertEqual(
+            self.store.list_products(task_id="acid_run", target_id="target-2"),
+            [],
+        )
+
+    def test_quick_task_has_null_target_metadata(self):
+        self.store.import_run(create_run(self.output_root, "quick_run"))
+        product = self.store.list_products(task_id="quick_run")[0]
+        self.assertIsNone(product["targetId"])
+        self.assertIsNone(product["targetName"])
+
+    def test_filtered_count_matches_paginated_product_query(self):
+        for index in range(3):
+            self.store.import_run(
+                create_run(
+                    self.output_root,
+                    f"filtered_{index}",
+                    product_id=f"filtered-product-{index}",
+                    product_name=(
+                        f"匹配商品 {index}" if index < 2 else "其他商品"
+                    ),
+                    effect="助眠" if index < 2 else "",
+                    collected_at=f"2026-09-02T1{index}:00:00+08:00",
+                )
+            )
+        for product in self.store.list_products(query="匹配", effect="助眠"):
+            self.store.update_review(product["snapshotId"], "recommend_follow_up")
+        filters = {
+            "query": "匹配",
+            "review_status": "recommend_follow_up",
+            "effect": "助眠",
+        }
+        self.assertEqual(self.store.count_products(**filters), 2)
+        self.assertEqual(
+            len(self.store.list_products(**filters, page=1, page_size=1)), 1
+        )
+        self.assertEqual(
+            len(self.store.list_products(**filters, page=2, page_size=1)), 1
+        )
 
     def test_import_all_discovers_only_valid_run_snapshots(self):
         create_run(self.output_root, "run_a")

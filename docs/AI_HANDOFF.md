@@ -1,11 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述当前 v0.6 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述当前 v0.7-A 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 产品/代码基线版本：**v0.6 — Reference Data Foundation**。
+- 当前开发版本：**v0.7-A — Product Query & Pagination Foundation**；这是 v0.7 中间增量，不创建 tag。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；整体稳定回退基线为 `reference-data-v0.6`。
+- v0.7-A 已完成商品服务端分页、`target_id` 筛选、Target 范围内最新快照选择以及 `targetId`/`targetName` 返回；SQLite schema 仍为 version 4，商品监测前端尚未迁移到新查询能力。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -209,12 +210,14 @@ ProductSnapshot 1 ── 1 Review
 | GET | `/api/tasks/{task_id}/candidate-hits` | 查看 Monitor 检索来源 |
 | GET | `/api/monitor-targets` | 启用的监测对象列表 |
 | GET | `/api/monitor-targets/{target_id}` | 对象及其有序 Query |
-| GET | `/api/products` | 商品索引；支持 `query`、`review_status`、`effect`、`task_id` |
+| GET | `/api/products` | 商品索引；支持 `query`、`review_status`、`effect`、`task_id`、`target_id`、`page`、`page_size` |
 | GET | `/api/products/{product_id}/snapshots` | 商品历次快照 |
 | GET | `/api/snapshots/{snapshot_id}` | 快照、Evidence 与 Review |
 | PUT | `/api/snapshots/{snapshot_id}/review` | 更新人工复核状态和备注 |
 
 `GET /api/monitor-targets` 与单对象接口保持原路径；每个 target 现在额外返回 `dataset_id`、`dataset_version`、`dataset_status` 和完整 `dataset` provenance，不需要新增 API。启动服务或运行 `src.data_store` 时，`--monitor-config` 可以重复指定；未指定时依次导入 development 与 reference 配置。
+
+`GET /api/products` 默认 `page=1`、`page_size=20`，单页最大 100，并返回 `count`、`total`、`page`、`pageSize`、`totalPages`。无 `task_id`/`target_id` 时每个 Product 返回全局最新 Snapshot；有 `target_id` 时返回每个 Product 在该 Target 范围内的最新 Snapshot；`task_id` 与 `target_id` 同时出现时按 AND 过滤。商品项中的 `targetId`、`targetName` 来自 Snapshot 所属 Task；Quick Task 两字段为 `null`。
 
 Quick 创建示例：
 
@@ -297,7 +300,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 118 项 `unittest`。其中 v0.5 稳定 tag 的原始基线为 81 项；v0.6-A/B/C1 合计增加 37 项，C1 相关增量覆盖 Query 来源/验证状态、官方别名、启用约束、SQLite v3→v4、search-only 编排、API metadata 和开发/正式数据隔离。2026-09-03 正式 E2E 完成后只运行一次全量回归，结果为 `Ran 118 tests ... OK`。
+当前共有 124 项 `unittest`。v0.6 稳定基线为 118 项；v0.7-A 增加 6 项，覆盖分页、总数、Target 范围 latest Snapshot、全局 latest Snapshot、组合筛选、Target 元数据与 Quick Task 空 Target。2026-09-03 完成 v0.7-A 后只运行一次全量回归，结果为 `Ran 124 tests ... OK`。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -352,7 +355,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - 人工复核只保存一个最新状态和备注，没有审核人、历史版本或审计日志。
 - 没有任务取消；人工验证仍需在服务终端确认；崩溃恢复依赖已有断点文件。
 - API 没有登录鉴权，但默认只监听回环地址；不要未经安全设计直接暴露到局域网/公网。
-- Product API 当前一次返回全部匹配结果，没有后端分页。
+- Product API 已有后端分页和 Target 筛选，但当前商品监测前端尚未接入分页状态与 Target 控件。
 
 ## 19. Technical Debt
 
@@ -369,15 +372,15 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 20. Requirement Backlog
 
-以下全部是**尚未实现**：
+以下是 v0.7-A 之后仍未实现的事项：
 
 | ID | 需求 | 关键边界 |
 | --- | --- | --- |
 | `GEO-01` | 商品页面声明产地 | 必须记录字段来源和页面证据，不能与发货地混同 |
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
-| `UI-01` | 商品监测分页 | 同时设计 API 分页和前端状态，避免只做视觉分页 |
-| `UI-02` | 按 MonitorTarget 筛选商品 | 需要从 Task/Hit/Snapshot 关系明确过滤语义 |
+| `UI-01` | 商品监测页接入服务端分页 | API 已完成；前端需要维护页码、总数、加载和筛选重置状态 |
+| `UI-02` | 商品监测页增加 MonitorTarget 筛选 | API 已按 ProductSnapshot → Task.target_id 实现；前端尚无筛选控件 |
 | `UI-03` | 整体 UI/UX 优化 | 不得制造虚假统计或结论性风险标签 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
@@ -420,7 +423,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 118 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 124 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

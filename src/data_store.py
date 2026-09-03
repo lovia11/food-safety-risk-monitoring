@@ -1132,6 +1132,8 @@ class DataStore:
             "snapshotId": row["snapshot_id"],
             "productId": row["product_id"],
             "taskId": row["task_id"],
+            "targetId": row["target_id"],
+            "targetName": row["target_name"],
             "rank": row["rank"],
             "productName": row["product_name"],
             "shopName": row["shop_name"],
@@ -1163,20 +1165,29 @@ class DataStore:
 
     def _base_snapshot_query(self) -> str:
         return """
-            SELECT s.*, t.run_path, r.review_status, r.review_note, r.reviewed_at
+            SELECT s.*, t.run_path, t.target_id,
+                   mt.standard_name AS target_name,
+                   r.review_status, r.review_note, r.reviewed_at
+        """ + self._base_snapshot_from()
+
+    @staticmethod
+    def _base_snapshot_from() -> str:
+        return """
             FROM product_snapshots s
             JOIN tasks t ON t.task_id = s.task_id
             JOIN reviews r ON r.snapshot_id = s.snapshot_id
+            LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
         """
 
-    def list_products(
+    def _product_filter(
         self,
         *,
         query: str = "",
         review_status: str = "",
         effect: str = "",
         task_id: str = "",
-    ) -> list[dict[str, Any]]:
+        target_id: str = "",
+    ) -> tuple[str, list[Any]]:
         clauses: list[str] = []
         values: list[Any] = []
         if query:
@@ -1196,27 +1207,80 @@ class DataStore:
         if task_id:
             clauses.append("s.task_id = ?")
             values.append(task_id)
-        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
-        # One product row per task when task_id is supplied; otherwise expose the
-        # newest observation for each stable Taobao product identity.
-        if task_id:
-            sql = self._base_snapshot_query() + where + " ORDER BY s.rank, s.product_id"
-        else:
-            latest = """
-                AND NOT EXISTS (
-                    SELECT 1 FROM product_snapshots newer
+        if target_id:
+            clauses.append("t.target_id = ?")
+            values.append(target_id)
+        if not task_id:
+            target_scope = ""
+            if target_id:
+                target_scope = " AND newer_task.target_id = ?"
+            clauses.append(
+                """
+                NOT EXISTS (
+                    SELECT 1
+                    FROM product_snapshots newer
+                    JOIN tasks newer_task ON newer_task.task_id = newer.task_id
                     WHERE newer.product_id = s.product_id
+                """
+                + target_scope
+                + """
                       AND (COALESCE(newer.collected_at, '') > COALESCE(s.collected_at, '')
                            OR (COALESCE(newer.collected_at, '') = COALESCE(s.collected_at, '')
                                AND newer.task_id > s.task_id))
                 )
-            """
-            sql = self._base_snapshot_query() + where
-            sql += latest if where else " WHERE 1=1" + latest
-            sql += " ORDER BY COALESCE(s.collected_at, '') DESC, s.product_id"
+                """
+            )
+            if target_id:
+                values.append(target_id)
+        return " WHERE " + " AND ".join(clauses), values
+
+    def list_products(
+        self,
+        *,
+        query: str = "",
+        review_status: str = "",
+        effect: str = "",
+        task_id: str = "",
+        target_id: str = "",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[dict[str, Any]]:
+        where, values = self._product_filter(
+            query=query,
+            review_status=review_status,
+            effect=effect,
+            task_id=task_id,
+            target_id=target_id,
+        )
+        if task_id:
+            order = " ORDER BY s.rank, s.product_id"
+        else:
+            order = " ORDER BY COALESCE(s.collected_at, '') DESC, s.product_id"
+        sql = self._base_snapshot_query() + where + order + " LIMIT ? OFFSET ?"
+        values.extend([page_size, (page - 1) * page_size])
         with self._connect() as connection:
             rows = connection.execute(sql, values).fetchall()
         return [self._snapshot_dict(row) for row in rows]
+
+    def count_products(
+        self,
+        *,
+        query: str = "",
+        review_status: str = "",
+        effect: str = "",
+        task_id: str = "",
+        target_id: str = "",
+    ) -> int:
+        where, values = self._product_filter(
+            query=query,
+            review_status=review_status,
+            effect=effect,
+            task_id=task_id,
+            target_id=target_id,
+        )
+        sql = "SELECT COUNT(*)" + self._base_snapshot_from() + where
+        with self._connect() as connection:
+            return int(connection.execute(sql, values).fetchone()[0])
 
     def list_product_snapshots(self, product_id: str) -> list[dict[str, Any]]:
         sql = (

@@ -2,9 +2,9 @@
 
 更新时间：2026-09-03
 
-当前版本：v0.6（Reference Data Foundation）
+当前版本：v0.7-A（Product Query & Pagination Foundation，中间增量）
 
-当前开发增量：v0.6 已完成最终收口；冻结基线以 `reference-data-v0.6` tag 为准
+当前开发增量：商品查询与分页后端基础已完成；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
 
 当前分支：`main`
 
@@ -39,9 +39,10 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | MonitorTarget、多 SearchQuery、跨 Query 去重与 CandidateHit | 已真实 Web E2E 验证 | `src/discovery.py`、`src/data_store.py` |
 | development/reference 数据集分离、106 项正式食药物质、来源校验与幂等导入 | 已实现并通过离线测试 | `src/data_store.py`、`config/monitor_targets.*.json` |
 | SearchQuery 来源/验证状态、6对象Pilot与search-only验证记录 | 已真实搜索验证 | `src/search_query_validation.py`、`docs/search_query_pilot_v0.6-c1.md` |
+| 商品服务端分页、MonitorTarget筛选与范围内最新快照语义 | 已实现并通过离线/API测试 | `src/data_store.py`、`src/local_api.py` |
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
 
-当前测试集共有 118 项；2026-09-03 在正式 Monitor Web E2E 完成后执行全量回归，结果为 `Ran 118 tests ... OK`。v0.5 稳定 tag 仍保留 81 项测试的原始基线，v0.6 由 `reference-data-v0.6` 冻结。
+当前测试集共有 124 项；2026-09-03 完成 v0.7-A 后执行一次全量离线回归，结果为 `Ran 124 tests ... OK`。v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
 
 ## 3. 当前架构
 
@@ -172,7 +173,7 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
 - 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；剩余 101 项（包含已验证召回但因场景边界停用的当归）不能直接创建正式 Monitor Task。5 个已启用对象中，目前只有铁皮石斛完成了正式 verified target 的详情/OCR/分析 Web E2E。
-- Product 列表 API/前端尚无正式分页；MonitorTarget 维度的商品筛选尚未实现。
+- Product 列表 API 已具备服务端分页和 MonitorTarget 维度筛选；当前商品监测前端仍沿用 run snapshot，尚未接入分页与 Target 筛选控件。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -181,8 +182,8 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - `GEO-01`：采集商品页面声明产地；
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
-- `UI-01`：商品监测分页；
-- `UI-02`：按 MonitorTarget 筛选商品；
+- `UI-01`：商品监测页接入服务端分页；
+- `UI-02`：商品监测页增加 MonitorTarget 筛选控件；
 - `UI-03`：整体 UI/UX 优化；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
