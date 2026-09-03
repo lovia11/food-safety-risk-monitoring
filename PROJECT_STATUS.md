@@ -2,14 +2,14 @@
 
 更新时间：2026-09-04
 
-当前版本：v0.7-C（UI/UX Polish & Product Workspace Acceptance，中间增量）
+当前版本：v0.7（Product Monitoring Workspace，最终冻结）
 
-当前开发增量：在 v0.7-B 的 SQLite Product API 与原生模块化前端上完成统一 B2B 视觉体系、商品工作台密度与状态反馈、研判/任务信息层级以及 1440px/1080px 响应式浏览器验收；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
+当前冻结范围：v0.7-A 完成 Product API 查询/分页基础，v0.7-B 建立跨任务 SQLite Product Workspace 与原生前端模块化，v0.7-C 完成 UI/UX 与宽窄桌面验收，v0.7-C2 修正任务进度、候选深采、停止原因及当前任务文案语义；最终标签为 `product-workspace-v0.7`
 
 当前分支：`main`
 
 v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6-C1`）
-稳定标签：`collector-baseline-v0.2`、`task-runtime-v0.3`、`data-review-v0.4`、`monitoring-discovery-v0.5`、`reference-data-v0.6`
+稳定标签：`collector-baseline-v0.2`、`task-runtime-v0.3`、`data-review-v0.4`、`monitoring-discovery-v0.5`、`reference-data-v0.6`、`product-workspace-v0.7`
 
 ## 1. 当前结论
 
@@ -44,7 +44,7 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 
-当前测试集共有 136 项；其中 v0.7-C 前端定向测试为 12 项，覆盖设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识以及商品加载/空结果/错误状态。2026-09-04 提交收口时只执行一次全量离线回归，结果为 `Ran 136 tests in 7.657s ... OK`；v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
+当前测试集共有 137 项；其中前端定向测试为 13 项，覆盖 Product API 参数、筛选/分页/空结果、设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识和 v0.7-C2 语义修正。2026-09-04 v0.7-C2 收口时只执行一次全量离线回归，结果为 `Ran 137 tests in 6.910s ... OK`；v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
 
 ## 3. 当前架构
 
@@ -117,6 +117,8 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 商品工作台通过 Product API 读取 67 件跨任务商品；已验证 20 条/页与第 2/4 页服务端分页、正式铁皮石斛筛选为 5 件、关键词无结果与一键清除、加载骨架、接口断开时的局部错误与服务恢复后的重试、详情打开和中性缩略图占位。正式/开发同名酸枣仁在筛选与任务选择中分别显示为“酸枣仁 · 正式”和“酸枣仁 · 开发”。
 
 研判页分别检查了有 `user_generated` Evidence 的酸枣仁历史样本和 0 Evidence 的铁皮石斛正式样本，确认商品信息、系统分析、Evidence、人工复核、原图/OCR 层级清晰；图片弹窗可由 Esc 关闭，复核保存有可见反馈。任务页明确分开当前任务、新建 Quick/Monitor 任务和历史任务，未启动新任务。基础词库与统计分析只显示“规划中/后续版本”说明，没有伪造图表、统计或检验能力。
+
+v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集任务和 1080px collapsed 商品工作台：已完成任务的 `1/5` 明确表示详情采集数量，不再绘制成总体 20% 进度；Dashboard 使用“候选未深采”；`stop_reason` 显示中文但未知值保留原文；任务名称与 `task_id` 分层；collapsed Sidebar 不显示分组文字；当前 run 文件入口统一使用“当前任务”。控制台仍为 0 error / 0 warning。
 
 ### v0.6 正式 Reference Monitor Web E2E
 
@@ -207,4 +209,4 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 
 `INSPECTION-01`—`INSPECTION-05` 当前仅记录需求，尚无知识库、关联数据、建议生成逻辑或前端字段；不得用假数据或写死映射提前展示。
 
-继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `reference-data-v0.6` 视为当前整体稳定回退基线；修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
+继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。

@@ -16,7 +16,7 @@
 | 统一命令行、状态隔离、断点续跑 | `main.py` / `src/main.py` | 已验证 |
 | 网页数据快照 | `src/web_contract.py` | 已对真实运行目录验证 |
 | 本地任务与业务 API | `src/local_api.py` / `src/data_store.py` | 已接入任务、商品快照、Evidence 与人工复核 |
-| 本地 Web MVP | `web/index.html` / `web/styles.css` / `web/app.js` | 已接入真实批次、图片、OCR、证据、日志和人工复核 |
+| 本地 Web MVP | `web/index.html` / `web/css/` / `web/js/` / `web/app.js` | 已接入跨任务 Product Workspace、真实图片/OCR/Evidence、任务与人工复核 |
 
 项目代码不依赖 Codex、ChatGPT 桌面应用、Codex Browser 或 Chrome 控制插件。页面出现登录或滑块验证时由用户在项目打开的可见浏览器中手动完成；项目不破解验证码。
 
@@ -74,7 +74,7 @@ python -m venv .venv
 
 采集器不再以页面 70% 或 80% 作为主要停止条件。它优先使用 `#imageTextInfo-container` 的实际底部，并在详情图片数量、已加载图片数量、图片 URL 和容器高度连续稳定后停止。找不到详情容器时，才依次使用推荐区标题、页面底部和 92% 页面比例作为兜底。
 
-每个商品仍保留最大滚动次数，防止动态页面无限增长。新停止策略已通过单元测试，下一次真实商品采集时还需记录 `scrollStopReason` 做回归核对。
+每个商品仍保留最大滚动次数，防止动态页面无限增长。该停止策略已在后续 v0.2/v0.3/v0.5 真实运行中记录并回归；不同淘宝/天猫详情模板仍需持续观察。
 
 ## 输出目录
 
@@ -146,7 +146,7 @@ Selector Health 只负责记录覆盖率并输出告警，不会自动替换选�
 http://127.0.0.1:8765/
 ```
 
-页面包含风险总览、商品监测、风险研判、采集任务，以及基础词库和统计分析两个待开发占位页。采集任务页可以输入关键词、候选商品数量和详情采集数量，由本地服务在后台调用现有 `StandalonePipeline`。第一版只允许一个活动任务，浏览器需要登录或人工验证时会在任务状态中提示。
+页面包含风险总览、跨任务累计商品监测、风险研判、采集任务，以及基础词库和统计分析两个待开发占位页。商品工作台通过 SQLite Product API 执行服务端筛选与分页；采集任务页支持 Quick/Monitor，并由本地服务在后台调用现有 `StandalonePipeline`。当前只允许一个活动任务，浏览器需要登录或人工验证时会在任务状态中提示。
 
 结果接口：
 
@@ -158,7 +158,7 @@ http://127.0.0.1:8765/
 - `GET http://127.0.0.1:8765/api/tasks`：任务列表和当前活动任务；
 - `GET http://127.0.0.1:8765/api/tasks/<task_id>`：轮询任务状态与最新结果；
 - `POST http://127.0.0.1:8765/api/tasks/<task_id>/resume`：恢复具有完整断点文件的中断或失败任务。
-- `GET http://127.0.0.1:8765/api/products`：查询已索引商品，可按关键词、任务、功效和复核状态筛选；
+- `GET http://127.0.0.1:8765/api/products`：分页查询跨任务已索引商品，可按 MonitorTarget、关键词、任务、功效和复核状态筛选；
 - `GET http://127.0.0.1:8765/api/products/<product_id>/snapshots`：查看同一淘宝商品的历次采集快照；
 - `GET http://127.0.0.1:8765/api/snapshots/<snapshot_id>`：查看商品快照及结构化 Evidence；
 - `PUT http://127.0.0.1:8765/api/snapshots/<snapshot_id>/review`：保存该次商品快照的人工复核结论与备注。

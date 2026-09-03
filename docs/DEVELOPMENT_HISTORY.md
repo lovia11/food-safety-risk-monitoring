@@ -644,10 +644,13 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 | v0.4 | 75 | SQLite、幂等导入、多快照、Evidence、Review持久化 |
 | v0.5 | 81 | Monitor配置、CandidateHit、Discovery、多Query任务/API |
 | v0.6 | 118 | 正式数据集 provenance、106项来源映射、SearchQuery策略/验证、SQLite v4 |
+| v0.7 | 137 | Product API分页/筛选、跨Task商品工作台、前端模块化、UI语义与响应式验收 |
 
 2026-09-02 文档整理前在 v0.5 当前 checkout 运行 `python -m unittest discover -s tests -q`，实际结果为 `Ran 81 tests ... OK`。
 
 2026-09-03 正式铁皮石斛 Monitor Web E2E 完成后只运行一次同一全量命令，实际结果为 `Ran 118 tests ... OK`。
+
+2026-09-04 v0.7-C2 收口时只运行一次全量命令，实际结果为 `Ran 137 tests ... OK`；该轮同时完成 1440px/1080px 本地浏览器验收，控制台 0 error / 0 warning。
 
 ### 11.3 主要真实运行
 
@@ -696,7 +699,6 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 - 没有任务取消和完整 Session UX；
 - 人工验证需要浏览器操作后回终端按 Enter；
 - API 无认证，只适合回环地址；
-- Product API 无后端分页；
 - Web Snapshot 和 SQLite 字段映射需要保持一致；
 - 统计页面不能在数据量不足时制造风险率或趋势。
 
@@ -718,9 +720,6 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 | `GEO-01` | 商品页面声明产地 | 明确页面字段、证据路径、缺失率；与发货地分开 |
 | `GEO-02` | 卖家所在省市 | 确认店铺主体信息来源、可靠性和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 先完成 GEO 字段语义，再定义抽样目标 |
-| `UI-01` | 商品监测分页 | API与前端一起分页，保持筛选一致 |
-| `UI-02` | 按 MonitorTarget 筛选商品 | 明确通过 Task、CandidateHit 还是 Snapshot 过滤 |
-| `UI-03` | 整体 UI/UX 优化 | 保持真实数字、来源和非结论性措辞 |
 | `SESSION-01` | 登录/验证交互改进 | 不绕过验证，减少终端依赖，明确等待/超时 |
 | `TASK-01` | 安全取消任务 | 正确回收浏览器、保存断点、处理 OCR 中断 |
 | `QUERY-02` | 后续分批扩大正式 SearchQuery | 按业务需要评估产品场景并真实验证，禁止模型按常识批量生成 Query |
@@ -755,7 +754,7 @@ v0.5 真实商品 `702353081235` 只在 UGC 中命中助眠词，因此风险理
 - 商品 `600949052422`：标题/OCR与 UGC 混合线索，展示 Evidence 结构；
 - v0.2 `test_b`：请求50、实际46、自然停止和一次重试，展示系统如实记录限制；
 - 早期单商品 108 Network 资源仅17个属详情，展示 DOM/Network 分工；
-- 118 项离线测试与五个稳定 tag，展示工程回归过程。
+- 137 项离线测试与分阶段冻结提交/标签，展示工程回归过程。
 
 现场演示应准备历史 run 作为兜底。真实淘宝受登录、网络和风控影响，现场采集失败不等于离线结果页面无法展示；但也不能把历史数据伪装成刚刚实时采集。
 
@@ -876,3 +875,58 @@ C1 选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石斛、�
 - v0.6 不继续批量补齐，后续只在明确业务需求下分批设计、真实验证和启用；
 - development seed 继续存在，仅用于工程回归，不会自动升级成正式数据；
 - SearchQuery 不能由模型随意批量生成；来源、场景、真实搜索验证和启用决定必须能够追溯。
+
+## 17. Product Monitoring Workspace v0.7
+
+v0.7 的目标不是改写采集、OCR 或风险分析主链，而是把原先以单个 run 结果为中心的查看页面发展为跨任务累计的 Product Monitoring Workspace。商品身份、Snapshot、Evidence 和 Review 继续由 SQLite 建立关系，原始图片、OCR、HTML 与运行日志仍由 `output` 保存。
+
+### 17.1 v0.7-A：Product Query and Pagination Foundation
+
+提交 `0607ba4` 增加 `GET /api/products` 的服务端查询与分页能力，支持 `page`、`page_size`、`target_id`、`query`、`review_status`、`effect` 和 `task_id`。未指定 Target 时返回每个 Product 的全局 latest Snapshot；指定 `target_id` 时，只在该 MonitorTarget 的任务范围内选择 latest Snapshot，避免被其他任务的新快照覆盖。此阶段没有升级数据模型，SQLite schema 保持 version 4。
+
+### 17.2 v0.7-B：Product Monitoring Workspace
+
+提交 `00bddbf` 将商品监测主列表迁移到 SQLite Product API，不再把 current run 与 history run 在浏览器端拼接后作为主数据源。筛选、分页和 MonitorTarget 范围语义由服务端执行；前端拆分为原生 ES Modules，`app.js` 收缩为初始化、页面切换和协调层，CSS 按基础、组件和页面分层。商品区具备独立 Loading、Empty 和 Error 状态。
+
+### 17.3 v0.7-C：UI/UX Polish and Acceptance
+
+提交 `37388b4` 在不引入 React、Vue、npm 或构建链的前提下，完成 B 端监管辅助系统风格整理。风险总览、商品监测、风险研判和采集任务统一状态颜色与信息密度；研判页明确 Product、系统分析、Evidence、OCR 原图/文本和人工复核的视觉层级。布局以 1440px 桌面为优先，并验证 1080px 紧凑桌面可用。
+
+### 17.4 v0.7-C2：UI Semantic Cleanup
+
+提交 `6f95313` 只修正 UI presentation：
+
+- “待继续分析”改为“候选未深采”，明确剩余候选没有进入详情采集链；
+- 历史任务不再把 `1/5` 绘制成 20% 总体进度，而是显示详情采集数量；
+- 任务名称与 `task_id` 分为主、次信息；
+- 为 `stop_reason` 增加中文 presentation mapping，未知值仍回退显示原值；
+- collapsed Sidebar 隐藏 navigation group label；
+- Product Workspace 的 run 文件入口明确使用“当前任务”，不再使用含混的“当前批次”。
+
+这些修正没有改变 Pipeline、Task Runtime、SQLite、Collector、OCR、风险规则或真实数据，只让界面语义与系统实际执行一致。
+
+### 17.5 v0.7 最终能力
+
+最终版本具备 SQLite Product Workspace、跨 Task 商品查询、服务端分页、MonitorTarget 筛选、Product Snapshot 历史、Evidence 查看、OCR 原图/文本、人工复核，以及 Quick / Monitor 两种任务入口。正式 verified reference 数据集仍有 106 个 MonitorTarget；其中当前只有酸枣仁、茯苓、龙眼肉（桂圆）、铁皮石斛、化橘红 5 个对象具备已验证并启用的 SearchQuery，可以创建正式 Monitor Task。其余对象没有被声称具备验证 Query。
+
+### 17.6 当前限制
+
+- 搜索页地区不等于商品产地，也不等于卖家所在地；
+- 页面风险线索不等于非法添加检测结论，Evidence 也不构成违法认定；
+- 当前 OCR 与规则质量尚未通过正式人工标注数据集评估；
+- 非法添加补充检验方法标准知识库尚未实现；
+- 系统仍限定为小规模、低并发、本机单用户 MVP。
+
+### 17.7 企业/老师需求 Backlog
+
+以下需求均为 **planned / not implemented**，不得在没有可核验数据时添加假知识、假关联或假标准：
+
+| ID | 规划需求 |
+| --- | --- |
+| `INSPECTION-01` | 非法添加补充检验方法标准知识库 |
+| `INSPECTION-02` | 风险线索与目标化合物关联 |
+| `INSPECTION-03` | 目标化合物与检验方法/标准关联 |
+| `INSPECTION-04` | 商品检测建议生成 |
+| `INSPECTION-05` | 最终结果增加产品名、链接、可能风险、建议检测成分和相关标准 |
+
+v0.7 最终冻结使用 `product-workspace-v0.7` 标签。冻结前的 137 项离线测试、1440px/1080px 浏览器验收及控制台检查均已通过；本轮最终冻结只整理文档，没有重复运行淘宝、Playwright、OCR 或全量测试。

@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述当前 v0.7-C 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述最终冻结 v0.7 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.7-C — UI/UX Polish & Product Workspace Acceptance**；这是 v0.7 中间增量，不创建 tag。
-- v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；整体稳定回退基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内最新快照语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C 完成统一 B2B 视觉、密集工作台、状态反馈、研判与任务信息层级以及 1440px/1080px 响应式验收。SQLite schema 仍为 version 4。
+- 当前冻结版本：**v0.7 — Product Monitoring Workspace**；标签为 `product-workspace-v0.7`。
+- v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C 完成统一 B2B 视觉、状态反馈与 1440px/1080px 响应式验收；v0.7-C2 进一步校正候选深采、历史任务进度、task_id、stop_reason、collapsed Sidebar 和当前任务文案。SQLite schema 仍为 version 4。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -15,14 +15,14 @@
 
 ## 2. Current Commit
 
-v0.7-C 的起始提交为已经推送的 v0.7-B：
+v0.7 最终冻结基于已经推送的 v0.7-C2：
 
 ```text
-00bddbff012427cecbd1b82aff74a9fb6130c090
-Build Product Monitoring Workspace v0.7-B
+6f95313a70c507ef34fbe68dace30c0237a49b94
+Refine UI Semantics v0.7-C2
 ```
 
-v0.6 最终收口提交由 `reference-data-v0.6` tag 指向。v0.7-C 的提交请以接手时 `git rev-parse HEAD` 为准；不要依赖旧对话中的短哈希。
+v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向，应以 `git rev-parse product-workspace-v0.7` 核查。v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向；不要依赖旧对话中的短哈希。
 
 ## 3. Stable Tags
 
@@ -33,8 +33,9 @@ v0.6 最终收口提交由 `reference-data-v0.6` tag 指向。v0.7-C 的提交�
 | `data-review-v0.4` | `53f0b88638dcd0daea6ea59436c4e2cdc35af9f9` | SQLite 与人工复核基线 |
 | `monitoring-discovery-v0.5` | `2ffafd749cd20dcdde0346f953c6e8e9a9c67472` | MonitorTarget、多 Query 与 CandidateHit 基线 |
 | `reference-data-v0.6` | 以 `git rev-parse reference-data-v0.6` 为准 | 正式目录、来源追踪、Query 策略与 Pilot 验证基线 |
+| `product-workspace-v0.7` | 以 `git rev-parse product-workspace-v0.7` 为准 | 跨任务 Product Workspace、前端模块化与 UI/UX 冻结基线 |
 
-修改 Collector 前先比较 `collector-baseline-v0.2`；修改当前整体系统前先比较 `reference-data-v0.6`。不要补造 v0.1 Git 历史。
+修改 Collector 前先比较 `collector-baseline-v0.2`；修改正式数据/Query 策略前先比较 `reference-data-v0.6`；修改当前整体系统前先比较 `product-workspace-v0.7`。不要补造 v0.1 Git 历史。
 
 ## 4. Project Goal
 
@@ -257,6 +258,8 @@ Monitor 创建示例：
 
 采集任务页继续支持 Quick/Monitor 两种模式，并将真实当前任务、新建表单与历史任务明确分区。商品详情可读取对应历史 run 的真实快照、原图、OCR 和 Evidence，人工复核通过 PUT API 持久化；Evidence 必须继续显示 `seller_managed` / `user_generated` 来源边界。中国地图使用 `web/data/china-provinces.geojson`，标题明确为“搜索页地区分布”。当前统计受数据量和字段语义限制，不得把搜索卡片地区渲染成“产地风险分布”结论，也不得制造不存在的统计数字。基础词库和统计分析仍是明确的后续版本规划页。
 
+v0.7-C2 只修改 presentation：Dashboard 的剩余候选称为“候选未深采”；历史任务的 `1/5` 表示详情采集数量而不是总体完成率；task 名称与 `task_id` 分层；已知 `stop_reason` 显示中文且未知值回退原值；collapsed Sidebar 隐藏分组标签；Product Workspace 的 CSV/JSON/报告入口明确指向“当前任务”。这些语义不得重新改回误导性总体进度。
+
 ## 14. MonitorTarget / SearchQuery / CandidateHit Mechanism
 
 当前开发种子在 `config/monitor_targets.development.json`：一个 `酸枣仁` MonitorTarget，两个 Query：`酸枣仁` 和 `酸枣仁茶`。它始终标记为 `development_seed`。
@@ -309,7 +312,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 136 项 `unittest`。v0.6 稳定基线为 118 项；v0.7-A 增加 6 项后端查询测试；v0.7-B 增加 9 项前端结构/契约测试；v0.7-C 再增加 3 项前端验收测试。现有 12 项前端测试覆盖模块与 CSS 路径、JS 语法、Product API 参数、筛选/分页/空结果、Quick/Monitor 请求、复核状态、设计令牌、响应式规则、显式规划状态及同名 MonitorTarget 数据集标识。2026-09-04 提交收口时只执行一次全量回归，结果为 `Ran 136 tests in 7.657s ... OK`。
+当前共有 137 项 `unittest`。v0.6 稳定基线为 118 项；v0.7-A 增加 6 项后端查询测试；v0.7-B 增加 9 项前端结构/契约测试；v0.7-C 增加 3 项前端验收测试；v0.7-C2 增加 1 项语义契约测试。现有 13 项前端测试覆盖模块与 CSS 路径、JS 语法、Product API 参数、筛选/分页/空结果、Quick/Monitor 请求、复核状态、设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识及 C2 语义。2026-09-04 C2 收口时只执行一次全量回归，结果为 `Ran 137 tests in 6.910s ... OK`。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -380,11 +383,11 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - 多 Query 仍把所有唯一候选按固定 first-hit 顺序送入详情，没有质量评分、地区平衡或随机抽样。
 - 页面结构诊断有覆盖率告警，但缺少详情模板分型、选择器版本和自动回归样本管理。
 - 历史 run 的字段存在版本差异，导入层做兼容；删除旧兼容逻辑前必须用保留 run 回归。
-- README 的“详情滚动下一次仍需真实回归”等个别描述滞后于后续 v0.2/v0.3/v0.5 真实 run，应在后续独立文档整理中更新；本轮按要求不改 README。
+- `docs/output_inventory.md` 生成于较早阶段，尚未覆盖全部 v0.5—v0.7 状态；后续如整理证据清单应按真实 output 更新。
 
 ## 20. Requirement Backlog
 
-以下是 v0.7-C 之后仍未实现的事项：
+以下是 v0.7 之后仍未实现的事项：
 
 | ID | 需求 | 关键边界 |
 | --- | --- | --- |
@@ -431,13 +434,13 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 新 AI 必须按以下顺序工作，不要仅凭 README 或旧对话猜测：
 
 1. 运行 `git status --short --branch`，确认分支、用户未提交改动和工作树边界；
-2. 运行 `git log --oneline --decorate -10` 与 `git tag -n`，确认当前 HEAD 和五个稳定基线；
+2. 运行 `git log --oneline --decorate -10` 与 `git tag -n`，确认当前 HEAD 和六个稳定基线；
 3. 阅读 `PROJECT_STATUS.md`、本文件、`docs/DEVELOPMENT_HISTORY.md`、`docs/output_inventory.md`；
 4. 阅读需求涉及模块及对应测试，不先做大规模重构；
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 136 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 137 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；
