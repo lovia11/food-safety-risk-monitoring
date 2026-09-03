@@ -9,7 +9,7 @@ import {
   resumeTaskRequest,
 } from "../api.js";
 import { appState, allRunSnapshots, clearProductSelection } from "../state.js";
-import { $, escapeHtml, formatDate, showToast, taskPresentation } from "../utils.js";
+import { $, escapeHtml, formatDate, monitorTargetPresentation, showToast, taskPresentation } from "../utils.js";
 
 let hooks = {
   renderApp: () => {},
@@ -87,7 +87,10 @@ function selectedMonitorTarget() {
 export function renderMonitorTargetOptions(preferredTargetId = "") {
   const select = $("#monitorTargetInput");
   if (!select) return;
-  select.innerHTML = appState.monitorTargets.map(item => `<option value="${escapeHtml(item.target_id)}">${escapeHtml(item.standard_name)}</option>`).join("");
+  select.innerHTML = appState.monitorTargets.map(item => {
+    const kind = monitorTargetPresentation(item);
+    return `<option value="${escapeHtml(item.target_id)}">${escapeHtml(item.standard_name)} · ${kind.label}</option>`;
+  }).join("");
   if (preferredTargetId && appState.monitorTargets.some(item => item.target_id === preferredTargetId)) {
     select.value = preferredTargetId;
   }
@@ -167,6 +170,7 @@ export function renderTasksPage() {
       : `${snapshot.task.keyword || "未命名"}采集任务`;
     return `<tr><td>${escapeHtml(taskLabel)}<small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(queryLabel || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
   }).join("");
+  renderCurrentTaskSummary();
   renderFlow($("#taskFlow"));
   renderDiscoveryDiagnostics();
   syncTaskFormState();
@@ -196,6 +200,26 @@ function upsertRunMeta(snapshot) {
   };
   appState.runs = [meta, ...appState.runs.filter(item => item.id !== meta.id)]
     .sort((a, b) => String(b.generatedAt || "").localeCompare(String(a.generatedAt || "")));
+}
+
+function renderCurrentTaskSummary() {
+  const target = $("#currentTaskSummary");
+  const snapshot = appState.current;
+  if (!target) return;
+  if (!snapshot?.task || !snapshot?.statistics) {
+    target.innerHTML = `<div class="empty-evidence">当前没有可展示的任务。</div>`;
+    return;
+  }
+  const status = taskPresentation(snapshot);
+  const request = snapshot.runtime?.request || {};
+  const monitor = request.taskType === "monitor";
+  const name = monitor ? `${request.targetName || snapshot.task.keyword || "未命名"}监测任务` : `${snapshot.task.keyword || "未命名"}采集任务`;
+  const query = monitor ? (request.searchQueries || []).map(item => item.query_text).join("、") : snapshot.task.keyword;
+  const stats = snapshot.statistics;
+  target.innerHTML = `<div class="current-task-header"><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(snapshot.task.id)}</p></div><span class="table-tag ${status.tone}">${escapeHtml(status.label)}</span></div>
+    <div class="current-task-meta"><div><span>任务类型</span><strong>${monitor ? "监测任务" : "快速任务"}</strong></div><div><span>监测对象 / 关键词</span><strong title="${escapeHtml(query || "—")}">${escapeHtml(query || "—")}</strong></div><div><span>更新时间</span><strong>${escapeHtml(formatDate(snapshot.generatedAt))}</strong></div></div>
+    <div class="current-task-metrics"><div><span>搜索发现</span><strong>${stats.searchRaw || 0}</strong></div><div><span>入选商品</span><strong>${stats.selectedProducts || 0}</strong></div><div><span>详情完成</span><strong>${stats.detailCollectedProducts || 0}</strong></div><div><span>OCR / 分析</span><strong>${stats.analyzedProducts || 0}</strong></div></div>
+    <div class="current-task-actions"><button class="button button-secondary" data-open-run="${escapeHtml(snapshot.task.id)}">查看任务详情</button></div>`;
 }
 
 export async function refreshRunData(preferredRunId = null) {

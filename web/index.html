@@ -14,19 +14,21 @@
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">食</div>
       <div>
-        <div class="brand-title">网络食品风险监测</div>
-        <div class="brand-subtitle">食药同源与保健食品风险线索<br>辅助筛查系统</div>
+        <div class="brand-title">食品风险线索监测</div>
+        <div class="brand-subtitle">食药同源与保健食品<br>辅助筛查系统</div>
       </div>
     </div>
 
     <nav class="nav-list">
-      <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span><span>风险总览</span></button>
-      <button class="nav-item" data-view="products"><span class="nav-icon">▣</span><span>商品监测</span></button>
-      <button class="nav-item" data-view="judgment"><span class="nav-icon">◇</span><span>风险研判</span></button>
-      <button class="nav-item" data-view="tasks"><span class="nav-icon">☷</span><span>采集任务</span></button>
+      <span class="nav-section-label">监测工作台</span>
+      <button class="nav-item active" data-view="overview" title="风险总览"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H5v-9.5Z"/><path d="M9 20v-6h6v6"/></svg></span><span>风险总览</span></button>
+      <button class="nav-item" data-view="products" title="商品监测"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg></span><span>商品监测</span></button>
+      <button class="nav-item" data-view="judgment" title="风险研判"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7v5c0 5-3.4 8-8 9-4.6-1-8-4-8-9V7l8-4Z"/><path d="m9 12 2 2 4-4"/></svg></span><span>风险研判</span></button>
+      <button class="nav-item" data-view="tasks" title="采集任务"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 4.5h6V7H9zM9 11h6M9 15h6"/></svg></span><span>采集任务</span></button>
 
-      <button class="nav-item" data-view="dictionary"><span class="nav-icon">▤</span><span>基础词库</span></button>
-      <button class="nav-item" data-view="statistics"><span class="nav-icon">◴</span><span>统计分析</span></button>
+      <span class="nav-section-label nav-section-secondary">数据与分析</span>
+      <button class="nav-item" data-view="dictionary" title="基础词库"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 8h7M8 12h7M8 16h5"/></svg></span><span>基础词库</span></button>
+      <button class="nav-item" data-view="statistics" title="统计分析"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19V3"/></svg></span><span>统计分析</span></button>
     </nav>
   </aside>
 
@@ -40,7 +42,7 @@
     <div id="appContent" hidden>
       <section class="view active" id="view-overview" data-view-panel="overview">
         <header class="page-header">
-          <div><h1>风险总览</h1></div>
+          <div><h1>风险总览</h1><p>汇总当前任务的采集、分析与待复核情况</p></div>
           <div class="header-actions">
             <div class="header-search"><span>⌕</span><input id="overviewSearch" type="search" placeholder="搜索商品 / 店铺 / 关键词" aria-label="总览搜索"></div>
             <button class="button button-primary" data-nav-target="tasks">＋ 新建采集任务</button>
@@ -58,7 +60,7 @@
             <div id="foodDistribution" class="distribution-content"></div>
           </article>
           <article class="card insight-card region-card">
-            <div class="card-heading compact-heading"><div><h2>地区分布</h2><p>当前采集商品</p></div></div>
+            <div class="card-heading compact-heading"><div><h2>搜索页地区分布</h2><p>当前批次候选商品</p></div></div>
             <div id="chinaHeatmap" class="china-heatmap" aria-label="中国省级商品地区热图"><div class="map-loading">地图加载中…</div></div>
             <div id="regionDistribution" class="region-distribution"></div>
           </article>
@@ -82,7 +84,7 @@
         <header class="page-header">
           <div><h1>商品监测</h1><p>跨任务查询已索引商品，并按监测对象和复核状态筛选</p></div>
           <div class="header-actions">
-            <a id="exportCsv" class="button button-secondary" href="#" download>导出 CSV</a>
+            <a id="exportCsv" class="button button-secondary" href="#" download>导出当前批次</a>
             <button class="button button-primary" data-nav-target="tasks">查看采集任务</button>
           </div>
         </header>
@@ -92,24 +94,31 @@
           <label class="product-query-field">关键词<div class="search-field"><span>⌕</span><input id="productSearch" type="search" placeholder="商品名称 / 店铺 / 商品ID" aria-label="搜索商品"></div></label>
           <label>复核状态<select id="productReviewFilter"><option value="">全部</option><option value="pending">待复核</option><option value="recommend_follow_up">建议进一步关注</option><option value="no_further_action">暂不进一步关注</option></select></label>
           <label>功效线索<select id="productEffectFilter"><option value="">全部</option><option value="助眠">助眠</option><option value="降压">降压</option><option value="降脂">降脂</option><option value="减脂">减脂</option><option value="男性相关">男性相关</option></select></label>
-          <label>每页数量<select id="productPageSize"><option value="20">20</option><option value="50">50</option></select></label>
-          <div class="filter-actions"><button id="runProductQuery" class="button button-primary">查询</button><button id="resetFilters" class="button button-secondary">重置</button></div>
+          <div class="filter-actions"><button id="resetFilters" class="button button-secondary">重置</button><button id="runProductQuery" class="button button-primary">查询</button></div>
         </article>
 
         <article class="card table-card product-list-card">
-          <div class="card-heading">
-            <div><h2>商品列表</h2><p id="productResultCount">—</p></div>
-            <div class="small-actions"><a id="viewJson" class="text-button" href="#" target="_blank">查看 JSON</a><a id="viewReport" class="text-button" href="#" target="_blank">查看报告</a></div>
+          <div class="table-toolbar">
+            <div><h2>商品结果</h2><p id="productResultCount">—</p></div>
+            <div class="table-toolbar-actions">
+              <div class="small-actions"><a id="viewJson" class="text-button" href="#" target="_blank">JSON</a><a id="viewReport" class="text-button" href="#" target="_blank">当前批次报告</a></div>
+              <label class="page-size-control">每页<select id="productPageSize"><option value="20">20</option><option value="50">50</option></select></label>
+            </div>
           </div>
           <div id="productWorkspaceStatus" class="workspace-state" hidden></div>
           <div id="productTableWrap" class="table-wrap"><table class="product-table"><thead><tr><th>商品名称</th><th>监测对象</th><th>店铺</th><th>搜索页地区</th><th>功效线索</th><th>人工复核状态</th><th>采集时间</th><th>操作</th></tr></thead><tbody id="productTableBody"></tbody></table></div>
-          <div id="productEmpty" class="table-empty" hidden>没有符合当前筛选条件的商品</div>
+          <div id="productEmpty" class="table-empty" hidden>
+            <span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></svg></span>
+            <strong id="productEmptyTitle">没有符合当前筛选条件的商品</strong>
+            <p id="productEmptyHint">请调整查询条件后重试。</p>
+            <button id="clearProductFilters" class="button button-secondary">清空筛选</button>
+          </div>
           <div class="pagination" aria-label="商品列表分页">
-            <span id="productTotalSummary">共 0 件</span>
+            <span id="productTotalSummary">0–0 / 共 0 件</span>
             <div class="pagination-controls">
               <button id="productFirstPage" class="button button-secondary" disabled>首页</button>
               <button id="productPreviousPage" class="button button-secondary" disabled>上一页</button>
-              <strong id="productPageSummary">第 0 / 0 页</strong>
+              <strong id="productPageSummary">第 0 / 0页</strong>
               <button id="productNextPage" class="button button-secondary" disabled>下一页</button>
               <button id="productLastPage" class="button button-secondary" disabled>末页</button>
             </div>
@@ -124,47 +133,49 @@
         </header>
 
         <article class="card product-hero" id="judgmentHero"></article>
-        <div class="judgment-grid">
-          <div class="judgment-left">
-            <article class="card analysis-card" id="analysisCard"></article>
-            <article class="card evidence-card">
-              <div class="card-heading"><div><h2>风险证据</h2><p>按来源和内容归属区分展示</p></div></div>
-              <div id="evidenceList" class="evidence-list"></div>
-              <div id="ugcNotice" class="ugc-notice" hidden>用户生成内容仅作为辅助线索，不单独作为风险判定依据。</div>
-            </article>
-            <article class="card review-card">
-              <div class="card-heading"><div><h2>人工复核</h2><p>复核结论按本次商品快照单独保存</p></div><span id="reviewStateBadge" class="table-tag gray">待复核</span></div>
-              <div id="reviewPanelContent" class="review-panel-content"><div class="empty-evidence">正在读取复核记录…</div></div>
-            </article>
-          </div>
-          <article class="card gallery-card">
-            <div class="card-heading"><div><h2>原始详情图 / 证据展示</h2><p>直接读取项目保存的真实详情图片</p></div><span id="galleryCount" class="muted-badge">—</span></div>
+        <div class="judgment-summary-grid">
+          <article class="card analysis-card" id="analysisCard"></article>
+          <article class="card evidence-card">
+            <div class="card-heading"><div><h2>风险证据</h2><p>页面原文、来源归属与命中词</p></div></div>
+            <div id="evidenceList" class="evidence-list"></div>
+            <div id="ugcNotice" class="ugc-notice" hidden>用户生成内容仅作为辅助线索，不单独作为风险判定依据。</div>
+          </article>
+          <article class="card review-card">
+            <div class="card-heading"><div><h2>人工复核</h2><p>按本次商品快照单独保存</p></div><span id="reviewStateBadge" class="table-tag gray">待复核</span></div>
+            <div id="reviewPanelContent" class="review-panel-content"><div class="empty-evidence">正在读取复核记录…</div></div>
+          </article>
+        </div>
+        <article class="card gallery-card">
+          <div class="card-heading"><div><h2>原始详情图与 OCR</h2><p>核对页面图片及其对应识别文字</p></div><span id="galleryCount" class="muted-badge">—</span></div>
+          <div class="gallery-workspace">
             <div class="gallery-main">
               <div id="galleryThumbs" class="gallery-thumbs"></div>
               <button id="mainEvidenceImageButton" class="main-image-button" aria-label="点击放大证据图片"><img id="mainEvidenceImage" alt="真实商品详情图"></button>
             </div>
             <div class="ocr-panel">
-              <div class="ocr-panel-head"><strong>OCR识别结果</strong><span id="ocrFileName">—</span></div>
+              <div class="ocr-panel-head"><strong>OCR 识别文本</strong><span id="ocrFileName">—</span></div>
               <pre id="ocrText">选择包含OCR结果的图片后显示识别文字。</pre>
             </div>
-          </article>
-        </div>
+          </div>
+        </article>
       </section>
 
       <section class="view" id="view-tasks" data-view-panel="tasks">
-        <header class="page-header"><div><h1>采集任务</h1><p>配置采集关键词并查看任务执行情况</p></div><div class="header-actions"><button id="scrollToLogs" class="button button-secondary">▤ 查看运行日志</button><button id="focusNewTask" class="button button-primary">＋ 新建采集任务</button></div></header>
-        <div class="task-page-grid">
-          <div>
-            <article class="card task-form-card" id="newTaskForm">
-              <div class="card-heading"><div><h2>新建采集任务</h2></div></div>
-              <label>任务名称<input id="taskNameInput" type="text" value="酸枣仁助眠专项采集"></label>
-              <label>目标平台<select><option selected>淘宝</option></select></label>
-              <label>任务模式<select id="taskModeInput"><option value="quick">快速任务（单搜索词）</option><option value="monitor">监测任务（对象词组）</option></select></label>
-              <label>食品类型<div class="preset-box"><span>酸枣仁 ×</span><span>百合 ×</span><span>茯苓 ×</span></div></label>
-              <label>功效关键词<div class="preset-box"><span>助眠 ×</span><span>安神 ×</span><span>改善睡眠 ×</span></div></label>
+        <header class="page-header"><div><h1>采集任务</h1><p>查看当前执行状态，或创建新的 Quick / Monitor 任务</p></div><div class="header-actions"><button id="scrollToLogs" class="button button-secondary">查看运行日志</button><button id="focusNewTask" class="button button-primary">新建采集任务</button></div></header>
+        <div class="task-top-grid">
+          <article class="card current-task-card">
+            <div class="card-heading"><div><h2>当前任务</h2><p>最近选中任务的实际执行状态</p></div></div>
+            <div id="currentTaskSummary"></div>
+          </article>
+          <article class="card task-form-card" id="newTaskForm">
+              <div class="card-heading"><div><h2>新建采集任务</h2><p>同一时间仅允许一个活动任务</p></div></div>
+              <label>草稿名称 <span class="field-note">仅保存在本机</span><input id="taskNameInput" type="text" value="酸枣仁助眠专项采集"></label>
+              <div class="task-form-row">
+                <label>目标平台<select disabled aria-label="目标平台"><option selected>淘宝</option></select></label>
+                <label>任务模式<select id="taskModeInput"><option value="quick">快速任务（单搜索词）</option><option value="monitor">监测任务（对象词组）</option></select></label>
+              </div>
               <div id="quickTaskFields">
-                <label>搜索关键词<input id="taskKeywordInput" type="text" value="酸枣仁" maxlength="80"></label>
-                <label>候选商品数量<input id="candidateLimitInput" type="number" value="10" min="1" max="50"></label>
+                <div class="task-form-row"><label>搜索关键词<input id="taskKeywordInput" type="text" value="酸枣仁" maxlength="80"></label><label>候选商品数量<input id="candidateLimitInput" type="number" value="10" min="1" max="50"></label></div>
               </div>
               <div id="monitorTaskFields" hidden>
                 <label>监测对象<select id="monitorTargetInput"></select></label>
@@ -172,35 +183,28 @@
                 <label>每个搜索词候选数量<input id="perQueryCandidateLimitInput" type="number" value="10" min="1" max="50"></label>
               </div>
               <label>详情采集数量<input id="detailLimitInput" type="number" value="2" min="1" max="50"></label>
-              <label>任务说明<textarea rows="3">优先采集食药同源类商品，筛查商品页面中的功效宣传表达。</textarea></label>
               <p id="taskFormMessage" class="task-form-message" role="status"></p>
               <div class="form-actions"><button id="saveTaskDraft" class="button button-secondary">保存草稿</button><button id="startTaskButton" class="button button-primary">立即启动</button></div>
-            </article>
-          </div>
-          <div>
-            <article class="card task-overview-card"><div class="card-heading"><div><h2>任务状态概览</h2></div></div><div id="taskStateOverview" class="task-state-overview"></div></article>
-            <article class="card task-record-card"><div class="card-heading"><div><h2>最近执行记录</h2></div></div><div class="table-wrap"><table><thead><tr><th>任务名称</th><th>关键词</th><th>状态</th><th>进度</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="taskRecordBody"></tbody></table></div></article>
-          </div>
+          </article>
         </div>
-        <article class="card task-process-wide"><div class="card-heading"><div><h2>任务执行流程</h2><p>当前酸枣仁任务的实际处理进度</p></div></div><div id="taskFlow" class="process-flow task-flow-wide"></div></article>
+        <article class="card task-record-card"><div class="card-heading task-history-heading"><div><h2>历史任务</h2><p>最近执行记录与状态汇总</p></div><div id="taskStateOverview" class="task-state-overview"></div></div><div class="table-wrap"><table><thead><tr><th>任务名称</th><th>关键词</th><th>状态</th><th>进度</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="taskRecordBody"></tbody></table></div></article>
+        <article class="card task-process-wide"><div class="card-heading"><div><h2>任务执行流程</h2><p>当前任务的实际处理进度</p></div></div><div id="taskFlow" class="process-flow task-flow-wide"></div></article>
         <article id="discoveryDiagnostics" class="card discovery-card" hidden><div class="card-heading"><div><h2>候选发现诊断</h2><p>按搜索词保留结果数量、停止原因与合并情况</p></div></div><div id="discoverySummary" class="discovery-summary"></div><div class="table-wrap"><table><thead><tr><th>执行顺序</th><th>搜索词</th><th>命中候选</th><th>页面商品卡片</th><th>停止原因</th></tr></thead><tbody id="discoveryQueryBody"></tbody></table></div></article>
         <article class="card task-output-card"><div class="card-heading"><div><h2>本次任务输出内容</h2></div></div><div class="task-output-grid"><div><span class="output-icon blue">▣</span><div><h3>商品列表</h3><p>商品名称、店铺、地区与采集状态</p></div></div><div><span class="output-icon green">▧</span><div><h3>原始详情图</h3><p>商品详情页原始图片与页面截图</p></div></div><div><span class="output-icon purple">OCR</span><div><h3>OCR结果</h3><p>识别详情图文字并保留对应关系</p></div></div><div><span class="output-icon orange">!</span><div><h3>风险分析</h3><p>规则命中、证据来源与复核建议</p></div></div></div></article>
         <article class="card log-card" id="runLogs"><details><summary><span>运行日志</span><span>run.log</span></summary><pre id="logContent">正在读取日志…</pre></details></article>
       </section>
 
       <section class="view" id="view-dictionary" data-view-panel="dictionary">
-        <header class="page-header"><div><h1>基础词库</h1><p>后续用于维护食药同源对象、搜索关键词与功效分类</p></div><span class="status-chip status-neutral"></span></header>
+        <header class="page-header"><div><h1>基础词库</h1><p>食药同源对象、搜索词与功效词的配置入口</p></div><span class="status-chip status-neutral">规划中</span></header>
         <article class="card placeholder-card">
-    
-          <div class="placeholder-grid"><div><span>01</span><h3>食药同源对象</h3><p>维护酸枣仁、茯苓等监测对象及基础分类。</p><b>待开发</b></div><div><span>02</span><h3>搜索关键词</h3><p>为不同监测对象维护淘宝检索词与组合。</p><b>待开发</b></div><div><span>03</span><h3>功效词库</h3><p>当前已有助眠、降压、降脂、减脂等本地规则。</p><b>待开发</b></div></div>
+          <div class="coming-state"><span class="coming-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 8h7M8 12h7M8 16h5"/></svg></span><h2>基础词库管理尚未开放</h2><p>当前词库通过项目配置文件维护。可视化编辑、版本审计与权限边界将在后续版本完善。</p></div>
         </article>
       </section>
 
       <section class="view" id="view-statistics" data-view-panel="statistics">
-        <header class="page-header"><div><h1>统计分析</h1><p>积累更多真实任务后查看数据分布与变化</p></div><span class="status-chip status-neutral"></span></header>
+        <header class="page-header"><div><h1>统计分析</h1><p>面向长期监测结果的数据分布与变化分析</p></div><span class="status-chip status-neutral">规划中</span></header>
         <article class="card placeholder-card statistics-placeholder">
-      
-          <div class="skeleton-grid"><div><h3>食品类型分布</h3><span></span><span></span><span></span></div><div><h3>功效类别分布</h3><span></span><span></span><span></span></div><div><h3>地区分布</h3><span></span><span></span><span></span></div></div>
+          <div class="coming-state"><span class="coming-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19V3"/></svg></span><h2>统计分析将在后续版本完善</h2><p>当前仅展示已有真实任务的基础汇总。趋势、对比与抽检策略分析需要更多数据积累和明确指标后再开放。</p></div>
         </article>
       </section>
     </div>

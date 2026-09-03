@@ -6,6 +6,7 @@ import {
   $,
   escapeHtml,
   formatDate,
+  monitorTargetPresentation,
   reviewPresentation,
   safeExternalUrl,
 } from "../utils.js";
@@ -44,7 +45,8 @@ function targetOptions() {
   return appState.monitorTargets.map(target => {
     const name = target.targetName || target.standardName || target.standard_name || "未命名对象";
     const id = target.targetId || target.target_id || "";
-    return `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`;
+    const kind = monitorTargetPresentation(target);
+    return `<option value="${escapeHtml(id)}">${escapeHtml(name)} · ${kind.label}</option>`;
   }).join("");
 }
 
@@ -63,16 +65,29 @@ function renderProductRow(product) {
     : `<span class="table-tag ${effect.tone}">${escapeHtml(effect.label)}</span>`;
   const review = reviewPresentation(product.review?.status);
   const targetLabel = productTargetLabel(product);
+  const target = appState.monitorTargets.find(item => (item.target_id || item.targetId) === product.targetId);
+  const targetKind = product.targetId ? monitorTargetPresentation(target) : null;
+  const targetMarkup = product.targetId
+    ? `<span class="table-tag blue">${escapeHtml(targetLabel)}</span>${targetKind ? `<small class="target-kind">${targetKind.label}</small>` : ""}`
+    : `<span class="table-tag gray">${escapeHtml(targetLabel)}</span>`;
   return `<tr>
-    <td><div class="product-cell"><div class="product-thumb product-thumb-placeholder">▣</div><div><strong>${escapeHtml(product.productName || "—")}</strong><span>商品ID ${escapeHtml(product.productId)}</span></div></div></td>
-    <td><span class="table-tag ${product.targetId ? "blue" : "gray"}">${escapeHtml(targetLabel)}</span></td>
+    <td><div class="product-cell"><div class="product-thumb product-thumb-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m7 16 3.5-3.5 2.5 2 2-2 2 2"/><circle cx="15.5" cy="9" r="1"/></svg></div><div><strong title="${escapeHtml(product.productName || "—")}">${escapeHtml(product.productName || "—")}</strong><span>商品ID ${escapeHtml(product.productId)}</span></div></div></td>
+    <td><div class="target-cell">${targetMarkup}</div></td>
     <td>${escapeHtml(product.shopName || "—")}</td>
     <td>${escapeHtml(product.region || "—")}</td>
     <td><div class="effect-tags">${effects}</div></td>
     <td><span class="table-tag ${review.tone}">${escapeHtml(review.label)}</span></td>
     <td>${escapeHtml(formatDate(product.collectedAt))}</td>
-    <td><div class="table-actions"><button data-view-product="${escapeHtml(product.productId)}" data-run-id="${escapeHtml(product.taskId)}">查看详情</button><i></i><a href="${escapeHtml(safeExternalUrl(product.productUrl))}" target="_blank" rel="noopener">打开淘宝原链接</a></div></td>
+    <td><div class="table-actions"><button data-view-product="${escapeHtml(product.productId)}" data-run-id="${escapeHtml(product.taskId)}">查看详情</button><i></i><a href="${escapeHtml(safeExternalUrl(product.productUrl))}" target="_blank" rel="noopener">打开原链接</a></div></td>
   </tr>`;
+}
+
+function loadingRows() {
+  return Array.from({ length: 6 }, () => `<tr class="loading-row" aria-hidden="true"><td><div class="product-skeleton"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td><td><div class="product-skeleton short"></div></td></tr>`).join("");
+}
+
+function hasProductFilters(state) {
+  return Object.values(state.filters || {}).some(Boolean);
 }
 
 function syncProductControls() {
@@ -93,31 +108,35 @@ export function renderProductsPage() {
   if (!body || !table || !empty || !status) return;
 
   syncProductControls();
-  body.innerHTML = state.items.map(renderProductRow).join("");
-  table.hidden = state.loading || Boolean(state.error) || !state.items.length;
+  body.innerHTML = state.loading ? loadingRows() : state.items.map(renderProductRow).join("");
+  table.hidden = Boolean(state.error) || (!state.loading && !state.items.length);
+  table.setAttribute("aria-busy", state.loading ? "true" : "false");
   empty.hidden = state.loading || Boolean(state.error) || Boolean(state.items.length);
 
   if (state.loading) {
-    status.hidden = false;
-    status.className = "workspace-state loading";
-    status.textContent = "正在查询商品数据…";
+    status.hidden = true;
+    status.className = "workspace-state";
+    status.textContent = "";
   } else if (state.error) {
     status.hidden = false;
     status.className = "workspace-state error";
-    status.innerHTML = `${escapeHtml(state.error)} <button class="text-button" id="retryProductQuery">重新加载</button>`;
+    status.innerHTML = `<strong>商品数据加载失败</strong><p>${escapeHtml(state.error)}</p><button class="button button-secondary" id="retryProductQuery">重新加载</button>`;
   } else {
     status.hidden = true;
     status.textContent = "";
   }
 
-  empty.textContent = state.total
-    ? "当前页没有商品，请返回有效页码或重置筛选。"
-    : "没有符合当前筛选条件的商品。";
-  $("#productResultCount").textContent = `共 ${state.total} 件，当前页 ${state.items.length} 件`;
+  const filtered = hasProductFilters(state);
+  $("#productEmptyTitle").textContent = filtered ? "没有符合当前筛选条件的商品" : "暂无监测商品";
+  $("#productEmptyHint").textContent = filtered ? "请调整或清空筛选条件后重试。" : "请先创建采集任务，完成后可在这里跨任务查询。";
+  $("#clearProductFilters").hidden = !filtered;
+  $("#productResultCount").textContent = filtered ? `共 ${state.total} 件符合当前条件` : `共 ${state.total} 件商品`;
 
   const displayPage = state.totalPages ? state.page : 0;
-  $("#productPageSummary").textContent = `第 ${displayPage} / ${state.totalPages} 页`;
-  $("#productTotalSummary").textContent = `共 ${state.total} 件`;
+  const rangeStart = state.items.length ? (state.page - 1) * state.pageSize + 1 : 0;
+  const rangeEnd = state.items.length ? rangeStart + state.items.length - 1 : 0;
+  $("#productPageSummary").textContent = `第 ${displayPage} / ${state.totalPages}页`;
+  $("#productTotalSummary").textContent = `${rangeStart}–${rangeEnd} / 共 ${state.total} 件`;
   $("#productFirstPage").disabled = !state.totalPages || state.page <= 1;
   $("#productPreviousPage").disabled = !state.totalPages || state.page <= 1;
   $("#productNextPage").disabled = !state.totalPages || state.page >= state.totalPages;
@@ -129,7 +148,6 @@ export async function loadProductsPage() {
   const token = ++state.requestToken;
   state.loading = true;
   state.error = "";
-  state.items = [];
   renderProductsPage();
   try {
     const payload = await getProducts(state);
@@ -190,12 +208,14 @@ export function bindProductEvents() {
     updateProductFilters(filtersFromControls());
     await loadProductsPage();
   });
-  $("#resetFilters").addEventListener("click", async () => {
+  const resetFilters = async () => {
     appState.productQuery = defaultProductQueryState();
     populateProductTargetOptions();
     renderProductsPage();
     await loadProductsPage();
-  });
+  };
+  $("#resetFilters").addEventListener("click", resetFilters);
+  $("#clearProductFilters").addEventListener("click", resetFilters);
   $("#productFirstPage").addEventListener("click", () => goToPage(1));
   $("#productPreviousPage").addEventListener("click", () => goToPage(appState.productQuery.page - 1));
   $("#productNextPage").addEventListener("click", () => goToPage(appState.productQuery.page + 1));

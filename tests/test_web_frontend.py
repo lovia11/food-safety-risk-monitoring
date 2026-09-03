@@ -113,7 +113,7 @@ class WebFrontendStructureTest(unittest.TestCase):
         result = run_node(
             """
             const products = await import('./web/js/pages/products.js');
-            const { reviewPresentation } = await import('./web/js/utils.js');
+            const { monitorTargetPresentation, reviewPresentation } = await import('./web/js/utils.js');
             console.log(JSON.stringify({
               quick: products.productTargetLabel({ targetId: null, targetName: null }),
               target: products.productTargetLabel({ targetId: 'target-1', targetName: '酸枣仁' }),
@@ -121,6 +121,8 @@ class WebFrontendStructureTest(unittest.TestCase):
               pending: reviewPresentation('pending').label,
               followUp: reviewPresentation('recommend_follow_up').label,
               noAction: reviewPresentation('no_further_action').label,
+              official: monitorTargetPresentation({ dataset_status: 'verified_reference' }).label,
+              development: monitorTargetPresentation({ dataset_status: 'development_seed' }).label,
             }));
             """
         )
@@ -133,6 +135,8 @@ class WebFrontendStructureTest(unittest.TestCase):
                 "pending": "待复核",
                 "followUp": "建议进一步关注",
                 "noAction": "暂不进一步关注",
+                "official": "正式",
+                "development": "开发",
             },
         )
 
@@ -178,6 +182,9 @@ class WebFrontendStructureTest(unittest.TestCase):
             "resetFilters",
             "productWorkspaceStatus",
             "productEmpty",
+            "productEmptyTitle",
+            "productEmptyHint",
+            "clearProductFilters",
             "productPreviousPage",
             "productNextPage",
         ):
@@ -192,6 +199,34 @@ class WebFrontendStructureTest(unittest.TestCase):
             "采集时间",
         ):
             self.assertIn(f"<th>{heading}</th>", html)
+
+    def test_design_tokens_inline_navigation_and_responsive_rules_are_present(self):
+        html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+        base_css = (WEB_ROOT / "css" / "base.css").read_text(encoding="utf-8")
+        pages_css = (WEB_ROOT / "css" / "pages.css").read_text(encoding="utf-8")
+        self.assertIn("--sidebar-width", base_css)
+        self.assertIn("--font-sans", base_css)
+        self.assertNotIn("min-width: 1180px", base_css)
+        self.assertIn("@media (max-width: 1099px)", base_css)
+        self.assertIn("@media (max-width: 1199px)", pages_css)
+        self.assertGreaterEqual(html.count('<svg viewBox="0 0 24 24">'), 6)
+
+    def test_unfinished_pages_use_explicit_planning_states_without_fake_charts(self):
+        html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("基础词库管理尚未开放", html)
+        self.assertIn("统计分析将在后续版本完善", html)
+        self.assertNotIn("skeleton-grid", html)
+        self.assertNotIn("placeholder-grid", html)
+
+    def test_task_page_separates_current_task_creation_and_history(self):
+        html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+        tasks_source = (WEB_ROOT / "js" / "pages" / "tasks.js").read_text(
+            encoding="utf-8"
+        )
+        for identifier in ("currentTaskSummary", "newTaskForm", "taskRecordBody"):
+            self.assertIn(f'id="{identifier}"', html)
+        self.assertIn("renderCurrentTaskSummary", tasks_source)
+        self.assertIn("· ${kind.label}", tasks_source)
 
     def test_product_workspace_no_longer_merges_current_and_history_runs(self):
         app_source = (WEB_ROOT / "app.js").read_text(encoding="utf-8")

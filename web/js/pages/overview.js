@@ -12,6 +12,13 @@ import {
 
 const CHART_COLORS = ["#2f7df4", "#35ae79", "#fa9a2e", "#ef5b62", "#7a67dc", "#7aa7d9"];
 
+const STAT_ICONS = {
+  search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>`,
+  detail: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>`,
+  analysis: `<span aria-hidden="true">OCR</span>`,
+  pending: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>`,
+};
+
 function counted(values) {
   return Object.entries(values.reduce((result, value) => {
     const key = value || "其他";
@@ -50,14 +57,14 @@ function renderStatCards() {
   const selected = stats.selectedProducts;
   const pending = Math.max(selected - stats.analyzedProducts, 0);
   const cards = [
-    ["⌕", "搜索发现商品", stats.searchRaw, `本批入选 ${selected} 件`, "blue"],
-    ["▣", "完成详情采集", stats.detailCollectedProducts, `保存原始详情图 ${stats.originalImages} 张`, "green"],
-    ["OCR", "完成OCR与分析", `${stats.analyzedProducts} / ${selected}`, "已生成结构化分析结果", "purple"],
-    ["!", "待继续分析", pending, "等待OCR与规则处理", "orange"],
+    ["search", "搜索发现商品", stats.searchRaw, `本批入选 ${selected} 件`, "blue"],
+    ["detail", "完成详情采集", stats.detailCollectedProducts, `保存原始详情图 ${stats.originalImages} 张`, "green"],
+    ["analysis", "完成OCR与分析", `${stats.analyzedProducts} / ${selected}`, "已生成结构化分析结果", "purple"],
+    ["pending", "待继续分析", pending, "等待OCR与规则处理", "orange"],
   ];
   $("#overviewStats").innerHTML = cards.map(([icon, label, value, foot, tone]) => `
     <article class="card overview-stat-card">
-      <div class="overview-stat-icon ${tone}">${escapeHtml(icon)}</div>
+      <div class="overview-stat-icon ${tone}">${STAT_ICONS[icon]}</div>
       <div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(foot)}</small></div>
     </article>`).join("");
 }
@@ -108,7 +115,7 @@ async function renderChinaHeatmap(regionItems) {
       if (!name) return "";
       const shortName = normalizeProvinceName(name);
       const value = counts[shortName] || 0;
-      const fill = value >= 3 ? "#1677ff" : value === 2 ? "#69aaf8" : value === 1 ? "#b7d6fb" : "#edf5ff";
+      const fill = value >= 3 ? "#2563eb" : value === 2 ? "#69aaf8" : value === 1 ? "#b7d6fb" : "#edf5ff";
       const path = geometryPath(feature.geometry);
       return path ? `<path class="china-province" d="${path}" fill="${fill}" fill-rule="evenodd"><title>${escapeHtml(shortName)}：${value} 件</title></path>` : "";
     }).join("");

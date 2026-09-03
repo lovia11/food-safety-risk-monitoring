@@ -82,6 +82,13 @@ export function reviewPresentation(status) {
   return { label: "待复核", tone: "gray" };
 }
 
+export function monitorTargetPresentation(target) {
+  const status = target?.dataset_status || target?.datasetStatus || target?.dataset?.dataset_status;
+  if (status === "verified_reference") return { label: "正式", tone: "blue" };
+  if (status === "development_seed") return { label: "开发", tone: "gray" };
+  return { label: "未标注", tone: "gray" };
+}
+
 export function taskPresentation(snapshot) {
   const stage = snapshot.task?.stage;
   if (stage === "completed") return { label: "已完成", tone: "green" };

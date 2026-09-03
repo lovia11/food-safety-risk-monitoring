@@ -1,10 +1,10 @@
 # 项目当前状态
 
-更新时间：2026-09-03
+更新时间：2026-09-04
 
-当前版本：v0.7-B（Product Monitoring Workspace & Frontend Modularization，中间增量）
+当前版本：v0.7-C（UI/UX Polish & Product Workspace Acceptance，中间增量）
 
-当前开发增量：商品监测工作台已迁移到 SQLite Product API，并完成服务端分页、MonitorTarget 筛选及原生前端模块化；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
+当前开发增量：在 v0.7-B 的 SQLite Product API 与原生模块化前端上完成统一 B2B 视觉体系、商品工作台密度与状态反馈、研判/任务信息层级以及 1440px/1080px 响应式浏览器验收；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
 
 当前分支：`main`
 
@@ -42,8 +42,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 商品服务端分页、MonitorTarget筛选与范围内最新快照语义 | 已实现并通过离线/API测试 | `src/data_store.py`、`src/local_api.py` |
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据；商品监测使用 SQLite Product API | `web/` |
 | 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
+| 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 
-当前测试集共有 133 项；2026-09-03 完成 v0.7-B 后执行一次全量离线回归，结果为 `Ran 133 tests ... OK`。v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
+当前测试集共有 136 项；其中 v0.7-C 前端定向测试为 12 项，覆盖设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识以及商品加载/空结果/错误状态。2026-09-04 提交收口时只执行一次全量离线回归，结果为 `Ran 136 tests in 7.657s ... OK`；v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
 
 ## 3. 当前架构
 
@@ -109,9 +110,13 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 
 ## 7. 当前真实验收结果
 
-### v0.7-B 本地 Web 验收
+### v0.7-C 本地 Web 验收
 
-使用现有 SQLite 与历史 output 启动本地服务，不访问淘宝、不运行 OCR、不创建采集任务。商品工作台通过 Product API 读取到 67 件跨任务商品；已验证 MonitorTarget 筛选、关键词查询、空结果、第 2/4 页服务端分页、详情打开、31 张历史原图与 26 张 OCR 结果展示、Evidence、人工复核保存，以及 Quick/Monitor 任务表单仍可打开。浏览器控制台无 warning/error。
+使用现有 SQLite 与历史 output 启动本地服务，不访问淘宝、不运行 OCR、不创建采集任务。通过浏览器真实 CSS 视口分别验收 1440px 完整布局和 1080px 紧凑布局；1080px 下侧栏收为图标栏，筛选区切换为两列，商品表可横向查看，研判与任务页按响应式规则重排，没有严重遮挡或重叠。
+
+商品工作台通过 Product API 读取 67 件跨任务商品；已验证 20 条/页与第 2/4 页服务端分页、正式铁皮石斛筛选为 5 件、关键词无结果与一键清除、加载骨架、接口断开时的局部错误与服务恢复后的重试、详情打开和中性缩略图占位。正式/开发同名酸枣仁在筛选与任务选择中分别显示为“酸枣仁 · 正式”和“酸枣仁 · 开发”。
+
+研判页分别检查了有 `user_generated` Evidence 的酸枣仁历史样本和 0 Evidence 的铁皮石斛正式样本，确认商品信息、系统分析、Evidence、人工复核、原图/OCR 层级清晰；图片弹窗可由 Esc 关闭，复核保存有可见反馈。任务页明确分开当前任务、新建 Quick/Monitor 任务和历史任务，未启动新任务。基础词库与统计分析只显示“规划中/后续版本”说明，没有伪造图表、统计或检验能力。
 
 ### v0.6 正式 Reference Monitor Web E2E
 
@@ -178,7 +183,9 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
 - 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；剩余 101 项（包含已验证召回但因场景边界停用的当归）不能直接创建正式 Monitor Task。5 个已启用对象中，目前只有铁皮石斛完成了正式 verified target 的详情/OCR/分析 Web E2E。
-- 商品监测工作台已迁移到 Product API，但 v0.7-B 只完成信息架构与可用性基础，视觉细节、响应式布局和交互精修仍留给 v0.7-C。
+- Product API 当前没有商品列表缩略图字段；商品表使用明确的中性图片占位，而不是伪造商品图。详情页继续展示历史 run 中的真实原图。
+- 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
+- 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
 
 ## 9. 下一阶段候选事项（尚未实现）
@@ -188,7 +195,6 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - `GEO-01`：采集商品页面声明产地；
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
-- `UI-03`：整体 UI/UX 优化；
 - `INSPECTION-01`：非法添加补充检验方法标准知识库；
 - `INSPECTION-02`：风险线索与目标化合物关联；
 - `INSPECTION-03`：目标化合物与检验方法/标准关联；
