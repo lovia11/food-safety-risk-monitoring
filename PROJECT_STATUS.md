@@ -2,9 +2,9 @@
 
 更新时间：2026-09-03
 
-当前版本：v0.7-A（Product Query & Pagination Foundation，中间增量）
+当前版本：v0.7-B（Product Monitoring Workspace & Frontend Modularization，中间增量）
 
-当前开发增量：商品查询与分页后端基础已完成；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
+当前开发增量：商品监测工作台已迁移到 SQLite Product API，并完成服务端分页、MonitorTarget 筛选及原生前端模块化；整体稳定回退基线仍以 `reference-data-v0.6` tag 为准，不创建 v0.7 中间标签
 
 当前分支：`main`
 
@@ -40,9 +40,10 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | development/reference 数据集分离、106 项正式食药物质、来源校验与幂等导入 | 已实现并通过离线测试 | `src/data_store.py`、`config/monitor_targets.*.json` |
 | SearchQuery 来源/验证状态、6对象Pilot与search-only验证记录 | 已真实搜索验证 | `src/search_query_validation.py`、`docs/search_query_pilot_v0.6-c1.md` |
 | 商品服务端分页、MonitorTarget筛选与范围内最新快照语义 | 已实现并通过离线/API测试 | `src/data_store.py`、`src/local_api.py` |
-| 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据 | `web/` |
+| 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据；商品监测使用 SQLite Product API | `web/` |
+| 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
 
-当前测试集共有 124 项；2026-09-03 完成 v0.7-A 后执行一次全量离线回归，结果为 `Ran 124 tests ... OK`。v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
+当前测试集共有 133 项；2026-09-03 完成 v0.7-B 后执行一次全量离线回归，结果为 `Ran 133 tests ... OK`。v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
 
 ## 3. 当前架构
 
@@ -107,6 +108,10 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 多 Query 按 `order` 串行执行。候选以 `product_id` 跨 Query 去重，首次有效出现决定合并列表顺序；顺序首先由 Query 顺序决定，再由 Query 内排名决定。前 `detail_limit` 个唯一候选进入详情链。即使同一商品被多个 Query 命中，所有来源仍作为多条 CandidateHit 保留，供后续解释召回来源。
 
 ## 7. 当前真实验收结果
+
+### v0.7-B 本地 Web 验收
+
+使用现有 SQLite 与历史 output 启动本地服务，不访问淘宝、不运行 OCR、不创建采集任务。商品工作台通过 Product API 读取到 67 件跨任务商品；已验证 MonitorTarget 筛选、关键词查询、空结果、第 2/4 页服务端分页、详情打开、31 张历史原图与 26 张 OCR 结果展示、Evidence、人工复核保存，以及 Quick/Monitor 任务表单仍可打开。浏览器控制台无 warning/error。
 
 ### v0.6 正式 Reference Monitor Web E2E
 
@@ -173,7 +178,8 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - 功效分析是配置化字面规则，不能覆盖隐含表达、否定、反讽和复杂语义；用户评价/问答只作辅助线索。
 - 当前 `region` 来自搜索卡片展示字段，不能等同于商品声明产地或卖家注册所在地。
 - 正式 reference dataset 已包含 106 项，但仅 6 项做过 SearchQuery Pilot、5 项具备当前运行资格；剩余 101 项（包含已验证召回但因场景边界停用的当归）不能直接创建正式 Monitor Task。5 个已启用对象中，目前只有铁皮石斛完成了正式 verified target 的详情/OCR/分析 Web E2E。
-- Product 列表 API 已具备服务端分页和 MonitorTarget 维度筛选；当前商品监测前端仍沿用 run snapshot，尚未接入分页与 Target 筛选控件。
+- 商品监测工作台已迁移到 Product API，但 v0.7-B 只完成信息架构与可用性基础，视觉细节、响应式布局和交互精修仍留给 v0.7-C。
+- MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -182,12 +188,17 @@ v0.6-C1 为 6 个 Pilot 建立 9 个 Query，并完成真实淘宝 search-only �
 - `GEO-01`：采集商品页面声明产地；
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
-- `UI-01`：商品监测页接入服务端分页；
-- `UI-02`：商品监测页增加 MonitorTarget 筛选控件；
 - `UI-03`：整体 UI/UX 优化；
+- `INSPECTION-01`：非法添加补充检验方法标准知识库；
+- `INSPECTION-02`：风险线索与目标化合物关联；
+- `INSPECTION-03`：目标化合物与检验方法/标准关联；
+- `INSPECTION-04`：商品检测建议生成；
+- `INSPECTION-05`：最终结果增加产品名、链接、可能风险、建议检测成分和相关标准；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
+
+`INSPECTION-01`—`INSPECTION-05` 当前仅记录需求，尚无知识库、关联数据、建议生成逻辑或前端字段；不得用假数据或写死映射提前展示。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `reference-data-v0.6` 视为当前整体稳定回退基线；修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
