@@ -96,11 +96,23 @@ def inspection_dataset(
         {
             "applicability_id": "test-applicability-1",
             "method_id": "test-method-1",
+            "substance_id": None,
             "scope_type": "include",
             "product_category": "测试食品",
             "product_form": "测试剂型",
             "ingredient_context": "",
             "source_scope_text": "测试适用范围原文",
+            "note": "synthetic test only",
+        },
+        {
+            "applicability_id": "test-applicability-substance-1",
+            "method_id": "test-method-1",
+            "substance_id": "test-substance-1",
+            "scope_type": "conditional",
+            "product_category": "测试食品",
+            "product_form": "测试特殊基质",
+            "ingredient_context": "",
+            "source_scope_text": "测试物质在特殊基质中的条件适用原文",
             "note": "synthetic test only",
         }
     ]
@@ -303,6 +315,56 @@ class InspectionReferenceValidationTest(unittest.TestCase):
         ):
             validate_inspection_config(payload)
 
+    def test_applicability_substance_scope_requires_an_explicit_valid_relationship(self):
+        normalized = validate_inspection_config(inspection_dataset())
+        self.assertEqual(
+            [
+                item["substance_id"]
+                for item in normalized["method_applicabilities"]
+            ],
+            [None, "test-substance-1"],
+        )
+
+        missing_field = inspection_dataset()
+        del missing_field["method_applicabilities"][0]["substance_id"]
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "显式包含substance_id"
+        ):
+            validate_inspection_config(missing_field)
+
+        missing_substance = inspection_dataset()
+        missing_substance["method_applicabilities"][1]["substance_id"] = (
+            "missing-substance"
+        )
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "substance_id不存在"
+        ):
+            validate_inspection_config(missing_substance)
+
+        unrelated_substance = inspection_dataset()
+        second_substance = copy.deepcopy(unrelated_substance["substances"][0])
+        second_substance.update(
+            {"substance_id": "test-substance-2", "canonical_name": "测试物质二"}
+        )
+        unrelated_substance["substances"].append(second_substance)
+        unrelated_substance["method_applicabilities"][1]["substance_id"] = (
+            "test-substance-2"
+        )
+        with self.assertRaisesRegex(InspectionConfigValidationError, "不检测Substance"):
+            validate_inspection_config(unrelated_substance)
+
+    def test_verified_method_requires_a_method_level_applicability(self):
+        payload = inspection_dataset(status="verified_reference")
+        payload["method_applicabilities"] = [
+            item
+            for item in payload["method_applicabilities"]
+            if item["substance_id"] is not None
+        ]
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "Method级Applicability"
+        ):
+            validate_inspection_config(payload)
+
     def test_enum_like_fields_are_rejected_independently(self):
         cases = []
         method_type = inspection_dataset()
@@ -355,6 +417,11 @@ class InspectionReferenceValidationTest(unittest.TestCase):
         cases.append(("verification_pending", pending_method))
         no_method_relation = inspection_dataset(status="verified_reference")
         no_method_relation["method_substances"] = []
+        no_method_relation["method_applicabilities"] = [
+            item
+            for item in no_method_relation["method_applicabilities"]
+            if item["substance_id"] is None
+        ]
         cases.append(("MethodSubstance", no_method_relation))
         no_applicability = inspection_dataset(status="verified_reference")
         no_applicability["method_applicabilities"] = []
@@ -404,7 +471,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         write_json(path, payload)
         return path
 
-    def test_schema_version_five_contains_exact_inspection_foundation_tables(self):
+    def test_schema_version_six_contains_exact_inspection_foundation_tables(self):
         with sqlite3.connect(self.store.database_path) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
             all_tables = {
@@ -413,8 +480,15 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 5)
+            applicability_columns = {
+                row[1]
+                for row in connection.execute(
+                    "PRAGMA table_info(inspection_method_applicabilities)"
+                )
+            }
+        self.assertEqual(version, 6)
         self.assertTrue(INSPECTION_TABLES <= all_tables)
+        self.assertIn("substance_id", applicability_columns)
         self.assertNotIn("risk_substance_mappings", all_tables)
         self.assertNotIn("inspection_recommendations", all_tables)
 
@@ -425,7 +499,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
             "methods": 1,
             "substances": 1,
             "method_substances": 1,
-            "applicabilities": 1,
+            "applicabilities": 2,
             "regulatory_contexts": 1,
         }
         self.assertEqual(self.store.import_inspection_config(path), expected)
@@ -459,7 +533,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         self.assertEqual(counts["inspection_methods"], 1)
         self.assertEqual(counts["inspection_substances"], 1)
         self.assertEqual(counts["inspection_method_substances"], 1)
-        self.assertEqual(counts["inspection_method_applicabilities"], 1)
+        self.assertEqual(counts["inspection_method_applicabilities"], 2)
         self.assertEqual(counts["substance_regulatory_contexts"], 1)
 
     def test_only_pending_to_verified_transition_is_allowed(self):
@@ -485,7 +559,10 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         development = inspection_dataset(dataset_id="development-transition")
         development["methods"][0]["method_id"] = "development-method"
         development["method_substances"][0]["method_id"] = "development-method"
-        development["method_applicabilities"][0]["method_id"] = "development-method"
+        for applicability in development["method_applicabilities"]:
+            applicability["method_id"] = "development-method"
+            if applicability["substance_id"] is not None:
+                applicability["substance_id"] = "development-substance"
         development["substances"][0]["substance_id"] = "development-substance"
         development["method_substances"][0]["substance_id"] = "development-substance"
         development["substance_regulatory_contexts"][0]["substance_id"] = (
@@ -493,6 +570,9 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         )
         development["method_applicabilities"][0]["applicability_id"] = (
             "development-applicability"
+        )
+        development["method_applicabilities"][1]["applicability_id"] = (
+            "development-substance-applicability"
         )
         development["substance_regulatory_contexts"][0]["context_id"] = (
             "development-context"
@@ -531,6 +611,43 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
             )
         counts = self.store.table_counts()
         self.assertEqual(counts["inspection_datasets"], 1)
+
+    def test_applicability_id_cannot_change_method_or_substance_parent(self):
+        initial = inspection_dataset(dataset_id="applicability-owner")
+        second_substance = copy.deepcopy(initial["substances"][0])
+        second_substance.update(
+            {"substance_id": "test-substance-2", "canonical_name": "测试物质二"}
+        )
+        initial["substances"].append(second_substance)
+        second_relation = copy.deepcopy(initial["method_substances"][0])
+        second_relation.update(
+            {
+                "substance_id": "test-substance-2",
+                "source_label": "测试物质二",
+                "normalization_note": "",
+                "ordinal": 2,
+            }
+        )
+        initial["method_substances"].append(second_relation)
+        self.store.import_inspection_config(self._write(initial, "parents.json"))
+
+        null_to_substance = copy.deepcopy(initial)
+        null_to_substance["method_applicabilities"][0]["substance_id"] = (
+            "test-substance-1"
+        )
+        with self.assertRaisesRegex(DataStoreError, "不能改绑"):
+            self.store.import_inspection_config(
+                self._write(null_to_substance, "null-to-substance.json")
+            )
+
+        substance_to_other = copy.deepcopy(initial)
+        substance_to_other["method_applicabilities"][1]["substance_id"] = (
+            "test-substance-2"
+        )
+        with self.assertRaisesRegex(DataStoreError, "不能改绑"):
+            self.store.import_inspection_config(
+                self._write(substance_to_other, "substance-to-other.json")
+            )
 
     def test_database_failure_rolls_back_entire_import(self):
         initial = inspection_dataset(
@@ -671,10 +788,112 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "candidate_hits",
                 )
             }
-        self.assertEqual(version, 5)
+        self.assertEqual(version, 6)
         self.assertTrue(INSPECTION_TABLES <= tables)
         self.assertEqual(set(preserved.values()), {1})
         self.assertEqual(review, ("recommend_follow_up", "必须保留的人工备注"))
+
+    def test_v5_upgrade_adds_nullable_substance_scope_without_data_loss(self):
+        database = self.root / "legacy-v5.db"
+        legacy = DataStore(database, self.root / "legacy-v5-output")
+        legacy.initialize()
+        legacy.import_inspection_config(
+            self._write(
+                inspection_dataset(dataset_id="legacy-inspection"),
+                "legacy-inspection.json",
+            )
+        )
+        with sqlite3.connect(database) as connection:
+            connection.executescript(
+                """
+                INSERT INTO tasks (
+                    task_id, keyword, stage, run_path, updated_at
+                ) VALUES (
+                    'v5-task', '测试', 'completed', 'v5-task',
+                    '2026-09-01T00:00:00+08:00'
+                );
+                INSERT INTO products VALUES (
+                    'v5-product', '2026-09-01T00:00:00+08:00',
+                    '2026-09-01T00:00:00+08:00'
+                );
+                INSERT INTO product_snapshots (
+                    snapshot_id, product_id, task_id, product_name, product_path,
+                    updated_at
+                ) VALUES (
+                    'v5-snapshot', 'v5-product', 'v5-task', '旧商品',
+                    'products/v5-product', '2026-09-01T00:00:00+08:00'
+                );
+                INSERT INTO reviews VALUES (
+                    'v5-snapshot', 'recommend_follow_up', 'v5人工备注',
+                    '2026-09-01T01:00:00+08:00'
+                );
+                INSERT INTO monitor_datasets VALUES (
+                    'v5-monitor-dataset', '1', 'development_seed', '旧来源',
+                    '旧引用', NULL, NULL, NULL, '',
+                    '2026-09-01T00:00:00+08:00', '2026-09-01T00:00:00+08:00'
+                );
+                INSERT INTO monitor_targets (
+                    target_id, dataset_id, standard_name, target_type, source_name,
+                    source_reference, enabled, updated_at
+                ) VALUES (
+                    'v5-target', 'v5-monitor-dataset', '旧对象', 'food_medicine',
+                    '旧来源', '旧引用', 1, '2026-09-01T00:00:00+08:00'
+                );
+                """
+            )
+            connection.executescript(
+                """
+                PRAGMA foreign_keys = OFF;
+                ALTER TABLE inspection_method_applicabilities
+                    RENAME TO inspection_method_applicabilities_v6;
+                CREATE TABLE inspection_method_applicabilities (
+                    applicability_id TEXT PRIMARY KEY,
+                    method_id TEXT NOT NULL REFERENCES inspection_methods(method_id),
+                    scope_type TEXT NOT NULL,
+                    product_category TEXT NOT NULL DEFAULT '',
+                    product_form TEXT NOT NULL DEFAULT '',
+                    ingredient_context TEXT NOT NULL DEFAULT '',
+                    source_scope_text TEXT NOT NULL DEFAULT '',
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL
+                );
+                INSERT INTO inspection_method_applicabilities (
+                    applicability_id, method_id, scope_type, product_category,
+                    product_form, ingredient_context, source_scope_text, note,
+                    updated_at
+                )
+                SELECT applicability_id, method_id, scope_type, product_category,
+                       product_form, ingredient_context, source_scope_text, note,
+                       updated_at
+                FROM inspection_method_applicabilities_v6;
+                DROP TABLE inspection_method_applicabilities_v6;
+                PRAGMA user_version = 5;
+                """
+            )
+
+        upgraded = DataStore(database, self.root / "legacy-v5-output")
+        upgraded.initialize()
+        with sqlite3.connect(database) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            applicability_scopes = connection.execute(
+                "SELECT substance_id FROM inspection_method_applicabilities "
+                "ORDER BY applicability_id"
+            ).fetchall()
+            review_note = connection.execute(
+                "SELECT review_note FROM reviews WHERE snapshot_id='v5-snapshot'"
+            ).fetchone()[0]
+            monitor_name = connection.execute(
+                "SELECT standard_name FROM monitor_targets WHERE target_id='v5-target'"
+            ).fetchone()[0]
+            inspection_counts = {
+                table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in INSPECTION_TABLES
+            }
+        self.assertEqual(version, 6)
+        self.assertEqual(applicability_scopes, [(None,), (None,)])
+        self.assertEqual(review_note, "v5人工备注")
+        self.assertEqual(monitor_name, "旧对象")
+        self.assertTrue(all(count > 0 for count in inspection_counts.values()))
 
 
 if __name__ == "__main__":

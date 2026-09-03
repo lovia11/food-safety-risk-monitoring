@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-A1（Inspection Reference Integrity Tightening）
+当前开发版本：v0.8-A2（Substance-Scoped Inspection Applicability）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A/A1 只新增 Inspection Reference schema、校验与导入基础并收紧 verified 数据完整性，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列只新增 Inspection Reference schema、校验与导入基础并收紧数据完整性，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
 
 当前分支：`main`
 
@@ -45,7 +45,7 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 | Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | 已实现并通过离线测试；尚无正式监管数据 | `src/inspection_reference.py`、`src/data_store.py` |
 
-当前测试集共有 156 项，其中 v0.8-A/A1 包含 19 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4→v5 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 160 项，其中 v0.8-A/A1/A2 包含 23 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4/v5→v6 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -60,7 +60,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 ### 3.2 数据分层
 
 - `output/<run_id>/` 是原始运行事实与可追溯证据的主存储：搜索 HTML/截图/诊断、详情 HTML、Network 响应、原图、OCR、`analysis.json`、日志及批次报告均保留在此。
-- `data/app.db` 是同一个 SQLite 业务数据库，当前 schema version 为 5。除既有任务、商品、Evidence、Review 和 Monitor 数据外，现可保存独立的 Inspection Reference 数据；已有 version 4 数据库原位升级时只创建新表，不重建或清空旧记录。
+- `data/app.db` 是同一个 SQLite 业务数据库，当前 schema version 为 6。除既有任务、商品、Evidence、Review 和 Monitor 数据外，现可保存独立的 Inspection Reference 数据；已有 version 4/5 数据库可原位升级，不重建或清空旧记录。
 - SQLite 不替代原始证据文件。数据库可从历史 `output` 幂等重建，重复导入不会复制记录，也不会覆盖已经保存的人工复核备注。
 - `.browser-profile/`、`output/`、`data/*.db`、`.venv/` 与 OCR 模型缓存均不提交 Git。
 
@@ -81,7 +81,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 - `inspection_methods`：检验方法编号、类型、状态、替代编号及方法级 provenance；
 - `inspection_substances`：物质规范身份，不承载固定“违法”属性；
 - `inspection_method_substances`：方法与物质关系，同时保留来源原始名称和显式归一化说明；
-- `inspection_method_applicabilities`：方法的适用、排除或条件性产品/基质范围；
+- `inspection_method_applicabilities`：`substance_id=NULL` 表示 Method-level 范围；非空时表示该 Method 对已关联 Substance 的特殊适用、排除或条件范围；
 - `substance_regulatory_contexts`：物质在特定产品范围、辖区和有效期内的监管语境及独立 provenance。
 
 Evidence 和 Review 归属于 ProductSnapshot，而不是永久归属于 Product。原因是淘宝页面内容、规则结果和人工判断都可能随采集时间变化。同一 Product 可以拥有多个任务快照。

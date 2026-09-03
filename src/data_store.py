@@ -37,7 +37,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
     Path("config/monitor_targets.reference.json"),
 )
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -667,6 +667,7 @@ class DataStore:
                 CREATE TABLE IF NOT EXISTS inspection_method_applicabilities (
                     applicability_id TEXT PRIMARY KEY,
                     method_id TEXT NOT NULL REFERENCES inspection_methods(method_id),
+                    substance_id TEXT REFERENCES inspection_substances(substance_id),
                     scope_type TEXT NOT NULL
                         CHECK(scope_type IN ('include', 'exclude', 'conditional')),
                     product_category TEXT NOT NULL DEFAULT '',
@@ -738,6 +739,12 @@ class DataStore:
                 "search_queries",
                 "query_note",
                 "TEXT NOT NULL DEFAULT ''",
+            )
+            self._ensure_column(
+                connection,
+                "inspection_method_applicabilities",
+                "substance_id",
+                "TEXT REFERENCES inspection_substances(substance_id)",
             )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
@@ -1092,27 +1099,34 @@ class DataStore:
 
             for applicability in payload["method_applicabilities"]:
                 existing_applicability = connection.execute(
-                    "SELECT method_id FROM inspection_method_applicabilities "
+                    "SELECT method_id, substance_id "
+                    "FROM inspection_method_applicabilities "
                     "WHERE applicability_id = ?",
                     (applicability["applicability_id"],),
                 ).fetchone()
                 if (
                     existing_applicability is not None
-                    and existing_applicability["method_id"] != applicability["method_id"]
+                    and (
+                        existing_applicability["method_id"]
+                        != applicability["method_id"]
+                        or existing_applicability["substance_id"]
+                        != applicability["substance_id"]
+                    )
                 ):
                     raise DataStoreError(
                         f"Inspection applicability_id {applicability['applicability_id']} "
-                        "不能改绑到其他Method"
+                        "不能改绑到其他Method或Substance"
                     )
                 connection.execute(
                     """
                     INSERT INTO inspection_method_applicabilities (
-                        applicability_id, method_id, scope_type, product_category,
-                        product_form, ingredient_context, source_scope_text, note,
-                        updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        applicability_id, method_id, substance_id, scope_type,
+                        product_category, product_form, ingredient_context,
+                        source_scope_text, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(applicability_id) DO UPDATE SET
                         method_id=excluded.method_id,
+                        substance_id=excluded.substance_id,
                         scope_type=excluded.scope_type,
                         product_category=excluded.product_category,
                         product_form=excluded.product_form,
@@ -1124,6 +1138,7 @@ class DataStore:
                     (
                         applicability["applicability_id"],
                         applicability["method_id"],
+                        applicability["substance_id"],
                         applicability["scope_type"],
                         applicability["product_category"],
                         applicability["product_form"],

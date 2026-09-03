@@ -393,10 +393,41 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             raise InspectionConfigValidationError(
                 f"Applicability {applicability_id} 引用的method_id不存在：{method_id}"
             )
+        if "substance_id" not in item:
+            raise InspectionConfigValidationError(
+                f"Applicability {applicability_id} 必须显式包含substance_id"
+            )
+        raw_substance_id = item.get("substance_id")
+        applicability_substance_id = (
+            None
+            if raw_substance_id is None
+            else _identifier(
+                raw_substance_id,
+                f"Applicability {applicability_id} 的substance_id",
+            )
+        )
+        if (
+            applicability_substance_id is not None
+            and applicability_substance_id not in substance_ids
+        ):
+            raise InspectionConfigValidationError(
+                f"Applicability {applicability_id} 引用的substance_id不存在："
+                f"{applicability_substance_id}"
+            )
+        if (
+            applicability_substance_id is not None
+            and (method_id, applicability_substance_id)
+            not in method_substance_keys
+        ):
+            raise InspectionConfigValidationError(
+                f"Applicability {applicability_id} 的Method {method_id} 不检测"
+                f"Substance {applicability_substance_id}"
+            )
         applicabilities.append(
             {
                 "applicability_id": applicability_id,
                 "method_id": method_id,
+                "substance_id": applicability_substance_id,
                 "scope_type": _choice(
                     item.get("scope_type"),
                     f"Applicability {applicability_id} 的scope_type",
@@ -517,6 +548,13 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             if not any(item["method_id"] == method_id for item in applicabilities):
                 raise InspectionConfigValidationError(
                     f"verified_reference中的Method {method_id} 缺少MethodApplicability"
+                )
+            if not any(
+                item["method_id"] == method_id and item["substance_id"] is None
+                for item in applicabilities
+            ):
+                raise InspectionConfigValidationError(
+                    f"verified_reference中的Method {method_id} 缺少Method级Applicability"
                 )
         for substance in substances:
             substance_id = substance["substance_id"]

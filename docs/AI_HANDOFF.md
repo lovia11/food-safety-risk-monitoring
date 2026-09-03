@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-A1 Inspection Reference Integrity Tightening 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-A2 Substance-Scoped Inspection Applicability 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-A1 — Inspection Reference Integrity Tightening**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-A2 — Substance-Scoped Inspection Applicability**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 将 SQLite schema 升至 version 5，新增独立 Inspection Dataset/Method/Substance/Applicability/RegulatoryContext 模型、validator 和事务化导入；没有导入正式检验数据，也没有实现推荐链。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 建立独立 Inspection Reference 基础，v0.8-A2 将 SQLite schema 升至 version 6，使 Applicability 可表达 Method-level 及可选的 Substance-scoped 条件；没有导入正式检验数据，也没有实现推荐链。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-A 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-A 系列当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -181,7 +181,7 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 
 ## 11. SQLite Tables
 
-当前 `SCHEMA_VERSION = 5`。已有 version 4 数据库原位升级时只新增 Inspection 表；既有 Task、Product、Snapshot、Evidence、Review、MonitorTarget、SearchQuery 和 CandidateHit 不删除、不重建。表如下：
+当前 `SCHEMA_VERSION = 6`。已有 version 5 数据库原位升级时只为 Applicability 增加可空 `substance_id`，旧记录保持 `NULL`；既有 Task、Product、Snapshot、Evidence、Review、Monitor 和其他 Inspection 数据不删除、不重建。表如下：
 
 | 表 | 关键字段/约束 | 用途 |
 | --- | --- | --- |
@@ -198,7 +198,7 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 | `inspection_methods` | `method_id` PK、`UNIQUE(dataset_id, method_no)`、type/status/source | 检验方法、版本替代编号与方法级 provenance |
 | `inspection_substances` | `substance_id` PK、`UNIQUE(dataset_id, canonical_name)` | 物质规范身份，不绑定监管结论 |
 | `inspection_method_substances` | `(method_id, substance_id)` PK、source_label、role | 方法—物质关系及来源原始名称 |
-| `inspection_method_applicabilities` | `applicability_id` PK、scope_type、产品/剂型/基质范围 | 方法适用、排除或条件范围 |
+| `inspection_method_applicabilities` | `applicability_id` PK、method_id、可空 substance_id、scope_type、产品/剂型/基质范围 | Method-level 或 Substance-scoped 的适用、排除或条件范围 |
 | `substance_regulatory_contexts` | `context_id` PK、status、scope、jurisdiction、validity、source | context-scoped 监管身份与独立 provenance |
 
 人工复核状态只允许：`pending`、`recommend_follow_up`、`no_further_action`。
@@ -213,7 +213,7 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 
 原图、HTML、Network response body、OCR 全文和日志不能塞进 SQLite；它们继续由文件系统保存。不要把可重建索引误当成原始证据唯一副本。
 
-Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset provenance 及 `methods`、`substances`、`method_substances`、`method_applicabilities`、`substance_regulatory_contexts`。`reference_pending` 的五个数组必须为空；`verified_reference` 必须有核验时间、非空方法/物质、方法级独立来源、完整引用和非孤立实体，且 Applicability 必须保留 `source_scope_text`、RegulatoryContext 不得为 `verification_pending`。`source_label` 与 `canonical_name` 不同，或双方非空的来源 CAS 与规范 CAS 不同时，必须记录 `normalization_note`，禁止静默归一化。`DataStore.import_inspection_config()` 只做事务化安全 upsert，不自动删除缺失记录，并阻止状态降级及 method/substance ID 跨 Dataset 转移。
+Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset provenance 及 `methods`、`substances`、`method_substances`、`method_applicabilities`、`substance_regulatory_contexts`。每个 Applicability 必须显式提供 `substance_id`：`null` 表示 Method-level，非空值必须同时存在于当前 Dataset 且已有对应 MethodSubstance；verified Method 必须至少保留一条 Method-level 范围。`reference_pending` 的五个数组必须为空；`verified_reference` 必须有核验时间、非空方法/物质、方法级独立来源、完整引用和非孤立实体，且 Applicability 必须保留 `source_scope_text`、RegulatoryContext 不得为 `verification_pending`。`source_label` 与 `canonical_name` 不同，或双方非空的来源 CAS 与规范 CAS 不同时，必须记录 `normalization_note`，禁止静默归一化。`DataStore.import_inspection_config()` 只做事务化安全 upsert，不自动删除缺失记录，并阻止状态降级、实体跨 Dataset 转移及 Applicability 父级改绑。
 
 ## 12. Main APIs
 
@@ -330,7 +330,7 @@ v0.8-A 不提供生产 Inspection JSON。仓库中没有正式 BJS/KJ/GB/T 数�
 
 ## 16. Tests
 
-当前共有 156 项 `unittest`：v0.7 冻结基线为 137 项；v0.8-A/A1 包含 19 项 Inspection contract、引用完整性、provenance、幂等/非删除导入、状态迁移、ID 所有权、事务 rollback 和 v4→v5 无损升级测试。现有 13 项前端测试仍保持不变；v0.8-A1 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 160 项 `unittest`：v0.7 冻结基线为 137 项；v0.8-A/A1/A2 包含 23 项 Inspection contract、引用完整性、provenance、幂等/非删除导入、状态迁移、ID 所有权、事务 rollback 和 v4/v5→v6 无损升级测试。现有 13 项前端测试仍保持不变；v0.8-A2 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -459,7 +459,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 156 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 160 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；
