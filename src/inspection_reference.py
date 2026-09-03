@@ -274,6 +274,7 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
     substance_ids: set[str] = set()
     canonical_names: set[str] = set()
     canonical_by_id: dict[str, str] = {}
+    canonical_cas_by_id: dict[str, str] = {}
     for position, value in enumerate(collections["substances"], start=1):
         item = _object(value, f"substances[{position}]")
         substance_id = _identifier(
@@ -292,6 +293,10 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
         )
         _reject_duplicate(canonical_name, canonical_names, "canonical_name")
         canonical_by_id[substance_id] = canonical_name
+        canonical_cas_no = _text_default(
+            item.get("cas_no"), f"Substance {substance_id} 的cas_no"
+        )
+        canonical_cas_by_id[substance_id] = canonical_cas_no
         substances.append(
             {
                 "substance_id": substance_id,
@@ -300,9 +305,7 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
                 "english_name": _text_default(
                     item.get("english_name"), f"Substance {substance_id} 的english_name"
                 ),
-                "cas_no": _text_default(
-                    item.get("cas_no"), f"Substance {substance_id} 的cas_no"
-                ),
+                "cas_no": canonical_cas_no,
                 "substance_group": _text_default(
                     item.get("substance_group"),
                     f"Substance {substance_id} 的substance_group",
@@ -339,20 +342,28 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             item.get("normalization_note"),
             f"MethodSubstance {method_id}/{substance_id} 的normalization_note",
         )
-        if source_label != canonical_by_id[substance_id] and not normalization_note:
+        source_cas_no = _text_default(
+            item.get("source_cas_no"),
+            f"MethodSubstance {method_id}/{substance_id} 的source_cas_no",
+        )
+        cas_mismatch = bool(
+            canonical_cas_by_id[substance_id]
+            and source_cas_no
+            and canonical_cas_by_id[substance_id] != source_cas_no
+        )
+        if (
+            source_label != canonical_by_id[substance_id] or cas_mismatch
+        ) and not normalization_note:
             raise InspectionConfigValidationError(
-                f"MethodSubstance {method_id}/{substance_id} 的source_label与"
-                "canonical_name不一致时必须包含normalization_note"
+                f"MethodSubstance {method_id}/{substance_id} 的来源名称或CAS与"
+                "规范值不一致时必须包含normalization_note"
             )
         method_substances.append(
             {
                 "method_id": method_id,
                 "substance_id": substance_id,
                 "source_label": source_label,
-                "source_cas_no": _text_default(
-                    item.get("source_cas_no"),
-                    f"MethodSubstance {method_id}/{substance_id} 的source_cas_no",
-                ),
+                "source_cas_no": source_cas_no,
                 "determination_role": _choice(
                     item.get("determination_role"),
                     f"MethodSubstance {method_id}/{substance_id} 的determination_role",
@@ -515,7 +526,18 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
                 raise InspectionConfigValidationError(
                     f"verified_reference中的Substance {substance_id} 是孤立实体"
                 )
+        for applicability in applicabilities:
+            if not applicability["source_scope_text"]:
+                raise InspectionConfigValidationError(
+                    "verified_reference中的MethodApplicability "
+                    f"{applicability['applicability_id']} 必须包含source_scope_text"
+                )
         for context in contexts:
+            if context["context_status"] == "verification_pending":
+                raise InspectionConfigValidationError(
+                    "verified_reference中的RegulatoryContext "
+                    f"{context['context_id']} 不能是verification_pending"
+                )
             if not context["source_date"]:
                 raise InspectionConfigValidationError(
                     f"verified_reference中的RegulatoryContext {context['context_id']} "

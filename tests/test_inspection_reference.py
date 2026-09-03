@@ -231,6 +231,78 @@ class InspectionReferenceValidationTest(unittest.TestCase):
         ):
             validate_inspection_config(payload)
 
+    def test_cas_normalization_requires_an_explicit_note_only_when_values_differ(self):
+        matching = inspection_dataset()
+        matching["substances"][0]["cas_no"] = "TEST-CAS-1"
+        matching["method_substances"][0].update(
+            {
+                "source_label": "测试物质",
+                "source_cas_no": "TEST-CAS-1",
+                "normalization_note": "",
+            }
+        )
+        self.assertEqual(
+            validate_inspection_config(matching)["method_substances"][0][
+                "source_cas_no"
+            ],
+            "TEST-CAS-1",
+        )
+
+        mismatching = copy.deepcopy(matching)
+        mismatching["method_substances"][0]["source_cas_no"] = "TEST-CAS-2"
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "normalization_note"
+        ):
+            validate_inspection_config(mismatching)
+
+        explained = copy.deepcopy(mismatching)
+        explained["method_substances"][0]["normalization_note"] = (
+            "测试中明确记录两个CAS值不同，未自动选择其一。"
+        )
+        self.assertTrue(
+            validate_inspection_config(explained)["method_substances"][0][
+                "normalization_note"
+            ]
+        )
+
+    def test_verified_reference_rejects_pending_regulatory_context(self):
+        development = inspection_dataset()
+        development["substance_regulatory_contexts"][0]["context_status"] = (
+            "verification_pending"
+        )
+        self.assertEqual(
+            validate_inspection_config(development)[
+                "substance_regulatory_contexts"
+            ][0]["context_status"],
+            "verification_pending",
+        )
+
+        payload = inspection_dataset(status="verified_reference")
+        payload["substance_regulatory_contexts"][0]["context_status"] = (
+            "verification_pending"
+        )
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "verification_pending"
+        ):
+            validate_inspection_config(payload)
+
+    def test_verified_reference_requires_applicability_source_scope_text(self):
+        development = inspection_dataset()
+        development["method_applicabilities"][0]["source_scope_text"] = ""
+        self.assertEqual(
+            validate_inspection_config(development)["method_applicabilities"][0][
+                "source_scope_text"
+            ],
+            "",
+        )
+
+        payload = inspection_dataset(status="verified_reference")
+        payload["method_applicabilities"][0]["source_scope_text"] = ""
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "source_scope_text"
+        ):
+            validate_inspection_config(payload)
+
     def test_enum_like_fields_are_rejected_independently(self):
         cases = []
         method_type = inspection_dataset()

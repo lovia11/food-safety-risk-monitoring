@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-A（Inspection Reference Data Foundation）
+当前开发版本：v0.8-A1（Inspection Reference Integrity Tightening）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 只新增 Inspection Reference schema、校验与导入基础，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A/A1 只新增 Inspection Reference schema、校验与导入基础并收紧 verified 数据完整性，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
 
 当前分支：`main`
 
@@ -45,7 +45,7 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 | Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | 已实现并通过离线测试；尚无正式监管数据 | `src/inspection_reference.py`、`src/data_store.py` |
 
-当前测试集共有 153 项，其中 v0.8-A 新增 16 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4→v5 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 156 项，其中 v0.8-A/A1 包含 19 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4→v5 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
