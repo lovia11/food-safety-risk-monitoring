@@ -145,10 +145,16 @@ class DataStoreTest(unittest.TestCase):
                 "monitor_targets",
                 "search_queries",
                 "candidate_hits",
+                "inspection_datasets",
+                "inspection_methods",
+                "inspection_substances",
+                "inspection_method_substances",
+                "inspection_method_applicabilities",
+                "substance_regulatory_contexts",
             }
             <= tables
         )
-        self.assertEqual(version, 4)
+        self.assertEqual(version, 5)
 
     def _import_monitor_seed(self, *, include_second_target: bool = False):
         config = self.root / "monitor_targets.json"

@@ -15,6 +15,10 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from src.inspection_reference import (
+    InspectionConfigValidationError,
+    validate_inspection_config,
+)
 from src.runtime import iso_now, read_json
 
 
@@ -33,7 +37,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
     Path("config/monitor_targets.reference.json"),
 )
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -588,6 +592,124 @@ class DataStore:
                     ON candidate_hits(task_id, query_id, rank);
                 CREATE INDEX IF NOT EXISTS idx_hits_product
                     ON candidate_hits(product_id, discovered_at);
+
+                CREATE TABLE IF NOT EXISTS inspection_datasets (
+                    dataset_id TEXT PRIMARY KEY,
+                    dataset_version TEXT NOT NULL,
+                    dataset_status TEXT NOT NULL
+                        CHECK(dataset_status IN (
+                            'development_seed', 'reference_pending', 'verified_reference'
+                        )),
+                    source_name TEXT,
+                    source_reference TEXT,
+                    source_date TEXT,
+                    collected_at TEXT,
+                    verified_at TEXT,
+                    description TEXT NOT NULL DEFAULT '',
+                    imported_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS inspection_methods (
+                    method_id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
+                    method_no TEXT NOT NULL,
+                    method_name TEXT NOT NULL,
+                    method_type TEXT NOT NULL
+                        CHECK(method_type IN (
+                            'supplementary_bjs', 'rapid_kj', 'national_standard_gbt'
+                        )),
+                    method_status TEXT NOT NULL
+                        CHECK(method_status IN (
+                            'current', 'superseded', 'revoked', 'verification_pending'
+                        )),
+                    publisher TEXT NOT NULL DEFAULT '',
+                    published_date TEXT,
+                    effective_date TEXT,
+                    replaces_method_no TEXT,
+                    replaced_by_method_no TEXT,
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    source_date TEXT,
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(dataset_id, method_no)
+                );
+
+                CREATE TABLE IF NOT EXISTS inspection_substances (
+                    substance_id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
+                    canonical_name TEXT NOT NULL,
+                    english_name TEXT NOT NULL DEFAULT '',
+                    cas_no TEXT NOT NULL DEFAULT '',
+                    substance_group TEXT NOT NULL DEFAULT '',
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(dataset_id, canonical_name)
+                );
+
+                CREATE TABLE IF NOT EXISTS inspection_method_substances (
+                    method_id TEXT NOT NULL REFERENCES inspection_methods(method_id),
+                    substance_id TEXT NOT NULL REFERENCES inspection_substances(substance_id),
+                    source_label TEXT NOT NULL,
+                    source_cas_no TEXT NOT NULL DEFAULT '',
+                    determination_role TEXT NOT NULL
+                        CHECK(determination_role IN (
+                            'quantitative', 'qualitative', 'rapid_screen', 'unspecified'
+                        )),
+                    normalization_note TEXT NOT NULL DEFAULT '',
+                    ordinal INTEGER,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY(method_id, substance_id),
+                    CHECK(ordinal IS NULL OR ordinal > 0)
+                );
+
+                CREATE TABLE IF NOT EXISTS inspection_method_applicabilities (
+                    applicability_id TEXT PRIMARY KEY,
+                    method_id TEXT NOT NULL REFERENCES inspection_methods(method_id),
+                    scope_type TEXT NOT NULL
+                        CHECK(scope_type IN ('include', 'exclude', 'conditional')),
+                    product_category TEXT NOT NULL DEFAULT '',
+                    product_form TEXT NOT NULL DEFAULT '',
+                    ingredient_context TEXT NOT NULL DEFAULT '',
+                    source_scope_text TEXT NOT NULL DEFAULT '',
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS substance_regulatory_contexts (
+                    context_id TEXT PRIMARY KEY,
+                    substance_id TEXT NOT NULL REFERENCES inspection_substances(substance_id),
+                    context_status TEXT NOT NULL
+                        CHECK(context_status IN (
+                            'non_food_substance',
+                            'pharmaceutical_or_derivative',
+                            'legal_health_food_raw_material',
+                            'context_dependent',
+                            'verification_pending'
+                        )),
+                    product_scope TEXT NOT NULL DEFAULT '',
+                    jurisdiction TEXT NOT NULL DEFAULT 'CN',
+                    valid_from TEXT,
+                    valid_to TEXT,
+                    source_label TEXT NOT NULL DEFAULT '',
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    source_date TEXT,
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_inspection_methods_dataset
+                    ON inspection_methods(dataset_id, method_no);
+                CREATE INDEX IF NOT EXISTS idx_inspection_substances_dataset
+                    ON inspection_substances(dataset_id, canonical_name);
+                CREATE INDEX IF NOT EXISTS idx_inspection_method_substances_substance
+                    ON inspection_method_substances(substance_id, method_id);
+                CREATE INDEX IF NOT EXISTS idx_inspection_applicabilities_method
+                    ON inspection_method_applicabilities(method_id, applicability_id);
+                CREATE INDEX IF NOT EXISTS idx_regulatory_contexts_substance
+                    ON substance_regulatory_contexts(substance_id, context_id);
                 """
             )
             self._ensure_column(connection, "tasks", "task_type", "TEXT NOT NULL DEFAULT 'quick'")
@@ -782,6 +904,298 @@ class DataStore:
                     )
                     query_count += 1
         return {"datasets": 1, "targets": target_count, "queries": query_count}
+
+    def import_inspection_config(self, config_path: Path) -> dict[str, int]:
+        """Validate and atomically upsert one Inspection Reference dataset."""
+
+        payload = validate_inspection_config(read_json(config_path))
+        now = iso_now()
+        with self._connect() as connection:
+            existing_dataset = connection.execute(
+                "SELECT dataset_status FROM inspection_datasets WHERE dataset_id = ?",
+                (payload["dataset_id"],),
+            ).fetchone()
+            if existing_dataset is not None:
+                previous_status = str(existing_dataset["dataset_status"])
+                next_status = str(payload["dataset_status"])
+                allowed_transition = previous_status == next_status or (
+                    previous_status == "reference_pending"
+                    and next_status == "verified_reference"
+                )
+                if not allowed_transition:
+                    raise InspectionConfigValidationError(
+                        f"Inspection数据集 {payload['dataset_id']} 不能从"
+                        f" {previous_status} 自动变更为 {next_status}"
+                    )
+
+            for method in payload["methods"]:
+                existing_method = connection.execute(
+                    "SELECT dataset_id FROM inspection_methods WHERE method_id = ?",
+                    (method["method_id"],),
+                ).fetchone()
+                if (
+                    existing_method is not None
+                    and existing_method["dataset_id"] != payload["dataset_id"]
+                ):
+                    raise DataStoreError(
+                        f"Inspection method_id {method['method_id']} 已属于数据集"
+                        f" {existing_method['dataset_id']}，不能转入 {payload['dataset_id']}"
+                    )
+
+            for substance in payload["substances"]:
+                existing_substance = connection.execute(
+                    "SELECT dataset_id FROM inspection_substances WHERE substance_id = ?",
+                    (substance["substance_id"],),
+                ).fetchone()
+                if (
+                    existing_substance is not None
+                    and existing_substance["dataset_id"] != payload["dataset_id"]
+                ):
+                    raise DataStoreError(
+                        f"Inspection substance_id {substance['substance_id']} 已属于数据集"
+                        f" {existing_substance['dataset_id']}，不能转入 {payload['dataset_id']}"
+                    )
+
+            connection.execute(
+                """
+                INSERT INTO inspection_datasets (
+                    dataset_id, dataset_version, dataset_status, source_name,
+                    source_reference, source_date, collected_at, verified_at,
+                    description, imported_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(dataset_id) DO UPDATE SET
+                    dataset_version=excluded.dataset_version,
+                    dataset_status=excluded.dataset_status,
+                    source_name=excluded.source_name,
+                    source_reference=excluded.source_reference,
+                    source_date=excluded.source_date,
+                    collected_at=excluded.collected_at,
+                    verified_at=excluded.verified_at,
+                    description=excluded.description,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    payload["dataset_id"],
+                    payload["dataset_version"],
+                    payload["dataset_status"],
+                    payload["source_name"],
+                    payload["source_reference"],
+                    payload["source_date"],
+                    payload["collected_at"],
+                    payload["verified_at"],
+                    payload["description"],
+                    now,
+                    now,
+                ),
+            )
+
+            for method in payload["methods"]:
+                connection.execute(
+                    """
+                    INSERT INTO inspection_methods (
+                        method_id, dataset_id, method_no, method_name, method_type,
+                        method_status, publisher, published_date, effective_date,
+                        replaces_method_no, replaced_by_method_no, source_name,
+                        source_reference, source_date, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(method_id) DO UPDATE SET
+                        dataset_id=excluded.dataset_id,
+                        method_no=excluded.method_no,
+                        method_name=excluded.method_name,
+                        method_type=excluded.method_type,
+                        method_status=excluded.method_status,
+                        publisher=excluded.publisher,
+                        published_date=excluded.published_date,
+                        effective_date=excluded.effective_date,
+                        replaces_method_no=excluded.replaces_method_no,
+                        replaced_by_method_no=excluded.replaced_by_method_no,
+                        source_name=excluded.source_name,
+                        source_reference=excluded.source_reference,
+                        source_date=excluded.source_date,
+                        note=excluded.note,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        method["method_id"],
+                        method["dataset_id"],
+                        method["method_no"],
+                        method["method_name"],
+                        method["method_type"],
+                        method["method_status"],
+                        method["publisher"],
+                        method["published_date"],
+                        method["effective_date"],
+                        method["replaces_method_no"],
+                        method["replaced_by_method_no"],
+                        method["source_name"],
+                        method["source_reference"],
+                        method["source_date"],
+                        method["note"],
+                        now,
+                    ),
+                )
+
+            for substance in payload["substances"]:
+                connection.execute(
+                    """
+                    INSERT INTO inspection_substances (
+                        substance_id, dataset_id, canonical_name, english_name,
+                        cas_no, substance_group, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(substance_id) DO UPDATE SET
+                        dataset_id=excluded.dataset_id,
+                        canonical_name=excluded.canonical_name,
+                        english_name=excluded.english_name,
+                        cas_no=excluded.cas_no,
+                        substance_group=excluded.substance_group,
+                        note=excluded.note,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        substance["substance_id"],
+                        substance["dataset_id"],
+                        substance["canonical_name"],
+                        substance["english_name"],
+                        substance["cas_no"],
+                        substance["substance_group"],
+                        substance["note"],
+                        now,
+                    ),
+                )
+
+            for relation in payload["method_substances"]:
+                connection.execute(
+                    """
+                    INSERT INTO inspection_method_substances (
+                        method_id, substance_id, source_label, source_cas_no,
+                        determination_role, normalization_note, ordinal, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(method_id, substance_id) DO UPDATE SET
+                        source_label=excluded.source_label,
+                        source_cas_no=excluded.source_cas_no,
+                        determination_role=excluded.determination_role,
+                        normalization_note=excluded.normalization_note,
+                        ordinal=excluded.ordinal,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        relation["method_id"],
+                        relation["substance_id"],
+                        relation["source_label"],
+                        relation["source_cas_no"],
+                        relation["determination_role"],
+                        relation["normalization_note"],
+                        relation["ordinal"],
+                        now,
+                    ),
+                )
+
+            for applicability in payload["method_applicabilities"]:
+                existing_applicability = connection.execute(
+                    "SELECT method_id FROM inspection_method_applicabilities "
+                    "WHERE applicability_id = ?",
+                    (applicability["applicability_id"],),
+                ).fetchone()
+                if (
+                    existing_applicability is not None
+                    and existing_applicability["method_id"] != applicability["method_id"]
+                ):
+                    raise DataStoreError(
+                        f"Inspection applicability_id {applicability['applicability_id']} "
+                        "不能改绑到其他Method"
+                    )
+                connection.execute(
+                    """
+                    INSERT INTO inspection_method_applicabilities (
+                        applicability_id, method_id, scope_type, product_category,
+                        product_form, ingredient_context, source_scope_text, note,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(applicability_id) DO UPDATE SET
+                        method_id=excluded.method_id,
+                        scope_type=excluded.scope_type,
+                        product_category=excluded.product_category,
+                        product_form=excluded.product_form,
+                        ingredient_context=excluded.ingredient_context,
+                        source_scope_text=excluded.source_scope_text,
+                        note=excluded.note,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        applicability["applicability_id"],
+                        applicability["method_id"],
+                        applicability["scope_type"],
+                        applicability["product_category"],
+                        applicability["product_form"],
+                        applicability["ingredient_context"],
+                        applicability["source_scope_text"],
+                        applicability["note"],
+                        now,
+                    ),
+                )
+
+            for context in payload["substance_regulatory_contexts"]:
+                existing_context = connection.execute(
+                    "SELECT substance_id FROM substance_regulatory_contexts "
+                    "WHERE context_id = ?",
+                    (context["context_id"],),
+                ).fetchone()
+                if (
+                    existing_context is not None
+                    and existing_context["substance_id"] != context["substance_id"]
+                ):
+                    raise DataStoreError(
+                        f"Inspection context_id {context['context_id']} "
+                        "不能改绑到其他Substance"
+                    )
+                connection.execute(
+                    """
+                    INSERT INTO substance_regulatory_contexts (
+                        context_id, substance_id, context_status, product_scope,
+                        jurisdiction, valid_from, valid_to, source_label, source_name,
+                        source_reference, source_date, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(context_id) DO UPDATE SET
+                        substance_id=excluded.substance_id,
+                        context_status=excluded.context_status,
+                        product_scope=excluded.product_scope,
+                        jurisdiction=excluded.jurisdiction,
+                        valid_from=excluded.valid_from,
+                        valid_to=excluded.valid_to,
+                        source_label=excluded.source_label,
+                        source_name=excluded.source_name,
+                        source_reference=excluded.source_reference,
+                        source_date=excluded.source_date,
+                        note=excluded.note,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        context["context_id"],
+                        context["substance_id"],
+                        context["context_status"],
+                        context["product_scope"],
+                        context["jurisdiction"],
+                        context["valid_from"],
+                        context["valid_to"],
+                        context["source_label"],
+                        context["source_name"],
+                        context["source_reference"],
+                        context["source_date"],
+                        context["note"],
+                        now,
+                    ),
+                )
+
+        return {
+            "dataset": 1,
+            "methods": len(payload["methods"]),
+            "substances": len(payload["substances"]),
+            "method_substances": len(payload["method_substances"]),
+            "applicabilities": len(payload["method_applicabilities"]),
+            "regulatory_contexts": len(
+                payload["substance_regulatory_contexts"]
+            ),
+        }
 
     def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
         where = " WHERE t.enabled = 1" if enabled_only else ""
@@ -1387,6 +1801,12 @@ class DataStore:
                     "monitor_targets",
                     "search_queries",
                     "candidate_hits",
+                    "inspection_datasets",
+                    "inspection_methods",
+                    "inspection_substances",
+                    "inspection_method_substances",
+                    "inspection_method_applicabilities",
+                    "substance_regulatory_contexts",
                 )
             }
 
@@ -1402,6 +1822,13 @@ def main(argv: list[str] | None = None) -> int:
         dest="monitor_configs",
         help="可重复指定；默认导入development与reference数据集",
     )
+    parser.add_argument(
+        "--import-inspection-config",
+        type=Path,
+        action="append",
+        dest="inspection_configs",
+        help="可重复指定待导入的Inspection Reference JSON；默认不导入",
+    )
     parser.add_argument("--run-id")
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
@@ -1414,6 +1841,11 @@ def main(argv: list[str] | None = None) -> int:
                 raise FileNotFoundError(f"监测数据集不存在：{monitor_config}")
             continue
         monitor_imports.append(store.import_monitor_config(monitor_config))
+    inspection_imports = []
+    for inspection_config in args.inspection_configs or []:
+        if not inspection_config.is_file():
+            raise FileNotFoundError(f"Inspection数据集不存在：{inspection_config}")
+        inspection_imports.append(store.import_inspection_config(inspection_config))
     result = (
         store.import_run((args.output_root / args.run_id).resolve())
         if args.run_id
@@ -1423,6 +1855,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(
             {
                 "monitor_imports": monitor_imports,
+                "inspection_imports": inspection_imports,
                 "result": result,
                 "counts": store.table_counts(),
             },

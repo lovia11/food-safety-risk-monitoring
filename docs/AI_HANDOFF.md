@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述最终冻结 v0.7 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-A Inspection Reference Data Foundation 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前冻结版本：**v0.7 — Product Monitoring Workspace**；标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-A — Inspection Reference Data Foundation**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C 完成统一 B2B 视觉、状态反馈与 1440px/1080px 响应式验收；v0.7-C2 进一步校正候选深采、历史任务进度、task_id、stop_reason、collapsed Sidebar 和当前任务文案。SQLite schema 仍为 version 4。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 将 SQLite schema 升至 version 5，新增独立 Inspection Dataset/Method/Substance/Applicability/RegulatoryContext 模型、validator 和事务化导入；没有导入正式检验数据，也没有实现推荐链。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -15,14 +15,14 @@
 
 ## 2. Current Commit
 
-v0.7 最终冻结基于已经推送的 v0.7-C2：
+当前稳定回退基线是已经推送并打 tag 的 v0.7 最终提交：
 
 ```text
-6f95313a70c507ef34fbe68dace30c0237a49b94
-Refine UI Semantics v0.7-C2
+98e732b88ef74dd5505646abaef0134e23a7adaf
+Establish Product Monitoring Workspace v0.7
 ```
 
-v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向，应以 `git rev-parse product-workspace-v0.7` 核查。v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向；不要依赖旧对话中的短哈希。
+v0.8-A 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -112,6 +112,7 @@ MonitorTarget/关键词
 | `src/runtime.py` | 时间、哈希、原子 JSON、run logger | 高，横切基础设施 |
 | `src/task_runtime.py` | Web 任务校验、后台线程、单任务保护、恢复与状态装饰 | 高 |
 | `src/data_store.py` | SQLite schema、run 幂等导入、查询和人工复核 | 高 |
+| `src/inspection_reference.py` | Inspection JSON contract、enum-like 值、规范化、引用/来源一致性校验 | 高，监管 Reference 边界 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
 | `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
@@ -164,6 +165,10 @@ Task          1 ── N CandidateHit N ── 1 Product
 Task          1 ── N ProductSnapshot N ── 1 Product
 ProductSnapshot 1 ── N Evidence
 ProductSnapshot 1 ── 1 Review
+
+InspectionDataset 1 ── N InspectionMethod N ── N InspectionSubstance
+InspectionMethod  1 ── N MethodApplicability
+InspectionSubstance 1 ── N SubstanceRegulatoryContext
 ```
 
 - `Product` 表示稳定的淘宝商品 ID，不承载某次页面内容；
@@ -171,11 +176,12 @@ ProductSnapshot 1 ── 1 Review
 - `Evidence` 和 `Review` 都属于 Snapshot，因为页面、规则和人工结论具有时间性；
 - `CandidateHit` 表示检索来源，不等同于详情已采集；
 - `MonitorDataset` 保存 development/reference 数据集身份、版本和来源；`MonitorTarget` 保存目标级来源并关联所属数据集；
+- `InspectionDataset` 与 `MonitorDataset` 是两个独立业务域；方法、物质、适用范围和监管语境通过显式关系表达，物质本体不保存固定的“违法”布尔值；
 - Monitor 任务可能有 19 个候选，但只有前 2 个 Snapshot 完成详情/OCR，其余保持待采集状态，这是正常且必须如实展示的状态。
 
 ## 11. SQLite Tables
 
-当前 `SCHEMA_VERSION = 4`，旧 version 2/3 数据库通过项目现有轻量 schema 机制升级。表如下：
+当前 `SCHEMA_VERSION = 5`。已有 version 4 数据库原位升级时只新增 Inspection 表；既有 Task、Product、Snapshot、Evidence、Review、MonitorTarget、SearchQuery 和 CandidateHit 不删除、不重建。表如下：
 
 | 表 | 关键字段/约束 | 用途 |
 | --- | --- | --- |
@@ -188,6 +194,12 @@ ProductSnapshot 1 ── 1 Review
 | `monitor_targets` | `target_id` PK、`dataset_id`、目标级来源、启用状态 | 标准监测对象 |
 | `search_queries` | `query_id` PK、`UNIQUE(target_id, query_text)`、order、query_source、validation_status、query_note | 对象下的有序搜索表达与验证依据（SQLite schema v4） |
 | `candidate_hits` | `hit_id` PK、`UNIQUE(task_id, product_id, query_id)` | Query 对商品的命中来源 |
+| `inspection_datasets` | `dataset_id` PK、version、status、source、timestamps | 独立 Inspection Reference 数据集 provenance |
+| `inspection_methods` | `method_id` PK、`UNIQUE(dataset_id, method_no)`、type/status/source | 检验方法、版本替代编号与方法级 provenance |
+| `inspection_substances` | `substance_id` PK、`UNIQUE(dataset_id, canonical_name)` | 物质规范身份，不绑定监管结论 |
+| `inspection_method_substances` | `(method_id, substance_id)` PK、source_label、role | 方法—物质关系及来源原始名称 |
+| `inspection_method_applicabilities` | `applicability_id` PK、scope_type、产品/剂型/基质范围 | 方法适用、排除或条件范围 |
+| `substance_regulatory_contexts` | `context_id` PK、status、scope、jurisdiction、validity、source | context-scoped 监管身份与独立 provenance |
 
 人工复核状态只允许：`pending`、`recommend_follow_up`、`no_further_action`。
 
@@ -200,6 +212,8 @@ ProductSnapshot 1 ── 1 Review
 ```
 
 原图、HTML、Network response body、OCR 全文和日志不能塞进 SQLite；它们继续由文件系统保存。不要把可重建索引误当成原始证据唯一副本。
+
+Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset provenance 及 `methods`、`substances`、`method_substances`、`method_applicabilities`、`substance_regulatory_contexts`。`reference_pending` 的五个数组必须为空；`verified_reference` 必须有核验时间、非空方法/物质、方法级独立来源、完整引用和非孤立实体。`source_label` 与 `canonical_name` 不同时必须记录 `normalization_note`，禁止静默归一化。`DataStore.import_inspection_config()` 只做事务化安全 upsert，不自动删除缺失记录，并阻止状态降级及 method/substance ID 跨 Dataset 转移。
 
 ## 12. Main APIs
 
@@ -300,6 +314,10 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 正式 reference dataset 入口。当前 `dataset_status=verified_reference`、`dataset_version=2024.08`、共 106 项，每项均保存首次纳入它的国家卫生健康委文件名称、引用和日期。6 个 Pilot 共配置 9 个已验证 Query，5 个对象启用；其余 100 项无 Query 且停用，当归虽有已验证 Query 也因商品场景与官方适用边界继续停用。开发种子仍单独保存在 development 文件中。
 
+### Inspection Reference config
+
+v0.8-A 不提供生产 Inspection JSON。仓库中没有正式 BJS/KJ/GB/T 数据，也没有空壳或假知识库；当前 contract 只通过 `tests/test_inspection_reference.py` 的 synthetic 临时数据验证。正式 Verified Inspection Dataset 属于 v0.8-B，导入前必须逐条核验来源。
+
 ### `.gitignore`
 
 必须继续排除 `.venv/`、`.browser-profile/`、`output/`、`data/*.db`、缓存、OCR/Paddle 模型、日志和本地环境变量。真实证据与 profile 含运行数据/登录状态，不能误提交。
@@ -312,7 +330,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 137 项 `unittest`。v0.6 稳定基线为 118 项；v0.7-A 增加 6 项后端查询测试；v0.7-B 增加 9 项前端结构/契约测试；v0.7-C 增加 3 项前端验收测试；v0.7-C2 增加 1 项语义契约测试。现有 13 项前端测试覆盖模块与 CSS 路径、JS 语法、Product API 参数、筛选/分页/空结果、Quick/Monitor 请求、复核状态、设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识及 C2 语义。2026-09-04 C2 收口时只执行一次全量回归，结果为 `Ran 137 tests in 6.910s ... OK`。
+当前共有 153 项 `unittest`：v0.7 冻结基线为 137 项；v0.8-A 新增 16 项 Inspection contract、引用完整性、provenance、幂等/非删除导入、状态迁移、ID 所有权、事务 rollback 和 v4→v5 无损升级测试。现有 13 项前端测试仍保持不变；v0.8-A 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -377,6 +395,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
+- Inspection Reference 当前只有 schema、validator 和 import 基础，没有正式 Verified Dataset、查询 API 或管理界面。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -387,14 +406,14 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 20. Requirement Backlog
 
-以下是 v0.7 之后仍未实现的事项：
+以下是 v0.8-A 之后仍未实现的事项：
 
 | ID | 需求 | 关键边界 |
 | --- | --- | --- |
 | `GEO-01` | 商品页面声明产地 | 必须记录字段来源和页面证据，不能与发货地混同 |
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
-| `INSPECTION-01` | 非法添加补充检验方法标准知识库 | 仅记录需求；未建设数据，不得创建假知识库 |
+| `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已由 v0.8-A 完成；v0.8-B Verified Data 为 planned / not implemented，不得创建假知识库 |
 | `INSPECTION-02` | 风险线索与目标化合物关联 | 仅记录需求；不得写死“功效→化合物”映射 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | 仅记录需求；需要可核验的标准来源与版本 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
@@ -440,7 +459,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 137 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 153 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

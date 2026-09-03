@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前版本：v0.7（Product Monitoring Workspace，最终冻结）
+当前开发版本：v0.8-A（Inspection Reference Data Foundation）
 
-当前冻结范围：v0.7-A 完成 Product API 查询/分页基础，v0.7-B 建立跨任务 SQLite Product Workspace 与原生前端模块化，v0.7-C 完成 UI/UX 与宽窄桌面验收，v0.7-C2 修正任务进度、候选深采、停止原因及当前任务文案语义；最终标签为 `product-workspace-v0.7`
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 只新增 Inspection Reference schema、校验与导入基础，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
 
 当前分支：`main`
 
@@ -43,8 +43,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据；商品监测使用 SQLite Product API | `web/` |
 | 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
+| Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | 已实现并通过离线测试；尚无正式监管数据 | `src/inspection_reference.py`、`src/data_store.py` |
 
-当前测试集共有 137 项；其中前端定向测试为 13 项，覆盖 Product API 参数、筛选/分页/空结果、设计令牌、响应式规则、显式规划状态、同名 MonitorTarget 数据集标识和 v0.7-C2 语义修正。2026-09-04 v0.7-C2 收口时只执行一次全量离线回归，结果为 `Ran 137 tests in 6.910s ... OK`；v0.6 的 118 项基线仍由 `reference-data-v0.6` 冻结。
+当前测试集共有 153 项，其中 v0.8-A 新增 16 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4→v5 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -59,7 +60,7 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 ### 3.2 数据分层
 
 - `output/<run_id>/` 是原始运行事实与可追溯证据的主存储：搜索 HTML/截图/诊断、详情 HTML、Network 响应、原图、OCR、`analysis.json`、日志及批次报告均保留在此。
-- `data/app.db` 是可重建的 SQLite 业务索引，当前 schema version 为 4。它保存任务、商品、商品快照、结构化 Evidence、人工复核、监测数据集及其来源、监测对象、搜索词和候选命中关系。旧 version 2/3 数据库会由现有轻量机制原位升级。
+- `data/app.db` 是同一个 SQLite 业务数据库，当前 schema version 为 5。除既有任务、商品、Evidence、Review 和 Monitor 数据外，现可保存独立的 Inspection Reference 数据；已有 version 4 数据库原位升级时只创建新表，不重建或清空旧记录。
 - SQLite 不替代原始证据文件。数据库可从历史 `output` 幂等重建，重复导入不会复制记录，也不会覆盖已经保存的人工复核备注。
 - `.browser-profile/`、`output/`、`data/*.db`、`.venv/` 与 OCR 模型缓存均不提交 Git。
 
@@ -76,6 +77,12 @@ Quick Task 直接将一个关键词交给 `LiveSearchCollector`。Monitor Task �
 - `monitor_targets`：被监测的标准对象；
 - `search_queries`：某 MonitorTarget 下按确定顺序执行的搜索表达，并保存 query_source、validation_status、query_note（SQLite schema v4）；
 - `candidate_hits`：某任务中“哪个 Query、以什么排名命中哪个商品”的来源事实。
+- `inspection_datasets`：Inspection 数据集身份、状态、来源与核验时间；与 `monitor_datasets` 独立；
+- `inspection_methods`：检验方法编号、类型、状态、替代编号及方法级 provenance；
+- `inspection_substances`：物质规范身份，不承载固定“违法”属性；
+- `inspection_method_substances`：方法与物质关系，同时保留来源原始名称和显式归一化说明；
+- `inspection_method_applicabilities`：方法的适用、排除或条件性产品/基质范围；
+- `substance_regulatory_contexts`：物质在特定产品范围、辖区和有效期内的监管语境及独立 provenance。
 
 Evidence 和 Review 归属于 ProductSnapshot，而不是永久归属于 Product。原因是淘宝页面内容、规则结果和人工判断都可能随采集时间变化。同一 Product 可以拥有多个任务快照。
 
@@ -189,6 +196,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
+- v0.8-A 只有 Inspection Reference 数据结构、validator 和 SQLite import 基础；尚未导入任何正式 BJS/KJ/GB/T 数据，也没有 RiskClue→Substance、自动检测建议、Web/API 展示或商品级 Recommendation。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -197,7 +205,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `GEO-01`：采集商品页面声明产地；
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
-- `INSPECTION-01`：非法添加补充检验方法标准知识库；
+- `INSPECTION-01`：Foundation 已由 v0.8-A 完成；Verified Inspection Dataset（正式 BJS/KJ/GB/T 数据）计划在 v0.8-B 单独建设；
 - `INSPECTION-02`：风险线索与目标化合物关联；
 - `INSPECTION-03`：目标化合物与检验方法/标准关联；
 - `INSPECTION-04`：商品检测建议生成；
@@ -207,6 +215,6 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01`—`INSPECTION-05` 当前仅记录需求，尚无知识库、关联数据、建议生成逻辑或前端字段；不得用假数据或写死映射提前展示。
+`INSPECTION-01` 当前只完成数据 Foundation，正式 Verified Data 仍为 planned / not implemented；`INSPECTION-02`—`INSPECTION-05` 均为 planned / not implemented。当前没有关联数据、建议生成逻辑或前端字段，不得用假数据或写死映射提前展示。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
