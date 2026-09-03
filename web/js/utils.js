@@ -89,6 +89,17 @@ export function monitorTargetPresentation(target) {
   return { label: "未标注", tone: "gray" };
 }
 
+export function stopReasonPresentation(value) {
+  const raw = String(value || "");
+  const labels = {
+    candidate_limit_reached: "达到候选数量上限",
+    all_queries_completed: "所有搜索词执行完成",
+    stagnant: "页面结果连续无新增",
+    stagnant_no_new_products: "页面结果连续无新增",
+  };
+  return labels[raw] || raw || "—";
+}
+
 export function taskPresentation(snapshot) {
   const stage = snapshot.task?.stage;
   if (stage === "completed") return { label: "已完成", tone: "green" };

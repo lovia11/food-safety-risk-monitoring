@@ -192,6 +192,8 @@
 .task-record-card { min-height: 300px; }
 .task-record-card .table-wrap { min-height: 210px; }
 .task-record-card td { height: 52px; }
+.task-record-card td > strong { display: block; color: #162a49; }
+.task-record-card td > small { display: block; margin-top: 2px; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
 .progress-cell { min-width: 105px; }
 .progress-track { height: 4px; margin-top: 5px; overflow: hidden; border-radius: 4px; background: #e8edf4; }
 .progress-track i { height: 100%; display: block; border-radius: inherit; background: var(--blue); }

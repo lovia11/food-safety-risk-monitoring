@@ -113,7 +113,7 @@ class WebFrontendStructureTest(unittest.TestCase):
         result = run_node(
             """
             const products = await import('./web/js/pages/products.js');
-            const { monitorTargetPresentation, reviewPresentation } = await import('./web/js/utils.js');
+            const { monitorTargetPresentation, reviewPresentation, stopReasonPresentation } = await import('./web/js/utils.js');
             console.log(JSON.stringify({
               quick: products.productTargetLabel({ targetId: null, targetName: null }),
               target: products.productTargetLabel({ targetId: 'target-1', targetName: '酸枣仁' }),
@@ -123,6 +123,10 @@ class WebFrontendStructureTest(unittest.TestCase):
               noAction: reviewPresentation('no_further_action').label,
               official: monitorTargetPresentation({ dataset_status: 'verified_reference' }).label,
               development: monitorTargetPresentation({ dataset_status: 'development_seed' }).label,
+              candidateLimit: stopReasonPresentation('candidate_limit_reached'),
+              allQueries: stopReasonPresentation('all_queries_completed'),
+              stagnant: stopReasonPresentation('stagnant'),
+              unknown: stopReasonPresentation('future_reason'),
             }));
             """
         )
@@ -137,6 +141,10 @@ class WebFrontendStructureTest(unittest.TestCase):
                 "noAction": "暂不进一步关注",
                 "official": "正式",
                 "development": "开发",
+                "candidateLimit": "达到候选数量上限",
+                "allQueries": "所有搜索词执行完成",
+                "stagnant": "页面结果连续无新增",
+                "unknown": "future_reason",
             },
         )
 
@@ -227,6 +235,27 @@ class WebFrontendStructureTest(unittest.TestCase):
             self.assertIn(f'id="{identifier}"', html)
         self.assertIn("renderCurrentTaskSummary", tasks_source)
         self.assertIn("· ${kind.label}", tasks_source)
+
+    def test_v07_c2_semantic_cleanup_is_explicit(self):
+        html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+        base_css = (WEB_ROOT / "css" / "base.css").read_text(encoding="utf-8")
+        overview_source = (WEB_ROOT / "js" / "pages" / "overview.js").read_text(
+            encoding="utf-8"
+        )
+        tasks_source = (WEB_ROOT / "js" / "pages" / "tasks.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("候选未深采", overview_source)
+        self.assertIn("本批候选中未进入详情采集链", overview_source)
+        self.assertIn("selected - stats.detailCollectedProducts", overview_source)
+        self.assertNotIn("等待OCR与规则处理", overview_source)
+        self.assertIn("<th>详情采集</th>", html)
+        self.assertIn("detailCollectedProducts", tasks_source)
+        self.assertNotIn("progress-track", tasks_source)
+        self.assertIn("stopReasonPresentation(item.stop_reason)", tasks_source)
+        self.assertIn(".nav-section-secondary { display: none; }", base_css)
+        for label in ("导出当前任务", "当前任务JSON", "当前任务报告"):
+            self.assertIn(label, html)
 
     def test_product_workspace_no_longer_merges_current_and_history_runs(self):
         app_source = (WEB_ROOT / "app.js").read_text(encoding="utf-8")

@@ -66,7 +66,7 @@
           </article>
           <article class="card insight-card recent-task-card">
             <div class="card-heading compact-heading"><div><h2>最近采集任务</h2><p>任务执行概况</p></div></div>
-            <div class="table-wrap plain-table"><table><thead><tr><th>任务名称</th><th>状态</th><th>进度</th></tr></thead><tbody id="overviewTaskBody"></tbody></table></div>
+            <div class="table-wrap plain-table"><table><thead><tr><th>任务名称</th><th>状态</th><th>详情采集</th></tr></thead><tbody id="overviewTaskBody"></tbody></table></div>
             <button class="text-button card-more" data-nav-target="tasks">查看全部 →</button>
           </article>
         </div>
@@ -84,7 +84,7 @@
         <header class="page-header">
           <div><h1>商品监测</h1><p>跨任务查询已索引商品，并按监测对象和复核状态筛选</p></div>
           <div class="header-actions">
-            <a id="exportCsv" class="button button-secondary" href="#" download>导出当前批次</a>
+            <a id="exportCsv" class="button button-secondary" href="#" download>导出当前任务</a>
             <button class="button button-primary" data-nav-target="tasks">查看采集任务</button>
           </div>
         </header>
@@ -101,7 +101,7 @@
           <div class="table-toolbar">
             <div><h2>商品结果</h2><p id="productResultCount">—</p></div>
             <div class="table-toolbar-actions">
-              <div class="small-actions"><a id="viewJson" class="text-button" href="#" target="_blank">JSON</a><a id="viewReport" class="text-button" href="#" target="_blank">当前批次报告</a></div>
+              <div class="small-actions"><a id="viewJson" class="text-button" href="#" target="_blank">当前任务JSON</a><a id="viewReport" class="text-button" href="#" target="_blank">当前任务报告</a></div>
               <label class="page-size-control">每页<select id="productPageSize"><option value="20">20</option><option value="50">50</option></select></label>
             </div>
           </div>
@@ -187,7 +187,7 @@
               <div class="form-actions"><button id="saveTaskDraft" class="button button-secondary">保存草稿</button><button id="startTaskButton" class="button button-primary">立即启动</button></div>
           </article>
         </div>
-        <article class="card task-record-card"><div class="card-heading task-history-heading"><div><h2>历史任务</h2><p>最近执行记录与状态汇总</p></div><div id="taskStateOverview" class="task-state-overview"></div></div><div class="table-wrap"><table><thead><tr><th>任务名称</th><th>关键词</th><th>状态</th><th>进度</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="taskRecordBody"></tbody></table></div></article>
+        <article class="card task-record-card"><div class="card-heading task-history-heading"><div><h2>历史任务</h2><p>最近执行记录与状态汇总</p></div><div id="taskStateOverview" class="task-state-overview"></div></div><div class="table-wrap"><table><thead><tr><th>任务名称</th><th>关键词</th><th>状态</th><th>详情采集</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="taskRecordBody"></tbody></table></div></article>
         <article class="card task-process-wide"><div class="card-heading"><div><h2>任务执行流程</h2><p>当前任务的实际处理进度</p></div></div><div id="taskFlow" class="process-flow task-flow-wide"></div></article>
         <article id="discoveryDiagnostics" class="card discovery-card" hidden><div class="card-heading"><div><h2>候选发现诊断</h2><p>按搜索词保留结果数量、停止原因与合并情况</p></div></div><div id="discoverySummary" class="discovery-summary"></div><div class="table-wrap"><table><thead><tr><th>执行顺序</th><th>搜索词</th><th>命中候选</th><th>页面商品卡片</th><th>停止原因</th></tr></thead><tbody id="discoveryQueryBody"></tbody></table></div></article>
         <article class="card task-output-card"><div class="card-heading"><div><h2>本次任务输出内容</h2></div></div><div class="task-output-grid"><div><span class="output-icon blue">▣</span><div><h3>商品列表</h3><p>商品名称、店铺、地区与采集状态</p></div></div><div><span class="output-icon green">▧</span><div><h3>原始详情图</h3><p>商品详情页原始图片与页面截图</p></div></div><div><span class="output-icon purple">OCR</span><div><h3>OCR结果</h3><p>识别详情图文字并保留对应关系</p></div></div><div><span class="output-icon orange">!</span><div><h3>风险分析</h3><p>规则命中、证据来源与复核建议</p></div></div></div></article>

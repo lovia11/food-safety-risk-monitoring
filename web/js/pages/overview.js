@@ -55,12 +55,12 @@ function renderStatCards() {
     return;
   }
   const selected = stats.selectedProducts;
-  const pending = Math.max(selected - stats.analyzedProducts, 0);
+  const notDeepCollected = Math.max(selected - stats.detailCollectedProducts, 0);
   const cards = [
     ["search", "搜索发现商品", stats.searchRaw, `本批入选 ${selected} 件`, "blue"],
     ["detail", "完成详情采集", stats.detailCollectedProducts, `保存原始详情图 ${stats.originalImages} 张`, "green"],
     ["analysis", "完成OCR与分析", `${stats.analyzedProducts} / ${selected}`, "已生成结构化分析结果", "purple"],
-    ["pending", "待继续分析", pending, "等待OCR与规则处理", "orange"],
+    ["pending", "候选未深采", notDeepCollected, "本批候选中未进入详情采集链", "orange"],
   ];
   $("#overviewStats").innerHTML = cards.map(([icon, label, value, foot, tone]) => `
     <article class="card overview-stat-card">
@@ -143,7 +143,7 @@ function renderOverviewTasks() {
   $("#overviewTaskBody").innerHTML = allRunSnapshots().map(snapshot => {
     const status = taskPresentation(snapshot);
     const stats = snapshot.statistics;
-    return `<tr><td>${escapeHtml(snapshot.task.keyword || "未命名")}采集任务<small>${escapeHtml(snapshot.task.id)}</small></td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td>${stats.analyzedProducts}/${stats.selectedProducts}</td></tr>`;
+    return `<tr><td>${escapeHtml(snapshot.task.keyword || "未命名")}采集任务<small>${escapeHtml(snapshot.task.id)}</small></td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td>${stats.detailCollectedProducts}/${stats.selectedProducts}</td></tr>`;
   }).join("");
 }
 

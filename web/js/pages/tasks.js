@@ -9,7 +9,7 @@ import {
   resumeTaskRequest,
 } from "../api.js";
 import { appState, allRunSnapshots, clearProductSelection } from "../state.js";
-import { $, escapeHtml, formatDate, monitorTargetPresentation, showToast, taskPresentation } from "../utils.js";
+import { $, escapeHtml, formatDate, monitorTargetPresentation, showToast, stopReasonPresentation, taskPresentation } from "../utils.js";
 
 let hooks = {
   renderApp: () => {},
@@ -76,7 +76,7 @@ function renderDiscoveryDiagnostics() {
     ["进入详情采集", discovery.selectedForDetail || 0],
   ];
   $("#discoverySummary").innerHTML = summaries.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
-  $("#discoveryQueryBody").innerHTML = (discovery.queryResults || []).map((item, index) => `<tr><td>${escapeHtml(item.order || index + 1)}</td><td>${escapeHtml(item.query_text || "—")}</td><td>${escapeHtml(item.candidate_count || 0)}</td><td>${escapeHtml(item.raw_card_count || 0)}</td><td>${escapeHtml(item.stop_reason || "—")}</td></tr>`).join("");
+  $("#discoveryQueryBody").innerHTML = (discovery.queryResults || []).map((item, index) => `<tr><td>${escapeHtml(item.order || index + 1)}</td><td>${escapeHtml(item.query_text || "—")}</td><td>${escapeHtml(item.candidate_count || 0)}</td><td>${escapeHtml(item.raw_card_count || 0)}</td><td>${escapeHtml(stopReasonPresentation(item.stop_reason))}</td></tr>`).join("");
 }
 
 function selectedMonitorTarget() {
@@ -156,9 +156,7 @@ export function renderTasksPage() {
   $("#taskRecordBody").innerHTML = snapshots.slice(0, 8).map(snapshot => {
     const stats = snapshot.statistics;
     const status = taskPresentation(snapshot);
-    const total = Math.max(stats.selectedProducts || 0, 1);
-    const value = stats.analyzedProducts || 0;
-    const percent = Math.min(100, Math.round(value / total * 100));
+    const detailCollected = stats.detailCollectedProducts || 0;
     const createdAt = snapshot.runtime?.createdAt || snapshot.generatedAt;
     const resume = snapshot.runtime?.resumable ? `<button class="text-button" data-resume-task="${escapeHtml(snapshot.task.id)}">恢复</button>` : "";
     const request = snapshot.runtime?.request || {};
@@ -168,7 +166,7 @@ export function renderTasksPage() {
     const taskLabel = request.taskType === "monitor"
       ? `${request.targetName || snapshot.task.keyword}监测任务`
       : `${snapshot.task.keyword || "未命名"}采集任务`;
-    return `<tr><td>${escapeHtml(taskLabel)}<small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(queryLabel || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${value} / ${stats.selectedProducts}</span><div class="progress-track"><i style="width:${percent}%"></i></div></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
+    return `<tr><td><strong>${escapeHtml(taskLabel)}</strong><small>${escapeHtml(snapshot.task.id)}</small></td><td>${escapeHtml(queryLabel || "—")}</td><td><span class="table-tag ${status.tone}">${status.label}</span></td><td class="progress-cell"><span>${detailCollected} / ${stats.selectedProducts}</span></td><td>${escapeHtml(formatDate(createdAt))}</td><td><button class="text-button" data-open-run="${escapeHtml(snapshot.task.id)}">查看</button>${resume}</td></tr>`;
   }).join("");
   renderCurrentTaskSummary();
   renderFlow($("#taskFlow"));
