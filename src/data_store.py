@@ -19,6 +19,10 @@ from src.inspection_reference import (
     InspectionConfigValidationError,
     validate_inspection_config,
 )
+from src.risk_substance_reference import (
+    RiskSubstanceConfigValidationError,
+    validate_risk_substance_config,
+)
 from src.runtime import iso_now, read_json
 
 
@@ -37,7 +41,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
     Path("config/monitor_targets.reference.json"),
 )
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -701,6 +705,67 @@ class DataStore:
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS risk_mapping_datasets (
+                    dataset_id TEXT PRIMARY KEY,
+                    dataset_version TEXT NOT NULL,
+                    dataset_status TEXT NOT NULL
+                        CHECK(dataset_status IN (
+                            'development_seed', 'reference_pending', 'verified_reference'
+                        )),
+                    source_name TEXT,
+                    source_reference TEXT,
+                    source_date TEXT,
+                    collected_at TEXT,
+                    verified_at TEXT,
+                    description TEXT NOT NULL DEFAULT '',
+                    imported_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS risk_substance_mappings (
+                    mapping_id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL REFERENCES risk_mapping_datasets(dataset_id),
+                    risk_category TEXT NOT NULL,
+                    risk_label TEXT NOT NULL,
+                    target_type TEXT NOT NULL
+                        CHECK(target_type IN ('substance', 'substance_group')),
+                    substance_id TEXT REFERENCES inspection_substances(substance_id),
+                    target_group_label TEXT,
+                    evidence_grade TEXT NOT NULL
+                        CHECK(evidence_grade IN ('A', 'B', 'C')),
+                    basis_type TEXT NOT NULL
+                        CHECK(basis_type IN (
+                            'current_regulatory_source',
+                            'current_official_guidance',
+                            'historical_sampling_plan',
+                            'official_case',
+                            'research_evidence',
+                            'pharmacologic_inference'
+                        )),
+                    temporal_status TEXT NOT NULL
+                        CHECK(temporal_status IN ('current', 'historical')),
+                    product_scope TEXT NOT NULL DEFAULT '',
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    source_date TEXT,
+                    source_basis_text TEXT NOT NULL,
+                    note TEXT NOT NULL DEFAULT '',
+                    CHECK(
+                        (target_type = 'substance'
+                            AND substance_id IS NOT NULL
+                            AND target_group_label IS NULL)
+                        OR
+                        (target_type = 'substance_group'
+                            AND substance_id IS NULL
+                            AND target_group_label IS NOT NULL
+                            AND TRIM(target_group_label) != '')
+                    ),
+                    CHECK(evidence_grade != 'A' OR temporal_status = 'current'),
+                    CHECK(
+                        basis_type != 'historical_sampling_plan'
+                        OR (temporal_status = 'historical' AND evidence_grade != 'A')
+                    )
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_inspection_methods_dataset
                     ON inspection_methods(dataset_id, method_no);
                 CREATE INDEX IF NOT EXISTS idx_inspection_substances_dataset
@@ -711,6 +776,10 @@ class DataStore:
                     ON inspection_method_applicabilities(method_id, applicability_id);
                 CREATE INDEX IF NOT EXISTS idx_regulatory_contexts_substance
                     ON substance_regulatory_contexts(substance_id, context_id);
+                CREATE INDEX IF NOT EXISTS idx_risk_mappings_dataset
+                    ON risk_substance_mappings(dataset_id, risk_category);
+                CREATE INDEX IF NOT EXISTS idx_risk_mappings_substance
+                    ON risk_substance_mappings(substance_id, risk_category);
                 """
             )
             self._ensure_column(connection, "tasks", "task_type", "TEXT NOT NULL DEFAULT 'quick'")
@@ -1211,6 +1280,157 @@ class DataStore:
                 payload["substance_regulatory_contexts"]
             ),
         }
+
+    def import_risk_substance_config(self, config_path: Path) -> dict[str, int]:
+        """Validate and atomically upsert one Risk-Substance dataset.
+
+        Substance targets must already exist in Inspection Reference.  This
+        importer never creates, guesses, or automatically imports substances.
+        """
+
+        payload = validate_risk_substance_config(read_json(config_path))
+        now = iso_now()
+        with self._connect() as connection:
+            existing_dataset = connection.execute(
+                "SELECT dataset_status FROM risk_mapping_datasets WHERE dataset_id = ?",
+                (payload["dataset_id"],),
+            ).fetchone()
+            if existing_dataset is not None:
+                previous_status = str(existing_dataset["dataset_status"])
+                next_status = str(payload["dataset_status"])
+                allowed_transition = previous_status == next_status or (
+                    previous_status == "reference_pending"
+                    and next_status == "verified_reference"
+                )
+                if not allowed_transition:
+                    raise RiskSubstanceConfigValidationError(
+                        f"Risk Mapping数据集 {payload['dataset_id']} 不能从"
+                        f" {previous_status} 自动变更为 {next_status}"
+                    )
+
+            for mapping in payload["mappings"]:
+                existing_mapping = connection.execute(
+                    """
+                    SELECT dataset_id, risk_category, target_type,
+                           substance_id, target_group_label
+                    FROM risk_substance_mappings
+                    WHERE mapping_id = ?
+                    """,
+                    (mapping["mapping_id"],),
+                ).fetchone()
+                if existing_mapping is not None:
+                    previous_identity = tuple(
+                        existing_mapping[field]
+                        for field in (
+                            "dataset_id",
+                            "risk_category",
+                            "target_type",
+                            "substance_id",
+                            "target_group_label",
+                        )
+                    )
+                    next_identity = tuple(
+                        mapping[field]
+                        for field in (
+                            "dataset_id",
+                            "risk_category",
+                            "target_type",
+                            "substance_id",
+                            "target_group_label",
+                        )
+                    )
+                    if previous_identity != next_identity:
+                        raise DataStoreError(
+                            f"Risk mapping_id {mapping['mapping_id']} "
+                            "不能改绑dataset、risk category或target身份"
+                        )
+
+                if mapping["target_type"] == "substance":
+                    substance_exists = connection.execute(
+                        "SELECT 1 FROM inspection_substances WHERE substance_id = ?",
+                        (mapping["substance_id"],),
+                    ).fetchone()
+                    if substance_exists is None:
+                        raise DataStoreError(
+                            f"Risk Mapping引用的Inspection substance_id不存在："
+                            f"{mapping['substance_id']}"
+                        )
+
+            connection.execute(
+                """
+                INSERT INTO risk_mapping_datasets (
+                    dataset_id, dataset_version, dataset_status, source_name,
+                    source_reference, source_date, collected_at, verified_at,
+                    description, imported_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(dataset_id) DO UPDATE SET
+                    dataset_version=excluded.dataset_version,
+                    dataset_status=excluded.dataset_status,
+                    source_name=excluded.source_name,
+                    source_reference=excluded.source_reference,
+                    source_date=excluded.source_date,
+                    collected_at=excluded.collected_at,
+                    verified_at=excluded.verified_at,
+                    description=excluded.description,
+                    imported_at=excluded.imported_at
+                """,
+                (
+                    payload["dataset_id"],
+                    payload["dataset_version"],
+                    payload["dataset_status"],
+                    payload["source_name"],
+                    payload["source_reference"],
+                    payload["source_date"],
+                    payload["collected_at"],
+                    payload["verified_at"],
+                    payload["description"],
+                    now,
+                ),
+            )
+
+            for mapping in payload["mappings"]:
+                connection.execute(
+                    """
+                    INSERT INTO risk_substance_mappings (
+                        mapping_id, dataset_id, risk_category, risk_label,
+                        target_type, substance_id, target_group_label,
+                        evidence_grade, basis_type, temporal_status, product_scope,
+                        source_name, source_reference, source_date,
+                        source_basis_text, note
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(mapping_id) DO UPDATE SET
+                        risk_label=excluded.risk_label,
+                        evidence_grade=excluded.evidence_grade,
+                        basis_type=excluded.basis_type,
+                        temporal_status=excluded.temporal_status,
+                        product_scope=excluded.product_scope,
+                        source_name=excluded.source_name,
+                        source_reference=excluded.source_reference,
+                        source_date=excluded.source_date,
+                        source_basis_text=excluded.source_basis_text,
+                        note=excluded.note
+                    """,
+                    (
+                        mapping["mapping_id"],
+                        mapping["dataset_id"],
+                        mapping["risk_category"],
+                        mapping["risk_label"],
+                        mapping["target_type"],
+                        mapping["substance_id"],
+                        mapping["target_group_label"],
+                        mapping["evidence_grade"],
+                        mapping["basis_type"],
+                        mapping["temporal_status"],
+                        mapping["product_scope"],
+                        mapping["source_name"] or "",
+                        mapping["source_reference"] or "",
+                        mapping["source_date"],
+                        mapping["source_basis_text"],
+                        mapping["note"],
+                    ),
+                )
+
+        return {"dataset": 1, "mappings": len(payload["mappings"])}
 
     def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
         where = " WHERE t.enabled = 1" if enabled_only else ""
@@ -1822,6 +2042,8 @@ class DataStore:
                     "inspection_method_substances",
                     "inspection_method_applicabilities",
                     "substance_regulatory_contexts",
+                    "risk_mapping_datasets",
+                    "risk_substance_mappings",
                 )
             }
 
@@ -1844,6 +2066,13 @@ def main(argv: list[str] | None = None) -> int:
         dest="inspection_configs",
         help="可重复指定待导入的Inspection Reference JSON；默认不导入",
     )
+    parser.add_argument(
+        "--import-risk-substance-config",
+        type=Path,
+        action="append",
+        dest="risk_substance_configs",
+        help="可重复指定待导入的Risk-Substance Reference JSON；默认不导入",
+    )
     parser.add_argument("--run-id")
     args = parser.parse_args(argv)
     store = DataStore(args.database, args.output_root)
@@ -1861,6 +2090,15 @@ def main(argv: list[str] | None = None) -> int:
         if not inspection_config.is_file():
             raise FileNotFoundError(f"Inspection数据集不存在：{inspection_config}")
         inspection_imports.append(store.import_inspection_config(inspection_config))
+    risk_substance_imports = []
+    for risk_substance_config in args.risk_substance_configs or []:
+        if not risk_substance_config.is_file():
+            raise FileNotFoundError(
+                f"Risk-Substance数据集不存在：{risk_substance_config}"
+            )
+        risk_substance_imports.append(
+            store.import_risk_substance_config(risk_substance_config)
+        )
     result = (
         store.import_run((args.output_root / args.run_id).resolve())
         if args.run_id
@@ -1871,6 +2109,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "monitor_imports": monitor_imports,
                 "inspection_imports": inspection_imports,
+                "risk_substance_imports": risk_substance_imports,
                 "result": result,
                 "counts": store.table_counts(),
             },

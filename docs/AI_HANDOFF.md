@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-B5 GB/T 45443-2025 & Melatonin Regulatory Context 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-C1 Risk-Substance Mapping Foundation 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-B5 — GB/T 45443-2025 & Melatonin Regulatory Context**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-C1 — Risk-Substance Mapping Foundation**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。GB/T 是首个 `national_standard_gbt`；褪黑素是首个具有正式 SubstanceRegulatoryContext 的实体，方法目标物身份与限定条件下合法保健食品原料语境可以并存。当前没有实现 RiskClue 映射或推荐链。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C1 将 schema 升至 version 7，只建立独立 Risk→Substance/Group JSON contract、两张空表和显式事务化导入。当前没有正式 Risk Mapping、Risk Analysis 桥接、Risk→Method 关系或推荐链。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-B5 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-C1 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -113,6 +113,7 @@ MonitorTarget/关键词
 | `src/task_runtime.py` | Web 任务校验、后台线程、单任务保护、恢复与状态装饰 | 高 |
 | `src/data_store.py` | SQLite schema、run 幂等导入、查询和人工复核 | 高 |
 | `src/inspection_reference.py` | Inspection JSON contract、enum-like 值、规范化、引用/来源一致性校验 | 高，监管 Reference 边界 |
+| `src/risk_substance_reference.py` | Risk→Substance/Group JSON contract、XOR、来源等级与时间状态校验；不做推断 | 高，风险关联 Reference 边界 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
 | `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
@@ -169,6 +170,8 @@ ProductSnapshot 1 ── 1 Review
 InspectionDataset 1 ── N InspectionMethod N ── N InspectionSubstance
 InspectionMethod  1 ── N MethodApplicability
 InspectionSubstance 1 ── N SubstanceRegulatoryContext
+
+RiskMappingDataset 1 ── N RiskSubstanceMapping N ── 0..1 InspectionSubstance
 ```
 
 - `Product` 表示稳定的淘宝商品 ID，不承载某次页面内容；
@@ -177,11 +180,12 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 - `CandidateHit` 表示检索来源，不等同于详情已采集；
 - `MonitorDataset` 保存 development/reference 数据集身份、版本和来源；`MonitorTarget` 保存目标级来源并关联所属数据集；
 - `InspectionDataset` 与 `MonitorDataset` 是两个独立业务域；方法、物质、适用范围和监管语境通过显式关系表达，物质本体不保存固定的“违法”布尔值；
+- `RiskMappingDataset` 是第三个独立 Reference 数据域；每条 Mapping 通过严格 XOR 指向一个既有 Inspection Substance，或只保存来源中的 Substance Group 文字。Risk→Substance 与 Substance→Method 始终是两层关系，禁止直接建立 Risk→Method；
 - Monitor 任务可能有 19 个候选，但只有前 2 个 Snapshot 完成详情/OCR，其余保持待采集状态，这是正常且必须如实展示的状态。
 
 ## 11. SQLite Tables
 
-当前 `SCHEMA_VERSION = 6`。已有 version 5 数据库原位升级时只为 Applicability 增加可空 `substance_id`，旧记录保持 `NULL`；既有 Task、Product、Snapshot、Evidence、Review、Monitor 和其他 Inspection 数据不删除、不重建。表如下：
+当前 `SCHEMA_VERSION = 7`。version 6 数据库升级时只新增 `risk_mapping_datasets` 和 `risk_substance_mappings` 两张空表；既有 Task、Product、Snapshot、Evidence、Review、Monitor 以及 5 Method、117 Substance、132 MethodSubstance、37 Applicability、1 RegulatoryContext 均原位保留，不删除、不重建。表如下：
 
 | 表 | 关键字段/约束 | 用途 |
 | --- | --- | --- |
@@ -200,6 +204,8 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 | `inspection_method_substances` | `(method_id, substance_id)` PK、source_label、role | 方法—物质关系及来源原始名称 |
 | `inspection_method_applicabilities` | `applicability_id` PK、method_id、可空 substance_id、scope_type、产品/剂型/基质范围 | Method-level 或 Substance-scoped 的适用、排除或条件范围 |
 | `substance_regulatory_contexts` | `context_id` PK、status、scope、jurisdiction、validity、source | context-scoped 监管身份与独立 provenance |
+| `risk_mapping_datasets` | `dataset_id` PK、version、status、source、timestamps | 独立 Risk Mapping 数据集 provenance |
+| `risk_substance_mappings` | `mapping_id` PK、risk_category、target XOR、grade、basis、temporal、source | Risk Category/Clue 到既有 Substance 或来源 Group 文字的可追溯关系 |
 
 人工复核状态只允许：`pending`、`recommend_follow_up`、`no_further_action`。
 
@@ -214,6 +220,10 @@ InspectionSubstance 1 ── N SubstanceRegulatoryContext
 原图、HTML、Network response body、OCR 全文和日志不能塞进 SQLite；它们继续由文件系统保存。不要把可重建索引误当成原始证据唯一副本。
 
 Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset provenance 及 `methods`、`substances`、`method_substances`、`method_applicabilities`、`substance_regulatory_contexts`。每个 Applicability 必须显式提供 `substance_id`：`null` 表示 Method-level，非空值必须同时存在于当前 Dataset 且已有对应 MethodSubstance；verified Method 必须至少保留一条 Method-level 范围。`reference_pending` 的五个数组必须为空；`verified_reference` 必须有核验时间、非空方法/物质、方法级独立来源、完整引用和非孤立实体，且 Applicability 必须保留 `source_scope_text`、RegulatoryContext 不得为 `verification_pending`。`source_label` 与 `canonical_name` 不同，或双方非空的来源 CAS 与规范 CAS 不同时，必须记录 `normalization_note`，禁止静默归一化。`DataStore.import_inspection_config()` 只做事务化安全 upsert，不自动删除缺失记录，并阻止状态降级、实体跨 Dataset 转移及 Applicability 父级改绑。
+
+Risk-Substance JSON 同样使用独立 `schema_version=1` contract，但不包含 Substance 定义。`target_type=substance` 时必须只有 `substance_id`，且显式导入时该 ID 必须已存在于 `inspection_substances`；`target_type=substance_group` 时必须只有 `target_group_label`，不展开或猜测成员。`reference_pending` 的 `mappings` 必须为空；`verified_reference` 必须有 `verified_at`、至少一条 Mapping 和完整逐条 provenance，且不得使用“待确认”“unknown”等占位值。`risk_category` 只要求稳定 identifier，本轮没有 Risk Category 表或封闭枚举。`DataStore.import_risk_substance_config()` 事务化、幂等、不删除旧 Mapping，只允许同状态更新或 pending→verified，并禁止同一 `mapping_id` 改绑 Dataset、Risk Category、target type、Substance 或 Group。CLI 仅在显式传入 `--import-risk-substance-config` 时导入，默认不导入任何 Risk Mapping。
+
+Evidence Grade `A/B/C` 表示**来源证据强度**：A 是当前有效且明确支持关系的权威官方来源，B 是历史抽检/监管口径等官方依据，C 是研究、案例或药理推断等较弱参考。它不是风险分数、模型置信度、商品违法概率或检出概率，禁止转成数值 score。`basis_type` 只允许 `current_regulatory_source`、`current_official_guidance`、`historical_sampling_plan`、`official_case`、`research_evidence`、`pharmacologic_inference`；A 必须是 `current`，historical sampling plan 必须是 `historical` 且不得为 A。
 
 ## 12. Main APIs
 
@@ -316,7 +326,11 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ### `config/inspection_reference.json`
 
-当前是 `verified_reference`，版本 `2026.09-b5`，包含逐项核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 和 GB/T 45443-2025：5 个 Method、117 个唯一 Substance、132 条 MethodSubstance、37 条 Applicability、1 个 RegulatoryContext。GB/T 45443 是首个 `national_standard_gbt`，复用 BJS 201710 已建立的褪黑素实体并记录定量检测关系；它是正常质量/含量检测标准，不是非法添加补充检验方法。褪黑素监管语境严格限定于相应保健食品原料目录、产品要求及自 2021-03-01 起的有效情形，不能外推至普通食品或任意商品。该数据集不是全部现行检验方法或全部监管知识；当前没有 RiskClue→Substance、InspectionRecommendation 或 Web/API 展示。
+当前是 `verified_reference`，版本 `2026.09-b5`，包含逐项核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 和 GB/T 45443-2025：5 个 Method、117 个唯一 Substance、132 条 MethodSubstance、37 条 Applicability、1 个 RegulatoryContext。GB/T 45443 是首个 `national_standard_gbt`，复用 BJS 201710 已建立的褪黑素实体并记录定量检测关系；它是正常质量/含量检测标准，不是非法添加补充检验方法。褪黑素监管语境严格限定于相应保健食品原料目录、产品要求及自 2021-03-01 起的有效情形，不能外推至普通食品或任意商品。该数据集不是全部现行检验方法或全部监管知识；当前没有任何正式 RiskClue→Substance Mapping、InspectionRecommendation 或 Web/API 展示。
+
+### Risk-Substance config
+
+v0.8-C1 不创建任何正式或默认 Risk Mapping 配置文件。测试只使用 synthetic fixture；不能从 `effect_keywords.json`、Inspection 方法标题、RegulatoryContext、药理知识或模型常识生成映射。
 
 ### `.gitignore`
 
@@ -330,7 +344,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 166 项 `unittest`：v0.7 冻结基线为 137 项；29 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及三项 BJS、KJ201903、GB/T 45443-2025 和褪黑素监管语境的正式数据事实与幂等性。现有 13 项前端测试仍保持不变；v0.8-B5 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 197 项 `unittest`：v0.7 冻结基线为 137 项；29 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及三项 BJS、KJ201903、GB/T 45443-2025 和褪黑素监管语境；31 项覆盖 Risk-Substance contract、XOR、证据等级/时间约束、外部 Substance FK、显式 CLI 导入、幂等/回滚和 v6→v7 数据保留。现有 13 项前端测试仍保持不变；v0.8-C1 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -395,7 +409,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法、查询 API 或管理界面，也不构成完整知识库；RiskClue→Substance、InspectionRecommendation 和 Web/API 展示均未实现。
+- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法、查询 API 或管理界面，也不构成完整知识库；Risk-Substance 只有 schema/import foundation 和 synthetic tests，没有正式 Mapping、Risk Analysis 桥接、InspectionRecommendation 或 Web/API 展示。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -414,7 +428,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
 | `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext，其余方法和监管语境必须逐批核验 |
-| `INSPECTION-02` | 风险线索与目标化合物关联 | 仅记录需求；不得写死“功效→化合物”映射 |
+| `INSPECTION-02` | 风险线索与目标化合物关联 | C1 只完成空的 Reference contract/import foundation；正式映射与分析桥接仍未实现，不得写死“功效→化合物”映射 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | 仅记录需求；需要可核验的标准来源与版本 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
 | `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | 仅记录需求；当前 UI 不显示不存在的字段或空标准卡片 |
@@ -445,6 +459,10 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 15. 实时 JSON 要原子写入，Windows 文件占用重试逻辑不能无验证删除；
 16. `/api/runs/.../files/...` 的路径穿越保护和服务回环绑定不能放宽；
 17. 页面和报告不得使用“违法”“非法添加已检出”等超出证据的结论。
+18. Risk→Substance 与 Substance→Method 必须保持两层关系；不得新增 Risk→Method 捷径。
+19. Risk Mapping 不得从 effect 词库、方法标题、RegulatoryContext、药理知识或 LLM 自动推断；正式数据必须逐条有来源。
+20. Substance target 必须引用已存在的 Inspection Substance；Group 只保存来源文字，不建表、不展开成员、不静默转换。
+21. Evidence Grade A/B/C 只表示来源证据强度，禁止解释或转换为风险分数、模型置信度、违法概率或检出概率。
 
 Collector 核心改动至少要：运行全部离线测试、核查保留 fixture、执行最小真实淘宝 E2E、对比 Diagnostics/原图/OCR/Evidence，并说明相对 `collector-baseline-v0.2` 的行为变化。
 
@@ -459,7 +477,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 166 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 197 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

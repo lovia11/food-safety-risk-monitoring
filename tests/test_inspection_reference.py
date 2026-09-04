@@ -471,7 +471,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         write_json(path, payload)
         return path
 
-    def test_schema_version_six_contains_exact_inspection_foundation_tables(self):
+    def test_schema_version_seven_preserves_inspection_foundation_tables(self):
         with sqlite3.connect(self.store.database_path) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
             all_tables = {
@@ -486,10 +486,11 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "PRAGMA table_info(inspection_method_applicabilities)"
                 )
             }
-        self.assertEqual(version, 6)
+        self.assertEqual(version, 7)
         self.assertTrue(INSPECTION_TABLES <= all_tables)
         self.assertIn("substance_id", applicability_columns)
-        self.assertNotIn("risk_substance_mappings", all_tables)
+        self.assertIn("risk_mapping_datasets", all_tables)
+        self.assertIn("risk_substance_mappings", all_tables)
         self.assertNotIn("inspection_recommendations", all_tables)
 
     def test_import_is_idempotent_and_preserves_distinct_names_and_context(self):
@@ -788,7 +789,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "candidate_hits",
                 )
             }
-        self.assertEqual(version, 6)
+        self.assertEqual(version, 7)
         self.assertTrue(INSPECTION_TABLES <= tables)
         self.assertEqual(set(preserved.values()), {1})
         self.assertEqual(review, ("recommend_follow_up", "必须保留的人工备注"))
@@ -889,7 +890,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                 table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 for table in INSPECTION_TABLES
             }
-        self.assertEqual(version, 6)
+        self.assertEqual(version, 7)
         self.assertEqual(applicability_scopes, [(None,), (None,)])
         self.assertEqual(review_note, "v5人工备注")
         self.assertEqual(monitor_name, "旧对象")

@@ -259,7 +259,7 @@ class MonitorReferenceDataTest(unittest.TestCase):
             legacy_name = connection.execute(
                 "SELECT standard_name FROM monitor_targets WHERE target_id='legacy-target'"
             ).fetchone()[0]
-        self.assertEqual(version, 6)
+        self.assertEqual(version, 7)
         self.assertIn("dataset_id", columns)
         self.assertEqual(legacy_name, "旧监测对象")
 
