@@ -1,9 +1,9 @@
 """Read-only Risk-to-Inspection knowledge trace composition.
 
-The resolver deliberately stops at persisted reference facts.  It does not
-expand groups, rank methods, evaluate product applicability, or derive legal
-conclusions.  Runtime data comes from SQLite through the public DataStore read
-API; the Reference JSON files are import inputs, not a resolver data source.
+The resolver deliberately stops at verified, persisted reference facts.  It
+does not expand groups, rank methods, evaluate product applicability, or derive
+legal conclusions.  Runtime data comes from SQLite through the public DataStore
+read API; the Reference JSON files are import inputs, not a resolver data source.
 """
 
 from __future__ import annotations
@@ -30,13 +30,13 @@ class MappingEvidence(TypedDict):
 class GroupTarget(TypedDict):
     target_group_label: str
     resolution_status: str
-    mapping_evidence: MappingEvidence
+    mapping_evidence: list[MappingEvidence]
 
 
 class UnresolvedGroup(TypedDict):
-    mapping_id: str
     target_group_label: str
     resolution_status: str
+    mapping_ids: list[str]
 
 
 class ApplicabilityTrace(TypedDict):
@@ -91,7 +91,7 @@ class SubstanceTarget(TypedDict):
     canonical_name: str
     english_name: str
     cas_no: str
-    mapping_evidence: MappingEvidence
+    mapping_evidence: list[MappingEvidence]
     inspection_methods: list[InspectionMethodTrace]
     regulatory_contexts: list[RegulatoryContextTrace]
 
@@ -99,6 +99,7 @@ class SubstanceTarget(TypedDict):
 class KnowledgeGap(TypedDict, total=False):
     type: str
     mapping_id: str
+    mapping_ids: list[str]
     target_group_label: str
     substance_id: str
     message: str
@@ -131,7 +132,7 @@ class KnowledgeTrace(Mapping[str, Any]):
 
 
 class InspectionKnowledgeResolver:
-    """Compose deterministic knowledge traces from persisted Reference rows."""
+    """Compose deterministic traces from verified persisted Reference rows."""
 
     def __init__(self, data_store: DataStore) -> None:
         self.data_store = data_store
@@ -189,45 +190,62 @@ class InspectionKnowledgeResolver:
             category, include_historical=include_historical
         )
         risk_labels = sorted({str(row["risk_label"]) for row in mappings})
-        group_targets: list[GroupTarget] = []
-        substance_targets: list[SubstanceTarget] = []
-        unresolved_groups: list[UnresolvedGroup] = []
-        knowledge_gaps: list[KnowledgeGap] = []
+        group_evidence: dict[str, list[MappingEvidence]] = {}
+        substance_evidence: dict[str, list[MappingEvidence]] = {}
 
         for mapping in mappings:
             evidence = self._mapping_evidence(mapping)
             if mapping["target_type"] == "substance_group":
                 group_label = str(mapping["target_group_label"])
-                group_target: GroupTarget = {
+                group_evidence.setdefault(group_label, []).append(evidence)
+            else:
+                substance_id = str(mapping["substance_id"])
+                substance_evidence.setdefault(substance_id, []).append(evidence)
+
+        group_targets: list[GroupTarget] = []
+        unresolved_groups: list[UnresolvedGroup] = []
+        knowledge_gaps: list[KnowledgeGap] = []
+        for group_label in sorted(group_evidence):
+            evidence_rows = sorted(
+                group_evidence[group_label], key=lambda item: item["mapping_id"]
+            )
+            mapping_ids = [item["mapping_id"] for item in evidence_rows]
+            group_targets.append(
+                {
                     "target_group_label": group_label,
                     "resolution_status": "partial",
-                    "mapping_evidence": evidence,
+                    "mapping_evidence": evidence_rows,
                 }
-                group_targets.append(group_target)
-                unresolved_groups.append(
-                    {
-                        "mapping_id": str(mapping["mapping_id"]),
-                        "target_group_label": group_label,
-                        "resolution_status": "partial",
-                    }
-                )
-                knowledge_gaps.append(
-                    {
-                        "type": "unresolved_group",
-                        "mapping_id": str(mapping["mapping_id"]),
-                        "target_group_label": group_label,
-                        "message": "Group membership is not expanded in D1.",
-                    }
-                )
-                continue
+            )
+            unresolved_groups.append(
+                {
+                    "target_group_label": group_label,
+                    "resolution_status": "partial",
+                    "mapping_ids": mapping_ids,
+                }
+            )
+            knowledge_gaps.append(
+                {
+                    "type": "unresolved_group",
+                    "mapping_ids": mapping_ids,
+                    "target_group_label": group_label,
+                    "message": "Group membership is not expanded in D1.",
+                }
+            )
 
-            substance_id = str(mapping["substance_id"])
+        substance_targets: list[SubstanceTarget] = []
+        no_method_gaps: list[KnowledgeGap] = []
+        for substance_id in sorted(substance_evidence):
+            evidence_rows = sorted(
+                substance_evidence[substance_id],
+                key=lambda item: item["mapping_id"],
+            )
             substance = self.data_store.get_inspection_substance(substance_id)
             if substance is None:
                 knowledge_gaps.append(
                     {
                         "type": "unresolved_substance",
-                        "mapping_id": str(mapping["mapping_id"]),
+                        "mapping_id": evidence_rows[0]["mapping_id"],
                         "substance_id": substance_id,
                         "message": "The mapped Inspection Substance is unavailable.",
                     }
@@ -239,13 +257,13 @@ class InspectionKnowledgeResolver:
             substance_targets.append(
                 {
                     **substance,
-                    "mapping_evidence": evidence,
+                    "mapping_evidence": evidence_rows,
                     "inspection_methods": methods,
                     "regulatory_contexts": contexts,
                 }
             )
             if not methods:
-                knowledge_gaps.append(
+                no_method_gaps.append(
                     {
                         "type": "no_verified_method",
                         "substance_id": substance_id,
@@ -260,6 +278,7 @@ class InspectionKnowledgeResolver:
                     "message": "This risk has no resolvable concrete Substance mapping.",
                 }
             )
+        knowledge_gaps.extend(no_method_gaps)
 
         return KnowledgeTrace(
             risk_category=category,

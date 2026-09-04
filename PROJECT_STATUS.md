@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-D1（Inspection Knowledge Trace Resolver）
+当前开发版本：v0.8-D1.1（Harden Verified Knowledge Trace Identity）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data：C2 的 3 条 source-native Group Mapping 原样保留，C3 的 5 条 Substance Mapping 复用西布曲明、西地那非、他达拉非三个既有 Inspection Substance。v0.8-D1 首次通过 SQLite 只读动态查询将 Risk、Substance、MethodSubstance、Method、Applicability 与 RegulatoryContext 串成可解释、可测试的 Knowledge Trace；它不是 InspectionRecommendation，仍不连接 Product Workspace、Web、Pipeline 或 `phase3_analysis`，不做商品适用性判断或 Group 完整展开。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data：C2 的 3 条 source-native Group Mapping 原样保留，C3 的 5 条 Substance Mapping 复用西布曲明、西地那非、他达拉非三个既有 Inspection Substance。v0.8-D1 首次通过 SQLite 只读动态查询将 Risk、Substance、MethodSubstance、Method、Applicability 与 RegulatoryContext 串成可解释、可测试的 Knowledge Trace；D1.1 进一步限定只消费 verified Risk Dataset，verified Risk 只能引用 verified Inspection Substance，并按 target identity 唯一输出、以 `mapping_evidence` 列表保留多来源。它不是 InspectionRecommendation，仍不连接 Product Workspace、Web、Pipeline 或 `phase3_analysis`，不做商品适用性判断或 Group 完整展开。
 
 当前分支：`main`
 
@@ -45,9 +45,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 | Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | verified dataset 已含三项 BJS、KJ201903 与 GB/T 45443-2025；GB/T 是首个 `national_standard_gbt`，并新增首个 SubstanceRegulatoryContext。褪黑素可同时是方法目标物及限定产品范围和时间下的合法保健食品原料；GB/T 45443 是正常质量/含量检测标准，不是非法添加补充检验方法 | `src/inspection_reference.py`、`src/data_store.py`、`config/inspection_reference.json` |
 | Risk→Substance/Group 独立 Reference Data | schema version 1；正式数据共 8 条：保留 3 条 A/current Group Mapping，新增 5 条同级别 Substance Mapping，具体目标仅为来源点名且已存在的西布曲明、西地那非、他达拉非；不按方法目标物清单推断其他 Group 成员 | `src/risk_substance_reference.py`、`src/data_store.py`、`config/risk_substance_reference.json` |
-| Inspection Knowledge Trace | 以 SQLite 为运行时查询索引，动态执行 Risk Mapping→Substance→MethodSubstance→Method，并分别挂载 Method-level / 当前 Substance-scoped Applicability 与对应 RegulatoryContext；Group 保持 `partial`，缺口显式输出，不排序推荐、不判断商品适用性或违法性 | `src/inspection_knowledge.py`、`src/data_store.py` |
+| Inspection Knowledge Trace | 以 SQLite 为运行时查询索引且只消费 verified Risk Dataset，动态执行 Risk Mapping→Substance→MethodSubstance→Method；Group/Substance 按 identity 唯一输出，多来源保存在 `mapping_evidence` 列表，并分别挂载 Applicability 与 RegulatoryContext；Group 保持 `partial`，缺口显式输出，不排序推荐、不判断商品适用性或违法性 | `src/inspection_knowledge.py`、`src/data_store.py` |
 
-当前测试集共有 220 项，其中新增 16 项覆盖正式 C3 Knowledge Trace、动态 MethodSubstance JOIN、Method status/role、Applicability 隔离、RegulatoryContext、historical 过滤、未知 Risk、无 Risk→Method 表及 synthetic knowledge gaps；既有 Inspection 与 Risk Reference 测试继续覆盖 contract、导入、迁移和正式数据事实。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 225 项，其中 D1/D1.1 的 19 项 Knowledge Trace 测试覆盖正式 C3 解析、verified Dataset 隔离、target/evidence 聚合、动态 MethodSubstance JOIN、Applicability 隔离、RegulatoryContext、historical 过滤与 synthetic knowledge gaps；Risk persistence 另覆盖 verified Substance 引用与回滚。既有 Inspection 与 Risk Reference 测试继续覆盖 contract、导入、迁移和正式数据事实。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 

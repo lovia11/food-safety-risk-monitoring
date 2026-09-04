@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D1 Inspection Knowledge Trace Resolver 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D1.1 Harden Verified Knowledge Trace Identity 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-D1 — Inspection Knowledge Trace Resolver**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-D1.1 — Harden Verified Knowledge Trace Identity**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1 首次以 SQLite 只读动态查询串起 Risk→Substance→MethodSubstance→Method→Applicability/RegulatoryContext，并显式输出 Group 与知识缺口；它不是 InspectionRecommendation，不连接 Risk Analysis、`phase3_analysis`、Product、Web/API，不做 Group 完整展开、商品适用性判断或法律结论。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1 首次以 SQLite 只读动态查询串起 Risk→Substance→MethodSubstance→Method→Applicability/RegulatoryContext，并显式输出 Group 与知识缺口；D1.1 强制 verified Reference 身份并按 target identity 聚合 provenance。它不是 InspectionRecommendation，不连接 Risk Analysis、`phase3_analysis`、Product、Web/API，不做 Group 完整展开、商品适用性判断或法律结论。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-D1 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-D1.1 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -185,7 +185,7 @@ RiskMappingDataset 1 ── N RiskSubstanceMapping N ── 0..1 InspectionSubst
 - `InspectionKnowledgeResolver` 只调用 `DataStore` 公共只读查询，在运行时动态连接上述两层关系；Method-level Applicability 与当前 Substance-scoped Applicability 分开返回，RegulatoryContext 只挂到对应 Substance。Group 始终保留为 `partial` 且不会查询 Method 或推断成员；
 - Monitor 任务可能有 19 个候选，但只有前 2 个 Snapshot 完成详情/OCR，其余保持待采集状态，这是正常且必须如实展示的状态。
 
-D1 模块 API 只接受 `risk_category: str` 和可选的 `include_historical=False`，返回 `KnowledgeTrace`：`risk_labels`、`group_targets`、`substance_targets`、`unresolved_groups` 与 `knowledge_gaps`。默认只读取 `temporal_status=current` 的 Risk Mapping；未知 category 返回空 trace。缺口至少区分 `unresolved_group`、`no_concrete_substance` 与 `no_verified_method`。输入不接受 Product、OCR 或 ingredient 信息，因此 Applicability 只原样呈现 constraints，不能解释为已经匹配某个商品。
+D1 模块 API 只接受 `risk_category: str` 和可选的 `include_historical=False`，返回 `KnowledgeTrace`：`risk_labels`、`group_targets`、`substance_targets`、`unresolved_groups` 与 `knowledge_gaps`。Resolver 始终只读取 `dataset_status=verified_reference` 的 Risk Mapping；`include_historical` 只控制 temporal status。Group 按 `target_group_label`、Substance 按 `substance_id` 唯一输出，多条 Mapping 作为按 `mapping_id` 排序的 `mapping_evidence` 列表完整保留。未知 category 返回空 trace。缺口至少区分 `unresolved_group`、`no_concrete_substance` 与 `no_verified_method`。输入不接受 Product、OCR 或 ingredient 信息，因此 Applicability 只原样呈现 constraints，不能解释为已经匹配某个商品。
 
 ## 11. SQLite Tables
 
@@ -225,7 +225,7 @@ D1 模块 API 只接受 `risk_category: str` 和可选的 `include_historical=Fa
 
 Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset provenance 及 `methods`、`substances`、`method_substances`、`method_applicabilities`、`substance_regulatory_contexts`。每个 Applicability 必须显式提供 `substance_id`：`null` 表示 Method-level，非空值必须同时存在于当前 Dataset 且已有对应 MethodSubstance；verified Method 必须至少保留一条 Method-level 范围。`reference_pending` 的五个数组必须为空；`verified_reference` 必须有核验时间、非空方法/物质、方法级独立来源、完整引用和非孤立实体，且 Applicability 必须保留 `source_scope_text`、RegulatoryContext 不得为 `verification_pending`。`source_label` 与 `canonical_name` 不同，或双方非空的来源 CAS 与规范 CAS 不同时，必须记录 `normalization_note`，禁止静默归一化。`DataStore.import_inspection_config()` 只做事务化安全 upsert，不自动删除缺失记录，并阻止状态降级、实体跨 Dataset 转移及 Applicability 父级改绑。
 
-Risk-Substance JSON 同样使用独立 `schema_version=1` contract，但不包含 Substance 定义。`target_type=substance` 时必须只有 `substance_id`，且显式导入时该 ID 必须已存在于 `inspection_substances`；`target_type=substance_group` 时必须只有 `target_group_label`，不展开或猜测成员。`reference_pending` 的 `mappings` 必须为空；`verified_reference` 必须有 `verified_at`、至少一条 Mapping 和完整逐条 provenance，且不得使用“待确认”“unknown”等占位值。`risk_category` 只要求稳定 identifier，本轮没有 Risk Category 表或封闭枚举。`DataStore.import_risk_substance_config()` 事务化、幂等、不删除旧 Mapping，只允许同状态更新或 pending→verified，并禁止同一 `mapping_id` 改绑 Dataset、Risk Category、target type、Substance 或 Group。CLI 仅在显式传入 `--import-risk-substance-config` 时导入，默认不导入任何 Risk Mapping。
+Risk-Substance JSON 同样使用独立 `schema_version=1` contract，但不包含 Substance 定义。`target_type=substance` 时必须只有 `substance_id`，且显式导入时该 ID 必须已存在于 `inspection_substances`；verified Risk Dataset 的 Substance target 还必须属于 verified Inspection Dataset，development/pending Inspection Substance 会使整个导入回滚。development Risk Dataset 仍只要求目标 Substance 存在。`target_type=substance_group` 时必须只有 `target_group_label`，不展开或猜测成员。`reference_pending` 的 `mappings` 必须为空；`verified_reference` 必须有 `verified_at`、至少一条 Mapping 和完整逐条 provenance，且不得使用“待确认”“unknown”等占位值。`risk_category` 只要求稳定 identifier，本轮没有 Risk Category 表或封闭枚举。`DataStore.import_risk_substance_config()` 事务化、幂等、不删除旧 Mapping，只允许同状态更新或 pending→verified，并禁止同一 `mapping_id` 改绑 Dataset、Risk Category、target type、Substance 或 Group。CLI 仅在显式传入 `--import-risk-substance-config` 时导入，默认不导入任何 Risk Mapping。
 
 Evidence Grade `A/B/C` 表示**来源证据强度**：A 是当前有效且明确支持关系的权威官方来源，B 是历史抽检/监管口径等官方依据，C 是研究、案例或药理推断等较弱参考。它不是风险分数、模型置信度、商品违法概率或检出概率，禁止转成数值 score。`basis_type` 只允许 `current_regulatory_source`、`current_official_guidance`、`historical_sampling_plan`、`official_case`、`research_evidence`、`pharmacologic_inference`；A 必须是 `current`，historical sampling plan 必须是 `historical` 且不得为 A。两个 `current_*` basis 的 `temporal_status=current` 约束由 Risk Reference validator 保证，SQLite schema version 7 不为此重建表。
 
@@ -348,7 +348,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 220 项 `unittest`：v0.7 冻结基线为 137 项；新增 16 项覆盖正式 C3 Knowledge Trace、动态 MethodSubstance JOIN、Method status/role、Method-level 与 Substance-scoped Applicability 隔离、RegulatoryContext、historical 过滤、未知 Risk、无 Risk→Method 表及 synthetic knowledge gaps。既有 Inspection、Risk-Substance、正式数据和前端测试均保持；v0.8-D1 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 225 项 `unittest`：v0.7 冻结基线为 137 项；D1/D1.1 共 19 项 Knowledge Trace 测试覆盖正式 C3 解析、verified Dataset 隔离、Group/Substance identity 与 evidence 聚合、动态 MethodSubstance JOIN、Applicability 隔离、RegulatoryContext、historical 过滤和 synthetic gaps；Risk persistence 另验证 verified Substance 引用、非 verified 拒绝及原子回滚。既有 Inspection、Risk-Substance、正式数据和前端测试均保持；v0.8-D1.1 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -481,7 +481,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 220 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 225 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

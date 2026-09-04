@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from src.data_store import DataStore
 from src.inspection_knowledge import InspectionKnowledgeResolver, KnowledgeTrace
@@ -43,6 +44,7 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
         substance_id: str | None = None,
         group_label: str | None = None,
         temporal_status: str = "current",
+        dataset_id: str = "risk-substance-reference",
     ) -> None:
         evidence_grade = "A" if temporal_status == "current" else "B"
         basis_type = (
@@ -57,12 +59,13 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
                 substance_id, target_group_label, evidence_grade, basis_type,
                 temporal_status, product_scope, source_name, source_reference,
                 source_date, source_basis_text, note
-            ) VALUES (?, 'risk-substance-reference', ?, ?, ?, ?, ?, ?, ?, ?,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                       'synthetic scope', 'synthetic source', 'synthetic reference',
                       '2026-01-01', 'synthetic basis', 'synthetic test only')
             """,
             (
                 mapping_id,
+                dataset_id,
                 risk_category,
                 f"{risk_category} label",
                 target_type,
@@ -72,6 +75,23 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
                 basis_type,
                 temporal_status,
             ),
+        )
+
+    def _insert_risk_dataset(
+        self, dataset_id: str, dataset_status: str = "development_seed"
+    ) -> None:
+        self._execute(
+            """
+            INSERT INTO risk_mapping_datasets (
+                dataset_id, dataset_version, dataset_status, source_name,
+                source_reference, source_date, collected_at, verified_at,
+                description, imported_at
+            ) VALUES (?, 'synthetic-1', ?, 'synthetic source',
+                      'synthetic reference', '2026-01-01',
+                      '2026-01-01T00:00:00+08:00', NULL,
+                      'synthetic test only', '2026-01-01T00:00:00+08:00')
+            """,
+            (dataset_id, dataset_status),
         )
 
     @staticmethod
@@ -128,6 +148,10 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             weight_loss.unresolved_groups[0]["resolution_status"], "partial"
         )
         self.assertEqual(
+            weight_loss.unresolved_groups[0]["mapping_ids"],
+            ["weight-loss-sibutramine-group-cn-2025"],
+        )
+        self.assertEqual(
             {item["substance_id"] for item in weight_loss.substance_targets},
             {SIBUTRAMINE_ID},
         )
@@ -148,7 +172,9 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
         ]
 
         self.assertEqual(len(evidence_rows), 5)
-        for evidence in evidence_rows:
+        for evidence_list in evidence_rows:
+            self.assertEqual(len(evidence_list), 1)
+            evidence = evidence_list[0]
             self.assertEqual(
                 set(evidence),
                 {
@@ -342,6 +368,151 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             },
         )
 
+    def test_non_verified_risk_datasets_are_excluded_in_both_temporal_modes(self):
+        self._insert_risk_dataset("synthetic-development-risk")
+        self._insert_mapping(
+            mapping_id="synthetic-development-weight-loss-group",
+            dataset_id="synthetic-development-risk",
+            risk_category="weight_loss",
+            target_type="substance_group",
+            group_label="开发测试Group",
+        )
+        self._insert_risk_dataset(
+            "synthetic-pending-risk", dataset_status="reference_pending"
+        )
+        self._insert_mapping(
+            mapping_id="synthetic-pending-weight-loss-group",
+            dataset_id="synthetic-pending-risk",
+            risk_category="weight_loss",
+            target_type="substance_group",
+            group_label="待核验测试Group",
+        )
+
+        for include_historical in (False, True):
+            with self.subTest(include_historical=include_historical):
+                trace = self.resolver.resolve(
+                    "weight_loss", include_historical=include_historical
+                )
+                self.assertEqual(len(trace.group_targets), 1)
+                self.assertEqual(len(trace.substance_targets), 1)
+                self.assertEqual(
+                    trace.group_targets[0]["target_group_label"],
+                    "西布曲明及其系列衍生物",
+                )
+                self.assertNotIn(
+                    "开发测试Group",
+                    {
+                        item["target_group_label"]
+                        for item in trace.group_targets
+                    },
+                )
+                self.assertNotIn(
+                    "待核验测试Group",
+                    {
+                        item["target_group_label"]
+                        for item in trace.group_targets
+                    },
+                )
+
+    def test_substance_identity_aggregates_current_and_historical_evidence(self):
+        self._insert_mapping(
+            mapping_id="synthetic-substance-a-current",
+            risk_category="synthetic_multi_evidence",
+            target_type="substance",
+            substance_id=SIBUTRAMINE_ID,
+        )
+        self._insert_mapping(
+            mapping_id="synthetic-substance-b-historical",
+            risk_category="synthetic_multi_evidence",
+            target_type="substance",
+            substance_id=SIBUTRAMINE_ID,
+            temporal_status="historical",
+        )
+
+        current = self.resolver.resolve("synthetic_multi_evidence")
+        with (
+            mock.patch.object(
+                self.store,
+                "get_inspection_substance",
+                wraps=self.store.get_inspection_substance,
+            ) as get_substance,
+            mock.patch.object(
+                self.store,
+                "list_substance_methods",
+                wraps=self.store.list_substance_methods,
+            ) as list_methods,
+            mock.patch.object(
+                self.store,
+                "list_method_applicabilities",
+                wraps=self.store.list_method_applicabilities,
+            ) as list_applicabilities,
+            mock.patch.object(
+                self.store,
+                "list_substance_regulatory_contexts",
+                wraps=self.store.list_substance_regulatory_contexts,
+            ) as list_contexts,
+        ):
+            historical = self.resolver.resolve(
+                "synthetic_multi_evidence", include_historical=True
+            )
+        self.assertEqual(get_substance.call_count, 1)
+        self.assertEqual(list_methods.call_count, 1)
+        self.assertEqual(list_applicabilities.call_count, 2)
+        self.assertEqual(list_contexts.call_count, 1)
+        self.assertEqual(len(current.substance_targets), 1)
+        self.assertEqual(len(current.substance_targets[0]["mapping_evidence"]), 1)
+        self.assertEqual(
+            current.substance_targets[0]["mapping_evidence"][0]["mapping_id"],
+            "synthetic-substance-a-current",
+        )
+        self.assertEqual(
+            current.substance_targets[0]["mapping_evidence"][0]["temporal_status"],
+            "current",
+        )
+        self.assertEqual(len(historical.substance_targets), 1)
+        self.assertEqual(
+            [
+                evidence["mapping_id"]
+                for evidence in historical.substance_targets[0]["mapping_evidence"]
+            ],
+            [
+                "synthetic-substance-a-current",
+                "synthetic-substance-b-historical",
+            ],
+        )
+
+    def test_group_identity_aggregates_evidence_and_gap_once(self):
+        for mapping_id, temporal_status in (
+            ("synthetic-group-a-current", "current"),
+            ("synthetic-group-b-historical", "historical"),
+        ):
+            self._insert_mapping(
+                mapping_id=mapping_id,
+                risk_category="synthetic_group_evidence",
+                target_type="substance_group",
+                group_label="同一测试Group",
+                temporal_status=temporal_status,
+            )
+
+        trace = self.resolver.resolve(
+            "synthetic_group_evidence", include_historical=True
+        )
+        unresolved_gaps = [
+            gap for gap in trace.knowledge_gaps if gap["type"] == "unresolved_group"
+        ]
+        expected_mapping_ids = [
+            "synthetic-group-a-current",
+            "synthetic-group-b-historical",
+        ]
+        self.assertEqual(len(trace.group_targets), 1)
+        self.assertEqual(len(trace.group_targets[0]["mapping_evidence"]), 2)
+        self.assertEqual(len(trace.unresolved_groups), 1)
+        self.assertEqual(
+            trace.unresolved_groups[0]["mapping_ids"], expected_mapping_ids
+        )
+        self.assertEqual(len(unresolved_gaps), 1)
+        self.assertEqual(unresolved_gaps[0]["mapping_ids"], expected_mapping_ids)
+
     def test_include_historical_defaults_to_false(self):
         for category in ("weight_loss", "male_function", "anti_fatigue"):
             self.assertEqual(
@@ -370,15 +541,18 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             "synthetic_history", include_historical=True
         )
         self.assertEqual(
-            [item["mapping_evidence"]["mapping_id"] for item in default_trace.group_targets],
+            [
+                item["mapping_evidence"][0]["mapping_id"]
+                for item in default_trace.group_targets
+            ],
             ["synthetic-history-current"],
         )
         self.assertEqual(
             [
-                item["mapping_evidence"]["mapping_id"]
+                item["mapping_evidence"][0]["mapping_id"]
                 for item in historical_trace.group_targets
             ],
-            ["synthetic-history-current", "synthetic-history-old"],
+            ["synthetic-history-old", "synthetic-history-current"],
         )
 
     def test_trace_has_no_numeric_risk_score(self):

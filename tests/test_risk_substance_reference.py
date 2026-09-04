@@ -270,7 +270,11 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
         write_json(path, payload)
         return path
 
-    def _seed_substances(self, *substance_ids: str) -> None:
+    def _seed_substances(
+        self,
+        *substance_ids: str,
+        dataset_status: str = "development_seed",
+    ) -> None:
         now = "2026-09-04T10:00:00+08:00"
         with sqlite3.connect(self.store.database_path) as connection:
             connection.execute("PRAGMA foreign_keys = ON")
@@ -279,10 +283,10 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
                 INSERT OR IGNORE INTO inspection_datasets (
                     dataset_id, dataset_version, dataset_status, source_name,
                     source_reference, description, imported_at, updated_at
-                ) VALUES ('synthetic-inspection', 'test-1', 'development_seed',
+                ) VALUES ('synthetic-inspection', 'test-1', ?,
                     '合成测试来源', 'test://synthetic-inspection', '', ?, ?)
                 """,
-                (now, now),
+                (dataset_status, now, now),
             )
             for ordinal, substance_id in enumerate(substance_ids, start=1):
                 connection.execute(
@@ -306,6 +310,37 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
         counts = self.store.table_counts()
         self.assertEqual(counts["risk_mapping_datasets"], 0)
         self.assertEqual(counts["risk_substance_mappings"], 0)
+
+    def test_verified_risk_rejects_non_verified_inspection_substance_and_rolls_back(self):
+        self._seed_substances("synthetic-substance-1")
+
+        for inspection_status in ("development_seed", "reference_pending"):
+            with self.subTest(inspection_status=inspection_status):
+                with sqlite3.connect(self.store.database_path) as connection:
+                    connection.execute(
+                        "UPDATE inspection_datasets SET dataset_status = ?",
+                        (inspection_status,),
+                    )
+                with self.assertRaisesRegex(
+                    DataStoreError, "verified_reference Dataset"
+                ):
+                    self.store.import_risk_substance_config(
+                        self._write(risk_dataset(status="verified_reference"))
+                    )
+                counts = self.store.table_counts()
+                self.assertEqual(counts["risk_mapping_datasets"], 0)
+                self.assertEqual(counts["risk_substance_mappings"], 0)
+
+    def test_verified_risk_accepts_verified_inspection_substance(self):
+        self._seed_substances(
+            "synthetic-substance-1", dataset_status="verified_reference"
+        )
+
+        result = self.store.import_risk_substance_config(
+            self._write(risk_dataset(status="verified_reference"))
+        )
+        self.assertEqual(result, {"dataset": 1, "mappings": 1})
+        self.assertEqual(self.store.table_counts()["risk_substance_mappings"], 1)
 
     def test_group_target_does_not_require_substance_foreign_key(self):
         payload = risk_dataset(target_type="substance_group")

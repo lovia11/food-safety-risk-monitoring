@@ -1346,13 +1346,28 @@ class DataStore:
                         )
 
                 if mapping["target_type"] == "substance":
-                    substance_exists = connection.execute(
-                        "SELECT 1 FROM inspection_substances WHERE substance_id = ?",
+                    inspection_substance = connection.execute(
+                        """
+                        SELECT d.dataset_status
+                        FROM inspection_substances s
+                        JOIN inspection_datasets d ON d.dataset_id = s.dataset_id
+                        WHERE s.substance_id = ?
+                        """,
                         (mapping["substance_id"],),
                     ).fetchone()
-                    if substance_exists is None:
+                    if inspection_substance is None:
                         raise DataStoreError(
                             f"Risk Mapping引用的Inspection substance_id不存在："
+                            f"{mapping['substance_id']}"
+                        )
+                    if (
+                        payload["dataset_status"] == "verified_reference"
+                        and inspection_substance["dataset_status"]
+                        != "verified_reference"
+                    ):
+                        raise DataStoreError(
+                            "verified_reference Risk Mapping引用的Inspection "
+                            "Substance必须属于verified_reference Dataset："
                             f"{mapping['substance_id']}"
                         )
 
@@ -1435,23 +1450,26 @@ class DataStore:
     def list_risk_mappings(
         self, risk_category: str, *, include_historical: bool = False
     ) -> list[dict[str, Any]]:
-        """Return persisted mappings for one risk category in stable order."""
+        """Return verified mappings for one risk category in stable order."""
 
         temporal_filter = (
-            "" if include_historical else " AND temporal_status = 'current'"
+            "" if include_historical else " AND m.temporal_status = 'current'"
         )
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT mapping_id, risk_category, risk_label, target_type,
-                       substance_id, target_group_label, evidence_grade,
-                       basis_type, temporal_status, product_scope, source_name,
-                       source_reference, source_date, source_basis_text, note
-                FROM risk_substance_mappings
-                WHERE risk_category = ?
+                SELECT m.mapping_id, m.risk_category, m.risk_label, m.target_type,
+                       m.substance_id, m.target_group_label, m.evidence_grade,
+                       m.basis_type, m.temporal_status, m.product_scope,
+                       m.source_name, m.source_reference, m.source_date,
+                       m.source_basis_text, m.note
+                FROM risk_substance_mappings m
+                JOIN risk_mapping_datasets d ON d.dataset_id = m.dataset_id
+                WHERE m.risk_category = ?
+                  AND d.dataset_status = 'verified_reference'
                 """
                 + temporal_filter
-                + " ORDER BY risk_category, target_type, mapping_id",
+                + " ORDER BY m.risk_category, m.target_type, m.mapping_id",
                 (risk_category,),
             ).fetchall()
         return [dict(row) for row in rows]
