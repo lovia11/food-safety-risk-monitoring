@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-C3（First Verified Substance-Level Risk Mappings）
+当前开发版本：v0.8-D1（Inspection Knowledge Trace Resolver）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C1 建立独立 Risk→Substance/Group Reference contract、SQLite schema 与显式导入；v0.8-C2 的 3 条 source-native Group Mapping 原样保留，v0.8-C3 新增 5 条来源明确点名的 Substance Mapping，复用西布曲明、西地那非、他达拉非三个既有 Inspection Substance。这不是完整 Group Expansion，仍未连接 Product Workspace、Web、Pipeline、风险分析或 Recommendation。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data：C2 的 3 条 source-native Group Mapping 原样保留，C3 的 5 条 Substance Mapping 复用西布曲明、西地那非、他达拉非三个既有 Inspection Substance。v0.8-D1 首次通过 SQLite 只读动态查询将 Risk、Substance、MethodSubstance、Method、Applicability 与 RegulatoryContext 串成可解释、可测试的 Knowledge Trace；它不是 InspectionRecommendation，仍不连接 Product Workspace、Web、Pipeline 或 `phase3_analysis`，不做商品适用性判断或 Group 完整展开。
 
 当前分支：`main`
 
@@ -45,8 +45,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 | Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | verified dataset 已含三项 BJS、KJ201903 与 GB/T 45443-2025；GB/T 是首个 `national_standard_gbt`，并新增首个 SubstanceRegulatoryContext。褪黑素可同时是方法目标物及限定产品范围和时间下的合法保健食品原料；GB/T 45443 是正常质量/含量检测标准，不是非法添加补充检验方法 | `src/inspection_reference.py`、`src/data_store.py`、`config/inspection_reference.json` |
 | Risk→Substance/Group 独立 Reference Data | schema version 1；正式数据共 8 条：保留 3 条 A/current Group Mapping，新增 5 条同级别 Substance Mapping，具体目标仅为来源点名且已存在的西布曲明、西地那非、他达拉非；不按方法目标物清单推断其他 Group 成员 | `src/risk_substance_reference.py`、`src/data_store.py`、`config/risk_substance_reference.json` |
+| Inspection Knowledge Trace | 以 SQLite 为运行时查询索引，动态执行 Risk Mapping→Substance→MethodSubstance→Method，并分别挂载 Method-level / 当前 Substance-scoped Applicability 与对应 RegulatoryContext；Group 保持 `partial`，缺口显式输出，不排序推荐、不判断商品适用性或违法性 | `src/inspection_knowledge.py`、`src/data_store.py` |
 
-当前测试集共有 204 项，其中 29 项覆盖 Inspection Reference contract、迁移/导入及五个正式方法/标准与褪黑素监管语境，33 项覆盖 Risk-Substance contract、XOR、来源等级/时间规则、外部 Substance FK、幂等/回滚和 v6→v7 迁移，5 项独立覆盖 3 条 Group 与 5 条 Substance 正式 Mapping 的精确事实、Inspection identity/FK 和 SQLite 幂等导入；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 220 项，其中新增 16 项覆盖正式 C3 Knowledge Trace、动态 MethodSubstance JOIN、Method status/role、Applicability 隔离、RegulatoryContext、historical 过滤、未知 Risk、无 Risk→Method 表及 synthetic knowledge gaps；既有 Inspection 与 Risk Reference 测试继续覆盖 contract、导入、迁移和正式数据事实。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -199,7 +200,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping，仍仅覆盖 `weight_loss`、`male_function`、`anti_fatigue`；这不是完整 Group Expansion。BJS 202405 尚未逐项核验和导入，也没有 Risk Analysis 桥接、InspectionRecommendation、Web/API 展示或商品级 Recommendation。
+- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping，仍仅覆盖 `weight_loss`、`male_function`、`anti_fatigue`；D1 只读 Knowledge Trace 不做完整 Group Expansion、商品范围匹配、方法推荐或法律判断。BJS 202405 尚未逐项核验和导入，也没有 Risk Analysis 桥接、Web/API 展示或商品级 Recommendation。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -209,8 +210,8 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
 - `INSPECTION-01`：Foundation 已由 v0.8-A 完成；v0.8-B1—B5 已逐批完成三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext 的 Verified Data，其余方法和监管语境仍需逐批核验；
-- `INSPECTION-02`：风险线索与目标化合物关联；
-- `INSPECTION-03`：目标化合物与检验方法/标准关联；
+- `INSPECTION-02`：C 阶段已完成首批 Verified Risk→Group/Substance 数据；完整 Group Expansion 与分析桥接仍未实现；
+- `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace；商品级方法适用性与 Recommendation 仍未实现；
 - `INSPECTION-04`：商品检测建议生成；
 - `INSPECTION-05`：最终结果增加产品名、链接、可能风险、建议检测成分和相关标准；
 - 改进人工登录/验证的 Session UX；
@@ -218,6 +219,6 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C1 为 `INSPECTION-02` 建立 Reference 结构，v0.8-C2 保留 3 条 source-native Group Mapping，v0.8-C3 只增加 5 条来源直接点名的 Substance Mapping；不得根据 Method 目标物清单推断 Group 成员。BJS 202405、完整 Group→Substance 展开、与现有 Risk Analysis 的桥接以及 `INSPECTION-03`—`INSPECTION-05` 仍为 planned / not implemented。
+`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 只通过既有外键关系动态生成 Knowledge Trace，不新增 Risk→Method 持久关系。不得根据 Method 目标物清单推断 Group 成员。BJS 202405、完整 Group→Substance 展开、与现有 Risk Analysis 的桥接、商品级 InspectionRecommendation 及 `INSPECTION-05` 仍为 planned / not implemented。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。

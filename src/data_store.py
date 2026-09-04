@@ -1432,6 +1432,104 @@ class DataStore:
 
         return {"dataset": 1, "mappings": len(payload["mappings"])}
 
+    def list_risk_mappings(
+        self, risk_category: str, *, include_historical: bool = False
+    ) -> list[dict[str, Any]]:
+        """Return persisted mappings for one risk category in stable order."""
+
+        temporal_filter = (
+            "" if include_historical else " AND temporal_status = 'current'"
+        )
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT mapping_id, risk_category, risk_label, target_type,
+                       substance_id, target_group_label, evidence_grade,
+                       basis_type, temporal_status, product_scope, source_name,
+                       source_reference, source_date, source_basis_text, note
+                FROM risk_substance_mappings
+                WHERE risk_category = ?
+                """
+                + temporal_filter
+                + " ORDER BY risk_category, target_type, mapping_id",
+                (risk_category,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_inspection_substance(self, substance_id: str) -> dict[str, Any] | None:
+        """Return one persisted Inspection Substance identity, if it exists."""
+
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT substance_id, canonical_name, english_name, cas_no
+                FROM inspection_substances
+                WHERE substance_id = ?
+                """,
+                (substance_id,),
+            ).fetchone()
+        return dict(row) if row is not None else None
+
+    def list_substance_methods(self, substance_id: str) -> list[dict[str, Any]]:
+        """Resolve MethodSubstance to Method rows without assigning priority."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.method_id, m.method_no, m.method_name, m.method_type,
+                       m.method_status, m.publisher, m.published_date,
+                       m.effective_date, ms.determination_role, ms.source_label,
+                       ms.source_cas_no, ms.normalization_note, m.source_name,
+                       m.source_reference, m.source_date, m.note
+                FROM inspection_method_substances ms
+                JOIN inspection_methods m ON m.method_id = ms.method_id
+                WHERE ms.substance_id = ?
+                ORDER BY m.method_no, m.method_id
+                """,
+                (substance_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_method_applicabilities(
+        self, method_id: str, substance_id: str
+    ) -> list[dict[str, Any]]:
+        """Return method-level and current-substance applicability rows only."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT applicability_id, method_id, substance_id, scope_type,
+                       product_category, product_form, ingredient_context,
+                       source_scope_text, note
+                FROM inspection_method_applicabilities
+                WHERE method_id = ?
+                  AND (substance_id IS NULL OR substance_id = ?)
+                ORDER BY CASE WHEN substance_id IS NULL THEN 0 ELSE 1 END,
+                         applicability_id
+                """,
+                (method_id, substance_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_substance_regulatory_contexts(
+        self, substance_id: str
+    ) -> list[dict[str, Any]]:
+        """Return the persisted regulatory contexts for exactly one substance."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT context_id, context_status, product_scope, jurisdiction,
+                       valid_from, valid_to, source_label, source_name,
+                       source_reference, source_date, note
+                FROM substance_regulatory_contexts
+                WHERE substance_id = ?
+                ORDER BY context_id
+                """,
+                (substance_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
         where = " WHERE t.enabled = 1" if enabled_only else ""
         with self._connect() as connection:
