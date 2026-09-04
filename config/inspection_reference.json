@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "dataset_id": "inspection-reference",
-  "dataset_version": "2026.09-b4",
+  "dataset_version": "2026.09-b5",
   "dataset_status": "verified_reference",
-  "source_name": "国家市场监督管理总局食品安全抽检监测司标准栏目",
-  "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+  "source_name": "国家市场监督管理总局官方公开来源（各Method和RegulatoryContext保留独立provenance）",
+  "source_reference": "https://www.samr.gov.cn/",
   "source_date": null,
-  "collected_at": "2026-09-04T16:56:04+08:00",
-  "verified_at": "2026-09-04T16:56:04+08:00",
-  "description": "当前已纳入逐项核验的BJS 202209、BJS 201701、BJS 201710和KJ201903；数据通过版本化方式逐批扩充，同时覆盖食品补充检验方法和食品快速检测方法，不代表全部现行检验方法目录。",
+  "collected_at": "2026-09-04T17:07:24+08:00",
+  "verified_at": "2026-09-04T17:07:24+08:00",
+  "description": "当前已纳入逐项核验的BJS 202209、BJS 201701、BJS 201710、KJ201903和GB/T 45443-2025，并首次纳入褪黑素的保健食品原料监管语境；数据通过版本化方式逐批扩充，不代表全部现行检验方法或全部监管知识。",
   "methods": [
     {
       "method_id": "bjs-202209",
@@ -77,6 +77,23 @@
       "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2019/art_2a1de171556f40f2b8f5829fe9810086.html",
       "source_date": "2019-09-27",
       "note": "本方法为巴比妥类化学成分的胶体金免疫层析定性快速筛查方法；阳性结果应进一步确证。本Dataset的4条MethodSubstance仅记录方法正文表1明确列出的4种参考物质及其性能验证对象，不得解释为KJ201903仅能响应这4种巴比妥类化学成分。"
+    },
+    {
+      "method_id": "gbt-45443-2025",
+      "dataset_id": "inspection-reference",
+      "method_no": "GB/T 45443-2025",
+      "method_name": "保健食品中褪黑素的测定",
+      "method_type": "national_standard_gbt",
+      "method_status": "current",
+      "publisher": "国家市场监督管理总局、国家标准化管理委员会",
+      "published_date": "2025-03-28",
+      "effective_date": "2025-10-01",
+      "replaces_method_no": "GB/T 5009.170-2003",
+      "replaced_by_method_no": null,
+      "source_name": "国家标准全文公开系统",
+      "source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=647D466911910DA6D8ADAEB957E2E9CD",
+      "source_date": "2025-03-28",
+      "note": "推荐性国家标准，现行，自2025-10-01实施，全部代替GB/T 5009.170-2003；用于保健食品中褪黑素的定量测定，不是食品非法添加补充检验方法。"
     }
   ],
   "substances": [
@@ -329,7 +346,8 @@
     {"method_id": "kj-201903", "substance_id": "substance-cas-57-44-3", "source_label": "巴比妥", "source_cas_no": "57-44-3", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 1},
     {"method_id": "kj-201903", "substance_id": "substance-cas-50-06-6", "source_label": "苯巴比妥", "source_cas_no": "50-06-6", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 2},
     {"method_id": "kj-201903", "substance_id": "substance-cas-57-43-2", "source_label": "异戊巴比妥", "source_cas_no": "57-43-2", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 3},
-    {"method_id": "kj-201903", "substance_id": "substance-cas-76-73-3", "source_label": "司可巴比妥钠", "source_cas_no": "76-73-3", "determination_role": "rapid_screen", "normalization_note": "KJ201903表1原文使用“司可巴比妥钠”，同时给出的英文名称为Secobarbital、CAS为76-73-3；当前知识库按来源CAS复用既有“司可巴比妥”Substance，保留原始source_label。该映射仅反映KJ201903来源记录与既有CAS身份的归一化，不据此推断不同盐型在其他法规或检验情境下必然等同。", "ordinal": 4}
+    {"method_id": "kj-201903", "substance_id": "substance-cas-76-73-3", "source_label": "司可巴比妥钠", "source_cas_no": "76-73-3", "determination_role": "rapid_screen", "normalization_note": "KJ201903表1原文使用“司可巴比妥钠”，同时给出的英文名称为Secobarbital、CAS为76-73-3；当前知识库按来源CAS复用既有“司可巴比妥”Substance，保留原始source_label。该映射仅反映KJ201903来源记录与既有CAS身份的归一化，不据此推断不同盐型在其他法规或检验情境下必然等同。", "ordinal": 4},
+    {"method_id": "gbt-45443-2025", "substance_id": "substance-cas-73-31-4", "source_label": "褪黑素", "source_cas_no": "73-31-4", "determination_role": "quantitative", "normalization_note": "", "ordinal": 1}
   ],
   "method_applicabilities": [
     {"applicability_id": "bjs-202209-scope-01", "method_id": "bjs-202209", "substance_id": null, "scope_type": "include", "product_category": "压片糖果", "product_form": "", "ingredient_context": "", "source_scope_text": "压片糖果", "note": ""},
@@ -361,7 +379,29 @@
     {"applicability_id": "kj-201903-scope-03", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "丸剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
     {"applicability_id": "kj-201903-scope-04", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "片剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
     {"applicability_id": "kj-201903-scope-05", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "散剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
-    {"applicability_id": "kj-201903-scope-06", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "口服液", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""}
+    {"applicability_id": "kj-201903-scope-06", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "口服液", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-01", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "片剂", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-02", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "硬胶囊", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-03", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "软胶囊", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-04", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "颗粒剂", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-05", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "粉剂", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-06", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "口服液", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""},
+    {"applicability_id": "gbt-45443-2025-scope-07", "method_id": "gbt-45443-2025", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "凝胶糖果", "ingredient_context": "", "source_scope_text": "本文件适用于片剂、硬胶囊、软胶囊、颗粒剂、粉剂、口服液、凝胶糖果剂型形态的保健食品中褪黑素的测定", "note": ""}
   ],
-  "substance_regulatory_contexts": []
+  "substance_regulatory_contexts": [
+    {
+      "context_id": "melatonin-health-food-raw-material-cn-2021",
+      "substance_id": "substance-cas-73-31-4",
+      "context_status": "legal_health_food_raw_material",
+      "product_scope": "保健食品；仅限符合《保健食品原料目录 褪黑素》及相关注册、备案和产品技术要求的使用情形",
+      "jurisdiction": "CN",
+      "valid_from": "2021-03-01",
+      "valid_to": null,
+      "source_label": "褪黑素",
+      "source_name": "国家市场监督管理总局 国家卫生健康委员会 国家中医药管理局关于发布辅酶Q10等五种保健食品原料目录的公告",
+      "source_reference": "https://www.samr.gov.cn/tssps/zcwj/art/2023/art_f22954c667fc400abddd0b7ece6155a6.html",
+      "source_date": "2020-11-23",
+      "note": "《保健食品原料目录 褪黑素》自2021-03-01起施行。本Context仅表达褪黑素在相应保健食品原料目录及监管要求下具有合法原料语境；不得解释为普通食品可以任意添加褪黑素，也不得解释为任意含褪黑素商品当然合规。"
+    }
+  ]
 }
