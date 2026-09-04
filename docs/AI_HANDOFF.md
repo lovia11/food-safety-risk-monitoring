@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-B3 Verified BJS 201710 Inspection Data 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-B4 Verified KJ201903 Rapid Inspection Data 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-B3 — Verified BJS 201710 Inspection Data**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-B4 — Verified KJ201903 Rapid Inspection Data**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1/B2/B3 已逐批加入核验的 BJS 202209、BJS 201701 与 BJS 201710。BJS 201701 首次使用 Substance-scoped Applicability；BJS 201710 首次大规模复用跨 Method Substance，并保留 3 项显式名称/英文规范化审计，但没有实现 RiskClue 映射或推荐链。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1/B2/B3/B4 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710 与 KJ201903。KJ201903 是首个 `rapid_kj`，4 个参考 Substance 全部跨 Method 复用，“司可巴比妥钠”保留 `source_label` 并显式归一化；快检阳性仍需进一步确证。当前没有实现 RiskClue 映射或推荐链。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-B3 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-B4 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -316,7 +316,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ### `config/inspection_reference.json`
 
-当前是 `verified_reference`，版本 `2026.09-b3`，包含逐项核验的 BJS 202209、BJS 201701 和 BJS 201710：3 个 Method、117 个唯一 Substance、127 条 MethodSubstance、24 条 Applicability、0 个 RegulatoryContext。BJS 201701 的 7 条 Applicability 包含 4 条 Method-level 与 3 条 Substance-scoped 条件；BJS 201710 新增 75 条关系，其中 10 个 Substance 复用既有 CAS 实体、65 个为新增实体，8 条 Applicability 均为 Method-level，并显式记录“脱羟基洛伐他丁→脱羟基洛伐他汀”“吡咯列酮→吡格列酮”和“Melatonine→Melatonin”三项规范化审计。它不是全部食品补充检验方法目录；当前没有 RiskClue→Substance、InspectionRecommendation 或 Web/API 展示。
+当前是 `verified_reference`，版本 `2026.09-b4`，包含逐项核验的 BJS 202209、BJS 201701、BJS 201710 和 KJ201903：4 个 Method、117 个唯一 Substance、131 条 MethodSubstance、30 条 Applicability、0 个 RegulatoryContext。KJ201903 是首个 `rapid_kj`，新增 4 条 `rapid_screen` 关系和 6 条 Method-level Applicability，4 个参考 Substance 全部复用 BJS 201710 已有 CAS 实体；来源“司可巴比妥钠”映射至 CAS 76-73-3 的既有“司可巴比妥”实体时保留原始 `source_label` 和明确归一化说明。KJ 快检阳性需进一步确证，不能当作实际检出结论。该数据集不是全部现行检验方法目录；当前没有 RiskClue→Substance、InspectionRecommendation 或 Web/API 展示。
 
 ### `.gitignore`
 
@@ -330,7 +330,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 164 项 `unittest`：v0.7 冻结基线为 137 项；27 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及 BJS 202209、BJS 201701、BJS 201710 的正式数据事实与幂等性。现有 13 项前端测试仍保持不变；v0.8-B3 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 165 项 `unittest`：v0.7 冻结基线为 137 项；28 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及 BJS 202209、BJS 201701、BJS 201710、KJ201903 的正式数据事实与幂等性。现有 13 项前端测试仍保持不变；v0.8-B4 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -395,7 +395,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入 BJS 202209、BJS 201701 与 BJS 201710，没有其他方法、查询 API 或管理界面，也不构成完整知识库；RiskClue→Substance、InspectionRecommendation 和 Web/API 展示均未实现。
+- Inspection Reference 当前只逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710 与 KJ201903，没有其他方法、查询 API 或管理界面，也不构成完整知识库；RiskClue→Substance、InspectionRecommendation 和 Web/API 展示均未实现。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -413,7 +413,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `GEO-01` | 商品页面声明产地 | 必须记录字段来源和页面证据，不能与发货地混同 |
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
-| `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入 BJS 202209、BJS 201701 与 BJS 201710，其余方法必须逐批核验 |
+| `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入 BJS 202209、BJS 201701、BJS 201710 与 KJ201903，其余方法必须逐批核验 |
 | `INSPECTION-02` | 风险线索与目标化合物关联 | 仅记录需求；不得写死“功效→化合物”映射 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | 仅记录需求；需要可核验的标准来源与版本 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
@@ -459,7 +459,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 164 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 165 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

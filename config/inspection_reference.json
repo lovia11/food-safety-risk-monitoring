@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "dataset_id": "inspection-reference",
-  "dataset_version": "2026.09-b3",
+  "dataset_version": "2026.09-b4",
   "dataset_status": "verified_reference",
-  "source_name": "国家市场监督管理总局食品补充检验方法数据库",
-  "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/",
+  "source_name": "国家市场监督管理总局食品安全抽检监测司标准栏目",
+  "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
   "source_date": null,
-  "collected_at": "2026-09-04T16:24:31+08:00",
-  "verified_at": "2026-09-04T16:24:31+08:00",
-  "description": "当前已纳入逐项核验的BJS 202209、BJS 201701和BJS 201710；数据通过版本化方式逐批扩充，不代表全部食品补充检验方法目录。",
+  "collected_at": "2026-09-04T16:56:04+08:00",
+  "verified_at": "2026-09-04T16:56:04+08:00",
+  "description": "当前已纳入逐项核验的BJS 202209、BJS 201701、BJS 201710和KJ201903；数据通过版本化方式逐批扩充，同时覆盖食品补充检验方法和食品快速检测方法，不代表全部现行检验方法目录。",
   "methods": [
     {
       "method_id": "bjs-202209",
@@ -60,6 +60,23 @@
       "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2017/art_0365495da2fa4ee782b888f0cacd0b5b.html",
       "source_date": "2017-11-17",
       "note": "依据BJS 201710正式方法全文逐项录入75种目标物；本Dataset仅记录检验方法事实，不建立RiskClue映射或商品违法结论。"
+    },
+    {
+      "method_id": "kj-201903",
+      "dataset_id": "inspection-reference",
+      "method_no": "KJ201903",
+      "method_name": "保健食品中巴比妥类化学成分的快速检测 胶体金免疫层析法",
+      "method_type": "rapid_kj",
+      "method_status": "current",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2019-09-27",
+      "effective_date": null,
+      "replaces_method_no": null,
+      "replaced_by_method_no": null,
+      "source_name": "市场监管总局2019年第41号公告",
+      "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2019/art_2a1de171556f40f2b8f5829fe9810086.html",
+      "source_date": "2019-09-27",
+      "note": "本方法为巴比妥类化学成分的胶体金免疫层析定性快速筛查方法；阳性结果应进一步确证。本Dataset的4条MethodSubstance仅记录方法正文表1明确列出的4种参考物质及其性能验证对象，不得解释为KJ201903仅能响应这4种巴比妥类化学成分。"
     }
   ],
   "substances": [
@@ -308,7 +325,11 @@
     {"method_id": "bjs-201710", "substance_id": "substance-cas-692-13-7", "source_label": "丁二胍", "source_cas_no": "692-13-7", "determination_role": "qualitative", "normalization_note": "", "ordinal": 72},
     {"method_id": "bjs-201710", "substance_id": "substance-cas-701-54-2", "source_label": "氨甲环酸", "source_cas_no": "701-54-2", "determination_role": "qualitative", "normalization_note": "", "ordinal": 73},
     {"method_id": "bjs-201710", "substance_id": "substance-cas-657-24-9", "source_label": "二甲双胍", "source_cas_no": "657-24-9", "determination_role": "qualitative", "normalization_note": "", "ordinal": 74},
-    {"method_id": "bjs-201710", "substance_id": "substance-cas-59-67-6", "source_label": "烟酸", "source_cas_no": "59-67-6", "determination_role": "qualitative", "normalization_note": "", "ordinal": 75}
+    {"method_id": "bjs-201710", "substance_id": "substance-cas-59-67-6", "source_label": "烟酸", "source_cas_no": "59-67-6", "determination_role": "qualitative", "normalization_note": "", "ordinal": 75},
+    {"method_id": "kj-201903", "substance_id": "substance-cas-57-44-3", "source_label": "巴比妥", "source_cas_no": "57-44-3", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 1},
+    {"method_id": "kj-201903", "substance_id": "substance-cas-50-06-6", "source_label": "苯巴比妥", "source_cas_no": "50-06-6", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 2},
+    {"method_id": "kj-201903", "substance_id": "substance-cas-57-43-2", "source_label": "异戊巴比妥", "source_cas_no": "57-43-2", "determination_role": "rapid_screen", "normalization_note": "", "ordinal": 3},
+    {"method_id": "kj-201903", "substance_id": "substance-cas-76-73-3", "source_label": "司可巴比妥钠", "source_cas_no": "76-73-3", "determination_role": "rapid_screen", "normalization_note": "KJ201903表1原文使用“司可巴比妥钠”，同时给出的英文名称为Secobarbital、CAS为76-73-3；当前知识库按来源CAS复用既有“司可巴比妥”Substance，保留原始source_label。该映射仅反映KJ201903来源记录与既有CAS身份的归一化，不据此推断不同盐型在其他法规或检验情境下必然等同。", "ordinal": 4}
   ],
   "method_applicabilities": [
     {"applicability_id": "bjs-202209-scope-01", "method_id": "bjs-202209", "substance_id": null, "scope_type": "include", "product_category": "压片糖果", "product_form": "", "ingredient_context": "", "source_scope_text": "压片糖果", "note": ""},
@@ -334,7 +355,13 @@
     {"applicability_id": "bjs-201710-scope-05", "method_id": "bjs-201710", "substance_id": null, "scope_type": "include", "product_category": "声称具有保健功效的食品", "product_form": "片剂", "ingredient_context": "", "source_scope_text": "片剂、口服液、硬胶囊、软胶囊类声称具有保健功效的食品", "note": ""},
     {"applicability_id": "bjs-201710-scope-06", "method_id": "bjs-201710", "substance_id": null, "scope_type": "include", "product_category": "声称具有保健功效的食品", "product_form": "口服液", "ingredient_context": "", "source_scope_text": "片剂、口服液、硬胶囊、软胶囊类声称具有保健功效的食品", "note": ""},
     {"applicability_id": "bjs-201710-scope-07", "method_id": "bjs-201710", "substance_id": null, "scope_type": "include", "product_category": "声称具有保健功效的食品", "product_form": "硬胶囊", "ingredient_context": "", "source_scope_text": "片剂、口服液、硬胶囊、软胶囊类声称具有保健功效的食品", "note": ""},
-    {"applicability_id": "bjs-201710-scope-08", "method_id": "bjs-201710", "substance_id": null, "scope_type": "include", "product_category": "声称具有保健功效的食品", "product_form": "软胶囊", "ingredient_context": "", "source_scope_text": "片剂、口服液、硬胶囊、软胶囊类声称具有保健功效的食品", "note": ""}
+    {"applicability_id": "bjs-201710-scope-08", "method_id": "bjs-201710", "substance_id": null, "scope_type": "include", "product_category": "声称具有保健功效的食品", "product_form": "软胶囊", "ingredient_context": "", "source_scope_text": "片剂、口服液、硬胶囊、软胶囊类声称具有保健功效的食品", "note": ""},
+    {"applicability_id": "kj-201903-scope-01", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "硬胶囊", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "kj-201903-scope-02", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "软胶囊", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "kj-201903-scope-03", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "丸剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "kj-201903-scope-04", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "片剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "kj-201903-scope-05", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "散剂", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""},
+    {"applicability_id": "kj-201903-scope-06", "method_id": "kj-201903", "substance_id": null, "scope_type": "include", "product_category": "保健食品", "product_form": "口服液", "ingredient_context": "", "source_scope_text": "本方法适用于硬胶囊、软胶囊、丸剂、片剂、散剂及口服液等保健食品中巴比妥类化学成分的快速测定", "note": ""}
   ],
   "substance_regulatory_contexts": []
 }

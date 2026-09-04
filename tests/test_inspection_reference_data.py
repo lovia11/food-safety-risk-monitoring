@@ -10,7 +10,7 @@ from src.runtime import read_json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
-DATASET_SOURCE_REFERENCE = "https://www.samr.gov.cn/spcjs/bcjyff/"
+DATASET_SOURCE_REFERENCE = "https://www.samr.gov.cn/spcjs/bz/"
 BJS_202209_SOURCE_REFERENCE = (
     "https://www.samr.gov.cn/spcjs/bz/cs/art/2022/"
     "art_46900b84fdad41d2ab711489f22c052b.html"
@@ -22,6 +22,10 @@ BJS_201701_SOURCE_REFERENCE = (
 BJS_201710_SOURCE_REFERENCE = (
     "https://www.samr.gov.cn/spcjs/bz/cs/art/2017/"
     "art_0365495da2fa4ee782b888f0cacd0b5b.html"
+)
+KJ_201903_SOURCE_REFERENCE = (
+    "https://www.samr.gov.cn/spcjs/xxfb/art/2019/"
+    "art_2a1de171556f40f2b8f5829fe9810086.html"
 )
 
 EXPECTED_BJS_202209_SUBSTANCES = [
@@ -190,11 +194,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
     def test_bjs_202209_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         self.assertEqual(payload["dataset_id"], "inspection-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-b3")
+        self.assertEqual(payload["dataset_version"], "2026.09-b4")
         self.assertEqual(payload["dataset_status"], "verified_reference")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
-        self.assertEqual(len(payload["methods"]), 3)
+        self.assertEqual(len(payload["methods"]), 4)
         method = next(
             item for item in payload["methods"] if item["method_id"] == "bjs-202209"
         )
@@ -261,7 +265,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
     def test_bjs_201701_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         methods = {item["method_id"]: item for item in payload["methods"]}
-        self.assertEqual(set(methods), {"bjs-202209", "bjs-201701", "bjs-201710"})
+        self.assertEqual(
+            set(methods),
+            {"bjs-202209", "bjs-201701", "bjs-201710", "kj-201903"},
+        )
         method = methods["bjs-201701"]
         self.assertEqual(method["method_no"], "BJS 201701")
         self.assertEqual(method["method_name"], "食品中西布曲明等化合物的测定")
@@ -351,8 +358,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         )
 
         self.assertEqual(len(payload["substances"]), 117)
-        self.assertEqual(len(payload["method_substances"]), 127)
-        self.assertEqual(len(payload["method_applicabilities"]), 24)
+        self.assertEqual(len(payload["method_substances"]), 131)
+        self.assertEqual(len(payload["method_applicabilities"]), 30)
         self.assertEqual(payload["substance_regulatory_contexts"], [])
 
     def test_bjs_201710_reference_contract_matches_verified_source_facts(self):
@@ -511,10 +518,118 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["methods"]), 3)
+        self.assertEqual(len(payload["methods"]), 4)
         self.assertEqual(len(payload["substances"]), 117)
-        self.assertEqual(len(payload["method_substances"]), 127)
-        self.assertEqual(len(payload["method_applicabilities"]), 24)
+        self.assertEqual(len(payload["method_substances"]), 131)
+        self.assertEqual(len(payload["method_applicabilities"]), 30)
+        self.assertEqual(payload["substance_regulatory_contexts"], [])
+
+    def test_kj_201903_reference_contract_matches_verified_source_facts(self):
+        payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
+        self.assertEqual(payload["dataset_version"], "2026.09-b4")
+        self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
+
+        methods = {item["method_id"]: item for item in payload["methods"]}
+        self.assertEqual(
+            set(methods),
+            {"bjs-202209", "bjs-201701", "bjs-201710", "kj-201903"},
+        )
+        method = methods["kj-201903"]
+        self.assertEqual(method["dataset_id"], "inspection-reference")
+        self.assertEqual(method["method_no"], "KJ201903")
+        self.assertEqual(
+            method["method_name"],
+            "保健食品中巴比妥类化学成分的快速检测 胶体金免疫层析法",
+        )
+        self.assertEqual(method["method_type"], "rapid_kj")
+        self.assertEqual(method["method_status"], "current")
+        self.assertEqual(method["publisher"], "国家市场监督管理总局")
+        self.assertEqual(method["published_date"], "2019-09-27")
+        self.assertIsNone(method["effective_date"])
+        self.assertIsNone(method["replaces_method_no"])
+        self.assertIsNone(method["replaced_by_method_no"])
+        self.assertEqual(method["source_name"], "市场监管总局2019年第41号公告")
+        self.assertEqual(method["source_reference"], KJ_201903_SOURCE_REFERENCE)
+        self.assertEqual(method["source_date"], "2019-09-27")
+        self.assertIn("阳性结果应进一步确证", method["note"])
+
+        substances_by_id = {
+            item["substance_id"]: item for item in payload["substances"]
+        }
+        kj_relations = [
+            item
+            for item in payload["method_substances"]
+            if item["method_id"] == "kj-201903"
+        ]
+        self.assertEqual(len(kj_relations), 4)
+        self.assertEqual([item["ordinal"] for item in kj_relations], [1, 2, 3, 4])
+        self.assertEqual(
+            [item["source_cas_no"] for item in kj_relations],
+            ["57-44-3", "50-06-6", "57-43-2", "76-73-3"],
+        )
+        self.assertEqual(
+            [item["substance_id"] for item in kj_relations],
+            [
+                "substance-cas-57-44-3",
+                "substance-cas-50-06-6",
+                "substance-cas-57-43-2",
+                "substance-cas-76-73-3",
+            ],
+        )
+        bjs_201710_substance_ids = {
+            item["substance_id"]
+            for item in payload["method_substances"]
+            if item["method_id"] == "bjs-201710"
+        }
+        self.assertTrue(
+            all(
+                item["substance_id"] in bjs_201710_substance_ids
+                for item in kj_relations
+            )
+        )
+        self.assertEqual(len(payload["substances"]), 117)
+        self.assertTrue(
+            all(item["determination_role"] == "rapid_screen" for item in kj_relations)
+        )
+
+        fourth = kj_relations[3]
+        self.assertEqual(fourth["source_label"], "司可巴比妥钠")
+        self.assertEqual(
+            substances_by_id[fourth["substance_id"]]["canonical_name"],
+            "司可巴比妥",
+        )
+        self.assertTrue(fourth["normalization_note"])
+        self.assertIn("司可巴比妥钠", fourth["normalization_note"])
+        self.assertIn("76-73-3", fourth["normalization_note"])
+
+        applicabilities = [
+            item
+            for item in payload["method_applicabilities"]
+            if item["method_id"] == "kj-201903"
+        ]
+        self.assertEqual(len(applicabilities), 6)
+        self.assertTrue(all(item["substance_id"] is None for item in applicabilities))
+        self.assertTrue(all(item["scope_type"] == "include" for item in applicabilities))
+        self.assertTrue(
+            all(item["product_category"] == "保健食品" for item in applicabilities)
+        )
+        self.assertEqual(
+            {item["product_form"] for item in applicabilities},
+            {"硬胶囊", "软胶囊", "丸剂", "片剂", "散剂", "口服液"},
+        )
+        self.assertTrue(
+            all(
+                item["source_scope_text"]
+                == "本方法适用于硬胶囊、软胶囊、丸剂、片剂、"
+                "散剂及口服液等保健食品中巴比妥类化学成分的快速测定"
+                for item in applicabilities
+            )
+        )
+
+        self.assertEqual(len(payload["methods"]), 4)
+        self.assertEqual(len(payload["substances"]), 117)
+        self.assertEqual(len(payload["method_substances"]), 131)
+        self.assertEqual(len(payload["method_applicabilities"]), 30)
         self.assertEqual(payload["substance_regulatory_contexts"], [])
 
     def test_verified_dataset_import_is_idempotent_with_exact_scoped_counts(self):
@@ -524,10 +639,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             store.initialize()
             expected = {
                 "dataset": 1,
-                "methods": 3,
+                "methods": 4,
                 "substances": 117,
-                "method_substances": 127,
-                "applicabilities": 24,
+                "method_substances": 131,
+                "applicabilities": 30,
                 "regulatory_contexts": 0,
             }
             self.assertEqual(store.import_inspection_config(REFERENCE_CONFIG), expected)
