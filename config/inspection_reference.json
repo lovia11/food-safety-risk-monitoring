@@ -3,8 +3,8 @@
   "dataset_id": "inspection-reference",
   "dataset_version": "2026.09-b1",
   "dataset_status": "verified_reference",
-  "source_name": "国家市场监督管理总局食品补充检验方法数据库",
-  "source_reference": "市场监管总局2022年第29号公告；BJS 202209官方方法全文",
+  "source_name": "市场监管总局2022年第29号公告",
+  "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2022/art_547b6bf10c8e4fa7ab052e250a1aa4b4.html",
   "source_date": "2022-09-10",
   "collected_at": "2026-09-04T15:16:29+08:00",
   "verified_at": "2026-09-04T15:16:29+08:00",
@@ -22,10 +22,10 @@
       "effective_date": null,
       "replaces_method_no": null,
       "replaced_by_method_no": null,
-      "source_name": "国家市场监督管理总局",
-      "source_reference": "BJS 202209《食品中双醋酚丁等19种化合物的测定》官方方法全文",
+      "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+      "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2022/art_46900b84fdad41d2ab711489f22c052b.html",
       "source_date": "2022-09-10",
-      "note": "依据官方方法全文录入；当前不建立任何RiskClue映射或非法添加结论。"
+      "note": "依据官方方法全文录入；官方方法数据库页面包含正式PDF附件；当前不建立任何RiskClue映射或非法添加结论。"
     }
   ],
   "substances": [

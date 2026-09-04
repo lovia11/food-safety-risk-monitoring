@@ -10,6 +10,14 @@ from src.runtime import read_json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
+DATASET_SOURCE_REFERENCE = (
+    "https://www.samr.gov.cn/spcjs/xxfb/art/2022/"
+    "art_547b6bf10c8e4fa7ab052e250a1aa4b4.html"
+)
+METHOD_SOURCE_REFERENCE = (
+    "https://www.samr.gov.cn/spcjs/bz/cs/art/2022/"
+    "art_46900b84fdad41d2ab711489f22c052b.html"
+)
 
 EXPECTED_SUBSTANCES = [
     ("阿米洛利", "2609-46-3"),
@@ -51,12 +59,20 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         self.assertEqual(payload["dataset_id"], "inspection-reference")
         self.assertEqual(payload["dataset_status"], "verified_reference")
+        self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
         self.assertEqual(len(payload["methods"]), 1)
         method = payload["methods"][0]
         self.assertEqual(method["method_id"], "bjs-202209")
         self.assertEqual(method["method_no"], "BJS 202209")
         self.assertEqual(method["method_status"], "current")
+        self.assertEqual(method["source_reference"], METHOD_SOURCE_REFERENCE)
+        self.assertTrue(
+            payload["source_reference"].startswith("https://www.samr.gov.cn/")
+        )
+        self.assertTrue(
+            method["source_reference"].startswith("https://www.samr.gov.cn/")
+        )
 
         substances = payload["substances"]
         self.assertEqual(len(substances), 19)
