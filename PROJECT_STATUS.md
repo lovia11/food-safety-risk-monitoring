@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-A2（Substance-Scoped Inspection Applicability）
+当前开发版本：v0.8-B1（First Verified Inspection Dataset）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列只新增 Inspection Reference schema、校验与导入基础并收紧数据完整性，不改变 v0.7 的 Product Workspace、Web、Pipeline 或风险规则。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1 只新增首个已核验方法数据集 BJS 202209，不改变 Product Workspace、Web、Pipeline 或风险规则。
 
 当前分支：`main`
 
@@ -43,9 +43,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 风险总览、商品监测、风险研判、采集任务 Web 页面 | 已接入真实数据；商品监测使用 SQLite Product API | `web/` |
 | 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
-| Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | 已实现并通过离线测试；尚无正式监管数据 | `src/inspection_reference.py`、`src/data_store.py` |
+| Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | 基础已完成；首个 verified dataset 仅含 BJS 202209 | `src/inspection_reference.py`、`src/data_store.py`、`config/inspection_reference.json` |
 
-当前测试集共有 160 项，其中 v0.8-A/A1/A2 包含 23 项 Inspection Reference contract、幂等/非删除导入、状态/所有权、事务和 v4/v5→v6 升级测试；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 162 项，其中 25 项覆盖 Inspection Reference contract、迁移/导入及 BJS 202209 正式数据事实；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -196,7 +196,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- v0.8-A 只有 Inspection Reference 数据结构、validator 和 SQLite import 基础；尚未导入任何正式 BJS/KJ/GB/T 数据，也没有 RiskClue→Substance、自动检测建议、Web/API 展示或商品级 Recommendation。
+- 正式 Inspection Reference 当前仅包含 BJS 202209，不代表全部食品补充检验方法目录；尚无其他 BJS/KJ/GB/T 数据，也没有 RiskClue→Substance、自动检测建议、Web/API 展示或商品级 Recommendation。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -205,7 +205,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `GEO-01`：采集商品页面声明产地；
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
-- `INSPECTION-01`：Foundation 已由 v0.8-A 完成；Verified Inspection Dataset（正式 BJS/KJ/GB/T 数据）计划在 v0.8-B 单独建设；
+- `INSPECTION-01`：Foundation 已由 v0.8-A 完成；v0.8-B1 已完成首个 Verified Method Dataset BJS 202209，其余方法仍需逐批核验；
 - `INSPECTION-02`：风险线索与目标化合物关联；
 - `INSPECTION-03`：目标化合物与检验方法/标准关联；
 - `INSPECTION-04`：商品检测建议生成；
