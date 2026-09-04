@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "bridge_id": "phase3-effect-risk-bridge",
+  "bridge_version": "2026.09-d2",
+  "description": "Phase 3功效线索到verified Risk Category的内部显式桥接。桥接按effect label与matched keyword精确匹配，不表示商品违法、实际含有目标物质，也不代表未配置关键词不存在监管风险。",
+  "mappings": [
+    {
+      "bridge_mapping_id": "jianfei-to-weight-loss",
+      "effect_label": "减脂",
+      "matched_keyword": "减肥",
+      "risk_category": "weight_loss",
+      "reference_mapping_id": "weight-loss-sibutramine-group-cn-2025",
+      "note": "“减肥”与当前verified Risk Mapping来源中的“宣称减肥功能食品”直接对应。该Bridge只完成内部taxonomy对齐，不继承或制造商品级违法结论。"
+    },
+    {
+      "bridge_mapping_id": "zhuangyang-to-male-function",
+      "effect_label": "男性相关",
+      "matched_keyword": "壮阳",
+      "risk_category": "male_function",
+      "reference_mapping_id": "male-function-nafei-lafei-group-cn-2025",
+      "note": "“壮阳”与当前verified Risk Mapping来源中的“补肾壮阳”等宣传直接对应。"
+    },
+    {
+      "bridge_mapping_id": "bushen-to-male-function",
+      "effect_label": "男性相关",
+      "matched_keyword": "补肾",
+      "risk_category": "male_function",
+      "reference_mapping_id": "male-function-nafei-lafei-group-cn-2025",
+      "note": "“补肾”与当前verified Risk Mapping来源中的“补肾壮阳”等宣传直接对应。"
+    }
+  ]
+}

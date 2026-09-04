@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D1.1 Harden Verified Knowledge Trace Identity 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D2 Evidence-to-Risk Taxonomy Bridge 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-D1.1 — Harden Verified Knowledge Trace Identity**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-D2 — Evidence-to-Risk Taxonomy Bridge**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1 首次以 SQLite 只读动态查询串起 Risk→Substance→MethodSubstance→Method→Applicability/RegulatoryContext，并显式输出 Group 与知识缺口；D1.1 强制 verified Reference 身份并按 target identity 聚合 provenance。它不是 InspectionRecommendation，不连接 Risk Analysis、`phase3_analysis`、Product、Web/API，不做 Group 完整展开、商品适用性判断或法律结论。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1/D1.1 建立并强化只读 Knowledge Trace。v0.8-D2 独立消费 Phase 3 `evidence_details`，以 `effect + matched_keyword` exact match 生成稳定 RiskSignal；当前只有 3 条 verified internal bridge，保留未桥接关键词和原始 `content_origin`。D2 不调用 KnowledgeResolver、不生成 InspectionRecommendation，不连接 Product、Web/API 或 Pipeline，也不做商品适用性判断或法律结论。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-D1.1 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-D2 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -115,6 +115,7 @@ MonitorTarget/关键词
 | `src/inspection_reference.py` | Inspection JSON contract、enum-like 值、规范化、引用/来源一致性校验 | 高，监管 Reference 边界 |
 | `src/risk_substance_reference.py` | Risk→Substance/Group JSON contract、XOR、来源等级与时间状态校验；不做推断 | 高，风险关联 Reference 边界 |
 | `src/inspection_knowledge.py` | 从 SQLite 组合只读 Knowledge Trace；保留 Group、来源与知识缺口，不做推荐或商品判断 | 高，知识链解释边界 |
+| `src/effect_risk_bridge.py` | 验证内部 Bridge config，并按 Phase 3 `effect + matched_keyword` 精确生成 RiskSignal 与 unmapped evidence；不调用 KnowledgeResolver | 高，Evidence→Risk taxonomy 边界 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
 | `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
@@ -186,6 +187,8 @@ RiskMappingDataset 1 ── N RiskSubstanceMapping N ── 0..1 InspectionSubst
 - Monitor 任务可能有 19 个候选，但只有前 2 个 Snapshot 完成详情/OCR，其余保持待采集状态，这是正常且必须如实展示的状态。
 
 D1 模块 API 只接受 `risk_category: str` 和可选的 `include_historical=False`，返回 `KnowledgeTrace`：`risk_labels`、`group_targets`、`substance_targets`、`unresolved_groups` 与 `knowledge_gaps`。Resolver 始终只读取 `dataset_status=verified_reference` 的 Risk Mapping；`include_historical` 只控制 temporal status。Group 按 `target_group_label`、Substance 按 `substance_id` 唯一输出，多条 Mapping 作为按 `mapping_id` 排序的 `mapping_evidence` 列表完整保留。未知 category 返回空 trace。缺口至少区分 `unresolved_group`、`no_concrete_substance` 与 `no_verified_method`。输入不接受 Product、OCR 或 ingredient 信息，因此 Applicability 只原样呈现 constraints，不能解释为已经匹配某个商品。
+
+D2 模块 API `bridge_analysis_evidence(analysis)` 只消费现有 `evidence_details`。每个 `(effect, matched_keyword)` 仅做 exact match，不做 category 整体映射、substring/regex/同义词/拼音/LLM 推断。同一 Risk Category 只输出一个 RiskSignal，`bridge_mapping_ids` 确定性排序，同一 Evidence unit 不重复；trigger evidence 原样保留 seller-managed 或 user-generated `content_origin`。未配置 keyword 以 `reason=no_verified_keyword_bridge` 显式进入 `unmapped_evidence`。D2 与 D1 完全分离，不查询 Method、Group/Substance target 或 InspectionRecommendation；`anti_fatigue` 当前尚无 Phase 3 detection bridge。
 
 ## 11. SQLite Tables
 
@@ -320,6 +323,10 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 当前 version 1，包含助眠、降压、降脂、减脂、男性相关五类字面词。命中只触发人工复核建议。修改后会改变分析结果，必须补规则测试并记录 config hash；不要添加没有业务依据的词来“提高命中数”。
 
+### `config/effect_risk_bridge.json`
+
+当前 schema version 1、Bridge 版本 `2026.09-d2`。正式 Mapping 严格只有 3 条：`减脂 + 减肥 → weight_loss`、`男性相关 + 壮阳 → male_function`、`男性相关 + 补肾 → male_function`。每条只保存内部 taxonomy 字段、note 与 `reference_mapping_id`，不复制官方 provenance；validator 同时核对 effect/keyword 归属、verified/current Risk Reference 身份和 Risk Category 一致性。其他现有 effect keyword 均不得自动桥接，未桥接 Evidence 必须显式保留。
+
 ### `config/monitor_targets.development.json`
 
 当前 schema version 2、`dataset_status=development_seed`。只能作为开发验证样本，不能在论文或 UI 中称为官方完整目录。
@@ -348,7 +355,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 225 项 `unittest`：v0.7 冻结基线为 137 项；D1/D1.1 共 19 项 Knowledge Trace 测试覆盖正式 C3 解析、verified Dataset 隔离、Group/Substance identity 与 evidence 聚合、动态 MethodSubstance JOIN、Applicability 隔离、RegulatoryContext、historical 过滤和 synthetic gaps；Risk persistence 另验证 verified Substance 引用、非 verified 拒绝及原子回滚。既有 Inspection、Risk-Substance、正式数据和前端测试均保持；v0.8-D1.1 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 253 项 `unittest`：v0.7 冻结基线为 137 项；D2 新增 28 项 Bridge 测试，覆盖正式 3 条配置、完整 cross-reference validator、exact keyword matching、RiskSignal/Evidence 去重、确定性排序、seller-managed/UGC 来源保留、显式 unmapped evidence、空输入和未知 effect；D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk-Substance、Phase 3、正式数据和前端测试均保持。v0.8-D2 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -413,7 +420,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法或管理界面，也不构成完整知识库；BJS 202405 仍待正式逐项核验。D1 查询 API/Resolver 只生成只读 Knowledge Trace。Risk-Substance 只有 3 条 Group 和 5 条来源点名的 Substance Mapping，覆盖范围很小且不构成完整 Group Expansion，也没有 Risk Analysis 桥接、InspectionRecommendation、商品适用性判定或 Web/API 展示。
+- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法或管理界面，也不构成完整知识库；BJS 202405 仍待正式逐项核验。D1 查询 API/Resolver 只生成只读 Knowledge Trace。Risk-Substance 只有 3 条 Group 和 5 条来源点名的 Substance Mapping；D2 只有 3 条 keyword-level Evidence→Risk Bridge，`anti_fatigue` 尚无 Phase 3 detection bridge，且 D1/D2 尚未组合。当前仍无 InspectionRecommendation、商品适用性判定或 Web/API 展示。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -432,7 +439,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
 | `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext，其余方法和监管语境必须逐批核验 |
-| `INSPECTION-02` | 风险线索与目标化合物关联 | C 阶段已完成首批 Verified Group/Substance Mapping；完整 Group Expansion 与分析桥接仍未实现，不得按 Method 清单或常识扩充 |
+| `INSPECTION-02` | 风险线索与目标化合物关联 | C 阶段已完成首批 Verified Group/Substance Mapping；D2 已完成 3 条 explicit keyword bridge；完整 Group Expansion、更多 lexical alignment 和 D1/D2 组合仍未实现，不得按 Method 清单或常识扩充 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | D1 已通过 SQLite 中的 MethodSubstance 动态生成只读 Knowledge Trace；商品级适用性和推荐仍未实现 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
 | `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | 仅记录需求；当前 UI 不显示不存在的字段或空标准卡片 |
@@ -467,6 +474,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 19. Risk Mapping 不得从 effect 词库、方法标题、RegulatoryContext、药理知识或 LLM 自动推断；正式数据必须逐条有来源。
 20. Substance target 必须引用已存在的 Inspection Substance；Group 只保存来源文字，不建表、不展开成员、不静默转换。
 21. Evidence Grade A/B/C 只表示来源证据强度，禁止解释或转换为风险分数、模型置信度、违法概率或检出概率。
+22. Evidence→Risk Bridge 必须按 `effect + matched_keyword` exact match；不得把 Phase 3 category 整体映射到 Risk，不得丢弃未桥接 keyword 或修改 `content_origin`，也不得在 D2 调用 KnowledgeResolver 或生成 Recommendation。
 
 Collector 核心改动至少要：运行全部离线测试、核查保留 fixture、执行最小真实淘宝 E2E、对比 Diagnostics/原图/OCR/Evidence，并说明相对 `collector-baseline-v0.2` 的行为变化。
 
