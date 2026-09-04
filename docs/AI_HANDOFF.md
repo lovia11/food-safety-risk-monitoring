@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D3 Evidence-to-Knowledge Trace Composition 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D4 Product Context & Method Applicability Evaluation 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-D3 — Evidence-to-Knowledge Trace Composition**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-D4 — Product Context & Method Applicability Evaluation**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1/D1.1 建立并强化只读 Knowledge Trace。v0.8-D2 独立消费 Phase 3 `evidence_details`，以 `effect + matched_keyword` exact match 生成稳定 RiskSignal；当前只有 3 条 verified internal bridge，保留未桥接关键词和原始 `content_origin`。v0.8-D3 严格将 D2 的唯一 RiskSignal 交给 D1 Resolver，首次生成完整 Evidence→Risk→Inspection Knowledge 组合结果；Bridge 的 `reference_mapping_id` 用于核对当前 SQLite KnowledgeTrace，缺失时返回 `composition_gaps`，不自动导入、不补数据也不中断解析。D3 不生成 InspectionRecommendation，不判断 seller/UGC 资格或商品适用性，不推荐方法，也不连接 Product、Web/API 或 Pipeline。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1/D1.1 建立并强化只读 Knowledge Trace；v0.8-D2 建立 exact Evidence-to-Risk Bridge；v0.8-D3 组合 Evidence→Risk→Inspection Knowledge。v0.8-D4 首次引入调用者显式确认的 `ProductInspectionContext`，对 D3 Method 的 Method-level 与当前 Substance-scoped Applicability 做 exact evaluation，输出 `applicable`、`conditional`、`not_applicable` 或 `insufficient_context`。缺失 category/form/ingredient 信息时不猜测，ingredient context 必须完整字符串明确确认；Method status 与 Applicability 分离，RegulatoryContext 不参与裁决。D4 仍不是 InspectionRecommendation，不判断 seller/UGC 资格、不推荐方法，也不连接 Product、Web/API 或 Pipeline。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-D3 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-D4 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -117,6 +117,7 @@ MonitorTarget/关键词
 | `src/inspection_knowledge.py` | 从 SQLite 组合只读 Knowledge Trace；保留 Group、来源与知识缺口，不做推荐或商品判断 | 高，知识链解释边界 |
 | `src/effect_risk_bridge.py` | 验证内部 Bridge config，并按 Phase 3 `effect + matched_keyword` 精确生成 RiskSignal 与 unmapped evidence；不调用 KnowledgeResolver | 高，Evidence→Risk taxonomy 边界 |
 | `src/inspection_signal_trace.py` | 严格组合 D2 RiskSignal 与 D1 KnowledgeTrace；从 validated Bridge config 读取 Reference ID，并将 Bridge↔SQLite 不一致显式输出为 composition gap | 高，Evidence→Knowledge 组合边界 |
+| `src/inspection_applicability.py` | 消费 D3 与显式 ProductInspectionContext，对 Method-level/当前 Substance-scoped Applicability 做 exact evaluation；保留 gaps，不抽取上下文、不推荐方法 | 高，商品上下文适用性边界 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
 | `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
@@ -192,6 +193,8 @@ D1 模块 API 只接受 `risk_category: str` 和可选的 `include_historical=Fa
 D2 模块 API `bridge_analysis_evidence(analysis)` 只消费现有 `evidence_details`。每个 `(effect, matched_keyword)` 仅做 exact match，不做 category 整体映射、substring/regex/同义词/拼音/LLM 推断。同一 Risk Category 只输出一个 RiskSignal，`bridge_mapping_ids` 确定性排序，同一 Evidence unit 不重复；trigger evidence 原样保留 seller-managed 或 user-generated `content_origin`。未配置 keyword 以 `reason=no_verified_keyword_bridge` 显式进入 `unmapped_evidence`。D2 与 D1 完全分离，不查询 Method、Group/Substance target 或 InspectionRecommendation；`anti_fatigue` 当前尚无 Phase 3 detection bridge。
 
 D3 模块 API `InspectionSignalTraceResolver(data_store).resolve_analysis(analysis, include_historical=False)` 先且只调用 D2 Bridge，再对其每个唯一 `risk_category` 调用 D1 Resolver。输出 `InspectionSignalTraceResult`：`bridge_id`、`bridge_version`、`risk_knowledge_signals`、原样继承的 `unmapped_evidence` 与 `composition_gaps`。每个 RiskKnowledgeSignal 保留 D2 的 `bridge_mapping_ids` 和完整 `trigger_evidence`，从 validated Bridge config 按 Mapping ID 读取、去重并排序 `reference_mapping_ids`，同时直接嵌入 D1 `KnowledgeTrace.to_dict()`，不重定义 Substance/Method/Applicability/RegulatoryContext contract。若 Bridge Reference ID 未出现在 trace 的 Group/Substance `mapping_evidence` 中，RiskSignal 与实际 trace 仍保留，并按 Risk Category + Reference ID 聚合输出 `bridge_reference_not_in_knowledge_trace`；这表示 stale/partial SQLite 运行环境缺口，不是 500 错误。`include_historical` 只透传 D1，不改变只能引用 current Mapping 的 D2 Bridge。
+
+D4 模块 API `evaluate_signal_trace(signal_trace, product_context)` 只消费已有 D3 result，不重新调用 Phase 3、D2 或 D1。`ProductInspectionContext` 的 `product_category`、`product_form` 和 `confirmed_ingredient_contexts` 必须由调用者显式确认；`None`/空列表是合法未知状态，`context_evidence` 只保留 provenance，不用于 seller/UGC 资格判断。Reference row 的 category/form 非空时只做完全相等，ingredient 非空时只有完整字符串已出现在 confirmed list 才算 match；未确认 ingredient 是 unresolved 而不是 mismatch。Method-level row 的 `substance_id=None`，Substance-scoped row 只作用于当前 Method/Substance。confirmed exclude 优先得到 `not_applicable`；include、conditional 和 unresolved constraints 按保守顺序聚合为四种状态。`not_applicable` 只表示当前已知 Reference applicability 未覆盖或有明确 exclude，不表示方法在科学上绝对不可用。Method lifecycle status 原样保留，RegulatoryContext 不参与 D4 裁决；D1 knowledge gaps 与 D3 composition gaps 都继续输出。D4 不生成 InspectionRecommendation 或方法优先级。
 
 ## 11. SQLite Tables
 
@@ -358,7 +361,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 277 项 `unittest`：v0.7 冻结基线为 137 项；D3 新增 24 项 Composition 测试，覆盖完整 D2→D1 调用、Reference ID config lookup/去重、Evidence provenance、unmapped evidence、D1 contract 保留、historical 透传、stale SQLite gap、同 Reference 缺口聚合、确定性顺序及 schema version 7；D2 的 28 项 Bridge 测试、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk-Substance、Phase 3、正式数据和前端测试均保持。v0.8-D3 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 303 项 `unittest`：v0.7 冻结基线为 137 项；D4 新增 26 项 Applicability 测试，覆盖显式 context contract、正式 BJS 201701/201710 exact category/form、ingredient 确认、include/conditional/exclude 聚合、Substance-scoped 隔离、Method status/RegulatoryContext 边界、gaps 保留、确定性顺序及 schema version 7；D3 的 24 项 Composition、D2 的 28 项 Bridge、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk-Substance、Phase 3、正式数据和前端测试均保持。v0.8-D4 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -423,7 +426,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法或管理界面，也不构成完整知识库；BJS 202405 仍待正式逐项核验。D1 查询 API/Resolver 只生成只读 Knowledge Trace。Risk-Substance 只有 3 条 Group 和 5 条来源点名的 Substance Mapping；D2 只有 3 条 keyword-level Evidence→Risk Bridge，`anti_fatigue` 尚无 Phase 3 detection bridge。D3 已组合 D2 与 D1，但只输出只读 trace 与运行环境一致性缺口；当前仍无 InspectionRecommendation、seller/UGC 资格判断、商品适用性判定、方法推荐或 Web/API 展示。
+- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法或管理界面，也不构成完整知识库；BJS 202405 仍待正式逐项核验。D1 查询 API/Resolver 生成只读 Knowledge Trace，D3 组合 D2 与 D1，D4 只对调用者已确认的结构化上下文做 exact Applicability evaluation。当前没有商品 category/form/ingredient 自动抽取，RegulatoryContext 不参与 Applicability，`not_applicable` 不是科学绝对不可用；仍无 InspectionRecommendation、seller/UGC 资格判断、方法推荐或 Web/API 展示。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -443,7 +446,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
 | `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext，其余方法和监管语境必须逐批核验 |
 | `INSPECTION-02` | 风险线索与目标化合物关联 | C 阶段已完成首批 Verified Group/Substance Mapping；D2 已完成 3 条 explicit keyword bridge，D3 已完成 D2→D1 组合；完整 Group Expansion 与更多 lexical alignment 仍未实现，不得按 Method 清单或常识扩充 |
-| `INSPECTION-03` | 目标化合物与检验方法/标准关联 | D1 已通过 SQLite 中的 MethodSubstance 动态生成只读 Knowledge Trace，D3 已在不建立 Risk→Method 捷径的前提下组合使用；商品级适用性和推荐仍未实现 |
+| `INSPECTION-03` | 目标化合物与检验方法/标准关联 | D1 已动态生成只读 Knowledge Trace，D3 已完成组合，D4 已基于显式 ProductInspectionContext 完成保守 exact Applicability evaluation；上下文自动抽取和推荐仍未实现 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
 | `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | 仅记录需求；当前 UI 不显示不存在的字段或空标准卡片 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
@@ -479,6 +482,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 21. Evidence Grade A/B/C 只表示来源证据强度，禁止解释或转换为风险分数、模型置信度、违法概率或检出概率。
 22. Evidence→Risk Bridge 必须按 `effect + matched_keyword` exact match；不得把 Phase 3 category 整体映射到 Risk，不得丢弃未桥接 keyword 或修改 `content_origin`，也不得在 D2 调用 KnowledgeResolver 或生成 Recommendation。
 23. D3 必须先调用 D2，再仅对 D2 输出的唯一 Risk Category 调用 D1；Reference ID 必须按 Bridge Mapping ID 从 validated config 读取，SQLite 缺失时输出 composition gap，不得猜测、自动导入或隐藏缺口。
+24. D4 只消费 D3 和显式 ProductInspectionContext；category/form/ingredient 只能 exact match，未确认信息必须保持 unresolved。Method-level 与 Substance-scoped constraints 不得混淆，Method status 和 RegulatoryContext 不得改写 Applicability，也不得输出 Recommendation 或优先级。
 
 Collector 核心改动至少要：运行全部离线测试、核查保留 fixture、执行最小真实淘宝 E2E、对比 Diagnostics/原图/OCR/Evidence，并说明相对 `collector-baseline-v0.2` 的行为变化。
 
@@ -493,7 +497,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 277 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 303 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；
