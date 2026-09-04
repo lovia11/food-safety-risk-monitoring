@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-D2（Evidence-to-Risk Taxonomy Bridge）
+当前开发版本：v0.8-D3（Evidence-to-Knowledge Trace Composition）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data；v0.8-D1/D1.1 建立并强化只读 Knowledge Trace。v0.8-D2 新增独立 Evidence-to-Risk taxonomy bridge，只按 Phase 3 `evidence_details` 中的 `effect + matched_keyword` 精确匹配：当前正式配置仅有“减脂+减肥→weight_loss”“男性相关+壮阳→male_function”“男性相关+补肾→male_function”3 条内部 Bridge，未桥接关键词显式保留，`content_origin` 原样保留。D2 不调用 KnowledgeResolver、不生成 InspectionRecommendation，也不接入 Product Workspace、Web 或 Pipeline。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data；v0.8-D1/D1.1 建立并强化只读 Knowledge Trace。v0.8-D2 新增独立 Evidence-to-Risk taxonomy bridge，只按 Phase 3 `evidence_details` 中的 `effect + matched_keyword` 精确匹配：当前正式配置仅有“减脂+减肥→weight_loss”“男性相关+壮阳→male_function”“男性相关+补肾→male_function”3 条内部 Bridge，未桥接关键词显式保留，`content_origin` 原样保留。v0.8-D3 首次按 D2 RiskSignal 的唯一 `risk_category` 调用 D1 Resolver，组合完整 Evidence→Risk→Inspection Knowledge 链；`reference_mapping_id` 用于核对 Bridge config 与当前 SQLite KnowledgeTrace，stale/missing Reference 以 `composition_gaps` 显式返回而不终止解析。D3 仍不生成 InspectionRecommendation，不判断 seller/UGC 资格或 Method 商品适用性，不做方法推荐，也不接入 Product Workspace、Web/API 或 Pipeline。
 
 当前分支：`main`
 
@@ -47,8 +47,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | Risk→Substance/Group 独立 Reference Data | schema version 1；正式数据共 8 条：保留 3 条 A/current Group Mapping，新增 5 条同级别 Substance Mapping，具体目标仅为来源点名且已存在的西布曲明、西地那非、他达拉非；不按方法目标物清单推断其他 Group 成员 | `src/risk_substance_reference.py`、`src/data_store.py`、`config/risk_substance_reference.json` |
 | Inspection Knowledge Trace | 以 SQLite 为运行时查询索引且只消费 verified Risk Dataset，动态执行 Risk Mapping→Substance→MethodSubstance→Method；Group/Substance 按 identity 唯一输出，多来源保存在 `mapping_evidence` 列表，并分别挂载 Applicability 与 RegulatoryContext；Group 保持 `partial`，缺口显式输出，不排序推荐、不判断商品适用性或违法性 | `src/inspection_knowledge.py`、`src/data_store.py` |
 | Evidence-to-Risk Taxonomy Bridge | 按 Phase 3 Evidence 的 `effect + matched_keyword` exact match 生成唯一 RiskSignal；仅含 3 条 verified internal bridge，保留 seller-managed/UGC `content_origin` 与未桥接证据；不按 category 整体映射，不调用 KnowledgeResolver、不生成 InspectionRecommendation；`anti_fatigue` 尚无 Phase 3 detection bridge | `src/effect_risk_bridge.py`、`config/effect_risk_bridge.json` |
+| Evidence-to-Knowledge Trace Composition | 严格执行 Phase 3 Evidence→D2 RiskSignal→D1 KnowledgeTrace；完整继承 trigger/unmapped evidence，按 Bridge Mapping 读取并去重 `reference_mapping_ids`，核对 SQLite trace 中实际出现的 Risk Mapping；缺失时保留 RiskSignal 与实际 KnowledgeTrace，并输出聚合的 `composition_gaps` | `src/inspection_signal_trace.py` |
 
-当前测试集共有 253 项，其中 D2 新增 28 项 Bridge 测试，覆盖正式 3 条配置、交叉引用 validator、exact keyword matching、RiskSignal 去重、确定性 Mapping 排序、seller-managed/UGC 来源保留、显式 unmapped evidence 与空/未知输入；D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk Reference、Phase 3 测试继续保留。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 277 项，其中 D3 新增 24 项 Composition 测试，覆盖 D2→D1 调用链、Reference ID config lookup/去重、Evidence provenance、unmapped evidence、D1 contract 保留、historical 透传、stale SQLite gap、同 Reference 缺口聚合、确定性排序及 schema version 7；D2 的 28 项 Bridge 测试、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk Reference、Phase 3 测试继续保留。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -201,7 +202,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping；D2 也只有 3 条 keyword-level Bridge，且 `anti_fatigue` 尚无 Phase 3 detection bridge。D1/D2 仍未组合，不做完整 Group Expansion、商品范围匹配、方法推荐或法律判断。BJS 202405 尚未逐项核验和导入，也没有 Web/API 展示或商品级 Recommendation。
+- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping；D2 也只有 3 条 keyword-level Bridge，且 `anti_fatigue` 尚无 Phase 3 detection bridge。D3 只完成只读 Evidence→Risk→Knowledge 组合，不做完整 Group Expansion、seller/UGC 资格判断、商品范围匹配、方法推荐或法律判断。BJS 202405 尚未逐项核验和导入，也没有 Web/API 展示或商品级 Recommendation。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -211,8 +212,8 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `GEO-02`：采集卖家所在省市；
 - `GEO-03`：候选商品按地区均衡选择；
 - `INSPECTION-01`：Foundation 已由 v0.8-A 完成；v0.8-B1—B5 已逐批完成三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext 的 Verified Data，其余方法和监管语境仍需逐批核验；
-- `INSPECTION-02`：C 阶段已完成首批 Verified Risk→Group/Substance 数据，D2 已完成首批 3 条 Phase 3 Evidence keyword bridge；完整 Group Expansion 与更多 lexical alignment 仍未实现；
-- `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace；商品级方法适用性与 Recommendation 仍未实现；
+- `INSPECTION-02`：C 阶段已完成首批 Verified Risk→Group/Substance 数据，D2 已完成首批 3 条 Phase 3 Evidence keyword bridge，D3 已组合 Evidence→Risk→Knowledge；完整 Group Expansion 与更多 lexical alignment 仍未实现；
+- `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace，D3 已在不引入 Risk→Method 捷径的前提下完成组合；商品级方法适用性与 Recommendation 仍未实现；
 - `INSPECTION-04`：商品检测建议生成；
 - `INSPECTION-05`：最终结果增加产品名、链接、可能风险、建议检测成分和相关标准；
 - 改进人工登录/验证的 Session UX；
@@ -220,6 +221,6 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 只通过既有外键关系动态生成 Knowledge Trace；v0.8-D2 只把 3 个明确 Phase 3 `effect + matched_keyword` 对齐到稳定 Risk Category。D1 与 D2 尚未组合，不新增 Risk→Method 持久关系。不得根据 Method 目标物清单推断 Group 成员。BJS 202405、完整 Group→Substance 展开、商品级 InspectionRecommendation 及 `INSPECTION-05` 仍为 planned / not implemented。
+`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 只通过既有外键关系动态生成 Knowledge Trace；v0.8-D2 只把 3 个明确 Phase 3 `effect + matched_keyword` 对齐到稳定 Risk Category；v0.8-D3 严格复用两者，生成可审计的 Evidence→Risk→Inspection Knowledge 组合结果，并对 Bridge Reference 与 SQLite trace 不一致输出 composition gap。D3 不新增 Risk→Method 持久关系。不得根据 Method 目标物清单推断 Group 成员。BJS 202405、完整 Group→Substance 展开、商品级 InspectionRecommendation 及 `INSPECTION-05` 仍为 planned / not implemented。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
