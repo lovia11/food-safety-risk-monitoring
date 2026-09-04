@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-D4（Product Context & Method Applicability Evaluation）
+当前开发版本：v0.8-D5（Product-level Inspection Recommendation）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data；v0.8-D1/D1.1 建立并强化只读 Knowledge Trace；v0.8-D2 建立独立 Evidence-to-Risk taxonomy bridge；v0.8-D3 首次组合完整 Evidence→Risk→Inspection Knowledge 链。v0.8-D4 新增调用者显式确认的 `ProductInspectionContext`，只对 D3 中每个 Substance/Method 的 Method-level 与当前 Substance-scoped Applicability 做 exact evaluation，输出 `applicable`、`conditional`、`not_applicable` 或 `insufficient_context`。ingredient context 必须被完整字符串明确确认；缺失信息不推断。D4 保留 Method status、D1 knowledge gaps 与 D3 composition gaps，RegulatoryContext 不参与裁决；仍不生成 InspectionRecommendation、不推荐方法、不判断 seller/UGC 资格，也不接入 Product Workspace、Web/API 或 Pipeline。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data；v0.8-D1/D1.1 建立并强化只读 Knowledge Trace；v0.8-D2 建立独立 Evidence-to-Risk taxonomy bridge；v0.8-D3 首次组合完整 Evidence→Risk→Inspection Knowledge 链；v0.8-D4 新增调用者显式确认的 `ProductInspectionContext` 并保守评估 Method Applicability。v0.8-D5 首次形成商品级监管辅助建议：只把 seller-managed 证据支持且 current Method 在显式 Product Context 下为 `applicable` 或 `conditional` 的方法放入 `suggested_methods`；UGC-only 线索仅作辅助复核，composition gap 阻断正式建议。RegulatoryContext 原样保留且不作法律裁决，结果不表示商品实际含有任何化合物。D5 仍不自动识别商品 context，尚未接入 Pipeline、API、Web，也未持久化 Recommendation。
 
 当前分支：`main`
 
@@ -49,8 +49,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | Evidence-to-Risk Taxonomy Bridge | 按 Phase 3 Evidence 的 `effect + matched_keyword` exact match 生成唯一 RiskSignal；仅含 3 条 verified internal bridge，保留 seller-managed/UGC `content_origin` 与未桥接证据；不按 category 整体映射，不调用 KnowledgeResolver、不生成 InspectionRecommendation；`anti_fatigue` 尚无 Phase 3 detection bridge | `src/effect_risk_bridge.py`、`config/effect_risk_bridge.json` |
 | Evidence-to-Knowledge Trace Composition | 严格执行 Phase 3 Evidence→D2 RiskSignal→D1 KnowledgeTrace；完整继承 trigger/unmapped evidence，按 Bridge Mapping 读取并去重 `reference_mapping_ids`，核对 SQLite trace 中实际出现的 Risk Mapping；缺失时保留 RiskSignal 与实际 KnowledgeTrace，并输出聚合的 `composition_gaps` | `src/inspection_signal_trace.py` |
 | Product Context & Method Applicability Evaluation | 消费既有 D3 结果和显式 `ProductInspectionContext`，对 Method-level 与当前 Substance-scoped 的 include/exclude/conditional constraints 做 exact match；缺少可能相关的 category/form/ingredient 信息时返回 `insufficient_context`，不自动抽取上下文、不使用 RegulatoryContext 裁决、不推荐方法 | `src/inspection_applicability.py` |
+| Product-level Inspection Recommendation | 严格组合 D3 trace 与 D4 assessment，保留商品身份、页面证据、Group/Substance、来源、RegulatoryContext 和全部 gaps；seller-managed 才能进入正式 `suggest_testing` 判断，UGC-only 仅为辅助复核，且只有 current + applicable/conditional Method 进入 `suggested_methods` | `src/inspection_recommendation.py` |
 
-当前测试集共有 303 项，其中 D4 新增 26 项 Applicability 测试，覆盖 context contract、正式 BJS 201701/201710 exact category/form 范围、ingredient 明确确认、include/conditional/exclude 聚合、Substance-scoped 隔离、Method status 与 RegulatoryContext 边界、gaps 保留、确定性排序及 schema version 7；D3 的 24 项 Composition、D2 的 28 项 Bridge、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk Reference、Phase 3 测试继续保留。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 332 项，其中 D5 新增 29 项 Recommendation 测试，覆盖商品身份、seller/UGC/mixed 证据资格、五种 Substance follow-up 状态、current/conditional/not-applicable/non-current Method 分流、composition/knowledge gaps、RegulatoryContext 边界、正式 weight-loss 链、确定性排序、固定 disclaimer 与 schema version 7；D4 的 26 项 Applicability、D3 的 24 项 Composition、D2 的 28 项 Bridge、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk Reference、Phase 3 测试继续保留。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -203,7 +204,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping；D2 也只有 3 条 keyword-level Bridge，且 `anti_fatigue` 尚无 Phase 3 detection bridge。D4 只评估调用者已确认的结构化商品上下文；当前没有商品类别、剂型或 ingredient context 自动抽取，`not_applicable` 只表示已知 Reference 范围未覆盖而非科学上绝对不可用。仍不做完整 Group Expansion、seller/UGC 资格判断、方法推荐或法律判断。BJS 202405 尚未逐项核验和导入，也没有 Web/API 展示或商品级 Recommendation。
+- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping；D2 也只有 3 条 keyword-level Bridge，且 `anti_fatigue` 尚无 Phase 3 detection bridge。D4 只评估调用者已确认的结构化商品上下文；当前没有商品类别、剂型或 ingredient context 自动抽取，`not_applicable` 只表示已知 Reference 范围未覆盖而非科学上绝对不可用。D5 只在内存中生成监管辅助建议，不能解释为商品实际含有目标物、违法认定或实验室检出结论。仍不做完整 Group Expansion 或自动法律判断；BJS 202405 尚未逐项核验和导入，Recommendation 也没有接入 Pipeline、API、Web 或持久化。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -214,14 +215,14 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `GEO-03`：候选商品按地区均衡选择；
 - `INSPECTION-01`：Foundation 已由 v0.8-A 完成；v0.8-B1—B5 已逐批完成三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext 的 Verified Data，其余方法和监管语境仍需逐批核验；
 - `INSPECTION-02`：C 阶段已完成首批 Verified Risk→Group/Substance 数据，D2 已完成首批 3 条 Phase 3 Evidence keyword bridge，D3 已组合 Evidence→Risk→Knowledge；完整 Group Expansion 与更多 lexical alignment 仍未实现；
-- `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace，D3 已完成组合，D4 已基于显式 ProductInspectionContext 实现保守的 exact Applicability evaluation；商品上下文自动提取和 Recommendation 仍未实现；
-- `INSPECTION-04`：商品检测建议生成；
-- `INSPECTION-05`：最终结果增加产品名、链接、可能风险、建议检测成分和相关标准；
+- `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace，D3 已完成组合，D4 已基于显式 ProductInspectionContext 实现保守的 exact Applicability evaluation；商品上下文自动提取仍未实现；
+- `INSPECTION-04`：D5 已完成纯内存商品级监管辅助建议生成；Pipeline/API/Web 接入与持久化仍未实现；
+- `INSPECTION-05`：D5 输出 contract 已包含产品名、链接、可能风险、建议关注/检测成分和相关标准；当前 UI 尚未接入；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 通过既有外键关系动态生成 Knowledge Trace；v0.8-D2 把 3 个明确 Phase 3 `effect + matched_keyword` 对齐到稳定 Risk Category；v0.8-D3 严格组合两者并核对 Bridge Reference；v0.8-D4 仅用调用者明确提供的 category/form/ingredient context 对既有 Applicability 做 exact evaluation。D4 不新增 schema 或 Risk→Method 持久关系，也不把 Method status、RegulatoryContext 或 `not_applicable` 转换为推荐或科学绝对结论。BJS 202405、完整 Group→Substance 展开、商品级 InspectionRecommendation 及 `INSPECTION-05` 仍为 planned / not implemented。
+`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 通过既有外键关系动态生成 Knowledge Trace；v0.8-D2 把 3 个明确 Phase 3 `effect + matched_keyword` 对齐到稳定 Risk Category；v0.8-D3 严格组合两者并核对 Bridge Reference；v0.8-D4 仅用调用者明确提供的 category/form/ingredient context 对既有 Applicability 做 exact evaluation；v0.8-D5 基于这些既有结果生成纯内存的商品级监管辅助建议，并明确 seller/UGC、Method lifecycle、Applicability 与 gaps 边界。D5 不新增 schema 或持久关系，也不把 Method status、RegulatoryContext 或页面线索转换为实际含有、违法或检出结论。BJS 202405、完整 Group→Substance 展开、Recommendation 的 Pipeline/API/Web 接入与持久化仍为 planned / not implemented。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
