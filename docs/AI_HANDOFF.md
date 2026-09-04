@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-C1 Risk-Substance Mapping Foundation 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-C2 First Verified Risk Mapping Dataset 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-C1 — Risk-Substance Mapping Foundation**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-C2 — First Verified Risk Mapping Dataset**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C1 将 schema 升至 version 7，只建立独立 Risk→Substance/Group JSON contract、两张空表和显式事务化导入。当前没有正式 Risk Mapping、Risk Analysis 桥接、Risk→Method 关系或推荐链。
+- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C1 将 schema 升至 version 7，建立独立 Risk→Substance/Group contract、表和显式事务化导入；v0.8-C2 首次加入 3 条经核验的 A 级 current Risk→Group Mapping，只覆盖 `weight_loss`、`male_function`、`anti_fatigue`。当前不展开 Group，不连接 Risk Analysis，没有 Risk→Method 捷径、Recommendation 或 Web/API 展示。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -22,7 +22,7 @@
 Establish Product Monitoring Workspace v0.7
 ```
 
-v0.8-C1 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
+v0.8-C2 当前提交应以本地 `git rev-parse HEAD` 核查，尚未建立 tag。v0.7 最终冻结提交由 `product-workspace-v0.7` tag 指向；v0.6 数据与 Query 策略基线仍由 `reference-data-v0.6` 指向。
 
 ## 3. Stable Tags
 
@@ -328,9 +328,9 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 当前是 `verified_reference`，版本 `2026.09-b5`，包含逐项核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 和 GB/T 45443-2025：5 个 Method、117 个唯一 Substance、132 条 MethodSubstance、37 条 Applicability、1 个 RegulatoryContext。GB/T 45443 是首个 `national_standard_gbt`，复用 BJS 201710 已建立的褪黑素实体并记录定量检测关系；它是正常质量/含量检测标准，不是非法添加补充检验方法。褪黑素监管语境严格限定于相应保健食品原料目录、产品要求及自 2021-03-01 起的有效情形，不能外推至普通食品或任意商品。该数据集不是全部现行检验方法或全部监管知识；当前没有任何正式 RiskClue→Substance Mapping、InspectionRecommendation 或 Web/API 展示。
 
-### Risk-Substance config
+### `config/risk_substance_reference.json`
 
-v0.8-C1 不创建任何正式或默认 Risk Mapping 配置文件。测试只使用 synthetic fixture；不能从 `effect_keywords.json`、Inspection 方法标题、RegulatoryContext、药理知识或模型常识生成映射。
+当前是 `verified_reference`，版本 `2026.09-c2`，只包含 3 条由市场监管总局官方公开来源明确支持的 A 级、`current_official_guidance`、current Risk→Group Mapping：`weight_loss`→“西布曲明及其系列衍生物”，`male_function`→“那非类、拉非类物质”，`anti_fatigue`→“那非类、拉非类物质”。这些关系只表示监管筛查线索与建议关注 Group 的来源关系，不表示具体商品检出或实际含有相关物质。Group 不展开为 Substance；不能从 `effect_keywords.json`、Inspection 方法标题、RegulatoryContext、药理知识或模型常识扩充映射。
 
 ### `.gitignore`
 
@@ -344,7 +344,7 @@ v0.8-C1 不创建任何正式或默认 Risk Mapping 配置文件。测试只使�
 
 ## 16. Tests
 
-当前共有 197 项 `unittest`：v0.7 冻结基线为 137 项；29 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及三项 BJS、KJ201903、GB/T 45443-2025 和褪黑素监管语境；31 项覆盖 Risk-Substance contract、XOR、证据等级/时间约束、外部 Substance FK、显式 CLI 导入、幂等/回滚和 v6→v7 数据保留。现有 13 项前端测试仍保持不变；v0.8-C1 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 203 项 `unittest`：v0.7 冻结基线为 137 项；29 项覆盖 Inspection contract、引用完整性、provenance、迁移/导入以及三项 BJS、KJ201903、GB/T 45443-2025 和褪黑素监管语境；33 项覆盖 Risk-Substance contract、XOR、证据等级/时间约束、外部 Substance FK、显式 CLI 导入、幂等/回滚和 v6→v7 数据保留；4 项独立覆盖首批正式 Risk Mapping 的精确事实及与 Inspection 隔离的幂等导入。现有 13 项前端测试仍保持不变；v0.8-C2 没有运行或新增真实淘宝/OCR/浏览器验收。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -409,7 +409,7 @@ v0.8-C1 不创建任何正式或默认 Risk Mapping 配置文件。测试只使�
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法、查询 API 或管理界面，也不构成完整知识库；Risk-Substance 只有 schema/import foundation 和 synthetic tests，没有正式 Mapping、Risk Analysis 桥接、InspectionRecommendation 或 Web/API 展示。
+- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法、查询 API 或管理界面，也不构成完整知识库；Risk-Substance 只有 3 条正式 Group Mapping，覆盖范围很小且没有 Group→Substance 展开、Risk Analysis 桥接、InspectionRecommendation 或 Web/API 展示。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -428,7 +428,7 @@ v0.8-C1 不创建任何正式或默认 Risk Mapping 配置文件。测试只使�
 | `GEO-02` | 卖家所在省市 | 需确认页面/店铺信息来源、缺失率和更新时间 |
 | `GEO-03` | 后续地区均衡选择 | 应建立在 GEO-01/GEO-02 语义明确后，不能直接使用现有 `region` 替代 |
 | `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext，其余方法和监管语境必须逐批核验 |
-| `INSPECTION-02` | 风险线索与目标化合物关联 | C1 只完成空的 Reference contract/import foundation；正式映射与分析桥接仍未实现，不得写死“功效→化合物”映射 |
+| `INSPECTION-02` | 风险线索与目标化合物关联 | C1 完成 Reference contract/import foundation，C2 只加入 3 条正式 Group Mapping；Group→Substance 与分析桥接仍未实现，不得写死或自动扩充“功效→化合物”映射 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | 仅记录需求；需要可核验的标准来源与版本 |
 | `INSPECTION-04` | 商品检测建议生成 | 仅记录需求；没有可靠关联数据前不得生成建议 |
 | `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | 仅记录需求；当前 UI 不显示不存在的字段或空标准卡片 |
@@ -477,7 +477,7 @@ Collector 核心改动至少要：运行全部离线测试、核查保留 fixtur
 5. 检查 `config/effect_keywords.json`、`config/monitor_targets.development.json` 和 `config/monitor_targets.reference.json` 的来源边界；
 6. 优先对照 `output/20260903T014401_task` 的 `task_request.json`、`run.log`、`search/discovery_summary.json`、Search Diagnostics、`products.json`、`web_snapshot.json` 和商品 `analysis.json`；需要多 Query 样本时再看 `output/20260902T192913_task`；
 7. 若涉及 Collector，再检查 `collection_experiment.md`、`20260901_collector_v02_test_b` 与 `collector-baseline-v0.2`；
-8. 运行当前 197 项离线测试，不能把“代码能导入”当作验收；
+8. 运行当前 203 项离线测试，不能把“代码能导入”当作验收；
 9. 明确写出本轮改动属于“已实现”“离线验证”还是“真实验证”；
 10. 只做需求内最小改动，保护用户已有运行数据和未提交文件；
 11. 需要真实淘宝验证时使用普通本地终端/有权创建子进程的环境，避免把 `[WinError 5]` 误判成平台风控；

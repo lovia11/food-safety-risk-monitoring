@@ -2,9 +2,9 @@
 
 更新时间：2026-09-04
 
-当前开发版本：v0.8-C1（Risk-Substance Mapping Foundation）
+当前开发版本：v0.8-C2（First Verified Risk Mapping Dataset）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C1 只新增独立的 Risk→Substance/Group Reference contract、SQLite schema 与显式导入能力；尚无任何正式 Risk Mapping，也未连接 Product Workspace、Web、Pipeline、风险分析或 Recommendation。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C1 建立独立 Risk→Substance/Group Reference contract、SQLite schema 与显式导入；v0.8-C2 首次加入 3 条经核验的 A 级 current Risk→Group Mapping，仅覆盖 `weight_loss`、`male_function`、`anti_fatigue`。Group 未展开到 Substance，仍未连接 Product Workspace、Web、Pipeline、风险分析或 Recommendation。
 
 当前分支：`main`
 
@@ -44,9 +44,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | 原生 ES Modules 与分层 CSS | 已完成并通过语法、契约和本地浏览器验证 | `web/app.js`、`web/js/`、`web/css/` |
 | 统一 B2B 视觉、密集商品表、状态反馈与 1080px/1440px 响应式布局 | 已完成并通过本地浏览器验收 | `web/index.html`、`web/css/`、`web/js/pages/` |
 | Inspection Method/Substance/Applicability/RegulatoryContext 独立 Reference Data 基础 | verified dataset 已含三项 BJS、KJ201903 与 GB/T 45443-2025；GB/T 是首个 `national_standard_gbt`，并新增首个 SubstanceRegulatoryContext。褪黑素可同时是方法目标物及限定产品范围和时间下的合法保健食品原料；GB/T 45443 是正常质量/含量检测标准，不是非法添加补充检验方法 | `src/inspection_reference.py`、`src/data_store.py`、`config/inspection_reference.json` |
-| Risk→Substance/Group 独立 Reference Data 基础 | 已实现 schema version 1 contract、Substance/Group XOR、来源证据等级与时间约束、SQLite v7 事务化显式导入；当前 0 条正式映射，不自动推断或桥接风险分析 | `src/risk_substance_reference.py`、`src/data_store.py` |
+| Risk→Substance/Group 独立 Reference Data | schema version 1；首批 3 条正式 Mapping 全部为 A 级、`current_official_guidance`、current Group target，覆盖减肥/减重、补肾壮阳/男性功能、抗疲劳；Group 不展开，不自动推断或桥接风险分析 | `src/risk_substance_reference.py`、`src/data_store.py`、`config/risk_substance_reference.json` |
 
-当前测试集共有 197 项，其中 29 项覆盖 Inspection Reference contract、迁移/导入及五个正式方法/标准与褪黑素监管语境，31 项覆盖 Risk-Substance contract、XOR、来源等级/时间规则、外部 Substance FK、幂等/回滚和 v6→v7 迁移；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 203 项，其中 29 项覆盖 Inspection Reference contract、迁移/导入及五个正式方法/标准与褪黑素监管语境，33 项覆盖 Risk-Substance contract、XOR、来源等级/时间规则、外部 Substance FK、幂等/回滚和 v6→v7 迁移，4 项独立覆盖首批正式 Risk Mapping 数据事实与 SQLite 幂等导入；v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
 
 ## 3. 当前架构
 
@@ -199,7 +199,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有空的数据结构与合成测试，没有正式 Risk Mapping、Risk Analysis 桥接、InspectionRecommendation、Web/API 展示或商品级 Recommendation。
+- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条正式 A/current Group Mapping，仅覆盖 `weight_loss`、`male_function`、`anti_fatigue`；Group 未展开，且没有 Risk Analysis 桥接、InspectionRecommendation、Web/API 展示或商品级 Recommendation。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -218,6 +218,6 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C1 只为 `INSPECTION-02` 建立可导入的 Risk→Substance/Group Reference 结构；正式映射数据、与现有 Risk Analysis 的桥接以及 `INSPECTION-03`—`INSPECTION-05` 仍为 planned / not implemented。不得用假数据、药理推断或写死映射提前展示。
+`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C1 为 `INSPECTION-02` 建立可导入的 Reference 结构，v0.8-C2 仅加入上述 3 条经核验的 Group Mapping；Group→Substance 展开、与现有 Risk Analysis 的桥接以及 `INSPECTION-03`—`INSPECTION-05` 仍为 planned / not implemented。不得用假数据、药理推断或写死映射提前展示。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。
