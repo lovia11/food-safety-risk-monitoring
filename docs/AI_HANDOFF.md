@@ -223,7 +223,7 @@ Inspection JSON 使用独立 `schema_version=1` contract，顶层包含 dataset 
 
 Risk-Substance JSON 同样使用独立 `schema_version=1` contract，但不包含 Substance 定义。`target_type=substance` 时必须只有 `substance_id`，且显式导入时该 ID 必须已存在于 `inspection_substances`；`target_type=substance_group` 时必须只有 `target_group_label`，不展开或猜测成员。`reference_pending` 的 `mappings` 必须为空；`verified_reference` 必须有 `verified_at`、至少一条 Mapping 和完整逐条 provenance，且不得使用“待确认”“unknown”等占位值。`risk_category` 只要求稳定 identifier，本轮没有 Risk Category 表或封闭枚举。`DataStore.import_risk_substance_config()` 事务化、幂等、不删除旧 Mapping，只允许同状态更新或 pending→verified，并禁止同一 `mapping_id` 改绑 Dataset、Risk Category、target type、Substance 或 Group。CLI 仅在显式传入 `--import-risk-substance-config` 时导入，默认不导入任何 Risk Mapping。
 
-Evidence Grade `A/B/C` 表示**来源证据强度**：A 是当前有效且明确支持关系的权威官方来源，B 是历史抽检/监管口径等官方依据，C 是研究、案例或药理推断等较弱参考。它不是风险分数、模型置信度、商品违法概率或检出概率，禁止转成数值 score。`basis_type` 只允许 `current_regulatory_source`、`current_official_guidance`、`historical_sampling_plan`、`official_case`、`research_evidence`、`pharmacologic_inference`；A 必须是 `current`，historical sampling plan 必须是 `historical` 且不得为 A。
+Evidence Grade `A/B/C` 表示**来源证据强度**：A 是当前有效且明确支持关系的权威官方来源，B 是历史抽检/监管口径等官方依据，C 是研究、案例或药理推断等较弱参考。它不是风险分数、模型置信度、商品违法概率或检出概率，禁止转成数值 score。`basis_type` 只允许 `current_regulatory_source`、`current_official_guidance`、`historical_sampling_plan`、`official_case`、`research_evidence`、`pharmacologic_inference`；A 必须是 `current`，historical sampling plan 必须是 `historical` 且不得为 A。两个 `current_*` basis 的 `temporal_status=current` 约束由 Risk Reference validator 保证，SQLite schema version 7 不为此重建表。
 
 ## 12. Main APIs
 

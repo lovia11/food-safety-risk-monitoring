@@ -294,6 +294,13 @@ def validate_risk_substance_config(payload: Any) -> dict[str, Any]:
             raise RiskSubstanceConfigValidationError(
                 f"Mapping {mapping_id} 的A级来源证据必须是current"
             )
+        if basis_type in {
+            "current_regulatory_source",
+            "current_official_guidance",
+        } and temporal_status != "current":
+            raise RiskSubstanceConfigValidationError(
+                f"Mapping {mapping_id} 的{basis_type}必须使用current temporal_status"
+            )
         if basis_type == "historical_sampling_plan":
             if temporal_status != "historical":
                 raise RiskSubstanceConfigValidationError(

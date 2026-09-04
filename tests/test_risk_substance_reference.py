@@ -175,6 +175,44 @@ class RiskSubstanceReferenceValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(RiskSubstanceConfigValidationError, "A级"):
             validate_risk_substance_config(payload)
 
+    def test_current_regulatory_source_rejects_historical_for_grade_b(self):
+        payload = risk_dataset()
+        mapping = payload["mappings"][0]
+        mapping["basis_type"] = "current_regulatory_source"
+        mapping["evidence_grade"] = "B"
+        mapping["temporal_status"] = "historical"
+        with self.assertRaisesRegex(
+            RiskSubstanceConfigValidationError, "current_regulatory_source"
+        ):
+            validate_risk_substance_config(payload)
+
+        mapping["basis_type"] = "official_case"
+        self.assertEqual(
+            validate_risk_substance_config(payload)["mappings"][0][
+                "temporal_status"
+            ],
+            "historical",
+        )
+
+    def test_current_official_guidance_rejects_historical_for_grade_c(self):
+        payload = risk_dataset()
+        mapping = payload["mappings"][0]
+        mapping["basis_type"] = "current_official_guidance"
+        mapping["evidence_grade"] = "C"
+        mapping["temporal_status"] = "historical"
+        with self.assertRaisesRegex(
+            RiskSubstanceConfigValidationError, "current_official_guidance"
+        ):
+            validate_risk_substance_config(payload)
+
+        mapping["basis_type"] = "research_evidence"
+        self.assertEqual(
+            validate_risk_substance_config(payload)["mappings"][0][
+                "temporal_status"
+            ],
+            "historical",
+        )
+
     def test_historical_sampling_plan_cannot_be_current(self):
         payload = risk_dataset()
         mapping = payload["mappings"][0]
