@@ -8,8 +8,14 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from src.data_store import DataStore
-from src.local_api import create_handler, list_run_snapshots, resolve_run_file, resolve_run_root
-from src.runtime import write_json
+from src.local_api import (
+    create_handler,
+    list_run_snapshots,
+    resolve_product_root,
+    resolve_run_file,
+    resolve_run_root,
+)
+from src.runtime import read_json, write_json
 from src.task_runtime import TaskManager
 from src.web_contract import write_web_snapshot
 
@@ -66,6 +72,185 @@ class LocalApiHelpersTest(unittest.TestCase):
                 resolve_run_root(output_root, "../outside")
             with self.assertRaises(ValueError):
                 resolve_run_file(run_root, "../../outside.txt")
+            with self.assertRaises(ValueError):
+                resolve_product_root(run_root, "../outside")
+
+    def test_inspection_context_options_and_human_update_api(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            run_root = output_root / "run-1"
+            product_root = run_root / "products" / "123"
+            web_root = root / "web"
+            web_root.mkdir()
+            (web_root / "index.html").write_text("ok", encoding="utf-8")
+            analysis = {
+                "product_id": "123",
+                "product_name": "测试减肥饼干",
+                "product_url": "https://item.example/123",
+                "detected_effects": ["减脂"],
+                "review_required": True,
+                "evidence_details": [
+                    {
+                        "effect": "减脂",
+                        "text": "页面宣称帮助减肥",
+                        "matched_keywords": ["减肥"],
+                        "source_type": "dom_product",
+                        "source_label": "当前商品 DOM",
+                        "content_origin": "seller_managed",
+                        "source_path": "dom_text.txt",
+                        "line_number": 1,
+                    }
+                ],
+            }
+            write_json(product_root / "analysis.json", analysis)
+            record = {
+                "keyword": "测试",
+                "product_id": "123",
+                "product_name": "测试减肥饼干",
+                "product_url": "https://item.example/123",
+                "crawl_status": "success",
+                "review_required": True,
+                "detected_effects": ["减脂"],
+            }
+            payload = {
+                "keyword": "测试",
+                "candidates": [{"product_id": "123", "rank": 1}],
+                "products": [record],
+            }
+            write_json(run_root / "products.json", payload)
+            write_json(
+                run_root / "search" / "search_candidates.json",
+                {"keyword": "测试", "candidates": payload["candidates"]},
+            )
+            write_json(
+                run_root / "batch_state.json",
+                [{"product_id": "123", "rank": 1, "status": "success"}],
+            )
+            write_web_snapshot(run_root, payload, [record], "completed", "完成")
+            store = DataStore(root / "data" / "app.db", output_root)
+            manager = TaskManager(output_root)
+            server = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                create_handler(
+                    output_root,
+                    web_root,
+                    manager,
+                    store,
+                    monitor_config=None,
+                ),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{server.server_port}"
+
+            def put_context(product_id, body):
+                request = Request(
+                    f"{base}/api/runs/run-1/products/{product_id}/inspection-context",
+                    data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="PUT",
+                )
+                return urlopen(request)
+
+            try:
+                with urlopen(f"{base}/api/inspection-context-options") as response:
+                    options = json.load(response)
+                self.assertIn("饼干", options["product_categories"])
+                self.assertIn("片剂", options["product_forms"])
+
+                with put_context(
+                    "123",
+                    {
+                        "product_category": "饼干",
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": ["测试原料", "测试原料"],
+                        "context_evidence": [{"source_type": "client-forged"}],
+                    },
+                ) as response:
+                    updated = json.load(response)
+                self.assertEqual(
+                    updated["context"]["confirmed_ingredient_contexts"],
+                    ["测试原料"],
+                )
+                self.assertTrue(
+                    all(
+                        item["source_type"] == "human_confirmed"
+                        and item["source_path"] == "local_web"
+                        and item.get("confirmed_at")
+                        for item in updated["context"]["context_evidence"]
+                    )
+                )
+                finding = updated["recommendation"]["risk_findings"][0]
+                follow_up = finding["substance_follow_ups"][0]
+                self.assertEqual(follow_up["follow_up_status"], "suggest_testing")
+                self.assertTrue(
+                    (product_root / "inspection_recommendation.json").is_file()
+                )
+                refreshed_snapshot = read_json(run_root / "web_snapshot.json")
+                refreshed_product = refreshed_snapshot["products"][0]
+                self.assertTrue(refreshed_product["inspection"]["available"])
+                self.assertEqual(
+                    refreshed_product["inspection"]["context"]["product_category"],
+                    "饼干",
+                )
+                saved_context = read_json(product_root / "inspection_context.json")
+                self.assertEqual(saved_context, updated["context"])
+
+                with put_context(
+                    "123",
+                    {
+                        "product_category": None,
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": [],
+                    },
+                ) as response:
+                    unknown = json.load(response)
+                self.assertIsNone(unknown["context"]["product_category"])
+                self.assertEqual(unknown["context"]["context_evidence"], [])
+
+                for invalid in (
+                    {
+                        "product_category": "",
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": [],
+                    },
+                    {
+                        "product_category": " 饼干",
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": [],
+                    },
+                ):
+                    with self.assertRaises(HTTPError) as raised:
+                        put_context("123", invalid)
+                    self.assertEqual(raised.exception.code, 400)
+
+                (run_root / "products" / "456").mkdir(parents=True)
+                with self.assertRaises(HTTPError) as raised:
+                    put_context(
+                        "456",
+                        {
+                            "product_category": None,
+                            "product_form": None,
+                            "confirmed_ingredient_contexts": [],
+                        },
+                    )
+                self.assertEqual(raised.exception.code, 409)
+
+                with self.assertRaises(HTTPError) as raised:
+                    put_context(
+                        "..%2Foutside",
+                        {
+                            "product_category": None,
+                            "product_form": None,
+                            "confirmed_ingredient_contexts": [],
+                        },
+                    )
+                self.assertEqual(raised.exception.code, 400)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(2)
 
     def test_lists_only_runs_with_valid_web_snapshot(self):
         with tempfile.TemporaryDirectory() as temporary:

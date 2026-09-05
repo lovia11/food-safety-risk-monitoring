@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from src.discovery import DiscoveryCoordinator
+from src.inspection_runtime import (
+    DEFAULT_INSPECTION_CONFIG_PATH,
+    DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
+    INSPECTION_RECOMMENDATION_ERROR_FILE,
+    INSPECTION_RECOMMENDATION_FILE,
+    InspectionRuntime,
+)
 from src.phase1_experiment import PhaseOneCollector
 from src.phase2_ocr import OCRRuntime, create_ocr_runtime, run_ocr
 from src.phase3_analysis import run_analysis
@@ -134,6 +141,32 @@ class StandalonePipeline:
         self.search_payload: dict[str, Any] | None = None
         self.web_stage = "initializing"
         self.web_message = "正在初始化本地采集任务"
+        self.inspection_runtime: InspectionRuntime | None = None
+
+    def set_inspection_runtime(
+        self, inspection_runtime: InspectionRuntime | None
+    ) -> None:
+        """Attach D6's file-oriented integration layer."""
+
+        self.inspection_runtime = inspection_runtime
+
+    def _generate_inspection_recommendation(self, product_root: Path) -> bool:
+        if self.inspection_runtime is None:
+            return False
+        error_path = product_root / INSPECTION_RECOMMENDATION_ERROR_FILE
+        try:
+            self.inspection_runtime.generate(product_root)
+            error_path.unlink(missing_ok=True)
+            return True
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            InspectionRuntime.record_error(product_root, exc)
+            self.logger.exception(
+                "商品%s Phase3已完成，但抽检辅助建议生成失败：%s",
+                product_root.name,
+                error,
+            )
+            return False
 
     def _write_state(self) -> None:
         ordered = sorted(
@@ -305,11 +338,26 @@ class StandalonePipeline:
             self.prepared_roots.items(), start=1
         ):
             state = self.state_by_id[product_id]
-            if (
-                state.get("status") == ProductStatus.SUCCESS
-                and (product_root / "analysis.json").exists()
-            ):
-                self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
+            analysis_exists = (product_root / "analysis.json").is_file()
+            recommendation_exists = (
+                product_root / INSPECTION_RECOMMENDATION_FILE
+            ).is_file()
+            if state.get("status") == ProductStatus.SUCCESS and analysis_exists:
+                if self.inspection_runtime is None or recommendation_exists:
+                    self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
+                    continue
+                self.web_stage = "processing_ocr_analysis"
+                self.web_message = (
+                    f"正在为第 {index}/{total} 个已有分析商品补生成抽检辅助建议"
+                )
+                self._write_state()
+                generated = self._generate_inspection_recommendation(product_root)
+                self.web_message = (
+                    f"已为第 {index}/{total} 个商品补生成抽检辅助建议"
+                    if generated
+                    else f"第 {index}/{total} 个商品的抽检辅助建议暂不可用"
+                )
+                self._write_state()
                 continue
             set_state(state, ProductStatus.PROCESSING)
             self.web_stage = "processing_ocr_analysis"
@@ -329,7 +377,15 @@ class StandalonePipeline:
                     write_run_outputs=False,
                 )
                 set_state(state, ProductStatus.SUCCESS)
-                self.web_message = f"已完成第 {index}/{total} 个商品的 OCR 与风险分析"
+                generated = self._generate_inspection_recommendation(product_root)
+                self.web_message = (
+                    f"已完成第 {index}/{total} 个商品的 OCR、风险分析与抽检辅助建议"
+                    if generated
+                    else (
+                        f"已完成第 {index}/{total} 个商品的 OCR 与风险分析；"
+                        "抽检辅助建议暂不可用"
+                    )
+                )
                 self.logger.info("商品%s完成OCR与风险分析", product_id)
             except Exception as exc:
                 error = f"{type(exc).__name__}: {exc}"
@@ -602,6 +658,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="本次实际采集详情的候选数量，默认与limit相同",
     )
     parser.add_argument("--output-root", type=Path, default=Path("output"))
+    parser.add_argument(
+        "--database",
+        type=Path,
+        help="默认按output-root同级的data/app.db约定解析",
+    )
+    parser.add_argument(
+        "--inspection-config",
+        type=Path,
+        default=DEFAULT_INSPECTION_CONFIG_PATH,
+    )
+    parser.add_argument(
+        "--risk-substance-config",
+        type=Path,
+        default=DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
+    )
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile"))
     parser.add_argument("--channel", default="chrome")
     parser.add_argument(
@@ -714,7 +785,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     pipeline: StandalonePipeline | None = None
     try:
+        inspection_runtime = InspectionRuntime.create(
+            output_root,
+            database_path=args.database,
+            inspection_config=args.inspection_config,
+            risk_substance_config=args.risk_substance_config,
+        )
         pipeline = StandalonePipeline(options)
+        pipeline.set_inspection_runtime(inspection_runtime)
         outputs = (
             pipeline.resume_processing(collect_pending_details=args.resume_details)
             if args.resume_run

@@ -114,6 +114,7 @@ class TaskManager:
         pipeline_defaults: dict[str, Any] | None = None,
         task_indexer: Callable[[Path], Any] | None = None,
         monitor_target_provider: Callable[[str], dict[str, Any] | None] | None = None,
+        inspection_runtime: Any | None = None,
     ) -> None:
         self.output_root = output_root.resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
@@ -121,6 +122,7 @@ class TaskManager:
         self.pipeline_defaults = dict(pipeline_defaults or {})
         self.task_indexer = task_indexer
         self.monitor_target_provider = monitor_target_provider
+        self.inspection_runtime = inspection_runtime
         self._lock = threading.RLock()
         self._active_task_id: str | None = None
         self._worker_thread: threading.Thread | None = None
@@ -130,6 +132,18 @@ class TaskManager:
         """Attach a best-effort business index without coupling the pipeline to SQLite."""
 
         self.task_indexer = task_indexer
+
+    def set_inspection_runtime(self, inspection_runtime: Any | None) -> None:
+        """Attach D6 integration used by newly created and resumed pipelines."""
+
+        self.inspection_runtime = inspection_runtime
+
+    def _create_pipeline(self, options: PipelineOptions) -> Any:
+        pipeline = self.pipeline_factory(options)
+        configure = getattr(pipeline, "set_inspection_runtime", None)
+        if callable(configure):
+            configure(self.inspection_runtime)
+        return pipeline
 
     def _notify_index(self, run_root: Path) -> None:
         if self.task_indexer is None or not (run_root / "web_snapshot.json").is_file():
@@ -430,7 +444,9 @@ class TaskManager:
     def _run_new_task(self, task_id: str, request: dict[str, Any]) -> None:
         run_root = self._run_root(task_id)
         try:
-            pipeline = self.pipeline_factory(self._pipeline_options(task_id, request))
+            pipeline = self._create_pipeline(
+                self._pipeline_options(task_id, request)
+            )
             self._attach_manual_action_status(pipeline, run_root)
             pipeline.run()
             self._notify_index(run_root)
@@ -545,7 +561,7 @@ class TaskManager:
     def _run_resume_task(self, task_id: str, options: PipelineOptions) -> None:
         run_root = self._run_root(task_id)
         try:
-            pipeline = self.pipeline_factory(options)
+            pipeline = self._create_pipeline(options)
             self._attach_manual_action_status(pipeline, run_root)
             pipeline.resume_processing(collect_pending_details=True)
             self._notify_index(run_root)

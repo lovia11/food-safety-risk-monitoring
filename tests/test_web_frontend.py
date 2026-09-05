@@ -280,8 +280,65 @@ class WebFrontendStructureTest(unittest.TestCase):
             "createTask",
             "resumeTaskRequest",
             "getRun",
+            "getInspectionContextOptions",
+            "updateInspectionContext",
         ):
             self.assertIn(f"export function {function_name}", source)
+
+    @unittest.skipUnless(NODE, "Node.js不可用")
+    def test_inspection_status_labels_and_ugc_boundary_are_explicit(self):
+        result = run_node(
+            """
+            const judgment = await import('./web/js/pages/judgment.js');
+            const statuses = [
+              'suggest_testing', 'needs_context_review',
+              'auxiliary_evidence_only', 'knowledge_integrity_gap',
+              'no_applicable_verified_method',
+            ];
+            const applicability = [
+              'applicable', 'conditional', 'not_applicable', 'insufficient_context',
+            ];
+            const followUps = Object.fromEntries(statuses.map(value => [value, judgment.followUpPresentation(value).label]));
+            const applicabilityLabels = Object.fromEntries(applicability.map(value => [value, judgment.applicabilityPresentation(value).label]));
+            const followUp = { suggested_methods: [{ method_no: 'BJS 201701' }] };
+            console.log(JSON.stringify({
+              followUps,
+              applicabilityLabels,
+              sellerCount: judgment.visibleSuggestedMethods({ evidence_qualification: 'seller_managed_primary' }, followUp).length,
+              ugcCount: judgment.visibleSuggestedMethods({ evidence_qualification: 'user_generated_auxiliary_only' }, followUp).length,
+            }));
+            """
+        )
+        self.assertEqual(result["followUps"]["suggest_testing"], "建议重点关注/检测")
+        self.assertEqual(result["followUps"]["needs_context_review"], "需补充商品信息")
+        self.assertEqual(result["followUps"]["knowledge_integrity_gap"], "知识完整性待核对")
+        self.assertEqual(result["applicabilityLabels"]["applicable"], "Reference范围匹配")
+        self.assertEqual(result["applicabilityLabels"]["insufficient_context"], "信息不足")
+        self.assertEqual(result["sellerCount"], 1)
+        self.assertEqual(result["ugcCount"], 0)
+
+    def test_judgment_contains_context_update_gaps_and_old_run_fallback(self):
+        html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+        judgment = (WEB_ROOT / "js" / "pages" / "judgment.js").read_text(
+            encoding="utf-8"
+        )
+        api = (WEB_ROOT / "js" / "api.js").read_text(encoding="utf-8")
+        for identifier in (
+            "inspectionStateBadge",
+            "inspectionContent",
+        ):
+            self.assertIn(f'id="{identifier}"', html)
+        for text in (
+            "抽检辅助建议",
+            "该历史任务尚未生成抽检辅助建议",
+            "需补充商品信息",
+            "知识链组合缺口",
+            "Group（partial）",
+            "保存并重新评估",
+        ):
+            self.assertIn(text, html + judgment)
+        self.assertIn("inspection-context-options", api)
+        self.assertIn("inspection-context`,", api)
 
 
 if __name__ == "__main__":

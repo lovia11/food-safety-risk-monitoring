@@ -32,6 +32,8 @@ export const appState = {
   selectedImagePath: null,
   businessSnapshot: null,
   reviewLoadToken: 0,
+  inspectionContextOptions: null,
+  inspectionContextOptionsError: "",
   pollTimer: null,
   monitorTargets: [],
   productQuery: defaultProductQueryState(),

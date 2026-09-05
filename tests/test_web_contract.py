@@ -40,6 +40,80 @@ class WebContractTest(unittest.TestCase):
             self.assertEqual(snapshot["statistics"]["selectedProducts"], 1)
             self.assertEqual(snapshot["statistics"]["clueProducts"], 1)
             self.assertEqual(snapshot["products"][0]["risk"]["tone"], "warning")
+            self.assertFalse(snapshot["products"][0]["inspection"]["available"])
+            self.assertIn("risk", snapshot["products"][0])
+
+    def test_recommendation_file_is_exposed_as_independent_inspection_contract(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run_root = Path(temporary) / "run"
+            product_root = run_root / "products" / "123"
+            disclaimer = "仅用于监管抽检辅助筛查，不构成实验室结论。"
+            write_json(
+                product_root / "inspection_context.json",
+                {
+                    "product_category": "饼干",
+                    "product_form": None,
+                    "confirmed_ingredient_contexts": [],
+                    "context_evidence": [],
+                },
+            )
+            write_json(
+                product_root / "inspection_recommendation.json",
+                {
+                    "product_context": {
+                        "product_category": "饼干",
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": [],
+                        "context_evidence": [],
+                    },
+                    "risk_findings": [{"risk_category": "weight_loss"}],
+                    "unmapped_evidence": [{"reason": "no_verified_keyword_bridge"}],
+                    "composition_gaps": [],
+                    "knowledge_gaps": [{"type": "unresolved_group"}],
+                    "disclaimer": disclaimer,
+                },
+            )
+            snapshot = build_web_snapshot(
+                run_root,
+                {"keyword": "测试", "candidates": [{"product_id": "123", "rank": 1}]},
+                [{"product_id": "123", "crawl_status": "success"}],
+                "completed",
+            )
+
+            inspection = snapshot["products"][0]["inspection"]
+            self.assertEqual(snapshot["schemaVersion"], 1)
+            self.assertTrue(inspection["available"])
+            self.assertEqual(inspection["context"]["product_category"], "饼干")
+            self.assertEqual(inspection["riskFindings"][0]["risk_category"], "weight_loss")
+            self.assertEqual(inspection["disclaimer"], disclaimer)
+            self.assertEqual(
+                inspection["recommendationPath"],
+                "products/123/inspection_recommendation.json",
+            )
+            self.assertEqual(
+                inspection["contextPath"],
+                "products/123/inspection_context.json",
+            )
+
+    def test_recommendation_error_is_observable_without_hiding_phase3_risk(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run_root = Path(temporary) / "run"
+            write_json(
+                run_root / "products" / "123" / "inspection_recommendation_error.json",
+                {"status": "error", "message": "reference unavailable"},
+            )
+            snapshot = build_web_snapshot(
+                run_root,
+                {"keyword": "测试", "candidates": [{"product_id": "123", "rank": 1}]},
+                [{"product_id": "123", "crawl_status": "success", "review_required": False}],
+                "completed",
+            )
+
+            product = snapshot["products"][0]
+            self.assertEqual(product["status"]["code"], "success")
+            self.assertFalse(product["inspection"]["available"])
+            self.assertEqual(product["inspection"]["recommendationStatus"], "error")
+            self.assertEqual(product["risk"]["reviewRequired"], False)
 
     def test_existing_run_exports_relative_assets(self):
         with tempfile.TemporaryDirectory() as temporary:

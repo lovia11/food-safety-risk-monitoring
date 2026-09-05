@@ -1638,6 +1638,39 @@ class DataStore:
                 result["imported"] += 1
         return result
 
+    def list_inspection_context_options(self) -> dict[str, list[str]]:
+        """Return exact non-empty context vocabulary from verified Reference."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT a.product_category, a.product_form, a.ingredient_context
+                FROM inspection_method_applicabilities a
+                JOIN inspection_methods m ON m.method_id = a.method_id
+                JOIN inspection_datasets d ON d.dataset_id = m.dataset_id
+                WHERE d.dataset_status = 'verified_reference'
+                """
+            ).fetchall()
+        return {
+            "product_categories": sorted(
+                {
+                    str(row["product_category"])
+                    for row in rows
+                    if row["product_category"]
+                }
+            ),
+            "product_forms": sorted(
+                {str(row["product_form"]) for row in rows if row["product_form"]}
+            ),
+            "ingredient_contexts": sorted(
+                {
+                    str(row["ingredient_context"])
+                    for row in rows
+                    if row["ingredient_context"]
+                }
+            ),
+        }
+
     def import_run(self, run_root: Path) -> dict[str, int]:
         """Upsert one run without replacing an existing human review."""
 

@@ -15,6 +15,7 @@ import {
   defaultJudgmentSelection,
   loadSelectedBusinessSnapshot,
   renderJudgmentPage,
+  saveInspectionContext,
   saveSelectedReview,
   selectGalleryImage,
   selectedGalleryProduct,
@@ -95,6 +96,11 @@ function bindGlobalEvents() {
     const reviewButton = event.target.closest("[data-save-review]");
     if (reviewButton) {
       if (await saveSelectedReview(reviewButton.dataset.saveReview)) await loadProductsPage();
+      return;
+    }
+    const inspectionButton = event.target.closest("[data-save-inspection-context]");
+    if (inspectionButton) {
+      await saveInspectionContext();
       return;
     }
     const thumb = event.target.closest("[data-image-path]");

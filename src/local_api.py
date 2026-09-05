@@ -16,6 +16,14 @@ from src.data_store import (
     ReviewValidationError,
     SnapshotNotFoundError,
 )
+from src.inspection_runtime import (
+    DEFAULT_INSPECTION_CONFIG_PATH,
+    DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
+    InspectionAnalysisUnavailableError,
+    InspectionContextValidationError,
+    InspectionRuntime,
+    database_path_for_output_root,
+)
 from src.runtime import read_json
 from src.task_runtime import (
     ActiveTaskError,
@@ -24,6 +32,7 @@ from src.task_runtime import (
     TaskNotResumableError,
     TaskValidationError,
 )
+from src.web_contract import snapshot_existing_run
 
 
 def resolve_run_root(output_root: Path, run_id: str) -> Path:
@@ -44,6 +53,22 @@ def resolve_run_file(run_root: Path, relative_path: str) -> Path:
     destination = (run_root / relative_path).resolve()
     if destination == run_root or not destination.is_relative_to(run_root):
         raise ValueError("file path escapes run root")
+    return destination
+
+
+def resolve_product_root(run_root: Path, product_id: str) -> Path:
+    run_root = run_root.resolve()
+    if (
+        not product_id
+        or product_id in {".", ".."}
+        or "/" in product_id
+        or "\\" in product_id
+    ):
+        raise ValueError("invalid product id")
+    products_root = (run_root / "products").resolve()
+    destination = (products_root / product_id).resolve()
+    if destination.parent != products_root:
+        raise ValueError("product path escapes run root")
     return destination
 
 
@@ -89,6 +114,8 @@ def create_handler(
     task_manager: TaskManager | None = None,
     data_store: DataStore | None = None,
     monitor_config: Path | tuple[Path, ...] | list[Path] | None = DEFAULT_MONITOR_CONFIG_PATHS,
+    inspection_config: Path | None = DEFAULT_INSPECTION_CONFIG_PATH,
+    risk_substance_config: Path | None = DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
@@ -96,6 +123,17 @@ def create_handler(
         resolved_output.parent / "data" / "app.db", resolved_output
     )
     store.initialize()
+    if (inspection_config is None) != (risk_substance_config is None):
+        raise ValueError("Inspection与Risk-Substance配置必须同时提供或同时省略")
+    inspection_runtime = (
+        InspectionRuntime.from_store(
+            store,
+            inspection_config=inspection_config,
+            risk_substance_config=risk_substance_config,
+        )
+        if inspection_config is not None and risk_substance_config is not None
+        else InspectionRuntime(store)
+    )
     monitor_configs = (
         []
         if monitor_config is None
@@ -114,6 +152,7 @@ def create_handler(
     )
     manager.set_task_indexer(store.import_run)
     manager.monitor_target_provider = store.get_monitor_target
+    manager.set_inspection_runtime(inspection_runtime)
 
     class LocalApiHandler(BaseHTTPRequestHandler):
         server_version = "TaobaoRiskMVP/1.1"
@@ -205,6 +244,9 @@ def create_handler(
             if path == "/api/monitor-targets":
                 targets = store.list_monitor_targets(enabled_only=True)
                 self._json(200, {"targets": targets, "count": len(targets)})
+                return
+            if path == "/api/inspection-context-options":
+                self._json(200, store.list_inspection_context_options())
                 return
             parts = [unquote(item) for item in path.split("/") if item]
             if len(parts) == 3 and parts[:2] == ["api", "monitor-targets"]:
@@ -333,6 +375,77 @@ def create_handler(
             path = urlparse(self.path).path
             parts = [unquote(item) for item in path.split("/") if item]
             if (
+                len(parts) == 6
+                and parts[:2] == ["api", "runs"]
+                and parts[3] == "products"
+                and parts[5] == "inspection-context"
+            ):
+                try:
+                    run_root = resolve_run_root(resolved_output, parts[2])
+                    product_root = resolve_product_root(run_root, parts[4])
+                except ValueError:
+                    self._error(400, "invalid_product_path", "任务或商品编号不合法")
+                    return
+                if not run_root.is_dir() or not product_root.is_dir():
+                    self._error(404, "product_not_found", "任务商品目录不存在")
+                    return
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                try:
+                    context, recommendation = inspection_runtime.update_human_context(
+                        product_root, payload
+                    )
+                except InspectionContextValidationError as exc:
+                    self._error(400, "invalid_inspection_context", str(exc))
+                    return
+                except InspectionAnalysisUnavailableError as exc:
+                    self._error(409, "inspection_analysis_unavailable", str(exc))
+                    return
+                except Exception as exc:
+                    inspection_runtime.record_error(product_root, exc)
+                    previous = read_json(run_root / "web_snapshot.json")
+                    task = previous.get("task") or {}
+                    snapshot_existing_run(
+                        run_root,
+                        stage=str(task.get("stage") or "completed"),
+                        message=str(task.get("message") or ""),
+                    )
+                    self._error(
+                        500,
+                        "inspection_recommendation_failed",
+                        f"Context已保存，但抽检辅助建议重新评估失败：{exc}",
+                    )
+                    return
+                previous = read_json(run_root / "web_snapshot.json")
+                task = previous.get("task") or {}
+                destination = snapshot_existing_run(
+                    run_root,
+                    stage=str(task.get("stage") or "completed"),
+                    message=str(task.get("message") or ""),
+                )
+                store.import_run(run_root)
+                refreshed = read_json(destination)
+                inspection = next(
+                    (
+                        item.get("inspection")
+                        for item in refreshed.get("products") or []
+                        if str(item.get("id") or "") == parts[4]
+                    ),
+                    None,
+                )
+                self._json(
+                    200,
+                    {
+                        "runId": parts[2],
+                        "productId": parts[4],
+                        "context": context,
+                        "recommendation": recommendation,
+                        "inspection": inspection,
+                    },
+                )
+                return
+            if (
                 len(parts) == 4
                 and parts[:2] == ["api", "snapshots"]
                 and parts[3] == "review"
@@ -413,7 +526,21 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="启动本地任务与结果服务")
     parser.add_argument("--output-root", type=Path, default=Path("output"))
     parser.add_argument("--web-root", type=Path, default=Path("web"))
-    parser.add_argument("--database", type=Path, default=Path("data/app.db"))
+    parser.add_argument(
+        "--database",
+        type=Path,
+        help="默认按output-root同级的data/app.db约定解析",
+    )
+    parser.add_argument(
+        "--inspection-config",
+        type=Path,
+        default=DEFAULT_INSPECTION_CONFIG_PATH,
+    )
+    parser.add_argument(
+        "--risk-substance-config",
+        type=Path,
+        default=DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
+    )
     parser.add_argument(
         "--monitor-config",
         type=Path,
@@ -436,8 +563,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
-    store = DataStore(args.database, args.output_root)
-    store.initialize()
+    store = DataStore(
+        args.database or database_path_for_output_root(args.output_root),
+        args.output_root,
+    )
+    inspection_runtime = InspectionRuntime.from_store(
+        store,
+        inspection_config=args.inspection_config,
+        risk_substance_config=args.risk_substance_config,
+    )
     monitor_configs = args.monitor_configs or list(DEFAULT_MONITOR_CONFIG_PATHS)
     for monitor_config in monitor_configs:
         if not monitor_config.is_file():
@@ -459,6 +593,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         task_indexer=store.import_run,
         monitor_target_provider=store.get_monitor_target,
+        inspection_runtime=inspection_runtime,
     )
     server = ThreadingHTTPServer(
         (args.host, args.port),
@@ -467,6 +602,8 @@ def main(argv: list[str] | None = None) -> int:
             args.web_root,
             manager,
             store,
+            None,
+            None,
             None,
         ),
     )

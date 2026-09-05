@@ -3,11 +3,90 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.inspection_runtime import INSPECTION_RECOMMENDATION_ERROR_FILE
 from src.main import PipelineOptions, ProductStatus, StandalonePipeline, initial_state
 from src.runtime import read_json, write_json
 
 
 class StandalonePipelineResumeTest(unittest.TestCase):
+    def test_successful_analysis_without_recommendation_is_backfilled_on_resume(self):
+        class Runtime:
+            def generate(self, product_root):
+                payload = {"product_context": {"product_category": None}}
+                write_json(product_root / "inspection_recommendation.json", payload)
+                return payload
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary)
+            product_root = output_root / "run" / "products" / "123"
+            write_json(product_root / "analysis.json", {"product_id": "123"})
+            pipeline = StandalonePipeline(
+                PipelineOptions(keyword="测试", output_root=output_root, run_id="run")
+            )
+            pipeline.set_inspection_runtime(Runtime())
+            pipeline.prepared_roots = {"123": product_root}
+            pipeline.state_by_id = {
+                "123": {
+                    "product_id": "123",
+                    "rank": 1,
+                    "status": ProductStatus.SUCCESS,
+                    "errors": [],
+                }
+            }
+            pipeline.search_payload = {"keyword": "测试", "candidates": []}
+
+            with patch("src.main.create_ocr_runtime") as create_runtime:
+                pipeline._process_products()
+
+            create_runtime.assert_not_called()
+            self.assertEqual(
+                pipeline.state_by_id["123"]["status"], ProductStatus.SUCCESS
+            )
+            self.assertTrue(
+                (product_root / "inspection_recommendation.json").is_file()
+            )
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_recommendation_failure_preserves_analysis_and_success_status(self):
+        class FailingRuntime:
+            def generate(self, product_root):
+                raise RuntimeError("reference unavailable")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary)
+            product_root = output_root / "run" / "products" / "123"
+            original_analysis = {"product_id": "123", "detected_effects": []}
+            write_json(product_root / "analysis.json", original_analysis)
+            pipeline = StandalonePipeline(
+                PipelineOptions(keyword="测试", output_root=output_root, run_id="run")
+            )
+            pipeline.set_inspection_runtime(FailingRuntime())
+            pipeline.prepared_roots = {"123": product_root}
+            pipeline.state_by_id = {
+                "123": {
+                    "product_id": "123",
+                    "rank": 1,
+                    "status": ProductStatus.SUCCESS,
+                    "errors": [],
+                }
+            }
+            pipeline.search_payload = {"keyword": "测试", "candidates": []}
+
+            pipeline._process_products()
+
+            self.assertEqual(read_json(product_root / "analysis.json"), original_analysis)
+            self.assertEqual(
+                pipeline.state_by_id["123"]["status"], ProductStatus.SUCCESS
+            )
+            error = read_json(product_root / INSPECTION_RECOMMENDATION_ERROR_FILE)
+            self.assertEqual(error["status"], "error")
+            self.assertIn("reference unavailable", error["message"])
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
     def test_candidate_and_detail_limits_have_separate_semantics(self):
         options = PipelineOptions(
             keyword="酸枣仁",

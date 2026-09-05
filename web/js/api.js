@@ -51,6 +51,17 @@ export function getSnapshot(snapshotId) {
   return requestJson(`${API_ROOT}/snapshots/${encodeURIComponent(snapshotId)}`);
 }
 
+export function getInspectionContextOptions() {
+  return requestJson(`${API_ROOT}/inspection-context-options`);
+}
+
+export function updateInspectionContext(runId, productId, payload) {
+  return requestJson(
+    `${API_ROOT}/runs/${encodeURIComponent(runId)}/products/${encodeURIComponent(productId)}/inspection-context`,
+    jsonOptions("PUT", payload),
+  );
+}
+
 export function updateReview(snapshotId, payload) {
   return requestJson(
     `${API_ROOT}/snapshots/${encodeURIComponent(snapshotId)}/review`,

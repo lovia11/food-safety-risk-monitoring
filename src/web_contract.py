@@ -11,6 +11,11 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from src.inspection_runtime import (
+    INSPECTION_CONTEXT_FILE,
+    INSPECTION_RECOMMENDATION_ERROR_FILE,
+    INSPECTION_RECOMMENDATION_FILE,
+)
 from src.phase5_batch import build_batch_record
 from src.runtime import iso_now, read_json, write_json
 
@@ -97,6 +102,85 @@ def _risk_view(record: dict[str, Any]) -> dict[str, Any]:
         "evidenceDetails": record.get("evidence_details") or [],
         "sourceCounts": record.get("evidence_source_counts") or {},
         "originCounts": record.get("evidence_origin_counts") or {},
+    }
+
+
+def _unknown_inspection_context() -> dict[str, Any]:
+    return {
+        "product_category": None,
+        "product_form": None,
+        "confirmed_ingredient_contexts": [],
+        "context_evidence": [],
+    }
+
+
+def _inspection_view(run_root: Path, product_id: str) -> dict[str, Any]:
+    """Expose D6 artifact content without reimplementing D5 decisions."""
+
+    product_root = run_root / "products" / product_id
+    recommendation_path = product_root / INSPECTION_RECOMMENDATION_FILE
+    context_path = product_root / INSPECTION_CONTEXT_FILE
+    error_path = product_root / INSPECTION_RECOMMENDATION_ERROR_FILE
+    context = _read_optional_json(context_path, _unknown_inspection_context())
+    if not isinstance(context, dict):
+        context = _unknown_inspection_context()
+
+    recommendation: dict[str, Any] | None = None
+    recommendation_error: dict[str, Any] | None = None
+    if recommendation_path.is_file():
+        value = _read_optional_json(recommendation_path, None)
+        if isinstance(value, dict):
+            recommendation = value
+        else:
+            recommendation_error = {
+                "status": "error",
+                "message": "抽检辅助建议文件无法读取",
+            }
+    elif error_path.is_file():
+        value = _read_optional_json(error_path, {})
+        recommendation_error = value if isinstance(value, dict) else {}
+
+    if recommendation is not None:
+        source_context = recommendation.get("product_context")
+        if isinstance(source_context, dict):
+            context = source_context
+        return {
+            "available": True,
+            "recommendationStatus": "available",
+            "context": context,
+            "riskFindings": recommendation.get("risk_findings") or [],
+            "unmappedEvidence": recommendation.get("unmapped_evidence") or [],
+            "compositionGaps": recommendation.get("composition_gaps") or [],
+            "knowledgeGaps": recommendation.get("knowledge_gaps") or [],
+            "disclaimer": recommendation.get("disclaimer") or "",
+            "recommendationPath": _asset_path(
+                product_id, INSPECTION_RECOMMENDATION_FILE
+            ),
+            "contextPath": (
+                _asset_path(product_id, INSPECTION_CONTEXT_FILE)
+                if context_path.is_file()
+                else None
+            ),
+            "error": None,
+        }
+    return {
+        "available": False,
+        "recommendationStatus": (
+            "error" if recommendation_error is not None else "unavailable"
+        ),
+        "context": context,
+        "riskFindings": [],
+        "unmappedEvidence": [],
+        "compositionGaps": [],
+        "knowledgeGaps": [],
+        "disclaimer": "",
+        "recommendationPath": None,
+        "contextPath": (
+            _asset_path(product_id, INSPECTION_CONTEXT_FILE)
+            if context_path.is_file()
+            else None
+        ),
+        "error": recommendation_error,
     }
 
 
@@ -198,6 +282,7 @@ def _product_view(
             "ocrImages": int(record.get("ocr_image_count") or 0),
         },
         "risk": _risk_view(risk_record),
+        "inspection": _inspection_view(run_root, product_id),
         "assets": _product_assets(run_root, product_id),
         "errors": record.get("errors") or [],
     }

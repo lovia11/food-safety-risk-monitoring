@@ -1,9 +1,11 @@
 "use strict";
 
 import {
+  getInspectionContextOptions,
   getProductSnapshots,
   getRunFileText,
   getSnapshot,
+  updateInspectionContext,
   updateReview,
 } from "../api.js";
 import { appState, allRunSnapshots, findRunProduct } from "../state.js";
@@ -19,6 +21,31 @@ import {
   safeExternalUrl,
   showToast,
 } from "../utils.js";
+
+export function followUpPresentation(status) {
+  return {
+    suggest_testing: { label: "建议重点关注/检测", tone: "orange" },
+    needs_context_review: { label: "需补充商品信息", tone: "blue" },
+    auxiliary_evidence_only: { label: "仅辅助线索", tone: "gray" },
+    knowledge_integrity_gap: { label: "知识完整性待核对", tone: "red" },
+    no_applicable_verified_method: { label: "当前知识库暂无适用的已核验方法", tone: "gray" },
+  }[status] || { label: status || "待人工核对", tone: "gray" };
+}
+
+export function applicabilityPresentation(status) {
+  return {
+    applicable: { label: "Reference范围匹配", tone: "green" },
+    conditional: { label: "条件适用", tone: "orange" },
+    not_applicable: { label: "当前Reference范围未覆盖", tone: "gray" },
+    insufficient_context: { label: "信息不足", tone: "blue" },
+  }[status] || { label: status || "待核对", tone: "gray" };
+}
+
+export function visibleSuggestedMethods(finding, followUp) {
+  return finding?.evidence_qualification === "seller_managed_primary"
+    ? (followUp?.suggested_methods || [])
+    : [];
+}
 
 export function defaultJudgmentSelection() {
   const existing = findRunProduct(appState.selectedRun, appState.selectedProduct);
@@ -53,6 +80,171 @@ function evidenceKeywords(product) {
   return [...new Set([...configured, ...evidence])];
 }
 
+function optionMarkup(values, current, unknownLabel) {
+  const options = [...new Set([...(values || []), ...(current ? [current] : [])])];
+  return `<option value="" ${current == null ? "selected" : ""}>${unknownLabel}</option>${options.map(value => `<option value="${escapeHtml(value)}" ${value === current ? "selected" : ""}>${escapeHtml(value)}</option>`).join("")}`;
+}
+
+function renderContextForm(context) {
+  const options = appState.inspectionContextOptions || {
+    product_categories: [],
+    product_forms: [],
+    ingredient_contexts: [],
+  };
+  const ingredients = context.confirmed_ingredient_contexts || [];
+  const ingredientOptions = [...new Set([
+    ...(options.ingredient_contexts || []),
+    ...ingredients,
+  ])];
+  const optionError = appState.inspectionContextOptionsError
+    ? `<p class="inspection-inline-error">Reference选项读取失败：${escapeHtml(appState.inspectionContextOptionsError)}</p>`
+    : "";
+  return `<section class="inspection-context-panel">
+    <div class="inspection-section-title"><div><h3>Product Inspection Context</h3><p>仅保存人工明确确认的信息；未知项保持“未确认”。</p></div></div>
+    <div class="inspection-context-fields">
+      <label>食品类别<select id="inspectionCategoryInput">${optionMarkup(options.product_categories, context.product_category, "未确认")}</select></label>
+      <label>剂型<select id="inspectionFormInput">${optionMarkup(options.product_forms, context.product_form, "未确认")}</select></label>
+      <label>ingredient context <span class="field-note">可多选</span><select id="inspectionIngredientInput" multiple>${ingredientOptions.map(value => `<option value="${escapeHtml(value)}" ${ingredients.includes(value) ? "selected" : ""}>${escapeHtml(value)}</option>`).join("")}</select></label>
+      <button class="button button-primary inspection-save-button" data-save-inspection-context>保存并重新评估</button>
+    </div>${optionError}<p id="inspectionSaveMessage" class="review-message"></p>
+  </section>`;
+}
+
+function renderTriggerEvidence(items) {
+  if (!items?.length) return `<div class="inspection-muted">暂无可桥接页面证据。</div>`;
+  return `<div class="inspection-trigger-list">${items.map(item => `<div><span class="source-tag ${item.content_origin === "user_generated" ? "user" : ""}">${item.content_origin === "user_generated" ? "UGC · 辅助" : "商家管理内容"}</span><p>${escapeHtml(item.text || "—")}</p></div>`).join("")}</div>`;
+}
+
+function renderMethod(method, secondary = false) {
+  const applicability = applicabilityPresentation(method.applicability_status);
+  const sourceUrl = safeExternalUrl(method.source_reference);
+  return `<div class="inspection-method ${secondary ? "secondary" : ""}">
+    <div><strong>${escapeHtml(method.method_no || "—")}</strong><span class="table-tag ${applicability.tone}">${escapeHtml(applicability.label)}</span></div>
+    <p>${escapeHtml(method.method_name || "—")}</p>
+    <small>${escapeHtml(method.source_name || "官方Reference")}${sourceUrl !== "#" ? ` · <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">查看来源</a>` : ""}</small>
+    ${method.applicability_reason ? `<small>${escapeHtml(method.applicability_reason)}</small>` : ""}
+  </div>`;
+}
+
+function renderMethodSection(title, methods, className = "") {
+  if (!methods?.length) return "";
+  return `<div class="inspection-method-section ${className}"><h4>${title}</h4>${methods.map(item => renderMethod(item, className === "secondary")).join("")}</div>`;
+}
+
+function renderSubstance(followUp, finding) {
+  const status = followUpPresentation(followUp.follow_up_status);
+  const contextIds = (followUp.methods_needing_context || [])
+    .flatMap(item => item.unresolved_applicability_ids || []);
+  return `<article class="inspection-substance">
+    <div class="inspection-substance-head"><div><h4>${escapeHtml(followUp.canonical_name || "待核对成分")}</h4><p>CAS：${escapeHtml(followUp.cas_no || "—")}</p></div><span class="table-tag ${status.tone}">${escapeHtml(status.label)}</span></div>
+    <p class="inspection-reason">${escapeHtml(followUp.reason || "")}</p>
+    ${contextIds.length ? `<div class="context-needed">还需确认与以下 Reference 范围有关的商品信息：${[...new Set(contextIds)].map(escapeHtml).join("、")}</div>` : ""}
+    ${renderMethodSection("建议方法", visibleSuggestedMethods(finding, followUp))}
+    ${renderMethodSection("待补充信息的方法", followUp.methods_needing_context, "needs-context")}
+    ${(followUp.other_known_methods || []).length ? `<details class="other-methods"><summary>其他已知方法（${followUp.other_known_methods.length}）</summary>${followUp.other_known_methods.map(item => renderMethod(item, true)).join("")}</details>` : ""}
+    ${(followUp.regulatory_contexts || []).length ? `<details class="regulatory-context"><summary>监管语境（需人工确认）</summary><p>${escapeHtml(followUp.regulatory_context_note || "")}</p>${followUp.regulatory_contexts.map(item => `<p>${escapeHtml(item.product_scope || item.note || "—")}</p>`).join("")}</details>` : ""}
+  </article>`;
+}
+
+function renderGapSection(inspection) {
+  const groups = (inspection.riskFindings || []).flatMap(item => item.group_targets || []);
+  const composition = inspection.compositionGaps || [];
+  const knowledge = inspection.knowledgeGaps || [];
+  if (!groups.length && !composition.length && !knowledge.length) return "";
+  return `<section class="inspection-gaps"><h3>Group partial / 知识缺口</h3>
+    ${groups.map(item => `<div><strong>Group（partial）：${escapeHtml(item.target_group_label || "未命名Group")}</strong><p>仅保留Reference中的Group文字，不自动展开成员。</p></div>`).join("")}
+    ${composition.map(item => `<div class="gap-warning"><strong>知识链组合缺口</strong><p>${escapeHtml(item.message || item.type || "需人工核对")}</p></div>`).join("")}
+    ${knowledge.map(item => `<div><strong>知识缺口：${escapeHtml(item.type || "待核对")}</strong><p>${escapeHtml(item.message || "当前知识库信息不完整。")}</p></div>`).join("")}
+  </section>`;
+}
+
+export function renderInspectionPanel(product, isHistory = false) {
+  const target = $("#inspectionContent");
+  if (!target) return;
+  const badge = $("#inspectionStateBadge");
+  const inspection = product?.inspection || {
+    available: false,
+    recommendationStatus: "unavailable",
+    context: {
+      product_category: null,
+      product_form: null,
+      confirmed_ingredient_contexts: [],
+      context_evidence: [],
+    },
+  };
+  const contextForm = renderContextForm(inspection.context || {});
+  if (!inspection.available) {
+    const failed = inspection.recommendationStatus === "error";
+    badge.className = `table-tag ${failed ? "red" : "gray"}`;
+    badge.textContent = failed ? "生成失败" : "尚未生成";
+    const unavailableTitle = isHistory
+      ? "该历史任务尚未生成抽检辅助建议"
+      : "当前商品尚未生成抽检辅助建议";
+    target.innerHTML = `${contextForm}<div class="inspection-unavailable ${failed ? "error" : ""}"><strong>${failed ? "抽检辅助建议暂不可用" : unavailableTitle}</strong><p>${escapeHtml(inspection.error?.message || "原有Phase3分析和风险证据仍可正常查看。")}</p></div>`;
+    return;
+  }
+  badge.className = "table-tag green";
+  badge.textContent = "已生成";
+  const findings = inspection.riskFindings || [];
+  target.innerHTML = `${contextForm}
+    <section class="inspection-findings"><div class="inspection-section-title"><div><h3>可能风险与建议关注成分</h3><p>页面线索对应的监管关注方向，不是实验室结论。</p></div></div>
+      ${findings.length ? findings.map(finding => `<article class="inspection-finding">
+        <div class="inspection-finding-head"><div><h3>${escapeHtml((finding.risk_labels || []).join("、") || finding.risk_category || "待核对风险方向")}</h3><p>${escapeHtml(finding.possible_risk_summary || "")}</p></div><span class="table-tag ${finding.evidence_qualification === "seller_managed_primary" ? "orange" : "gray"}">${finding.evidence_qualification === "seller_managed_primary" ? "商家管理内容支持" : "仅UGC辅助线索"}</span></div>
+        ${renderTriggerEvidence(finding.trigger_evidence || [])}
+        <div class="inspection-substance-grid">${(finding.substance_follow_ups || []).map(item => renderSubstance(item, finding)).join("") || `<div class="inspection-muted">当前没有可列出的具体成分，Group与知识缺口见下方。</div>`}</div>
+      </article>`).join("") : `<div class="inspection-muted">当前Phase3证据没有进入已核验的Evidence-to-Risk Bridge。</div>`}
+    </section>
+    ${renderGapSection(inspection)}
+    <div class="inspection-disclaimer">${escapeHtml(inspection.disclaimer || "")}</div>`;
+}
+
+async function loadInspectionContextOptions() {
+  if (appState.inspectionContextOptions || appState.inspectionContextOptionsError) return;
+  try {
+    appState.inspectionContextOptions = await getInspectionContextOptions();
+  } catch (error) {
+    appState.inspectionContextOptionsError = error.message;
+  }
+}
+
+export async function saveInspectionContext() {
+  const { product } = findRunProduct(appState.selectedRun, appState.selectedProduct);
+  const message = $("#inspectionSaveMessage");
+  if (!product || !message) return false;
+  message.textContent = "正在保存并重新评估…";
+  message.className = "review-message";
+  const ingredientInput = $("#inspectionIngredientInput");
+  const payload = {
+    product_category: $("#inspectionCategoryInput").value || null,
+    product_form: $("#inspectionFormInput").value || null,
+    confirmed_ingredient_contexts: [...ingredientInput.selectedOptions].map(item => item.value),
+  };
+  try {
+    const result = await updateInspectionContext(
+      appState.selectedRun,
+      appState.selectedProduct,
+      payload,
+    );
+    product.inspection = result.inspection || {
+      available: true,
+      recommendationStatus: "available",
+      context: result.context,
+      riskFindings: result.recommendation.risk_findings || [],
+      unmappedEvidence: result.recommendation.unmapped_evidence || [],
+      compositionGaps: result.recommendation.composition_gaps || [],
+      knowledgeGaps: result.recommendation.knowledge_gaps || [],
+      disclaimer: result.recommendation.disclaimer || "",
+    };
+    renderInspectionPanel(product);
+    showToast("商品信息已保存，抽检辅助建议已重新评估");
+    return true;
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = "review-message error";
+    return false;
+  }
+}
+
 function renderEmptyJudgment() {
   $("#judgmentHero").innerHTML = `<div class="empty-evidence">当前任务尚无可查看的商品结果。</div>`;
   $("#analysisCard").innerHTML = `<div class="empty-evidence">任务产生商品分析结果后将在这里展示。</div>`;
@@ -66,6 +258,9 @@ function renderEmptyJudgment() {
   $("#ocrFileName").textContent = "—";
   $("#ocrText").textContent = "暂无OCR结果。";
   $("#openProductLinkTop").href = "#";
+  $("#inspectionStateBadge").className = "table-tag gray";
+  $("#inspectionStateBadge").textContent = "尚未生成";
+  $("#inspectionContent").innerHTML = `<div class="empty-evidence">该历史任务尚未生成抽检辅助建议</div>`;
   appState.businessSnapshot = null;
   renderReviewPanel();
 }
@@ -123,6 +318,7 @@ export function renderJudgmentPage() {
     return `<div class="evidence-item"><div class="evidence-top"><span class="source-tag ${isUser ? "user" : ""}">${escapeHtml(label)}</span><span class="origin-label">${isUser ? "user_generated · 辅助" : "seller_managed · 主要"}</span></div><p>${escapeHtml(item.text || "—")}</p>${matched.length ? `<div class="evidence-keywords">命中：${matched.map(escapeHtml).join("、")}</div>` : ""}</div>`;
   }).join("") : `<div class="empty-evidence">${analyzed ? "未发现配置词库中的明确功效证据" : "尚未生成风险证据"}</div>`;
   $("#ugcNotice").hidden = !evidence.some(item => item.content_origin === "user_generated");
+  renderInspectionPanel(product, isHistory);
   renderGallery(snapshot, product);
   renderReviewPanel();
 }
@@ -176,6 +372,7 @@ export async function loadSelectedBusinessSnapshot() {
   renderReviewPanel();
   if (!runId || !productId) return;
   try {
+    await loadInspectionContextOptions();
     const collection = await getProductSnapshots(productId);
     const match = (collection.snapshots || []).find(item => item.taskId === runId);
     if (!match) throw new Error("该商品尚未建立业务数据索引");
@@ -183,6 +380,8 @@ export async function loadSelectedBusinessSnapshot() {
     if (token !== appState.reviewLoadToken || runId !== appState.selectedRun || productId !== appState.selectedProduct) return;
     appState.businessSnapshot = detail;
     renderReviewPanel();
+    const { product } = findRunProduct(runId, productId);
+    if (product) renderInspectionPanel(product, runId !== appState.current?.task?.id);
   } catch (error) {
     if (token !== appState.reviewLoadToken) return;
     $("#reviewStateBadge").className = "table-tag gray";

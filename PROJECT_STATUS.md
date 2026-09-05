@@ -1,10 +1,10 @@
 # 项目当前状态
 
-更新时间：2026-09-04
+更新时间：2026-09-05
 
-当前开发版本：v0.8-D5（Product-level Inspection Recommendation）
+当前开发版本：v0.8-D6（Recommendation Pipeline/API/Web Integration）
 
-当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A 系列建立 Inspection Reference 基础；v0.8-B1—B5 已逐批加入核验的 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，并首次纳入褪黑素 RegulatoryContext。v0.8-C 阶段已完成 Risk→Group/Substance Verified Data；v0.8-D1/D1.1 建立并强化只读 Knowledge Trace；v0.8-D2 建立独立 Evidence-to-Risk taxonomy bridge；v0.8-D3 首次组合完整 Evidence→Risk→Inspection Knowledge 链；v0.8-D4 新增调用者显式确认的 `ProductInspectionContext` 并保守评估 Method Applicability。v0.8-D5 首次形成商品级监管辅助建议：只把 seller-managed 证据支持且 current Method 在显式 Product Context 下为 `applicable` 或 `conditional` 的方法放入 `suggested_methods`；UGC-only 线索仅作辅助复核，composition gap 阻断正式建议。RegulatoryContext 原样保留且不作法律裁决，结果不表示商品实际含有任何化合物。D5 仍不自动识别商品 context，尚未接入 Pipeline、API、Web，也未持久化 Recommendation。
+当前稳定冻结基线：v0.7 Product Monitoring Workspace，commit `98e732b88ef74dd5505646abaef0134e23a7adaf`，标签为 `product-workspace-v0.7`。v0.8-A—D5 已建立并冻结 Inspection Reference、Risk Mapping、Evidence Bridge、Knowledge Trace、显式 Product Context Applicability 与商品级 Recommendation 规则。v0.8-D6 已把冻结的 D5 builder 接入真实 Pipeline、本地文件、Local API 与风险研判页：Phase3 成功后生成商品目录 `inspection_recommendation.json`；Product Context 缺省保持 unknown，人工确认后可通过 run-scoped API 重新评估；Recommendation 仍不写入 SQLite。D6 没有新增监管知识、自动商品分类、剂型/ingredient 抽取或法律裁决。
 
 当前分支：`main`
 
@@ -50,8 +50,9 @@ v0.6-C1 提交：`e8cf28d`（`Validate SearchQuery Policy and Pilot Targets v0.6
 | Evidence-to-Knowledge Trace Composition | 严格执行 Phase 3 Evidence→D2 RiskSignal→D1 KnowledgeTrace；完整继承 trigger/unmapped evidence，按 Bridge Mapping 读取并去重 `reference_mapping_ids`，核对 SQLite trace 中实际出现的 Risk Mapping；缺失时保留 RiskSignal 与实际 KnowledgeTrace，并输出聚合的 `composition_gaps` | `src/inspection_signal_trace.py` |
 | Product Context & Method Applicability Evaluation | 消费既有 D3 结果和显式 `ProductInspectionContext`，对 Method-level 与当前 Substance-scoped 的 include/exclude/conditional constraints 做 exact match；缺少可能相关的 category/form/ingredient 信息时返回 `insufficient_context`，不自动抽取上下文、不使用 RegulatoryContext 裁决、不推荐方法 | `src/inspection_applicability.py` |
 | Product-level Inspection Recommendation | 严格组合 D3 trace 与 D4 assessment，保留商品身份、页面证据、Group/Substance、来源、RegulatoryContext 和全部 gaps；seller-managed 才能进入正式 `suggest_testing` 判断，UGC-only 仅为辅助复核，且只有 current + applicable/conditional Method 进入 `suggested_methods` | `src/inspection_recommendation.py` |
+| Recommendation Pipeline/API/Web Integration | 统一 runtime helper 按 Inspection→Risk 顺序 bootstrap schema 7 SQLite Reference 索引，加载显式 `inspection_context.json` 或 unknown context，调用冻结 D5 并原子写 `inspection_recommendation.json`；Web contract、Context API 与研判页直接消费该事实文件 | `src/inspection_runtime.py`、`src/main.py`、`src/local_api.py`、`src/web_contract.py`、`web/js/pages/judgment.js` |
 
-当前测试集共有 332 项，其中 D5 新增 29 项 Recommendation 测试，覆盖商品身份、seller/UGC/mixed 证据资格、五种 Substance follow-up 状态、current/conditional/not-applicable/non-current Method 分流、composition/knowledge gaps、RegulatoryContext 边界、正式 weight-loss 链、确定性排序、固定 disclaimer 与 schema version 7；D4 的 26 项 Applicability、D3 的 24 项 Composition、D2 的 28 项 Bridge、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk Reference、Phase 3 测试继续保留。v0.7 冻结时的 137 项基线仍由 `product-workspace-v0.7` 保留。
+当前测试集共有 345 项。D6 新增 13 项定向测试，覆盖 unknown/exact Context、seller 减肥+饼干链、原子文件、SUCCESS 补生成、Recommendation 失败隔离、Reference bootstrap 幂等、schema 7、SQLite Context vocabulary、Context PUT 验证/路径安全/重算、Web contract 可用与错误状态、旧 Run 兼容及前端状态语义。D1-D5 的既有规则测试保持不变；D6 尚未执行真实淘宝 E2E。
 
 ## 3. 当前架构
 
@@ -204,7 +205,7 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - 1080px 下密集商品表保留横向滚动以维持字段可读性；本轮覆盖桌面与紧凑桌面，不承诺手机端完整适配。
 - 基础词库与统计分析仍是明确的后续版本规划页，没有 CRUD、图表或分析能力。
 - MonitorTarget 下拉当前按既有 API 只展示 enabled target；这不代表其余正式对象已经具备 Monitor Task 运行资格。
-- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；褪黑素 RegulatoryContext 只适用于明确的保健食品原料目录、产品要求和有效时间，不能外推为普通食品可任意添加。Risk-Substance 当前只有 3 条 Group 与 5 条具体 Substance Mapping；D2 也只有 3 条 keyword-level Bridge，且 `anti_fatigue` 尚无 Phase 3 detection bridge。D4 只评估调用者已确认的结构化商品上下文；当前没有商品类别、剂型或 ingredient context 自动抽取，`not_applicable` 只表示已知 Reference 范围未覆盖而非科学上绝对不可用。D5 只在内存中生成监管辅助建议，不能解释为商品实际含有目标物、违法认定或实验室检出结论。仍不做完整 Group Expansion 或自动法律判断；BJS 202405 尚未逐项核验和导入，Recommendation 也没有接入 Pipeline、API、Web 或持久化。
+- 正式 Inspection Reference 当前仅逐项核验并纳入 BJS 202209、BJS 201701、BJS 201710、KJ201903 与 GB/T 45443-2025，不代表全部现行检验方法或全部监管知识；Risk-Substance 仍只有 3 条 Group 与 5 条具体 Substance Mapping。D6 已展示 Recommendation，但默认 Product Context 为 unknown，绝不根据商品名、标题、搜索词、OCR 或 DOM 自动识别食品类别、剂型或 ingredient context。Recommendation 文件不表示实际含有、违法认定或实验室检出；仍不做完整 Group Expansion、BJS 202405 或自动法律判断。
 
 ## 9. 下一阶段候选事项（尚未实现）
 
@@ -216,13 +217,13 @@ v0.7-C2 随后用同一批本地 SQLite 数据复核 1440px 风险总览/采集�
 - `INSPECTION-01`：Foundation 已由 v0.8-A 完成；v0.8-B1—B5 已逐批完成三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext 的 Verified Data，其余方法和监管语境仍需逐批核验；
 - `INSPECTION-02`：C 阶段已完成首批 Verified Risk→Group/Substance 数据，D2 已完成首批 3 条 Phase 3 Evidence keyword bridge，D3 已组合 Evidence→Risk→Knowledge；完整 Group Expansion 与更多 lexical alignment 仍未实现；
 - `INSPECTION-03`：D1 已完成只读动态 Knowledge Trace，D3 已完成组合，D4 已基于显式 ProductInspectionContext 实现保守的 exact Applicability evaluation；商品上下文自动提取仍未实现；
-- `INSPECTION-04`：D5 已完成纯内存商品级监管辅助建议生成；Pipeline/API/Web 接入与持久化仍未实现；
-- `INSPECTION-05`：D5 输出 contract 已包含产品名、链接、可能风险、建议关注/检测成分和相关标准；当前 UI 尚未接入；
+- `INSPECTION-04`：D5 builder 已由 D6 接入 Pipeline/API/Web；Recommendation 以商品目录 JSON 为事实源，不计划在本轮复制进 SQLite；
+- `INSPECTION-05`：研判页已展示产品信息、可能风险、建议关注成分、方法/标准、gaps 与 disclaimer；仍需真实淘宝 E2E 和论文场景评估；
 - 改进人工登录/验证的 Session UX；
 - 增加安全的任务取消与状态恢复；
 - 后续按业务需要评估产品场景并逐批验证新的 SearchQuery；不在 v0.6 内批量补齐剩余对象，也不允许模型按常识随意生成搜索词；
 - 以标注样本评估并提升 OCR/风险规则质量。
 
-`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-C 阶段完成首批 Verified Risk→Group/Substance 数据；v0.8-D1 通过既有外键关系动态生成 Knowledge Trace；v0.8-D2 把 3 个明确 Phase 3 `effect + matched_keyword` 对齐到稳定 Risk Category；v0.8-D3 严格组合两者并核对 Bridge Reference；v0.8-D4 仅用调用者明确提供的 category/form/ingredient context 对既有 Applicability 做 exact evaluation；v0.8-D5 基于这些既有结果生成纯内存的商品级监管辅助建议，并明确 seller/UGC、Method lifecycle、Applicability 与 gaps 边界。D5 不新增 schema 或持久关系，也不把 Method status、RegulatoryContext 或页面线索转换为实际含有、违法或检出结论。BJS 202405、完整 Group→Substance 展开、Recommendation 的 Pipeline/API/Web 接入与持久化仍为 planned / not implemented。
+`INSPECTION-01` 当前已完成数据 Foundation，并纳入五个已核验方法和首条监管语境，但仍不是完整知识库。v0.8-D1—D5 的知识与建议规则保持冻结；v0.8-D6 只完成工程集成。Pipeline 在 Phase3 后加载显式 Context 或 unknown 默认值并写 Recommendation；人工 Context 更新由服务端保存 provenance 后调用同一 runtime 重算；Web contract 保持 schema version 1 的向后兼容扩展。SQLite schema 仍为 7 且只作为可重建索引，不持久化 Recommendation。
 
 继续开发前应先阅读 `docs/AI_HANDOFF.md` 和 `docs/DEVELOPMENT_HISTORY.md`，并把 `product-workspace-v0.7` 视为当前整体稳定回退基线；正式数据与 Query 策略以 `reference-data-v0.6` 为基线，修改 Collector 时仍以 `collector-baseline-v0.2` 为专门对照。

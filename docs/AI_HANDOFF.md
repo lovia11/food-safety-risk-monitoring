@@ -1,12 +1,12 @@
 # AI 接手指南
 
-本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D5 Product-level Inspection Recommendation 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
+本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D6 Recommendation Pipeline/API/Web Integration 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version
 
-- 当前开发版本：**v0.8-D5 — Product-level Inspection Recommendation**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
+- 当前开发版本：**v0.8-D6 — Recommendation Pipeline/API/Web Integration**。当前稳定冻结版本仍为 **v0.7 — Product Monitoring Workspace**，标签为 `product-workspace-v0.7`。
 - v0.6-A、v0.6-B、v0.6-C1 和最终正式 Monitor Web E2E 均已完成；当前整体稳定回退基线为 `product-workspace-v0.7`，正式数据与 Query 策略基线为 `reference-data-v0.6`。
-- v0.7-A 已完成商品服务端分页与 Target 范围内 latest Snapshot 语义；v0.7-B 已把商品监测前端迁移到 Product API 并拆分原生 ES Modules/分层 CSS；v0.7-C/C2 完成视觉与语义验收。v0.8-A 系列建立独立 Inspection Reference 基础并将 schema 升至 version 6；v0.8-B1—B5 已逐批加入三项 BJS、KJ201903 与 GB/T 45443-2025。v0.8-C 阶段已完成 3 条 Group 与 5 条 Substance Verified Risk Mapping。v0.8-D1/D1.1 建立并强化只读 Knowledge Trace；v0.8-D2 建立 exact Evidence-to-Risk Bridge；v0.8-D3 组合 Evidence→Risk→Inspection Knowledge；v0.8-D4 用调用者显式确认的 Product Context 保守评估 Method Applicability。v0.8-D5 首次形成商品级监管辅助建议：seller-managed 证据是正式 `suggest_testing` 的必要条件，UGC-only 仅保留为辅助复核；只有 current 且 applicable/conditional 的 Method 进入 `suggested_methods`，composition gap 会阻断正式建议。RegulatoryContext 原样展示、不自动作法律裁决，结果不表示商品实际含有任何化合物。D5 尚未接入 Pipeline、API、Web，也未持久化 Recommendation。
+- v0.8-D5 的 Recommendation 业务逻辑已经冻结。D6 只做集成：`inspection_runtime.py` 统一 bootstrap schema 7 Reference 索引、加载显式 Context、调用 D5 并原子写商品目录 JSON；Pipeline 在 Phase3 成功后生成 Recommendation，失败不降级已有 OCR/Phase3 SUCCESS；Local API 提供 Reference Context 选项和 run-scoped 人工确认/重算；研判页展示 Recommendation、方法分流、Group/gaps 与 disclaimer。Recommendation 不进入 SQLite。
 - 当前阶段：本地、单用户、单活动任务的工程化 MVP。
 - 状态口径：
   - **已真实验证**：存在真实淘宝 run，可从输出文件核查；
@@ -119,6 +119,7 @@ MonitorTarget/关键词
 | `src/inspection_signal_trace.py` | 严格组合 D2 RiskSignal 与 D1 KnowledgeTrace；从 validated Bridge config 读取 Reference ID，并将 Bridge↔SQLite 不一致显式输出为 composition gap | 高，Evidence→Knowledge 组合边界 |
 | `src/inspection_applicability.py` | 消费 D3 与显式 ProductInspectionContext，对 Method-level/当前 Substance-scoped Applicability 做 exact evaluation；保留 gaps，不抽取上下文、不推荐方法 | 高，商品上下文适用性边界 |
 | `src/inspection_recommendation.py` | 先调用 D3，再以 D4 评估结果生成纯内存商品级监管辅助建议；区分 seller/UGC，筛选 current + applicable/conditional Method，并保留 evidence、provenance、RegulatoryContext 与 gaps | 高，Recommendation 解释与人工复核边界 |
+| `src/inspection_runtime.py` | D6 小型集成层；统一 Reference bootstrap、Context 文件加载/人工 provenance、D5 调用与 Recommendation/error 原子文件 | 高，D5 工程接入边界 |
 | `src/discovery.py` | 多 Query 串行发现、跨 Query 去重、CandidateHit | 高，v0.5 核心 |
 | `src/search_query_validation.py` | 低频 search-only Pilot 编排与验证结果记录 | 中，仅验证搜索策略，不代替完整 E2E |
 | `src/local_api.py` | 静态文件、本地 API、路径隔离、组件装配 | 高 |
@@ -139,7 +140,7 @@ MonitorTarget/关键词
 
 `POST /api/tasks` 提交 `task_type=quick`、`keyword`、`candidate_limit`、`detail_limit`。`TaskManager` 创建 run 目录和 `task_request.json`，写入初始 `web_snapshot.json`，随后在后台线程实例化 `StandalonePipeline`。
 
-Pipeline 启动项目 Chrome，先访问淘宝首页建立正常页面会话，再从可见搜索框提交关键词。`LiveSearchCollector` 提取卡片，按商品 ID 去重并生成 Search Diagnostics。前 `detail_limit` 件进入 Phase 1；完成浏览器阶段后顺序执行 PaddleOCR 与规则分析，最后写批次输出并索引 SQLite。
+Pipeline 启动项目 Chrome，先访问淘宝首页建立正常页面会话，再从可见搜索框提交关键词。`LiveSearchCollector` 提取卡片，按商品 ID 去重并生成 Search Diagnostics。前 `detail_limit` 件进入 Phase 1；完成浏览器阶段后顺序执行 PaddleOCR、Phase3 规则分析与 D6 Recommendation 文件生成，最后写批次输出并索引 SQLite。Recommendation 失败会写可观察 error 文件，但不会删除 `analysis.json` 或把已有 Phase3 SUCCESS 改为 `failed_processing`。
 
 ### 9.2 Monitor Task
 
@@ -198,6 +199,8 @@ D3 模块 API `InspectionSignalTraceResolver(data_store).resolve_analysis(analys
 D4 模块 API `evaluate_signal_trace(signal_trace, product_context)` 只消费已有 D3 result，不重新调用 Phase 3、D2 或 D1。`ProductInspectionContext` 的 `product_category`、`product_form` 和 `confirmed_ingredient_contexts` 必须由调用者显式确认；`None`/空列表是合法未知状态，`context_evidence` 只保留 provenance，不用于 seller/UGC 资格判断。Reference row 的 category/form 非空时只做完全相等，ingredient 非空时只有完整字符串已出现在 confirmed list 才算 match；未确认 ingredient 是 unresolved 而不是 mismatch。Method-level row 的 `substance_id=None`，Substance-scoped row 只作用于当前 Method/Substance。confirmed exclude 优先得到 `not_applicable`；include、conditional 和 unresolved constraints 按保守顺序聚合为四种状态。`not_applicable` 只表示当前已知 Reference applicability 未覆盖或有明确 exclude，不表示方法在科学上绝对不可用。Method lifecycle status 原样保留，RegulatoryContext 不参与 D4 裁决；D1 knowledge gaps 与 D3 composition gaps 都继续输出。D4 不生成 InspectionRecommendation 或方法优先级。
 
 D5 模块 API `InspectionRecommendationBuilder(data_store).build(analysis, product_context, include_historical=False)` 严格先调用 D3 `InspectionSignalTraceResolver`，再调用 D4 `evaluate_signal_trace`，不重写 Phase 3、Bridge、Knowledge 或 Applicability 规则。顶层保留 analysis 中的商品身份、显式 Product Context、risk findings、unmapped evidence、composition/knowledge gaps 与固定 disclaimer。每个 Risk/Substance 唯一输出；seller-managed 证据使 Risk 具备正式建议资格，UGC-only 只能得到 `auxiliary_evidence_only`。Substance follow-up 按 `knowledge_integrity_gap`、`auxiliary_evidence_only`、`suggest_testing`、`needs_context_review`、`no_applicable_verified_method` 的保守顺序聚合：composition gap 优先阻断，只有 current + applicable/conditional Method 可进入 `suggested_methods`；current + insufficient_context 放入 `methods_needing_context`，not_applicable 或 non-current Method 仅进入 `other_known_methods`。Group 不会被虚构展开，unresolved group 不阻断已有具体 Substance；RegulatoryContext 原样保留并附人工确认提示，不参与法律、适用性或 follow-up 裁决。结果只是监管抽检辅助筛查，不表示实际含有、违法认定或实验室检出。
+
+D6 文件 contract 位于 `output/<run>/products/<product_id>/`：可选 `inspection_context.json` 与生成的 `inspection_recommendation.json`。Context 文件不存在时必须构造全 unknown 的 `ProductInspectionContext(None, None, [], [])`，不得从商品名、标题、关键词、OCR 或 DOM 猜测。`PUT /api/runs/{run_id}/products/{product_id}/inspection-context` 只接受 category/form/ingredient 值，服务端写 `human_confirmed + local_web + confirmed_at` provenance 并调用同一 runtime 重算；`GET /api/inspection-context-options` 从 verified SQLite Reference 动态返回 exact vocabulary。旧 Run 无 Recommendation 时继续展示 Phase3，并返回 `inspection.available=false`。
 
 ## 11. SQLite Tables
 
@@ -364,7 +367,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 
 ## 16. Tests
 
-当前共有 332 项 `unittest`：v0.7 冻结基线为 137 项；D5 新增 29 项 Recommendation 测试，覆盖商品身份、seller/UGC/mixed 资格、五种 Substance follow-up 状态、Method 分流、gaps、RegulatoryContext、正式 weight-loss 链、确定性、固定 disclaimer 与 schema version 7；D4 的 26 项 Applicability、D3 的 24 项 Composition、D2 的 28 项 Bridge、D1/D1.1 的 19 项 Knowledge Trace 测试及既有 Inspection、Risk-Substance、Phase 3、正式数据和前端测试均保持。v0.8-D5 没有运行或新增真实淘宝/OCR/浏览器验收。
+当前共有 345 项 `unittest`。D6 的 13 项新增测试覆盖 runtime/Pipeline artifacts 与失败隔离、SUCCESS 补生成、Reference bootstrap、Context API、Web contract、旧 Run 和前端状态语义；D1-D5 规则测试保持不变。v0.8-D6 没有运行真实淘宝/OCR E2E，仍需后续真实链路与论文场景评估。
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
@@ -429,7 +432,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 - `ThreadingHTTPServer`、后台 daemon thread 和进程内锁只适合单机进程；多进程时无法保证唯一活动任务。
 - `web_snapshot.json` 与 SQLite 同时承载状态展示，虽有明确主次，但仍需维护字段映射一致性。
 - SQLite schema 通过 `CREATE TABLE IF NOT EXISTS` 和少量 `_ensure_column` 演进，还没有正式 migration framework。
-- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，没有其他方法或管理界面，也不构成完整知识库；BJS 202405 仍待正式逐项核验。D1 查询 API/Resolver 生成只读 Knowledge Trace，D3 组合 D2 与 D1，D4 只对调用者已确认的结构化上下文做 exact Applicability evaluation，D5 再生成纯内存监管辅助建议。当前没有商品 category/form/ingredient 自动抽取；RegulatoryContext 不参与 Applicability 或法律裁决，`not_applicable` 不是科学绝对不可用，`suggest_testing` 也不表示商品实际含有目标物。Recommendation 尚未持久化或接入 Pipeline、Web/API。
+- Inspection Reference 当前只逐项核验并纳入三项 BJS、KJ201903、GB/T 45443-2025 与一条褪黑素监管语境，不构成完整知识库；BJS 202405 仍待正式逐项核验。D6 已接入 D5，但 Product Context 默认 unknown，人工确认仍依赖使用者选择 exact Reference vocabulary；没有 category/form/ingredient 自动抽取。Recommendation 只持久化为商品目录 JSON，不进入 SQLite，也不表示实际含有、违法或实验室检出。
 - Review 只有最新状态，无历史审计；将来若进入真实监管流程必须重新评估。
 - Monitor config 通过启动时导入 SQLite，没有 CRUD 和版本管理页面。
 - 正式 reference 文件已有 106 项，但只验证了 6 个 Pilot；5 个对象具备 Monitor Task 资格。铁皮石斛已完成正式 verified target 的详情/OCR/分析 Web E2E，其余 4 个已启用正式对象没有逐一做同等 E2E；剩余 101 项（含停用的当归）不具备直接 Monitor 资格。
@@ -450,8 +453,8 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 | `INSPECTION-01` | 非法添加补充检验方法标准知识库 | Foundation 已完成；Verified Data 已逐批纳入三项 BJS、KJ201903、GB/T 45443-2025 与首条 RegulatoryContext，其余方法和监管语境必须逐批核验 |
 | `INSPECTION-02` | 风险线索与目标化合物关联 | C 阶段已完成首批 Verified Group/Substance Mapping；D2 已完成 3 条 explicit keyword bridge，D3 已完成 D2→D1 组合；完整 Group Expansion 与更多 lexical alignment 仍未实现，不得按 Method 清单或常识扩充 |
 | `INSPECTION-03` | 目标化合物与检验方法/标准关联 | D1 已动态生成只读 Knowledge Trace，D3 已完成组合，D4 已基于显式 ProductInspectionContext 完成保守 exact Applicability evaluation；上下文自动抽取仍未实现 |
-| `INSPECTION-04` | 商品检测建议生成 | D5 已完成纯内存 Recommendation builder；持久化及 Pipeline/API/Web 接入仍未实现 |
-| `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | D5 输出 contract 已具备这些字段与人工复核边界；当前 UI 尚未接入 |
+| `INSPECTION-04` | 商品检测建议生成 | D5 builder 已由 D6 接入 Pipeline、商品目录文件与 Context 重算 API；SQLite 不复制 Recommendation |
+| `INSPECTION-05` | 结果增加产品名、链接、可能风险、建议检测成分和相关标准 | D6 研判页已展示最终业务字段、方法分流、Group/gaps 与 disclaimer；仍需真实 E2E/论文评估 |
 | `SESSION-01` | 登录/人工验证体验 | 保持人工处理边界，减少对终端 Enter 的依赖 |
 | `TASK-01` | 安全任务取消 | 要处理浏览器、OCR、状态原子化与可恢复性 |
 | `QUERY-02` | 后续分批扩大正式 SearchQuery | 按业务需要先评估产品场景，再设计和真实验证下一批；禁止按常识批量扩词或用功效词改变候选池 |
@@ -487,6 +490,7 @@ v0.6-C1 只选择酸枣仁、茯苓、龙眼肉（桂圆）、当归、铁皮石
 23. D3 必须先调用 D2，再仅对 D2 输出的唯一 Risk Category 调用 D1；Reference ID 必须按 Bridge Mapping ID 从 validated config 读取，SQLite 缺失时输出 composition gap，不得猜测、自动导入或隐藏缺口。
 24. D4 只消费 D3 和显式 ProductInspectionContext；category/form/ingredient 只能 exact match，未确认信息必须保持 unresolved。Method-level 与 Substance-scoped constraints 不得混淆，Method status 和 RegulatoryContext 不得改写 Applicability，也不得输出 Recommendation 或优先级。
 25. D5 必须严格调用 D3→D4；只有 seller-managed 且 current + applicable/conditional 的 Method 可进入 `suggested_methods`。UGC-only、composition gap、RegulatoryContext 和 Group 均不得被改写为正式检测结论、法律裁决、虚构 Substance 或数值评分。
+26. D6 只能通过统一 runtime 调用 D5；Context 缺失保持 unknown，人工更新 provenance 由服务端生成。Recommendation 事实源是商品目录 JSON，SQLite schema 必须保持 7，旧 Run 缺失文件必须返回 `available=false`。
 
 Collector 核心改动至少要：运行全部离线测试、核查保留 fixture、执行最小真实淘宝 E2E、对比 Diagnostics/原图/OCR/Evidence，并说明相对 `collector-baseline-v0.2` 的行为变化。
 
