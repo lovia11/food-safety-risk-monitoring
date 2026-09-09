@@ -186,6 +186,19 @@ def _inspection_view(run_root: Path, product_id: str) -> dict[str, Any]:
 
 def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
     product_root = run_root / "products" / product_id
+
+    def existing_asset(local_path: Any) -> str | None:
+        if not local_path:
+            return None
+        normalized = str(local_path).replace("\\", "/").lstrip("/")
+        try:
+            candidate = (product_root / normalized).resolve()
+        except (OSError, RuntimeError):
+            return None
+        if not candidate.is_relative_to(product_root.resolve()) or not candidate.is_file():
+            return None
+        return _asset_path(product_id, normalized)
+
     meta = _read_optional_json(product_root / "meta.json", {})
     images = []
     for item in meta.get("images") or []:
@@ -193,7 +206,7 @@ def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
         images.append(
             {
                 "index": item.get("index"),
-                "path": _asset_path(product_id, local_path),
+                "path": existing_asset(local_path),
                 "sourceUrl": item.get("url"),
                 "width": item.get("naturalWidth"),
                 "height": item.get("naturalHeight"),
@@ -204,9 +217,7 @@ def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
             }
         )
 
-    screenshots = [
-        _asset_path(product_id, item) for item in (meta.get("screenshots") or [])
-    ]
+    screenshots = [existing_asset(item) for item in (meta.get("screenshots") or [])]
     screenshots = [item for item in screenshots if item]
 
     ocr_items = []
@@ -216,19 +227,19 @@ def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
         ocr_items.append(
             {
                 "image": item.get("image"),
-                "imagePath": _asset_path(product_id, item.get("sourcePath")),
+                "imagePath": existing_asset(item.get("sourcePath")),
                 "status": item.get("status"),
                 "lineCount": item.get("lineCount"),
                 "characterCount": item.get("characterCount"),
                 "averageConfidence": item.get("averageConfidence"),
-                "textPath": _asset_path(product_id, item.get("textPath")),
-                "jsonPath": _asset_path(product_id, item.get("jsonPath")),
+                "textPath": existing_asset(item.get("textPath")),
+                "jsonPath": existing_asset(item.get("jsonPath")),
                 "error": item.get("error"),
             }
         )
 
-    overview = _asset_path(product_id, "page/overview.png")
-    if not (product_root / "page" / "overview.png").exists():
+    overview = existing_asset("page/overview.png")
+    if overview is None:
         overview = screenshots[0] if screenshots else None
     return {
         "overview": overview,

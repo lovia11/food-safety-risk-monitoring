@@ -12,16 +12,24 @@ export type AppRoute =
 
 function parseHash(hash: string): AppRoute {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  const decode = (value: string | undefined) => {
+    if (!value) return undefined;
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return undefined;
+    }
+  };
   if (parts[0] === "inspections") {
-    return { section: "inspections", taskId: parts[1] };
+    return { section: "inspections", taskId: decode(parts[1]) };
   }
   if (parts[0] === "sampling") {
     return {
       section: "sampling",
-      listId: parts[1] === "history" ? parts[2] : undefined,
+      listId: parts[1] === "history" ? decode(parts[2]) : undefined,
     };
   }
-  return { section: "products", productId: parts[1] };
+  return { section: "products", productId: decode(parts[1]) };
 }
 
 export function AppRouter() {

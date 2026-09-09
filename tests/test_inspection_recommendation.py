@@ -598,11 +598,11 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
             },
         )
 
-    def test_schema_version_remains_seven(self):
+    def test_schema_version_is_eight(self):
         with sqlite3.connect(self.store.database_path) as connection:
             schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-        self.assertEqual(schema_version, 7)
+        self.assertEqual(schema_version, 8)
 
 
 if __name__ == "__main__":

@@ -486,7 +486,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "PRAGMA table_info(inspection_method_applicabilities)"
                 )
             }
-        self.assertEqual(version, 7)
+        self.assertEqual(version, 8)
         self.assertTrue(INSPECTION_TABLES <= all_tables)
         self.assertIn("substance_id", applicability_columns)
         self.assertIn("risk_mapping_datasets", all_tables)
@@ -789,7 +789,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "candidate_hits",
                 )
             }
-        self.assertEqual(version, 7)
+        self.assertEqual(version, 8)
         self.assertTrue(INSPECTION_TABLES <= tables)
         self.assertEqual(set(preserved.values()), {1})
         self.assertEqual(review, ("recommend_follow_up", "必须保留的人工备注"))
@@ -890,7 +890,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                 table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 for table in INSPECTION_TABLES
             }
-        self.assertEqual(version, 7)
+        self.assertEqual(version, 8)
         self.assertEqual(applicability_scopes, [(None,), (None,)])
         self.assertEqual(review_note, "v5人工备注")
         self.assertEqual(monitor_name, "旧对象")

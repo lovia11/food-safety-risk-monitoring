@@ -545,7 +545,7 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
                 "SELECT review_note FROM reviews WHERE snapshot_id='v6-snapshot'"
             ).fetchone()[0]
 
-        self.assertEqual(schema_version, 7)
+        self.assertEqual(schema_version, 8)
         self.assertEqual(
             inspection_counts,
             {
