@@ -10,11 +10,14 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.main import PipelineOptions, StandalonePipeline
+from src.manual_action_gate import ManualActionGate, WebManualActionAdapter
+from src.taobao_live import blocker_reason
 from src.runtime import iso_now, read_json, write_json
 from src.web_contract import STAGE_PRESENTATION, TERMINAL_STAGES, write_web_snapshot
 
 
 MAX_KEYWORD_LENGTH = 80
+MAX_TASK_NAME_LENGTH = 120
 MAX_PRODUCT_LIMIT = 50
 RESUMABLE_STAGES = {"interrupted", "failed", "completed_with_errors"}
 TASK_REQUEST_FILE = "task_request.json"
@@ -57,6 +60,10 @@ def validate_task_request(payload: Any) -> dict[str, Any]:
     task_type = str(payload.get("task_type") or "quick").strip()
     if task_type not in {"quick", "monitor"}:
         raise TaskValidationError("task_type必须是quick或monitor")
+    name = str(payload.get("name") or "").strip()
+    if len(name) > MAX_TASK_NAME_LENGTH:
+        raise TaskValidationError(f"name不能超过{MAX_TASK_NAME_LENGTH}个字符")
+    display_name = {"display_name": name} if name else {}
     if task_type == "monitor":
         target_id = str(payload.get("target_id") or "").strip()
         if not target_id:
@@ -68,6 +75,7 @@ def validate_task_request(payload: Any) -> dict[str, Any]:
                 "per_query_candidate_limit"
             ),
             "detail_limit": positive_integer("detail_limit"),
+            **display_name,
         }
 
     keyword = str(payload.get("keyword") or "").strip()
@@ -83,25 +91,11 @@ def validate_task_request(payload: Any) -> dict[str, Any]:
         "keyword": keyword,
         "candidate_limit": candidate_limit,
         "detail_limit": detail_limit,
+        **display_name,
     }
     if "task_type" in payload:
         result["task_type"] = "quick"
     return result
-
-
-class _ManualActionStatusHandler(logging.Handler):
-    """Reflect existing Collector login/CAPTCHA warnings in the Web snapshot."""
-
-    def __init__(self, callback: Callable[[str], None]) -> None:
-        super().__init__(level=logging.WARNING)
-        self.callback = callback
-
-    def emit(self, record: logging.LogRecord) -> None:
-        message = record.getMessage()
-        if "页面阻塞状态" in message or (
-            "检测到淘宝" in message and "人工完成" in message
-        ):
-            self.callback(message)
 
 
 class TaskManager:
@@ -115,6 +109,7 @@ class TaskManager:
         task_indexer: Callable[[Path], Any] | None = None,
         monitor_target_provider: Callable[[str], dict[str, Any] | None] | None = None,
         inspection_runtime: Any | None = None,
+        manual_action_gate: ManualActionGate | None = None,
     ) -> None:
         self.output_root = output_root.resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
@@ -123,6 +118,7 @@ class TaskManager:
         self.task_indexer = task_indexer
         self.monitor_target_provider = monitor_target_provider
         self.inspection_runtime = inspection_runtime
+        self.manual_action_gate = manual_action_gate or ManualActionGate()
         self._lock = threading.RLock()
         self._active_task_id: str | None = None
         self._worker_thread: threading.Thread | None = None
@@ -143,6 +139,26 @@ class TaskManager:
         configure = getattr(pipeline, "set_inspection_runtime", None)
         if callable(configure):
             configure(self.inspection_runtime)
+        configure_manual_action = getattr(pipeline, "set_manual_action_adapter", None)
+        if callable(configure_manual_action):
+            run_root = self._run_root(str(options.run_id or ""))
+            configure_manual_action(
+                WebManualActionAdapter(
+                    task_id=run_root.name,
+                    gate=self.manual_action_gate,
+                    blocker_checker=blocker_reason,
+                    on_waiting=lambda state: self._set_stage(
+                        run_root,
+                        "waiting_for_manual_action",
+                        f"等待在项目浏览器中完成{state['reason']}",
+                    ),
+                    on_resolved=lambda _state: self._set_stage(
+                        run_root,
+                        "searching",
+                        "淘宝验证已解除，正在继续搜索商品",
+                    ),
+                )
+            )
         return pipeline
 
     def _notify_index(self, run_root: Path) -> None:
@@ -242,11 +258,13 @@ class TaskManager:
         task_id = run_root.name
         stage = str((snapshot.get("task") or {}).get("stage") or "")
         decorated = dict(snapshot)
+        decorated["manualAction"] = self.manual_action_gate.snapshot(task_id)
         decorated["runtime"] = {
             "active": self.active_task_id == task_id,
             "resumable": self._is_resumable(run_root, stage),
             "createdAt": request.get("created_at"),
             "request": {
+                "displayName": request.get("display_name"),
                 "taskType": request.get("task_type") or "quick",
                 "keyword": request.get("keyword"),
                 "candidateLimit": request.get("candidate_limit"),
@@ -312,6 +330,7 @@ class TaskManager:
                     "task": decorated.get("task") or {},
                     "statistics": decorated.get("statistics") or {},
                     "runtime": decorated.get("runtime") or {},
+                    "manualAction": decorated.get("manualAction"),
                     "url": f"/api/tasks/{run_root.name}",
                 }
             )
@@ -408,19 +427,14 @@ class TaskManager:
         values["run_id"] = task_id
         return PipelineOptions(**values)
 
-    def _attach_manual_action_status(self, pipeline: Any, run_root: Path) -> None:
-        logger = getattr(pipeline, "logger", None)
-        if not isinstance(logger, logging.Logger):
-            return
-        logger.addHandler(
-            _ManualActionStatusHandler(
-                lambda message: self._set_stage(
-                    run_root,
-                    "manual_action_required",
-                    "需要在项目浏览器中完成人工登录或验证；完成后请在服务终端按 Enter",
-                )
-            )
-        )
+    def acknowledge_manual_action(
+        self, task_id: str, generation: int
+    ) -> dict[str, Any]:
+        """Signal the gate only; browser rechecks stay on the collector worker."""
+
+        self.get_task(task_id)
+        self.manual_action_gate.acknowledge(task_id, generation)
+        return self.get_task(task_id)
 
     def _record_failure(self, run_root: Path, exc: BaseException) -> None:
         message = f"{type(exc).__name__}: {exc}"
@@ -447,7 +461,6 @@ class TaskManager:
             pipeline = self._create_pipeline(
                 self._pipeline_options(task_id, request)
             )
-            self._attach_manual_action_status(pipeline, run_root)
             pipeline.run()
             self._notify_index(run_root)
         except BaseException as exc:  # keep the HTTP service alive on worker failure
@@ -562,7 +575,6 @@ class TaskManager:
         run_root = self._run_root(task_id)
         try:
             pipeline = self._create_pipeline(options)
-            self._attach_manual_action_status(pipeline, run_root)
             pipeline.resume_processing(collect_pending_details=True)
             self._notify_index(run_root)
         except BaseException as exc:

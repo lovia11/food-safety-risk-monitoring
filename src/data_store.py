@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import sqlite3
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
@@ -459,6 +460,17 @@ class DataStore:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA busy_timeout = 10000")
         return connection
+
+    @contextmanager
+    def transaction(self):
+        """Yield one write transaction for application services.
+
+        Repositories participating in a cross-entity business action receive the
+        same connection.  They remain responsible only for their own entity.
+        """
+
+        with self._connect() as connection:
+            yield connection
 
     def initialize(self) -> None:
         with self._connect() as connection:
@@ -2050,7 +2062,19 @@ class DataStore:
             "counts": {
                 "originalImages": row["original_image_count"],
                 "ocrImages": row["ocr_image_count"],
+                "evidence": int(row["evidence_count"] or 0),
+                "sellerManagedEvidence": int(row["seller_evidence_count"] or 0),
+                "ugcEvidence": int(row["ugc_evidence_count"] or 0),
             },
+            "representativeEvidence": (
+                {
+                    "text": row["representative_evidence_text"],
+                    "contentOrigin": row["representative_evidence_origin"],
+                    "sourceLabel": row["representative_evidence_label"],
+                }
+                if row["representative_evidence_text"]
+                else None
+            ),
             "review": {
                 "status": row["review_status"],
                 "note": row["review_note"],
@@ -2061,6 +2085,15 @@ class DataStore:
                 "inCurrentList": row["current_source_snapshot_id"] is not None,
                 "sourceSnapshotId": row["current_source_snapshot_id"],
                 "historicalCount": int(row["historical_count"] or 0),
+                "decisionStatus": (
+                    "current"
+                    if row["current_source_snapshot_id"] is not None
+                    else "no_further_action"
+                    if row["review_status"] == "no_further_action"
+                    else "reviewed_follow_up"
+                    if row["review_status"] == "recommend_follow_up"
+                    else "pending"
+                ),
             },
         }
 
@@ -2083,6 +2116,12 @@ class DataStore:
                    ) AS snapshot_count,
                    sm.source_snapshot_id AS current_source_snapshot_id,
                    COALESCE(history.historical_count, 0) AS historical_count
+                   , COALESCE(ev.evidence_count, 0) AS evidence_count
+                   , COALESCE(ev.seller_evidence_count, 0) AS seller_evidence_count
+                   , COALESCE(ev.ugc_evidence_count, 0) AS ugc_evidence_count
+                   , rep.text AS representative_evidence_text
+                   , rep.content_origin AS representative_evidence_origin
+                   , rep.source_label AS representative_evidence_label
         """
 
     def _base_snapshot_query(self) -> str:
@@ -2096,6 +2135,30 @@ class DataStore:
             JOIN reviews r ON r.snapshot_id = s.snapshot_id
             LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
             LEFT JOIN sampling_list_memberships sm ON sm.product_id = s.product_id
+            LEFT JOIN (
+                SELECT snapshot_id, COUNT(*) AS evidence_count,
+                       SUM(CASE WHEN content_origin = 'seller_managed' THEN 1 ELSE 0 END)
+                           AS seller_evidence_count,
+                       SUM(CASE WHEN content_origin != 'seller_managed' THEN 1 ELSE 0 END)
+                           AS ugc_evidence_count
+                FROM evidence
+                GROUP BY snapshot_id
+            ) ev ON ev.snapshot_id = s.snapshot_id
+            LEFT JOIN (
+                SELECT snapshot_id, text, content_origin, source_label
+                FROM (
+                    SELECT snapshot_id, text, content_origin, source_label,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY snapshot_id
+                               ORDER BY CASE WHEN content_origin = 'seller_managed'
+                                             THEN 0 ELSE 1 END,
+                                        evidence_id
+                           ) AS evidence_rank
+                    FROM evidence
+                    WHERE NULLIF(TRIM(text), '') IS NOT NULL
+                ) ranked_evidence
+                WHERE evidence_rank = 1
+            ) rep ON rep.snapshot_id = s.snapshot_id
             LEFT JOIN (
                 SELECT product_id, COUNT(DISTINCT list_id) AS historical_count
                 FROM sampling_list_item_index
@@ -2348,6 +2411,81 @@ class DataStore:
             ],
         }
 
+    def get_task_business_summary(self, task_id: str) -> dict[str, Any]:
+        """Return persistent Review counts separately from current membership."""
+
+        with self._connect() as connection:
+            task = connection.execute(
+                """
+                SELECT t.*, mt.standard_name AS target_name
+                FROM tasks t
+                LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
+                WHERE t.task_id = ?
+                """,
+                (task_id,),
+            ).fetchone()
+            if task is None:
+                raise SnapshotNotFoundError("任务索引不存在")
+            counts = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS product_count,
+                    SUM(CASE WHEN s.status IN (
+                        'detail_collected', 'processing_ocr_analysis',
+                        'failed_processing', 'success'
+                    ) THEN 1 ELSE 0 END) AS detail_completed,
+                    SUM(CASE WHEN s.detected_effects_json != '[]' THEN 1 ELSE 0 END)
+                        AS clue_products,
+                    SUM(CASE WHEN r.review_status = 'pending' THEN 1 ELSE 0 END)
+                        AS pending_review,
+                    SUM(CASE WHEN r.review_status = 'recommend_follow_up' THEN 1 ELSE 0 END)
+                        AS recommend_follow_up,
+                    SUM(CASE WHEN r.review_status = 'no_further_action' THEN 1 ELSE 0 END)
+                        AS no_further_action,
+                    SUM(CASE WHEN s.status LIKE 'failed%' THEN 1 ELSE 0 END)
+                        AS error_count
+                FROM product_snapshots s
+                JOIN reviews r ON r.snapshot_id = s.snapshot_id
+                WHERE s.task_id = ?
+                """,
+                (task_id,),
+            ).fetchone()
+            current_sampling = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) FROM sampling_list_memberships
+                    WHERE source_task_id = ?
+                    """,
+                    (task_id,),
+                ).fetchone()[0]
+            )
+        display_name = (
+            task["display_name"]
+            or task["target_name"]
+            or task["keyword"]
+            or task["task_id"]
+        )
+        return {
+            "taskId": task["task_id"],
+            "displayName": display_name,
+            "taskType": task["task_type"],
+            "targetId": task["target_id"],
+            "targetName": task["target_name"],
+            "keyword": task["keyword"],
+            "createdAt": task["created_at"],
+            "updatedAt": task["updated_at"],
+            "archiveSummary": {
+                "detailCompleted": int(counts["detail_completed"] or 0),
+                "detailTarget": int(task["detail_limit"] or counts["product_count"] or 0),
+                "clueProducts": int(counts["clue_products"] or 0),
+                "pendingReview": int(counts["pending_review"] or 0),
+                "recommendFollowUpCount": int(counts["recommend_follow_up"] or 0),
+                "noFurtherActionCount": int(counts["no_further_action"] or 0),
+                "currentSamplingItems": current_sampling,
+                "errorCount": int(counts["error_count"] or 0),
+            },
+        }
+
     def list_product_snapshots(self, product_id: str) -> list[dict[str, Any]]:
         sql = (
             self._base_snapshot_query()
@@ -2387,30 +2525,48 @@ class DataStore:
     def update_review(
         self, snapshot_id: str, review_status: str, review_note: str = ""
     ) -> dict[str, Any]:
+        with self.transaction() as connection:
+            review = self.save_review(
+                connection, snapshot_id, review_status, review_note
+            )
+        return review
+
+    def save_review(
+        self,
+        connection: sqlite3.Connection,
+        snapshot_id: str,
+        review_status: str,
+        review_note: str = "",
+    ) -> dict[str, Any]:
+        """Persist only Review state using the caller's transaction."""
+
         if review_status not in REVIEW_STATUSES:
             raise ReviewValidationError("人工复核状态不合法")
         note = str(review_note or "").strip()
         if len(note) > 2000:
             raise ReviewValidationError("复核备注不能超过2000个字符")
         reviewed_at = None if review_status == "pending" else iso_now()
-        with self._connect() as connection:
-            exists = connection.execute(
-                "SELECT 1 FROM product_snapshots WHERE snapshot_id = ?", (snapshot_id,)
-            ).fetchone()
-            if exists is None:
-                raise SnapshotNotFoundError("商品快照不存在")
-            connection.execute(
-                """
-                INSERT INTO reviews (snapshot_id, review_status, review_note, reviewed_at)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(snapshot_id) DO UPDATE SET
-                    review_status=excluded.review_status,
-                    review_note=excluded.review_note,
-                    reviewed_at=excluded.reviewed_at
-                """,
-                (snapshot_id, review_status, note, reviewed_at),
-            )
-        return self.get_snapshot(snapshot_id)["review"]
+        exists = connection.execute(
+            "SELECT 1 FROM product_snapshots WHERE snapshot_id = ?", (snapshot_id,)
+        ).fetchone()
+        if exists is None:
+            raise SnapshotNotFoundError("商品快照不存在")
+        connection.execute(
+            """
+            INSERT INTO reviews (snapshot_id, review_status, review_note, reviewed_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(snapshot_id) DO UPDATE SET
+                review_status=excluded.review_status,
+                review_note=excluded.review_note,
+                reviewed_at=excluded.reviewed_at
+            """,
+            (snapshot_id, review_status, note, reviewed_at),
+        )
+        return {
+            "status": review_status,
+            "note": note,
+            "reviewedAt": reviewed_at,
+        }
 
     def list_candidate_hits(self, task_id: str) -> list[dict[str, Any]]:
         with self._connect() as connection:

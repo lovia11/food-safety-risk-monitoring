@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from src.data_store import DataStore
-from src.runtime import write_json
+from src.runtime import read_json, write_json
 from src.task_runtime import (
     ActiveTaskError,
     TaskManager,
@@ -101,6 +101,33 @@ class TaskRuntimeTest(unittest.TestCase):
                 "detail_limit": 2,
             },
         )
+
+    def test_optional_display_name_is_validated_and_persisted_as_run_fact(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            manager = TaskManager(Path(temporary), pipeline_factory=SuccessfulPipeline)
+            created = manager.create_task(
+                {
+                    "name": " 九月重点排查 ",
+                    "keyword": "酸枣仁",
+                    "candidate_limit": 3,
+                    "detail_limit": 1,
+                }
+            )
+            self.assertEqual(created["runtime"]["request"]["displayName"], "九月重点排查")
+            request = read_json(
+                Path(temporary) / created["task"]["id"] / "task_request.json"
+            )
+            self.assertEqual(request["display_name"], "九月重点排查")
+            self.assertTrue(manager.wait_for_idle())
+        with self.assertRaises(TaskValidationError):
+            validate_task_request(
+                {
+                    "name": "x" * 121,
+                    "keyword": "酸枣仁",
+                    "candidate_limit": 3,
+                    "detail_limit": 1,
+                }
+            )
 
     def test_monitor_task_freezes_queries_and_calls_existing_pipeline(self):
         captured = []

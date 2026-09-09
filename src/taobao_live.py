@@ -299,6 +299,7 @@ def wait_until_unblocked(
     logger: logging.Logger,
     non_interactive: bool,
     max_manual_attempts: int = 1,
+    manual_action_adapter: Any | None = None,
 ) -> None:
     """Pause for permitted manual login/CAPTCHA work and verify the result."""
 
@@ -307,6 +308,9 @@ def wait_until_unblocked(
         if not reason:
             return
         logger.warning("页面阻塞状态：%s（人工处理 %s/%s）", reason, attempt, max_manual_attempts)
+        if manual_action_adapter is not None:
+            manual_action_adapter.wait(page, reason, logger)
+            return
         wait_for_manual_action(page, reason, logger, non_interactive)
         page.wait_for_timeout(1_500)
     remaining = blocker_reason(page)
@@ -331,13 +335,17 @@ def open_search_from_home(
     keyword: str,
     logger: logging.Logger,
     non_interactive: bool,
+    manual_action_adapter: Any | None = None,
 ) -> Any:
     """Use Taobao's visible home-page search flow instead of a deep-link request."""
 
     logger.info("先打开淘宝首页建立正常页面会话")
     page.goto(TAOBAO_HOME_URL, wait_until="domcontentloaded", timeout=60_000)
     page.wait_for_timeout(2_000)
-    wait_until_unblocked(page, logger, non_interactive)
+    wait_until_unblocked(
+        page, logger, non_interactive,
+        manual_action_adapter=manual_action_adapter,
+    )
     search_input = first_visible(
         page,
         (
@@ -359,7 +367,10 @@ def open_search_from_home(
         logger.info("淘宝搜索在新标签页打开，采集器已自动切换")
     search_page.wait_for_load_state("domcontentloaded", timeout=60_000)
     search_page.wait_for_timeout(3_000)
-    wait_until_unblocked(search_page, logger, non_interactive)
+    wait_until_unblocked(
+        search_page, logger, non_interactive,
+        manual_action_adapter=manual_action_adapter,
+    )
     return search_page
 
 
@@ -558,6 +569,7 @@ class LiveSearchCollector:
         scroll_step: int = 900,
         max_scrolls: int = 30,
         wait_ms: int = 900,
+        manual_action_adapter: Any | None = None,
     ) -> None:
         self.context = context
         self.run_root = run_root
@@ -566,6 +578,7 @@ class LiveSearchCollector:
         self.scroll_step = scroll_step
         self.max_scrolls = max_scrolls
         self.wait_ms = wait_ms
+        self.manual_action_adapter = manual_action_adapter
 
     def collect(
         self,
@@ -600,6 +613,7 @@ class LiveSearchCollector:
                 keyword=keyword,
                 logger=self.logger,
                 non_interactive=self.non_interactive,
+                manual_action_adapter=self.manual_action_adapter,
             )
 
             by_id: dict[str, dict[str, Any]] = {}

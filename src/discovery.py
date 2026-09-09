@@ -26,12 +26,14 @@ class DiscoveryCoordinator:
         logger: Any,
         non_interactive: bool = False,
         collector_factory: Callable[..., Any] = LiveSearchCollector,
+        manual_action_adapter: Any | None = None,
     ) -> None:
         self.context = context
         self.run_root = run_root.resolve()
         self.logger = logger
         self.non_interactive = non_interactive
         self.collector_factory = collector_factory
+        self.manual_action_adapter = manual_action_adapter
 
     def discover(
         self,
@@ -70,6 +72,7 @@ class DiscoveryCoordinator:
                 run_root=query_root,
                 logger=self.logger,
                 non_interactive=self.non_interactive,
+                manual_action_adapter=self.manual_action_adapter,
             )
             payload = collector.collect(
                 query_text,

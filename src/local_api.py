@@ -26,6 +26,17 @@ from src.inspection_runtime import (
     database_path_for_output_root,
 )
 from src.runtime import read_json
+from src.review_decision import ReviewDecisionService, ReviewDecisionValidationError
+from src.sampling_store import (
+    SamplingMembershipNotFoundError,
+    SamplingSnapshotNotFoundError,
+    SamplingStore,
+    SamplingValidationError,
+)
+from src.manual_action_gate import (
+    ManualActionGenerationError,
+    ManualActionNotWaitingError,
+)
 from src.task_runtime import (
     ActiveTaskError,
     TaskManager,
@@ -109,6 +120,52 @@ def list_run_snapshots(output_root: Path) -> list[dict[str, Any]]:
     return runs
 
 
+BUSINESS_STATUS_PRESENTATION = {
+    "running": ("排查中", "查看执行进度"),
+    "waiting_for_manual_action": ("等待淘宝验证", "查看验证提示"),
+    "awaiting_review": ("待人工复核", "继续人工复核"),
+    "completed": ("已完成", "查看排查结果"),
+    "partial_error": ("部分异常", "查看执行结果"),
+    "interrupted": ("已中断", "查看执行结果"),
+}
+
+
+def task_business_dto(raw: dict[str, Any], summary: dict[str, Any]) -> dict[str, Any]:
+    """Map technical runtime stages to the stable task business vocabulary."""
+
+    stage = str((raw.get("task") or {}).get("stage") or "")
+    runtime = raw.get("runtime") or {}
+    archive = summary["archiveSummary"]
+    if stage in {"manual_action_required", "waiting_for_manual_action"}:
+        business_status = "waiting_for_manual_action"
+    elif stage == "interrupted":
+        business_status = "interrupted"
+    elif stage in {"failed", "completed_with_errors"}:
+        business_status = "partial_error"
+    elif stage in {"completed", "collection_completed"}:
+        business_status = (
+            "awaiting_review" if archive["pendingReview"] > 0 else "completed"
+        )
+    else:
+        business_status = "running"
+    label, action = BUSINESS_STATUS_PRESENTATION[business_status]
+    if business_status == "interrupted" and runtime.get("resumable"):
+        action = "继续任务"
+    return {
+        **summary,
+        "id": summary["taskId"],
+        "businessStatus": business_status,
+        "businessStatusLabel": label,
+        "actionLabel": action,
+        "stage": stage,
+        "message": str((raw.get("task") or {}).get("message") or ""),
+        "active": bool(runtime.get("active")),
+        "resumable": bool(runtime.get("resumable")),
+        "manualAction": raw.get("manualAction"),
+        "url": f"/api/tasks/{summary['taskId']}",
+    }
+
+
 def create_handler(
     output_root: Path,
     web_root: Path = Path("web"),
@@ -146,6 +203,8 @@ def create_handler(
         if config_path.is_file():
             store.import_monitor_config(config_path)
     store.import_all_runs()
+    sampling_store = SamplingStore(store.database_path)
+    review_decisions = ReviewDecisionService(store, sampling_store)
     manager = task_manager or TaskManager(
         resolved_output,
         task_indexer=store.import_run,
@@ -207,7 +266,9 @@ def create_handler(
         def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib handler API
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+            self.send_header(
+                "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
+            )
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
@@ -234,10 +295,18 @@ def create_handler(
                 self._json(200, {"runs": list_run_snapshots(resolved_output)})
                 return
             if path == "/api/tasks":
+                raw_tasks = manager.list_tasks()
+                tasks = []
+                for raw in raw_tasks:
+                    try:
+                        summary = store.get_task_business_summary(str(raw["id"]))
+                    except SnapshotNotFoundError:
+                        continue
+                    tasks.append(task_business_dto(raw, summary))
                 self._json(
                     200,
                     {
-                        "tasks": manager.list_tasks(),
+                        "tasks": tasks,
                         "activeTaskId": manager.active_task_id,
                     },
                 )
@@ -251,6 +320,10 @@ def create_handler(
                 return
             if path == "/api/product-filter-options":
                 self._json(200, store.list_product_filter_options())
+                return
+            if path == "/api/sampling-list":
+                items = sampling_store.list_current()
+                self._json(200, {"items": items, "count": len(items)})
                 return
             parts = [unquote(item) for item in path.split("/") if item]
             if len(parts) == 3 and parts[:2] == ["api", "monitor-targets"]:
@@ -376,8 +449,14 @@ def create_handler(
                 return
             if len(parts) == 3 and parts[:2] == ["api", "tasks"]:
                 try:
-                    self._json(200, manager.get_task(parts[2]))
+                    raw_task = manager.get_task(parts[2])
+                    business = task_business_dto(
+                        raw_task, store.get_task_business_summary(parts[2])
+                    )
+                    self._json(200, {**raw_task, **business})
                 except TaskNotFoundError as exc:
+                    self._error(404, "task_not_found", str(exc))
+                except SnapshotNotFoundError as exc:
                     self._error(404, "task_not_found", str(exc))
                 return
             if (
@@ -538,7 +617,12 @@ def create_handler(
                 if payload is None:
                     return
                 try:
-                    self._json(202, manager.create_task(payload))
+                    raw_task = manager.create_task(payload)
+                    task_id = str((raw_task.get("task") or {}).get("id") or "")
+                    business = task_business_dto(
+                        raw_task, store.get_task_business_summary(task_id)
+                    )
+                    self._json(202, {**raw_task, **business})
                 except TaskValidationError as exc:
                     self._error(400, "invalid_task", str(exc))
                 except ActiveTaskError as exc:
@@ -553,9 +637,111 @@ def create_handler(
                         },
                     )
                 return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "snapshots"]
+                and parts[3] == "review-decision"
+            ):
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                if not isinstance(payload, dict):
+                    self._error(400, "invalid_review_decision", "请求体必须是JSON对象")
+                    return
+                if any(
+                    key in payload
+                    for key in (
+                        "source_task_id", "sourceTaskId", "source_snapshot_id",
+                        "sourceSnapshotId", "product_id", "productId",
+                    )
+                ):
+                    self._error(
+                        400,
+                        "invalid_review_decision",
+                        "Product和Task关系由服务端根据URL中的Snapshot确定",
+                    )
+                    return
+                try:
+                    result = review_decisions.decide(
+                        parts[2],
+                        str(payload.get("decision") or ""),
+                        str(payload.get("added_from") or ""),
+                        str(payload.get("note") or ""),
+                    )
+                except ReviewDecisionValidationError as exc:
+                    self._error(400, "invalid_review_decision", str(exc))
+                    return
+                except (ReviewValidationError, SamplingValidationError) as exc:
+                    self._error(400, "invalid_review_decision", str(exc))
+                    return
+                except SnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                    return
+                self._json(200, result)
+                return
+            if path == "/api/sampling-list/items":
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                if not isinstance(payload, dict):
+                    self._error(400, "invalid_sampling_item", "请求体必须是JSON对象")
+                    return
+                if "source_task_id" in payload or "sourceTaskId" in payload:
+                    self._error(
+                        400,
+                        "invalid_sampling_item",
+                        "Task关系由服务端根据Snapshot确定",
+                    )
+                    return
+                try:
+                    membership = sampling_store.add(
+                        str(payload.get("product_id") or ""),
+                        str(payload.get("source_snapshot_id") or ""),
+                        str(payload.get("added_from") or ""),
+                    )
+                except SamplingValidationError as exc:
+                    self._error(400, "invalid_sampling_item", str(exc))
+                    return
+                except SamplingSnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                    return
+                self._json(200, {"membership": membership})
+                return
+            if (
+                len(parts) == 5
+                and parts[:2] == ["api", "tasks"]
+                and parts[3:] == ["manual-action", "acknowledge"]
+            ):
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                generation = payload.get("generation") if isinstance(payload, dict) else None
+                if isinstance(generation, bool) or not isinstance(generation, int) or generation < 1:
+                    self._error(400, "invalid_manual_action", "generation必须是正整数")
+                    return
+                try:
+                    raw_task = manager.acknowledge_manual_action(parts[2], generation)
+                    business = task_business_dto(
+                        raw_task, store.get_task_business_summary(parts[2])
+                    )
+                except TaskNotFoundError as exc:
+                    self._error(404, "task_not_found", str(exc))
+                    return
+                except ManualActionGenerationError as exc:
+                    self._error(409, "stale_manual_action_generation", str(exc))
+                    return
+                except ManualActionNotWaitingError as exc:
+                    self._error(409, "manual_action_not_waiting", str(exc))
+                    return
+                self._json(202, {**raw_task, **business})
+                return
             if len(parts) == 4 and parts[:2] == ["api", "tasks"] and parts[3] == "resume":
                 try:
-                    self._json(202, manager.resume_task(parts[2]))
+                    raw_task = manager.resume_task(parts[2])
+                    business = task_business_dto(
+                        raw_task, store.get_task_business_summary(parts[2])
+                    )
+                    self._json(202, {**raw_task, **business})
                 except TaskNotFoundError as exc:
                     self._error(404, "task_not_found", str(exc))
                 except TaskNotResumableError as exc:
@@ -571,6 +757,22 @@ def create_handler(
                             }
                         },
                     )
+                return
+            self._error(404, "not_found", "接口不存在")
+
+        def do_DELETE(self) -> None:  # noqa: N802 - stdlib handler API
+            path = urlparse(self.path).path
+            parts = [unquote(item) for item in path.split("/") if item]
+            if (
+                len(parts) == 4
+                and parts[:3] == ["api", "sampling-list", "items"]
+            ):
+                try:
+                    membership = sampling_store.remove(parts[3])
+                except SamplingMembershipNotFoundError as exc:
+                    self._error(404, "sampling_membership_not_found", str(exc))
+                    return
+                self._json(200, {"membership": membership})
                 return
             self._error(404, "not_found", "接口不存在")
 

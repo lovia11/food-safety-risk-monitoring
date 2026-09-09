@@ -521,6 +521,7 @@ class LocalApiHelpersTest(unittest.TestCase):
                         "inCurrentList": False,
                         "sourceSnapshotId": None,
                         "historicalCount": 0,
+                        "decisionStatus": "pending",
                     },
                 )
                 snapshot_id = products[0]["snapshotId"]

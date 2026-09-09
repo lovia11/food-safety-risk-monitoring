@@ -39,6 +39,7 @@ STAGE_PRESENTATION = {
     "collecting_details": "正在采集商品详情",
     "processing_ocr_analysis": "正在执行 OCR 与风险分析",
     "manual_action_required": "需要人工登录或验证",
+    "waiting_for_manual_action": "等待淘宝验证",
     "collection_completed": "详情采集已完成",
     "completed": "任务已完成",
     "completed_with_errors": "任务完成，但存在失败项",

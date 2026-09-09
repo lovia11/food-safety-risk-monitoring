@@ -142,6 +142,7 @@ class StandalonePipeline:
         self.web_stage = "initializing"
         self.web_message = "正在初始化本地采集任务"
         self.inspection_runtime: InspectionRuntime | None = None
+        self.manual_action_adapter: Any | None = None
 
     def set_inspection_runtime(
         self, inspection_runtime: InspectionRuntime | None
@@ -149,6 +150,11 @@ class StandalonePipeline:
         """Attach D6's file-oriented integration layer."""
 
         self.inspection_runtime = inspection_runtime
+
+    def set_manual_action_adapter(self, adapter: Any | None) -> None:
+        """Attach the Web gate adapter without changing standalone CLI behavior."""
+
+        self.manual_action_adapter = adapter
 
     def _generate_inspection_recommendation(self, product_root: Path) -> bool:
         if self.inspection_runtime is None:
@@ -304,6 +310,7 @@ class StandalonePipeline:
                         channel=self.options.channel,
                         max_scrolls=50,
                         non_interactive=self.options.non_interactive,
+                        manual_action_adapter=self.manual_action_adapter,
                         run_root=self.run_root,
                         candidate=candidate,
                         logger=self.logger,
@@ -573,6 +580,7 @@ class StandalonePipeline:
                         run_root=self.run_root,
                         logger=self.logger,
                         non_interactive=self.options.non_interactive,
+                        manual_action_adapter=self.manual_action_adapter,
                     ).collect(
                         self.options.keyword,
                         candidate_limit=self.options.requested_candidate_limit,
