@@ -13,6 +13,37 @@ export type SamplingStatus = {
   inCurrentList: boolean;
   sourceSnapshotId: string | null;
   historicalCount: number;
+  decisionStatus:
+    | "current"
+    | "reviewed_follow_up"
+    | "no_further_action"
+    | "pending";
+};
+
+export type SamplingMembership = {
+  productId: string;
+  sourceSnapshotId: string;
+  sourceTaskId: string;
+  addedFrom: "product_overview" | "inspection_workspace";
+  addedAt: string;
+  updatedAt: string;
+  productName?: string;
+  shopName?: string;
+  collectedAt?: string | null;
+  review?: Review;
+};
+
+export type SamplingList = {
+  items: SamplingMembership[];
+  count: number;
+};
+
+export type ReviewDecisionResult = {
+  snapshotId: string;
+  productId: string;
+  review: Review;
+  membership: SamplingMembership | null;
+  sampling: SamplingStatus;
 };
 
 export type SnapshotSummary = {
@@ -41,7 +72,15 @@ export type SnapshotSummary = {
   counts: {
     originalImages: number;
     ocrImages: number;
+    evidence: number;
+    sellerManagedEvidence: number;
+    ugcEvidence: number;
   };
+  representativeEvidence: {
+    text: string;
+    contentOrigin: string;
+    sourceLabel: string;
+  } | null;
   review: Review;
   snapshotCount: number;
   sampling: SamplingStatus;
@@ -196,4 +235,107 @@ export type InspectionContextOptions = {
   product_categories: string[];
   product_forms: string[];
   ingredient_contexts: string[];
+};
+
+export type TaskBusinessStatus =
+  | "running"
+  | "waiting_for_manual_action"
+  | "awaiting_review"
+  | "completed"
+  | "partial_error"
+  | "interrupted";
+
+export type TaskArchiveSummary = {
+  detailCompleted: number;
+  detailTarget: number;
+  clueProducts: number;
+  pendingReview: number;
+  recommendFollowUpCount: number;
+  noFurtherActionCount: number;
+  currentSamplingItems: number;
+  errorCount: number;
+};
+
+export type ManualActionState = {
+  status: "waiting" | "resolved" | "idle";
+  generation: number;
+  reason: string | null;
+  requestedAt: string | null;
+  lastCheckedAt: string | null;
+  attempt: number;
+  canAcknowledge: boolean;
+} | null;
+
+export type TaskSummary = {
+  id: string;
+  taskId: string;
+  displayName: string;
+  taskType: "quick" | "monitor";
+  targetId: string | null;
+  targetName: string | null;
+  keyword: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  businessStatus: TaskBusinessStatus;
+  businessStatusLabel: string;
+  actionLabel: string;
+  stage: string;
+  message: string;
+  active: boolean;
+  resumable: boolean;
+  manualAction: ManualActionState;
+  archiveSummary: TaskArchiveSummary;
+  url: string;
+};
+
+export type TaskList = {
+  tasks: TaskSummary[];
+  activeTaskId: string | null;
+};
+
+export type TaskDetail = TaskSummary & {
+  task: {
+    id: string;
+    keyword: string;
+    stage: string;
+    stageLabel: string;
+    terminal: boolean;
+    message: string;
+  };
+  statistics: Record<string, number>;
+  runtime: {
+    active: boolean;
+    resumable: boolean;
+    createdAt: string | null;
+    request: {
+      displayName: string | null;
+      taskType: "quick" | "monitor";
+      keyword: string;
+      candidateLimit: number | null;
+      detailLimit: number | null;
+      targetId: string | null;
+      targetName: string | null;
+      perQueryCandidateLimit: number | null;
+      searchQueries: MonitorQuery[];
+    };
+  };
+};
+
+export type MonitorQuery = {
+  query_id: string;
+  query_text: string;
+  query_type: string;
+  query_source: string;
+  validation_status: string;
+  query_note: string;
+  order: number;
+  enabled: boolean;
+};
+
+export type MonitorTarget = {
+  target_id: string;
+  standard_name: string;
+  target_type: string;
+  enabled: boolean;
+  queries: MonitorQuery[];
 };

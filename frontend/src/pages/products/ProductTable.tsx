@@ -13,14 +13,23 @@ type ProductTableProps = {
 
 function SamplingCell({ product }: { product: SnapshotSummary }) {
   const { sampling } = product;
+  const tone = sampling.inCurrentList
+    ? "success"
+    : sampling.decisionStatus === "reviewed_follow_up"
+      ? "info"
+      : "neutral";
   return (
     <div className="sampling-cell">
-      <StatusBadge tone={sampling.inCurrentList ? "success" : "neutral"}>
+      <StatusBadge tone={tone}>
         {sampling.inCurrentList
           ? "当前清单中"
-          : sampling.historicalCount > 0
-            ? "当前未纳入"
-            : "从未纳入"}
+          : sampling.decisionStatus === "reviewed_follow_up"
+            ? "已复核 / 当前未在"
+            : sampling.decisionStatus === "no_further_action"
+              ? "暂不纳入"
+              : sampling.historicalCount > 0
+                ? "曾纳入 / 当前未在"
+                : "从未纳入"}
       </StatusBadge>
       {sampling.historicalCount > 0 && (
         <small>曾纳入 {sampling.historicalCount} 次</small>
@@ -40,8 +49,8 @@ export function ProductTable({
         <thead>
           <tr>
             <th>商品</th>
-            <th>最近所属排查</th>
-            <th>可能风险方向</th>
+            <th>地区信息</th>
+            <th>页面功效线索</th>
             <th>人工复核</th>
             <th>抽检清单</th>
             <th>最近采集</th>
@@ -63,8 +72,10 @@ export function ProductTable({
                   </button>
                 </td>
                 <td>
-                  <span className="cell-primary">{product.taskDisplayName}</span>
-                  {product.targetName && <small>{product.targetName}</small>}
+                  <div className="region-cell">
+                    <span><small>搜索页地区</small>{product.region || "未记录"}</span>
+                    <span><small>商品产地</small><em>待采集</em></span>
+                  </div>
                 </td>
                 <td>
                   <div className="effect-list">

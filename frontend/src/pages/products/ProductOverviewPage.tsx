@@ -157,13 +157,13 @@ export function ProductOverviewPage({ productId }: ProductOverviewPageProps) {
                 </select>
               </label>
               <label>
-                可能风险方向
+                页面功效线索
                 <select
                   value={query.effect}
                   onChange={(event) => updateFilter("effect", event.target.value)}
                   disabled={!options}
                 >
-                  <option value="">全部方向</option>
+                  <option value="">全部线索</option>
                   {options?.effects.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}

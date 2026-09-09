@@ -5,7 +5,10 @@ import type {
   ProductPage,
   ProductQuery,
   Review,
+  ReviewDecisionResult,
   ReviewStatus,
+  SamplingList,
+  SamplingMembership,
   SnapshotSummary,
   SnapshotWorkspace,
 } from "./contracts";
@@ -72,6 +75,48 @@ export async function updateReview(
     },
   );
   return result.review;
+}
+
+export function saveReviewDecision(
+  snapshotId: string,
+  decision: "recommend_follow_up" | "no_further_action",
+  addedFrom: "product_overview" | "inspection_workspace",
+  note: string,
+) {
+  return apiRequest<ReviewDecisionResult>(
+    `/api/snapshots/${encodeURIComponent(snapshotId)}/review-decision`,
+    {
+      method: "POST",
+      body: JSON.stringify({ decision, added_from: addedFrom, note }),
+    },
+  );
+}
+
+export function getSamplingList(signal?: AbortSignal) {
+  return apiRequest<SamplingList>("/api/sampling-list", { signal });
+}
+
+export async function addSamplingItem(
+  productId: string,
+  snapshotId: string,
+  addedFrom: "product_overview" | "inspection_workspace",
+) {
+  const result = await apiRequest<{ membership: SamplingMembership }>(
+    "/api/sampling-list/items",
+    {
+      method: "POST",
+      body: JSON.stringify({ product_id: productId, source_snapshot_id: snapshotId, added_from: addedFrom }),
+    },
+  );
+  return result.membership;
+}
+
+export async function removeSamplingItem(productId: string) {
+  const result = await apiRequest<{ membership: SamplingMembership }>(
+    `/api/sampling-list/items/${encodeURIComponent(productId)}`,
+    { method: "DELETE" },
+  );
+  return result.membership;
 }
 
 export function getInspectionContextOptions(signal?: AbortSignal) {

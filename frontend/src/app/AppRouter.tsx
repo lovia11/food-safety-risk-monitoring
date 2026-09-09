@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 import { AppShell } from "../layout/AppShell";
-import { InspectionArchivePlaceholder } from "../pages/inspections/InspectionArchivePlaceholder";
+import { InspectionArchivePage } from "../pages/inspections/InspectionArchivePage";
+import { InspectionWorkspacePage } from "../pages/inspections/InspectionWorkspacePage";
+import { NewInspectionPage } from "../pages/inspections/NewInspectionPage";
 import { ProductOverviewPage } from "../pages/products/ProductOverviewPage";
-import { SamplingPlaceholder } from "../pages/sampling/SamplingPlaceholder";
+import { CurrentSamplingPage } from "../pages/sampling/CurrentSamplingPage";
 
 export type AppRoute =
   | { section: "products"; productId?: string }
@@ -47,7 +49,7 @@ export function AppRouter() {
 
   const detailOpen = Boolean(
     (route.section === "products" && route.productId) ||
-      (route.section === "inspections" && route.taskId) ||
+      (route.section === "inspections" && route.taskId && route.taskId !== "new") ||
       (route.section === "sampling" && route.listId),
   );
 
@@ -56,9 +58,9 @@ export function AppRouter() {
       {route.section === "products" ? (
         <ProductOverviewPage productId={route.productId} />
       ) : route.section === "inspections" ? (
-        <InspectionArchivePlaceholder />
+        route.taskId === "new" ? <NewInspectionPage /> : route.taskId ? <InspectionWorkspacePage taskId={route.taskId} /> : <InspectionArchivePage />
       ) : (
-        <SamplingPlaceholder />
+        <CurrentSamplingPage />
       )}
     </AppShell>
   );

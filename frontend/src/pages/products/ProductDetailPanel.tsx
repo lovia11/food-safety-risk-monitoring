@@ -8,7 +8,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
-  ReviewStatus,
   SnapshotSummary,
   SnapshotWorkspace,
 } from "../../api/contracts";
@@ -16,7 +15,6 @@ import {
   getProductSnapshots,
   getSnapshotWorkspace,
   updateInspectionContext,
-  updateReview,
 } from "../../api/products";
 import { Drawer } from "../../components/Drawer";
 import { EmptyState } from "../../components/EmptyState";
@@ -49,7 +47,6 @@ export function ProductDetailPanel({
   const [workspaceError, setWorkspaceError] = useState("");
   const [loadingSnapshots, setLoadingSnapshots] = useState(true);
   const [loadingWorkspace, setLoadingWorkspace] = useState(false);
-  const [savingReview, setSavingReview] = useState(false);
   const [savingContext, setSavingContext] = useState(false);
   const { pushToast } = useToast();
 
@@ -115,21 +112,6 @@ export function ProductDetailPanel({
     ) || [];
     return { seller, ugc };
   }, [workspace]);
-
-  const handleReviewSave = async (status: ReviewStatus, note: string) => {
-    if (!selectedSnapshotId) return;
-    setSavingReview(true);
-    try {
-      await updateReview(selectedSnapshotId, status, note);
-      await loadWorkspace(selectedSnapshotId);
-      onProductChanged();
-      pushToast("人工复核已保存", "success");
-    } catch (reason) {
-      pushToast(reason instanceof Error ? reason.message : "复核保存失败", "danger");
-    } finally {
-      setSavingReview(false);
-    }
-  };
 
   const handleContextSave = async (context: {
     product_category: string | null;
@@ -293,9 +275,16 @@ export function ProductDetailPanel({
                 />
               )}
               <ReviewActions
+                snapshotId={selectedSnapshotId}
+                productId={workspace.snapshot.productId}
                 review={workspace.review}
-                saving={savingReview}
-                onSave={handleReviewSave}
+                sampling={workspace.sampling}
+                addedFrom="product_overview"
+                weakEvidence={evidenceGroups.seller.length === 0 && evidenceGroups.ugc.length > 0}
+                onChanged={async () => {
+                  await loadWorkspace(selectedSnapshotId);
+                  onProductChanged();
+                }}
               />
             </>
           ) : null}
