@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -6,6 +7,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from src.data_store import DataStore
 from src.local_api import (
@@ -397,6 +399,22 @@ class LocalApiHelpersTest(unittest.TestCase):
                     ],
                 },
             )
+            write_json(
+                run_root / "products" / "123" / "inspection_recommendation.json",
+                {
+                    "product_context": {
+                        "product_category": None,
+                        "product_form": None,
+                        "confirmed_ingredient_contexts": [],
+                        "context_evidence": [],
+                    },
+                    "risk_findings": [{"risk_label": "助眠相关宣传线索"}],
+                    "unmapped_evidence": [],
+                    "composition_gaps": [],
+                    "knowledge_gaps": [],
+                    "disclaimer": "仅用于抽检辅助筛查。",
+                },
+            )
             write_web_snapshot(
                 run_root,
                 {
@@ -476,8 +494,12 @@ class LocalApiHelpersTest(unittest.TestCase):
             thread.start()
             base = f"http://127.0.0.1:{server.server_port}"
             try:
-                with urlopen(f"{base}/api/products?task_id=run-1") as response:
-                    product_page = json.load(response)
+                with patch(
+                    "src.local_api.build_snapshot_artifacts",
+                    side_effect=AssertionError("商品列表不应读取Recommendation文件"),
+                ):
+                    with urlopen(f"{base}/api/products?task_id=run-1") as response:
+                        product_page = json.load(response)
                 products = product_page["products"]
                 self.assertEqual(len(products), 1)
                 self.assertEqual(
@@ -492,7 +514,28 @@ class LocalApiHelpersTest(unittest.TestCase):
                 )
                 self.assertIsNone(products[0]["targetId"])
                 self.assertIsNone(products[0]["targetName"])
+                self.assertEqual(products[0]["snapshotCount"], 1)
+                self.assertEqual(
+                    products[0]["sampling"],
+                    {
+                        "inCurrentList": False,
+                        "sourceSnapshotId": None,
+                        "historicalCount": 0,
+                    },
+                )
                 snapshot_id = products[0]["snapshotId"]
+                with urlopen(f"{base}/api/product-filter-options") as response:
+                    filter_options = json.load(response)
+                self.assertIn(
+                    {"value": "助眠", "label": "助眠"},
+                    filter_options["effects"],
+                )
+                self.assertTrue(
+                    any(
+                        item["value"] == "run-1"
+                        for item in filter_options["tasks"]
+                    )
+                )
                 with urlopen(
                     f"{base}/api/products?target_id=target-1&page=1&page_size=20"
                 ) as response:
@@ -528,6 +571,9 @@ class LocalApiHelpersTest(unittest.TestCase):
                     "page_size=0",
                     "page_size=101",
                     "review_status=invalid",
+                    "sampling_status=historical",
+                    "collected_from=09-03-2026",
+                    "collected_from=2026-09-04&collected_to=2026-09-03",
                 ):
                     with self.subTest(parameters=parameters):
                         with self.assertRaises(HTTPError) as raised:
@@ -539,6 +585,21 @@ class LocalApiHelpersTest(unittest.TestCase):
                 with urlopen(f"{base}/api/snapshots/{snapshot_id}") as response:
                     detail = json.load(response)
                 self.assertEqual(detail["evidence"][0]["sourceType"], "ocr")
+                with urlopen(
+                    f"{base}/api/snapshots/{snapshot_id}/workspace"
+                ) as response:
+                    workspace = json.load(response)
+                self.assertEqual(workspace["snapshot"]["taskId"], "run-1")
+                self.assertEqual(workspace["evidence"][0]["text"], "帮助睡眠")
+                self.assertEqual(workspace["review"]["status"], "pending")
+                self.assertFalse(workspace["sampling"]["inCurrentList"])
+                self.assertEqual(
+                    workspace["inspection"]["recommendationStatus"], "available"
+                )
+                self.assertEqual(
+                    workspace["assets"]["analysisPath"],
+                    "products/123/analysis.json",
+                )
                 request = Request(
                     f"{base}/api/snapshots/{snapshot_id}/review",
                     data=json.dumps(
@@ -550,6 +611,15 @@ class LocalApiHelpersTest(unittest.TestCase):
                 with urlopen(request) as response:
                     saved = json.load(response)
                 self.assertEqual(saved["review"]["status"], "recommend_follow_up")
+                with sqlite3.connect(database_path) as connection:
+                    connection.execute(
+                        "UPDATE tasks SET run_path='../outside' WHERE task_id='run-1'"
+                    )
+                connection.close()
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(f"{base}/api/snapshots/{snapshot_id}/workspace")
+                self.assertEqual(raised.exception.code, 409)
+                raised.exception.close()
             finally:
                 server.shutdown()
                 server.server_close()

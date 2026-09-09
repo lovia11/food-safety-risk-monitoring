@@ -244,6 +244,20 @@ def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
     }
 
 
+def build_snapshot_artifacts(run_root: Path, product_id: str) -> dict[str, Any]:
+    """Read file-backed assets and D6 output for one run-scoped snapshot.
+
+    Callers must resolve and validate ``run_root`` and ``product_id`` before using
+    this helper. Keeping the run explicit prevents a historical Snapshot from
+    accidentally receiving the latest Product recommendation from another run.
+    """
+
+    return {
+        "assets": _product_assets(run_root, product_id),
+        "inspection": _inspection_view(run_root, product_id),
+    }
+
+
 def _product_view(
     run_root: Path,
     record: dict[str, Any],

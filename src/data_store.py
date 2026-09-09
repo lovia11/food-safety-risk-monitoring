@@ -11,7 +11,7 @@ import hashlib
 import json
 import re
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -41,7 +41,8 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
     Path("config/monitor_targets.reference.json"),
 )
-SCHEMA_VERSION = 7
+SAMPLING_STATUSES = {"current", "historical_only", "never"}
+SCHEMA_VERSION = 8
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -67,6 +68,10 @@ class SnapshotNotFoundError(DataStoreError):
 
 class ReviewValidationError(DataStoreError):
     """A review update contains an unsupported value."""
+
+
+class ProductFilterValidationError(DataStoreError):
+    """A product-list filter contains an unsupported value."""
 
 
 class MonitorConfigValidationError(DataStoreError):
@@ -461,6 +466,7 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS tasks (
                     task_id TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL DEFAULT '',
                     keyword TEXT NOT NULL DEFAULT '',
                     candidate_limit INTEGER,
                     detail_limit INTEGER,
@@ -534,6 +540,51 @@ class DataStore:
                     ON evidence(snapshot_id, ordinal);
                 CREATE INDEX IF NOT EXISTS idx_reviews_status
                     ON reviews(review_status);
+
+                CREATE TABLE IF NOT EXISTS sampling_list_memberships (
+                    product_id TEXT PRIMARY KEY
+                        REFERENCES products(taobao_product_id),
+                    source_snapshot_id TEXT NOT NULL
+                        REFERENCES product_snapshots(snapshot_id),
+                    source_task_id TEXT NOT NULL
+                        REFERENCES tasks(task_id),
+                    added_from TEXT NOT NULL
+                        CHECK(added_from IN ('product_overview', 'inspection_workspace')),
+                    added_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS sampling_lists (
+                    list_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL
+                        CHECK(status IN ('preparing', 'exported')),
+                    exported_at TEXT,
+                    item_count INTEGER NOT NULL DEFAULT 0 CHECK(item_count >= 0),
+                    snapshot_path TEXT NOT NULL DEFAULT '',
+                    workbook_path TEXT NOT NULL DEFAULT '',
+                    snapshot_sha256 TEXT NOT NULL DEFAULT '',
+                    workbook_sha256 TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS sampling_list_item_index (
+                    list_id TEXT NOT NULL
+                        REFERENCES sampling_lists(list_id) ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    product_id TEXT NOT NULL,
+                    source_snapshot_id TEXT NOT NULL,
+                    source_task_id TEXT NOT NULL,
+                    PRIMARY KEY(list_id, ordinal),
+                    UNIQUE(list_id, product_id)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_sampling_membership_snapshot
+                    ON sampling_list_memberships(source_snapshot_id);
+                CREATE INDEX IF NOT EXISTS idx_sampling_membership_task
+                    ON sampling_list_memberships(source_task_id);
+                CREATE INDEX IF NOT EXISTS idx_sampling_history_product
+                    ON sampling_list_item_index(product_id, list_id);
 
                 CREATE TABLE IF NOT EXISTS monitor_datasets (
                     dataset_id TEXT PRIMARY KEY,
@@ -785,6 +836,9 @@ class DataStore:
             self._ensure_column(connection, "tasks", "task_type", "TEXT NOT NULL DEFAULT 'quick'")
             self._ensure_column(connection, "tasks", "target_id", "TEXT")
             self._ensure_column(connection, "tasks", "per_query_candidate_limit", "INTEGER")
+            self._ensure_column(
+                connection, "tasks", "display_name", "TEXT NOT NULL DEFAULT ''"
+            )
             self._ensure_column(
                 connection,
                 "monitor_targets",
@@ -1686,9 +1740,14 @@ class DataStore:
             raise ValueError("snapshot task id does not match run directory")
         request = _read_optional_json(run_root / "task_request.json", {})
         config = _read_optional_json(run_root / "run_config.json", {})
+        if not isinstance(request, dict):
+            request = {}
+        if not isinstance(config, dict):
+            config = {}
         generated_at = str(snapshot.get("generatedAt") or iso_now())
         stage = str(task.get("stage") or "")
         terminal = bool(task.get("terminal"))
+        keyword = str(task.get("keyword") or request.get("keyword") or "").strip()
         created_at = request.get("created_at") or config.get("generated_at")
         candidate_limit = (
             request.get("candidate_limit")
@@ -1713,14 +1772,50 @@ class DataStore:
         ]
         imported_evidence = 0
         with self._connect() as connection:
+            existing_task = connection.execute(
+                "SELECT display_name FROM tasks WHERE task_id = ?", (task_id,)
+            ).fetchone()
+            existing_display_name = (
+                str(existing_task["display_name"] or "").strip()
+                if existing_task is not None
+                else ""
+            )
+            explicit_display_name = str(
+                request.get("display_name") or request.get("name") or ""
+            ).strip()
+            request_target = request.get("monitor_target") or {}
+            request_target_name = (
+                str(request_target.get("standard_name") or "").strip()
+                if isinstance(request_target, dict)
+                else ""
+            )
+            target_name = str(request.get("target_name") or request_target_name).strip()
+            if not target_name and target_id:
+                target_row = connection.execute(
+                    "SELECT standard_name FROM monitor_targets WHERE target_id = ?",
+                    (target_id,),
+                ).fetchone()
+                target_name = (
+                    str(target_row["standard_name"] or "").strip()
+                    if target_row is not None
+                    else ""
+                )
+            display_name = (
+                explicit_display_name
+                or existing_display_name
+                or target_name
+                or keyword
+                or task_id
+            )
             connection.execute(
                 """
                 INSERT INTO tasks (
-                    task_id, keyword, candidate_limit, detail_limit, stage,
+                    task_id, display_name, keyword, candidate_limit, detail_limit, stage,
                     created_at, started_at, completed_at, run_path, updated_at,
                     task_type, target_id, per_query_candidate_limit
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(task_id) DO UPDATE SET
+                    display_name=excluded.display_name,
                     keyword=excluded.keyword,
                     candidate_limit=COALESCE(excluded.candidate_limit, tasks.candidate_limit),
                     detail_limit=COALESCE(excluded.detail_limit, tasks.detail_limit),
@@ -1739,7 +1834,8 @@ class DataStore:
                 """,
                 (
                     task_id,
-                    str(task.get("keyword") or ""),
+                    display_name,
+                    keyword,
                     int(candidate_limit) if candidate_limit is not None else None,
                     int(detail_limit) if detail_limit is not None else None,
                     stage,
@@ -1930,6 +2026,7 @@ class DataStore:
             "snapshotId": row["snapshot_id"],
             "productId": row["product_id"],
             "taskId": row["task_id"],
+            "taskDisplayName": row["task_display_name"],
             "targetId": row["target_id"],
             "targetName": row["target_name"],
             "rank": row["rank"],
@@ -1959,14 +2056,37 @@ class DataStore:
                 "note": row["review_note"],
                 "reviewedAt": row["reviewed_at"],
             },
+            "snapshotCount": int(row["snapshot_count"] or 0),
+            "sampling": {
+                "inCurrentList": row["current_source_snapshot_id"] is not None,
+                "sourceSnapshotId": row["current_source_snapshot_id"],
+                "historicalCount": int(row["historical_count"] or 0),
+            },
         }
 
-    def _base_snapshot_query(self) -> str:
+    @staticmethod
+    def _base_snapshot_columns() -> str:
         return """
-            SELECT s.*, t.run_path, t.target_id,
+            s.*, t.run_path, t.target_id,
+                   COALESCE(
+                       NULLIF(t.display_name, ''),
+                       mt.standard_name,
+                       NULLIF(t.keyword, ''),
+                       t.task_id
+                   ) AS task_display_name,
                    mt.standard_name AS target_name,
-                   r.review_status, r.review_note, r.reviewed_at
-        """ + self._base_snapshot_from()
+                   r.review_status, r.review_note, r.reviewed_at,
+                   (
+                       SELECT COUNT(*)
+                       FROM product_snapshots all_snapshots
+                       WHERE all_snapshots.product_id = s.product_id
+                   ) AS snapshot_count,
+                   sm.source_snapshot_id AS current_source_snapshot_id,
+                   COALESCE(history.historical_count, 0) AS historical_count
+        """
+
+    def _base_snapshot_query(self) -> str:
+        return "SELECT " + self._base_snapshot_columns() + self._base_snapshot_from()
 
     @staticmethod
     def _base_snapshot_from() -> str:
@@ -1975,9 +2095,39 @@ class DataStore:
             JOIN tasks t ON t.task_id = s.task_id
             JOIN reviews r ON r.snapshot_id = s.snapshot_id
             LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
+            LEFT JOIN sampling_list_memberships sm ON sm.product_id = s.product_id
+            LEFT JOIN (
+                SELECT product_id, COUNT(DISTINCT list_id) AS historical_count
+                FROM sampling_list_item_index
+                GROUP BY product_id
+            ) history ON history.product_id = s.product_id
         """
 
-    def _product_filter(
+    @staticmethod
+    def _normalize_product_filter_dates(
+        collected_from: str, collected_to: str
+    ) -> tuple[str, str]:
+        normalized: list[str] = []
+        for value, field in (
+            (collected_from, "collected_from"),
+            (collected_to, "collected_to"),
+        ):
+            text = str(value or "").strip()
+            if not text:
+                normalized.append("")
+                continue
+            try:
+                parsed = date.fromisoformat(text)
+            except ValueError as exc:
+                raise ProductFilterValidationError(
+                    f"{field}必须使用YYYY-MM-DD格式"
+                ) from exc
+            normalized.append(parsed.isoformat())
+        if normalized[0] and normalized[1] and normalized[0] > normalized[1]:
+            raise ProductFilterValidationError("collected_from不能晚于collected_to")
+        return normalized[0], normalized[1]
+
+    def _product_snapshot_filter(
         self,
         *,
         query: str = "",
@@ -1985,6 +2135,8 @@ class DataStore:
         effect: str = "",
         task_id: str = "",
         target_id: str = "",
+        collected_from: str = "",
+        collected_to: str = "",
     ) -> tuple[str, list[Any]]:
         clauses: list[str] = []
         values: list[Any] = []
@@ -2008,29 +2160,63 @@ class DataStore:
         if target_id:
             clauses.append("t.target_id = ?")
             values.append(target_id)
-        if not task_id:
-            target_scope = ""
-            if target_id:
-                target_scope = " AND newer_task.target_id = ?"
-            clauses.append(
-                """
-                NOT EXISTS (
-                    SELECT 1
-                    FROM product_snapshots newer
-                    JOIN tasks newer_task ON newer_task.task_id = newer.task_id
-                    WHERE newer.product_id = s.product_id
-                """
-                + target_scope
-                + """
-                      AND (COALESCE(newer.collected_at, '') > COALESCE(s.collected_at, '')
-                           OR (COALESCE(newer.collected_at, '') = COALESCE(s.collected_at, '')
-                               AND newer.task_id > s.task_id))
-                )
-                """
+        start_date, end_date = self._normalize_product_filter_dates(
+            collected_from, collected_to
+        )
+        if start_date:
+            clauses.append("COALESCE(s.collected_at, '') >= ?")
+            values.append(f"{start_date}T00:00:00")
+        if end_date:
+            exclusive_end = date.fromisoformat(end_date) + timedelta(days=1)
+            clauses.append("COALESCE(s.collected_at, '') < ?")
+            values.append(f"{exclusive_end.isoformat()}T00:00:00")
+        return (" WHERE " + " AND ".join(clauses)) if clauses else "", values
+
+    def _ranked_product_query(
+        self,
+        *,
+        query: str = "",
+        review_status: str = "",
+        effect: str = "",
+        task_id: str = "",
+        target_id: str = "",
+        sampling_status: str = "",
+        collected_from: str = "",
+        collected_to: str = "",
+    ) -> tuple[str, list[Any], str]:
+        if sampling_status and sampling_status not in SAMPLING_STATUSES:
+            raise ProductFilterValidationError("抽检清单状态不合法")
+        where, values = self._product_snapshot_filter(
+            query=query,
+            review_status=review_status,
+            effect=effect,
+            task_id=task_id,
+            target_id=target_id,
+            collected_from=collected_from,
+            collected_to=collected_to,
+        )
+        ranked = (
+            "WITH ranked_products AS (SELECT "
+            + self._base_snapshot_columns()
+            + ", ROW_NUMBER() OVER (PARTITION BY s.product_id "
+            "ORDER BY COALESCE(s.collected_at, '') DESC, s.task_id DESC) "
+            "AS representative_rank"
+            + self._base_snapshot_from()
+            + where
+            + ") "
+        )
+        outer_clauses = ["representative_rank = 1"]
+        if sampling_status == "current":
+            outer_clauses.append("current_source_snapshot_id IS NOT NULL")
+        elif sampling_status == "historical_only":
+            outer_clauses.extend(
+                ["current_source_snapshot_id IS NULL", "historical_count > 0"]
             )
-            if target_id:
-                values.append(target_id)
-        return " WHERE " + " AND ".join(clauses), values
+        elif sampling_status == "never":
+            outer_clauses.extend(
+                ["current_source_snapshot_id IS NULL", "historical_count = 0"]
+            )
+        return ranked, values, " WHERE " + " AND ".join(outer_clauses)
 
     def list_products(
         self,
@@ -2040,21 +2226,33 @@ class DataStore:
         effect: str = "",
         task_id: str = "",
         target_id: str = "",
+        sampling_status: str = "",
+        collected_from: str = "",
+        collected_to: str = "",
         page: int = 1,
         page_size: int = 20,
     ) -> list[dict[str, Any]]:
-        where, values = self._product_filter(
+        ranked, values, outer_where = self._ranked_product_query(
             query=query,
             review_status=review_status,
             effect=effect,
             task_id=task_id,
             target_id=target_id,
+            sampling_status=sampling_status,
+            collected_from=collected_from,
+            collected_to=collected_to,
         )
         if task_id:
-            order = " ORDER BY s.rank, s.product_id"
+            order = " ORDER BY rank, product_id"
         else:
-            order = " ORDER BY COALESCE(s.collected_at, '') DESC, s.product_id"
-        sql = self._base_snapshot_query() + where + order + " LIMIT ? OFFSET ?"
+            order = " ORDER BY COALESCE(collected_at, '') DESC, product_id"
+        sql = (
+            ranked
+            + "SELECT * FROM ranked_products"
+            + outer_where
+            + order
+            + " LIMIT ? OFFSET ?"
+        )
         values.extend([page_size, (page - 1) * page_size])
         with self._connect() as connection:
             rows = connection.execute(sql, values).fetchall()
@@ -2068,17 +2266,87 @@ class DataStore:
         effect: str = "",
         task_id: str = "",
         target_id: str = "",
+        sampling_status: str = "",
+        collected_from: str = "",
+        collected_to: str = "",
     ) -> int:
-        where, values = self._product_filter(
+        ranked, values, outer_where = self._ranked_product_query(
             query=query,
             review_status=review_status,
             effect=effect,
             task_id=task_id,
             target_id=target_id,
+            sampling_status=sampling_status,
+            collected_from=collected_from,
+            collected_to=collected_to,
         )
-        sql = "SELECT COUNT(*)" + self._base_snapshot_from() + where
+        sql = ranked + "SELECT COUNT(*) FROM ranked_products" + outer_where
         with self._connect() as connection:
             return int(connection.execute(sql, values).fetchone()[0])
+
+    def list_product_filter_options(self) -> dict[str, Any]:
+        """Return filter values that are backed by the current business index."""
+
+        with self._connect() as connection:
+            task_rows = connection.execute(
+                """
+                SELECT t.task_id, t.display_name, t.keyword, t.target_id,
+                       mt.standard_name AS target_name
+                FROM tasks t
+                LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
+                ORDER BY COALESCE(t.created_at, '') DESC, t.task_id DESC
+                """
+            ).fetchall()
+            target_rows = connection.execute(
+                """
+                SELECT DISTINCT t.target_id, mt.standard_name
+                FROM tasks t
+                JOIN monitor_targets mt ON mt.target_id = t.target_id
+                WHERE t.target_id IS NOT NULL
+                ORDER BY mt.standard_name, t.target_id
+                """
+            ).fetchall()
+            effect_rows = connection.execute(
+                "SELECT detected_effects_json FROM product_snapshots"
+            ).fetchall()
+        effects = sorted(
+            {
+                str(effect).strip()
+                for row in effect_rows
+                for effect in _json_value(row["detected_effects_json"], [])
+                if str(effect).strip()
+            }
+        )
+        return {
+            "tasks": [
+                {
+                    "value": row["task_id"],
+                    "label": (
+                        row["display_name"]
+                        or row["target_name"]
+                        or row["keyword"]
+                        or row["task_id"]
+                    ),
+                    "targetId": row["target_id"],
+                }
+                for row in task_rows
+            ],
+            "targets": [
+                {"value": row["target_id"], "label": row["standard_name"]}
+                for row in target_rows
+            ],
+            "effects": [{"value": item, "label": item} for item in effects],
+            "reviewStatuses": [
+                {"value": "pending", "label": "待复核"},
+                {"value": "recommend_follow_up", "label": "建议跟进"},
+                {"value": "no_further_action", "label": "暂不纳入"},
+            ],
+            "samplingStatuses": [
+                {"value": "current", "label": "当前已在清单"},
+                {"value": "historical_only", "label": "曾纳入、当前不在"},
+                {"value": "never", "label": "从未纳入"},
+            ],
+        }
 
     def list_product_snapshots(self, product_id: str) -> list[dict[str, Any]]:
         sql = (
@@ -2181,6 +2449,9 @@ class DataStore:
                     "product_snapshots",
                     "evidence",
                     "reviews",
+                    "sampling_list_memberships",
+                    "sampling_lists",
+                    "sampling_list_item_index",
                     "monitor_datasets",
                     "monitor_targets",
                     "search_queries",

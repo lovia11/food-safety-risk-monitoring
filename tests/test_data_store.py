@@ -27,6 +27,7 @@ def create_run(
     stage: str = "completed",
     collected_at: str = "2026-09-02T10:00:00+08:00",
     target_id: str | None = None,
+    display_name: str | None = None,
 ) -> Path:
     run_root = output_root / run_id
     task_request = {
@@ -45,6 +46,8 @@ def create_run(
                 "per_query_candidate_limit": 10,
             }
         )
+    if display_name is not None:
+        task_request["display_name"] = display_name
     write_json(
         run_root / "task_request.json",
         task_request,
@@ -153,10 +156,57 @@ class DataStoreTest(unittest.TestCase):
                 "substance_regulatory_contexts",
                 "risk_mapping_datasets",
                 "risk_substance_mappings",
+                "sampling_list_memberships",
+                "sampling_lists",
+                "sampling_list_item_index",
             }
             <= tables
         )
-        self.assertEqual(version, 7)
+        self.assertEqual(version, 8)
+
+    def test_schema_7_migration_is_additive_and_preserves_review(self):
+        run_root = create_run(self.output_root, "legacy_run")
+        self.store.import_run(run_root)
+        snapshot_id = self.store.list_products()[0]["snapshotId"]
+        self.store.update_review(snapshot_id, "recommend_follow_up", "保留旧复核")
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.executescript(
+                """
+                DROP TABLE sampling_list_item_index;
+                DROP TABLE sampling_list_memberships;
+                DROP TABLE sampling_lists;
+                ALTER TABLE tasks DROP COLUMN display_name;
+                PRAGMA user_version = 7;
+                """
+            )
+
+        migrated = DataStore(self.store.database_path, self.output_root)
+        migrated.initialize()
+        with sqlite3.connect(self.store.database_path) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            task_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(tasks)")
+            }
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+        self.assertEqual(version, 8)
+        self.assertIn("display_name", task_columns)
+        self.assertTrue(
+            {
+                "sampling_list_memberships",
+                "sampling_lists",
+                "sampling_list_item_index",
+            }
+            <= tables
+        )
+        migrated_review = migrated.get_snapshot(snapshot_id)["review"]
+        self.assertEqual(migrated_review["status"], "recommend_follow_up")
+        self.assertEqual(migrated_review["note"], "保留旧复核")
+        self.assertIsNotNone(migrated_review["reviewedAt"])
 
     def _import_monitor_seed(self, *, include_second_target: bool = False):
         config = self.root / "monitor_targets.json"
@@ -298,6 +348,25 @@ class DataStoreTest(unittest.TestCase):
             ).fetchone()
         self.assertEqual(row, ("酸枣仁", 10, 2, "completed", "run_a"))
 
+    def test_display_name_is_indexed_with_fallback_and_preserved_on_reimport(self):
+        explicit_run = create_run(
+            self.output_root, "named_run", display_name="酸枣仁专项排查"
+        )
+        self.store.import_run(explicit_run)
+        request = read_json(explicit_run / "task_request.json")
+        request.pop("display_name")
+        write_json(explicit_run / "task_request.json", request)
+        self.store.import_run(explicit_run)
+
+        fallback_run = create_run(self.output_root, "fallback_run", product_id="456")
+        self.store.import_run(fallback_run)
+        with sqlite3.connect(self.store.database_path) as connection:
+            names = dict(
+                connection.execute("SELECT task_id, display_name FROM tasks").fetchall()
+            )
+        self.assertEqual(names["named_run"], "酸枣仁专项排查")
+        self.assertEqual(names["fallback_run"], "酸枣仁")
+
     def test_imports_product_and_snapshot(self):
         self.store.import_run(create_run(self.output_root, "run_a"))
         counts = self.store.table_counts()
@@ -392,6 +461,43 @@ class DataStoreTest(unittest.TestCase):
         )
         self.assertEqual([item["productId"] for item in filtered], ["123"])
         self.assertEqual(self.store.list_products(query="不存在"), [])
+
+    def test_representative_snapshot_is_selected_after_snapshot_filters(self):
+        older = create_run(
+            self.output_root,
+            "run_old",
+            product_name="较早助眠商品",
+            effect="助眠",
+            collected_at="2026-09-02T10:00:00+08:00",
+        )
+        newer = create_run(
+            self.output_root,
+            "run_new",
+            product_name="较新其他商品",
+            effect="减脂",
+            collected_at="2026-09-03T10:00:00+08:00",
+        )
+        self.store.import_run(older)
+        self.store.import_run(newer)
+        older_snapshot = next(
+            item
+            for item in self.store.list_product_snapshots("123")
+            if item["taskId"] == "run_old"
+        )
+        self.store.update_review(
+            older_snapshot["snapshotId"], "recommend_follow_up", "较早结论"
+        )
+
+        for filters in (
+            {"query": "较早"},
+            {"effect": "助眠"},
+            {"review_status": "recommend_follow_up"},
+            {"collected_from": "2026-09-02", "collected_to": "2026-09-02"},
+        ):
+            with self.subTest(filters=filters):
+                product = self.store.list_products(**filters)[0]
+                self.assertEqual(product["taskId"], "run_old")
+                self.assertEqual(product["snapshotCount"], 2)
 
     def test_product_query_uses_global_latest_snapshot_by_default(self):
         self._import_monitor_seed(include_second_target=True)
@@ -510,6 +616,145 @@ class DataStoreTest(unittest.TestCase):
         self.assertEqual(
             len(self.store.list_products(**filters, page=2, page_size=1)), 1
         )
+
+    def test_sampling_status_and_historical_count_are_independent(self):
+        for run_id, product_id in (
+            ("current_run", "current-product"),
+            ("historical_run", "historical-product"),
+            ("never_run", "never-product"),
+        ):
+            self.store.import_run(
+                create_run(self.output_root, run_id, product_id=product_id)
+            )
+        current = self.store.list_products(task_id="current_run")[0]
+        now = "2026-09-09T10:00:00+08:00"
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.executemany(
+                """
+                INSERT INTO sampling_lists (
+                    list_id, status, exported_at, item_count, snapshot_path,
+                    workbook_path, snapshot_sha256, workbook_sha256,
+                    created_at, updated_at
+                ) VALUES (?, 'exported', ?, 1, ?, ?, '', '', ?, ?)
+                """,
+                [
+                    ("list-current", now, "current.json", "current.xlsx", now, now),
+                    ("list-history", now, "history.json", "history.xlsx", now, now),
+                ],
+            )
+            connection.executemany(
+                """
+                INSERT INTO sampling_list_item_index (
+                    list_id, ordinal, product_id, source_snapshot_id, source_task_id
+                ) VALUES (?, 1, ?, ?, ?)
+                """,
+                [
+                    (
+                        "list-current",
+                        "current-product",
+                        current["snapshotId"],
+                        "current_run",
+                    ),
+                    (
+                        "list-history",
+                        "historical-product",
+                        "frozen-missing-snapshot",
+                        "frozen-missing-task",
+                    ),
+                ],
+            )
+            connection.execute(
+                """
+                INSERT INTO sampling_list_memberships (
+                    product_id, source_snapshot_id, source_task_id,
+                    added_from, added_at, updated_at
+                ) VALUES (?, ?, ?, 'product_overview', ?, ?)
+                """,
+                (
+                    "current-product",
+                    current["snapshotId"],
+                    "current_run",
+                    now,
+                    now,
+                ),
+            )
+
+        current_result = self.store.list_products(sampling_status="current")
+        historical_result = self.store.list_products(
+            sampling_status="historical_only"
+        )
+        never_result = self.store.list_products(sampling_status="never")
+        self.assertEqual([item["productId"] for item in current_result], ["current-product"])
+        self.assertEqual(current_result[0]["sampling"]["historicalCount"], 1)
+        self.assertEqual(
+            [item["productId"] for item in historical_result], ["historical-product"]
+        )
+        self.assertEqual(historical_result[0]["sampling"]["historicalCount"], 1)
+        self.assertEqual([item["productId"] for item in never_result], ["never-product"])
+
+    def test_historical_index_ids_are_frozen_text_but_membership_ids_are_foreign_keys(self):
+        now = "2026-09-09T10:00:00+08:00"
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute(
+                """
+                INSERT INTO sampling_lists (
+                    list_id, status, item_count, snapshot_path, workbook_path,
+                    snapshot_sha256, workbook_sha256, created_at, updated_at
+                ) VALUES ('frozen-list', 'exported', 1, 'frozen.json',
+                          'frozen.xlsx', '', '', ?, ?)
+                """,
+                (now, now),
+            )
+            connection.execute(
+                """
+                INSERT INTO sampling_list_item_index (
+                    list_id, ordinal, product_id, source_snapshot_id, source_task_id
+                ) VALUES ('frozen-list', 1, 'gone-product', 'gone-snapshot', 'gone-task')
+                """
+            )
+            historical_foreign_keys = connection.execute(
+                "PRAGMA foreign_key_list(sampling_list_item_index)"
+            ).fetchall()
+            membership_columns = {
+                row[1]
+                for row in connection.execute(
+                    "PRAGMA table_info(sampling_list_memberships)"
+                )
+            }
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    """
+                    INSERT INTO sampling_list_memberships (
+                        product_id, source_snapshot_id, source_task_id,
+                        added_from, added_at, updated_at
+                    ) VALUES ('gone-product', 'gone-snapshot', 'gone-task',
+                              'product_overview', ?, ?)
+                    """,
+                    (now, now),
+                )
+        self.assertEqual(
+            {(row[2], row[3]) for row in historical_foreign_keys},
+            {("sampling_lists", "list_id")},
+        )
+        self.assertNotIn("note", membership_columns)
+
+    def test_product_filter_options_are_derived_from_indexed_data(self):
+        self.store.import_run(
+            create_run(
+                self.output_root,
+                "options_run",
+                product_id="options-product",
+                effect="真实方向",
+                display_name="真实排查名称",
+            )
+        )
+        options = self.store.list_product_filter_options()
+        self.assertIn(
+            {"value": "真实方向", "label": "真实方向"}, options["effects"]
+        )
+        self.assertEqual(options["tasks"][0]["label"], "真实排查名称")
 
     def test_import_all_discovers_only_valid_run_snapshots(self):
         create_run(self.output_root, "run_a")

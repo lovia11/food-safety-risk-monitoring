@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from src.data_store import (
     DEFAULT_MONITOR_CONFIG_PATHS,
     DataStore,
+    ProductFilterValidationError,
     ReviewValidationError,
     SnapshotNotFoundError,
 )
@@ -32,7 +33,7 @@ from src.task_runtime import (
     TaskNotResumableError,
     TaskValidationError,
 )
-from src.web_contract import snapshot_existing_run
+from src.web_contract import build_snapshot_artifacts, snapshot_existing_run
 
 
 def resolve_run_root(output_root: Path, run_id: str) -> Path:
@@ -248,6 +249,9 @@ def create_handler(
             if path == "/api/inspection-context-options":
                 self._json(200, store.list_inspection_context_options())
                 return
+            if path == "/api/product-filter-options":
+                self._json(200, store.list_product_filter_options())
+                return
             parts = [unquote(item) for item in path.split("/") if item]
             if len(parts) == 3 and parts[:2] == ["api", "monitor-targets"]:
                 target = store.get_monitor_target(parts[2])
@@ -275,12 +279,26 @@ def create_handler(
                         "target_id": str(
                             (query.get("target_id") or [""])[0]
                         ).strip(),
+                        "sampling_status": str(
+                            (query.get("sampling_status") or [""])[0]
+                        ).strip(),
+                        "collected_from": str(
+                            (query.get("collected_from") or [""])[0]
+                        ).strip(),
+                        "collected_to": str(
+                            (query.get("collected_to") or [""])[0]
+                        ).strip(),
                     }
                     total = store.count_products(**filters)
                     products = store.list_products(
                         **filters, page=page, page_size=page_size
                     )
-                except (ReviewValidationError, TypeError, ValueError) as exc:
+                except (
+                    ProductFilterValidationError,
+                    ReviewValidationError,
+                    TypeError,
+                    ValueError,
+                ) as exc:
                     self._error(400, "invalid_filter", str(exc))
                     return
                 self._json(
@@ -315,6 +333,46 @@ def create_handler(
                     self._json(200, store.get_snapshot(parts[2]))
                 except SnapshotNotFoundError as exc:
                     self._error(404, "snapshot_not_found", str(exc))
+                return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "snapshots"]
+                and parts[3] == "workspace"
+            ):
+                try:
+                    detail = store.get_snapshot(parts[2])
+                    run_root = resolve_run_root(
+                        resolved_output, str((detail.get("paths") or {}).get("run") or "")
+                    )
+                    resolve_product_root(run_root, str(detail.get("productId") or ""))
+                except SnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                    return
+                except ValueError:
+                    self._error(
+                        409,
+                        "snapshot_artifact_path_invalid",
+                        "商品快照的文件索引路径不合法",
+                    )
+                    return
+                artifacts = build_snapshot_artifacts(
+                    run_root, str(detail.get("productId") or "")
+                )
+                snapshot = dict(detail)
+                evidence = snapshot.pop("evidence", [])
+                review = snapshot.pop("review")
+                sampling = snapshot.pop("sampling")
+                self._json(
+                    200,
+                    {
+                        "snapshot": snapshot,
+                        "evidence": evidence,
+                        "review": review,
+                        "assets": artifacts["assets"],
+                        "inspection": artifacts["inspection"],
+                        "sampling": sampling,
+                    },
+                )
                 return
             if len(parts) == 3 and parts[:2] == ["api", "tasks"]:
                 try:
