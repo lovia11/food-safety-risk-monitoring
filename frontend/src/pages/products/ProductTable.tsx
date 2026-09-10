@@ -2,7 +2,7 @@ import { ArrowRight, History } from "lucide-react";
 
 import type { SnapshotSummary } from "../../api/contracts";
 import { StatusBadge } from "../../components/StatusBadge";
-import { formatDateTime } from "../../domain/product";
+import { formatDateTime, productAnalysisPresentation } from "../../domain/product";
 import { reviewPresentation } from "../../domain/presentation";
 
 type ProductTableProps = {
@@ -61,6 +61,7 @@ export function ProductTable({
         <tbody>
           {products.map((product) => {
             const review = reviewPresentation[product.review.status];
+            const analysis = productAnalysisPresentation(product.status);
             const selected = selectedProductId === product.productId;
             return (
               <tr key={product.productId} data-selected={selected}>
@@ -69,6 +70,7 @@ export function ProductTable({
                     <strong title={product.productName}>{product.productName || "未命名商品"}</strong>
                     <span>{product.shopName || "店铺未记录"}</span>
                     <small>ID {product.productId}</small>
+                    <StatusBadge tone={analysis.tone}>{analysis.label}</StatusBadge>
                   </button>
                 </td>
                 <td>

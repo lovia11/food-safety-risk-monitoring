@@ -110,7 +110,7 @@ export function ProductOverviewPage({ productId }: ProductOverviewPageProps) {
       <PageHeader
         eyebrow="商品档案"
         title="商品总览"
-        description="一件商品一行；筛选后展示匹配范围内最近一次快照。"
+        description="一件商品一行；展示匹配范围内最近一次采集记录，并区分搜索发现与完整分析结果。"
         actions={
           page ? <StatusBadge tone="info">共 {page.total} 件商品</StatusBadge> : undefined
         }

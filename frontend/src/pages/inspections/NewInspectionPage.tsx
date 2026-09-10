@@ -1,9 +1,10 @@
-import { AlertCircle, ArrowLeft, ChevronDown, Play, Search } from "lucide-react";
+import { AlertCircle, ArrowLeft, Play, Search } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { MonitorTarget, TaskList } from "../../api/contracts";
 import { createTask, getMonitorTargets, getTasks } from "../../api/tasks";
 import { LoadingState } from "../../components/LoadingState";
+import { buildWebTaskRequest } from "../../domain/task";
 import { PageHeader } from "../../layout/PageHeader";
 
 export function NewInspectionPage() {
@@ -11,8 +12,7 @@ export function NewInspectionPage() {
   const [name, setName] = useState("");
   const [keyword, setKeyword] = useState("");
   const [targetId, setTargetId] = useState("");
-  const [candidateLimit, setCandidateLimit] = useState(10);
-  const [detailLimit, setDetailLimit] = useState(2);
+  const [analysisLimit, setAnalysisLimit] = useState(10);
   const [targets, setTargets] = useState<MonitorTarget[]>([]);
   const [tasks, setTasks] = useState<TaskList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,9 +49,13 @@ export function NewInspectionPage() {
     setSubmitting(true);
     setError("");
     try {
-      const payload = mode === "quick"
-        ? { task_type: "quick", name, keyword, candidate_limit: candidateLimit, detail_limit: detailLimit }
-        : { task_type: "monitor", name, target_id: targetId, per_query_candidate_limit: candidateLimit, detail_limit: detailLimit };
+      const payload = buildWebTaskRequest({
+        mode,
+        name,
+        keyword,
+        targetId,
+        analysisLimit,
+      });
       const created = await createTask(payload);
       window.location.hash = `#/inspections/${encodeURIComponent(created.task.id)}`;
     } catch (reason) {
@@ -88,13 +92,11 @@ export function NewInspectionPage() {
             <div className="query-preview"><strong>将使用已验证搜索词</strong>{queries.length ? <ul>{queries.map((query) => <li key={query.query_id}>{query.query_text}</li>)}</ul> : <p>该对象暂无可执行的已验证搜索词。</p>}</div>
           </>
         )}
-        <details className="advanced-settings">
-          <summary><ChevronDown size={15} />高级设置</summary>
-          <div>
-            <label>{mode === "monitor" ? "每个搜索词候选数量" : "候选数量"}<input type="number" min={1} max={50} value={candidateLimit} onChange={(event) => setCandidateLimit(Number(event.target.value))} /></label>
-            <label>详情采集数量<input type="number" min={1} max={50} value={detailLimit} onChange={(event) => setDetailLimit(Number(event.target.value))} /></label>
-          </div>
-        </details>
+        <label>
+          最多分析商品数
+          <input type="number" min={1} max={50} value={analysisLimit} onChange={(event) => setAnalysisLimit(Number(event.target.value))} />
+          <small>搜索结果合并去重后，最多选择这些商品继续采集详情、识别文字并分析线索。</small>
+        </label>
         {error && <div className="inline-message" data-tone="danger"><AlertCircle size={17} />{error}</div>}
         <button type="submit" className="primary-button start-task-button" disabled={Boolean(tasks?.activeTaskId) || submitting || (mode === "monitor" && !queries.length)}>
           <Play size={16} />{submitting ? "正在启动" : "开始排查"}

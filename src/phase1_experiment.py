@@ -189,6 +189,7 @@ class PhaseOneCollector:
         run_root: Path | None = None,
         candidate: dict[str, Any] | None = None,
         logger: logging.Logger | None = None,
+        manual_action_adapter: Any | None = None,
     ) -> None:
         product_id = extract_product_id(product_url) or "unknown_product"
         self.product_url = product_url
@@ -201,6 +202,7 @@ class PhaseOneCollector:
         self.non_interactive = non_interactive
         self.candidate = candidate or {}
         self.logger = logger
+        self.manual_action_adapter = manual_action_adapter
         self.network_records: list[dict[str, Any]] = []
         self._network_by_url: dict[str, list[dict[str, Any]]] = {}
         self._network_lock = threading.Lock()
@@ -304,6 +306,18 @@ class PhaseOneCollector:
         return None
 
     def _wait_for_manual_action(self, page: Any, reason: str) -> None:
+        if self.manual_action_adapter is not None:
+            public_reason = {
+                "login": "淘宝登录",
+                "verification": "淘宝人工验证",
+                "page_not_ready": "淘宝页面尚未就绪",
+            }.get(reason, reason)
+            self.manual_action_adapter.wait(
+                page,
+                public_reason,
+                self.logger or logging.getLogger(__name__),
+            )
+            return
         if self.non_interactive:
             raise RuntimeError(f"manual action required: {reason}")
         self.log(
@@ -319,6 +333,8 @@ class PhaseOneCollector:
             if not blocker:
                 return
             self._wait_for_manual_action(page, blocker)
+            if self.manual_action_adapter is not None:
+                return
             page.wait_for_timeout(1_500)
         blocker = self._blocker(page)
         if blocker:

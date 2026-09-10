@@ -27,3 +27,29 @@ export function taskFlowIndex(stage: string) {
   if (stage === "processing_ocr_analysis") return 2;
   return 3;
 }
+
+export function buildWebTaskRequest(input: {
+  mode: "quick" | "monitor";
+  name: string;
+  keyword: string;
+  targetId: string;
+  analysisLimit: number;
+}) {
+  const common = { name: input.name };
+  if (input.mode === "quick") {
+    return {
+      ...common,
+      task_type: "quick",
+      keyword: input.keyword,
+      candidate_limit: input.analysisLimit,
+      detail_limit: input.analysisLimit,
+    };
+  }
+  return {
+    ...common,
+    task_type: "monitor",
+    target_id: input.targetId,
+    per_query_candidate_limit: input.analysisLimit,
+    detail_limit: input.analysisLimit,
+  };
+}

@@ -562,6 +562,7 @@ class StandalonePipeline:
                         run_root=self.run_root,
                         logger=self.logger,
                         non_interactive=self.options.non_interactive,
+                        manual_action_adapter=self.manual_action_adapter,
                     ).discover(
                         target={
                             "target_id": self.options.target_id,

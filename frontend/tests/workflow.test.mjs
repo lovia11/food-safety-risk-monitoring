@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { productAnalysisPresentation } from "../src/domain/product.ts";
 import { queueMatches } from "../src/domain/reviewQueue.ts";
 import {
   evidenceQualificationLabel,
   samplingMethodGroups,
   suggestedSamplingMethods,
 } from "../src/domain/sampling.ts";
-import { shouldResumeTask } from "../src/domain/task.ts";
+import { buildWebTaskRequest, shouldResumeTask } from "../src/domain/task.ts";
 
 test("pending snapshot remains in pending queue when product has a membership", () => {
   const item = {
@@ -34,6 +35,55 @@ test("archive resumes only interrupted resumable tasks", () => {
   assert.equal(
     shouldResumeTask({ businessStatus: "partial_error", resumable: true }),
     false,
+  );
+});
+
+test("web quick task analyzes every selected candidate up to the user limit", () => {
+  assert.deepEqual(
+    buildWebTaskRequest({
+      mode: "quick",
+      name: "十件商品排查",
+      keyword: "酸枣仁",
+      targetId: "",
+      analysisLimit: 10,
+    }),
+    {
+      name: "十件商品排查",
+      task_type: "quick",
+      keyword: "酸枣仁",
+      candidate_limit: 10,
+      detail_limit: 10,
+    },
+  );
+});
+
+test("web monitor task keeps a global analysis cap across queries", () => {
+  assert.deepEqual(
+    buildWebTaskRequest({
+      mode: "monitor",
+      name: "监测对象排查",
+      keyword: "",
+      targetId: "target-1",
+      analysisLimit: 10,
+    }),
+    {
+      name: "监测对象排查",
+      task_type: "monitor",
+      target_id: "target-1",
+      per_query_candidate_limit: 10,
+      detail_limit: 10,
+    },
+  );
+});
+
+test("product overview distinguishes search-only candidates from analyzed products", () => {
+  assert.equal(
+    productAnalysisPresentation("pending_detail_collection").label,
+    "仅搜索发现，尚未分析",
+  );
+  assert.equal(
+    productAnalysisPresentation("success").label,
+    "已完成详情和线索分析",
   );
 });
 
