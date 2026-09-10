@@ -9,6 +9,7 @@ import shutil
 import threading
 import uuid
 from copy import deepcopy
+from math import ceil
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -25,7 +26,7 @@ from src.web_contract import build_snapshot_artifacts
 
 SAMPLING_SNAPSHOT_FILE = "sampling_list_snapshot.json"
 SAMPLING_WORKBOOK_FILE = "sampling_list.xlsx"
-SAMPLING_SNAPSHOT_VERSION = 1
+SAMPLING_SNAPSHOT_VERSION = 2
 SAMPLING_DISCLAIMER = (
     "本清单仅用于监管抽检辅助筛查和人工研判，不构成实验室检测结论，"
     "不认定商品违法、功效真实、实际含有或检出任何成分。具体检验项目及方法"
@@ -100,60 +101,104 @@ def _unique_text(values: list[Any]) -> list[str]:
     return result
 
 
+_METHOD_GROUP_FIELDS = {
+    "suggested_methods": "suggestedMethods",
+    "methods_needing_context": "methodsNeedingContext",
+    "other_known_methods": "otherKnownMethods",
+}
+
+
+def _method_summary(method: dict[str, Any]) -> dict[str, str]:
+    return {
+        "methodId": str(method.get("method_id") or ""),
+        "methodNo": str(method.get("method_no") or ""),
+        "methodName": str(method.get("method_name") or ""),
+        "methodStatus": str(method.get("method_status") or ""),
+        "applicabilityStatus": str(method.get("applicability_status") or ""),
+        "applicabilityReason": str(method.get("applicability_reason") or ""),
+        "sourceName": str(method.get("source_name") or ""),
+        "sourceReference": str(method.get("source_reference") or ""),
+    }
+
+
+def _page_evidence_qualification(evidence: list[dict[str, Any]]) -> str:
+    origins = {str(item.get("contentOrigin") or "") for item in evidence}
+    if "seller_managed" in origins:
+        return "seller_managed_primary"
+    if "user_generated" in origins:
+        return "user_generated_auxiliary_only"
+    return "not_recorded"
+
+
 def _sampling_summary(
-    snapshot: dict[str, Any], inspection: dict[str, Any]
+    snapshot: dict[str, Any],
+    inspection: dict[str, Any],
+    evidence: list[dict[str, Any]],
 ) -> dict[str, Any]:
     risk_directions: list[Any] = []
-    qualifications: list[Any] = []
+    risk_qualifications: list[Any] = []
     substances: list[Any] = []
-    methods: list[dict[str, str]] = []
-    method_ids: set[str] = set()
+    method_groups: dict[str, list[dict[str, str]]] = {
+        destination: [] for destination in _METHOD_GROUP_FIELDS.values()
+    }
+    method_ids: dict[str, set[str]] = {
+        destination: set() for destination in _METHOD_GROUP_FIELDS.values()
+    }
     for finding in inspection.get("riskFindings") or []:
         labels = finding.get("risk_labels") or []
         risk_directions.extend(labels or [finding.get("risk_category")])
-        qualifications.append(finding.get("evidence_qualification"))
+        risk_qualifications.append(finding.get("evidence_qualification"))
         for substance in finding.get("substance_follow_ups") or []:
             substances.append(substance.get("canonical_name"))
-            for group in (
-                "suggested_methods",
-                "methods_needing_context",
-                "other_known_methods",
-            ):
-                for method in substance.get(group) or []:
+            for source_group, destination_group in _METHOD_GROUP_FIELDS.items():
+                for method in substance.get(source_group) or []:
                     identity = str(
                         method.get("method_id")
                         or method.get("method_no")
                         or method.get("method_name")
                         or ""
                     )
-                    if not identity or identity in method_ids:
+                    if not identity or identity in method_ids[destination_group]:
                         continue
-                    method_ids.add(identity)
-                    methods.append(
-                        {
-                            "methodId": str(method.get("method_id") or ""),
-                            "methodNo": str(method.get("method_no") or ""),
-                            "methodName": str(method.get("method_name") or ""),
-                            "applicabilityStatus": str(
-                                method.get("applicability_status") or ""
-                            ),
-                            "applicabilityReason": str(
-                                method.get("applicability_reason") or ""
-                            ),
-                            "sourceName": str(method.get("source_name") or ""),
-                            "sourceReference": str(
-                                method.get("source_reference") or ""
-                            ),
-                        }
-                    )
-    if not risk_directions:
-        risk_directions.extend(snapshot.get("detectedEffects") or [])
+                    method_ids[destination_group].add(identity)
+                    method_groups[destination_group].append(_method_summary(method))
     return {
+        "pageEffectClues": _unique_text(snapshot.get("detectedEffects") or []),
         "riskDirections": _unique_text(risk_directions),
-        "evidenceQualifications": _unique_text(qualifications),
+        "pageEvidenceQualification": _page_evidence_qualification(evidence),
+        "riskEvidenceQualifications": _unique_text(risk_qualifications),
         "substances": _unique_text(substances),
-        "methods": methods,
+        **method_groups,
     }
+
+
+def _normalize_v1_item(item: dict[str, Any]) -> None:
+    """Expose a v2-shaped view using only facts already frozen in a v1 item."""
+
+    summary = item.setdefault("summary", {})
+    inspection = item.get("inspection") or {}
+    evidence = item.get("evidence") or []
+    normalized = _sampling_summary(
+        {"detectedEffects": item.get("detectedEffects") or []},
+        inspection,
+        evidence,
+    )
+    summary["pageEffectClues"] = normalized["pageEffectClues"]
+    summary["riskDirections"] = normalized["riskDirections"]
+    summary["pageEvidenceQualification"] = normalized[
+        "pageEvidenceQualification"
+    ]
+    summary["riskEvidenceQualifications"] = normalized[
+        "riskEvidenceQualifications"
+    ]
+    rebuilt_methods = any(
+        normalized[field] for field in _METHOD_GROUP_FIELDS.values()
+    )
+    for field in _METHOD_GROUP_FIELDS.values():
+        summary[field] = normalized[field]
+    summary["legacyUnclassifiedMethods"] = (
+        [] if rebuilt_methods else deepcopy(summary.get("methods") or [])
+    )
 
 
 def _major_evidence(evidence: list[dict[str, Any]]) -> list[str]:
@@ -163,6 +208,39 @@ def _major_evidence(evidence: list[dict[str, Any]]) -> list[str]:
         if item.get("contentOrigin") == "seller_managed"
     ]
     return _unique_text(seller or [item.get("text") for item in evidence])
+
+
+def _qualification_label(value: Any) -> str:
+    labels = {
+        "seller_managed_primary": "商家管理内容主要证据",
+        "user_generated_auxiliary_only": "用户生成内容辅助线索",
+        "not_recorded": "未记录",
+    }
+    text = str(value or "")
+    return labels.get(text, text or "未记录")
+
+
+def _workbook_method_lines(methods: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for method in methods:
+        label = " · ".join(
+            _unique_text([method.get("methodNo"), method.get("methodName")])
+        )
+        if not label:
+            continue
+        details = []
+        if method.get("methodStatus"):
+            details.append(f"方法状态：{method['methodStatus']}")
+        if method.get("applicabilityStatus"):
+            details.append(f"适用性：{method['applicabilityStatus']}")
+        if method.get("applicabilityReason"):
+            details.append(f"适用说明：{method['applicabilityReason']}")
+        if method.get("sourceName"):
+            details.append(f"来源：{method['sourceName']}")
+        if method.get("sourceReference"):
+            details.append(f"来源链接：{method['sourceReference']}")
+        lines.append(f"{label}（{'；'.join(details)}）" if details else label)
+    return lines
 
 
 def _matches_asset_path(candidate: Any, source_path: Any) -> bool:
@@ -223,35 +301,49 @@ def write_sampling_workbook(
         "店铺",
         "来源排查",
         "页面采集时间",
+        "页面功效线索",
         "可能风险方向",
         "主要页面证据",
-        "Evidence qualification",
+        "页面证据性质",
+        "风险映射证据性质",
         "建议关注/检测成分",
-        "相关方法编号",
-        "方法名称",
-        "方法适用状态",
+        "建议参考方法/标准",
+        "需补充信息后判断的方法",
+        "其他已知方法（非直接建议）",
         "人工备注",
     ]
     sheet.append(headers)
     for item in items:
         summary = item.get("summary") or {}
-        methods = summary.get("methods") or []
         row = [
             _safe_cell(item.get("productName")),
             _safe_cell(_safe_http_url(item.get("productUrl"))),
             _safe_cell(item.get("shopName")),
             _safe_cell(item.get("sourceTaskDisplayName") or item.get("sourceTaskId")),
             _safe_cell(item.get("collectedAt")),
+            _safe_cell("\n".join(summary.get("pageEffectClues") or [])),
             _safe_cell("\n".join(summary.get("riskDirections") or [])),
             _safe_cell("\n".join(_major_evidence(item.get("evidence") or []))),
-            _safe_cell("\n".join(summary.get("evidenceQualifications") or [])),
-            _safe_cell("\n".join(summary.get("substances") or [])),
-            _safe_cell("\n".join(_unique_text([m.get("methodNo") for m in methods]))),
-            _safe_cell("\n".join(_unique_text([m.get("methodName") for m in methods]))),
+            _safe_cell(
+                _qualification_label(summary.get("pageEvidenceQualification"))
+            ),
             _safe_cell(
                 "\n".join(
-                    _unique_text([m.get("applicabilityStatus") for m in methods])
+                    _qualification_label(value)
+                    for value in summary.get("riskEvidenceQualifications") or []
                 )
+            ),
+            _safe_cell("\n".join(summary.get("substances") or [])),
+            _safe_cell(
+                "\n".join(_workbook_method_lines(summary.get("suggestedMethods") or []))
+            ),
+            _safe_cell(
+                "\n".join(
+                    _workbook_method_lines(summary.get("methodsNeedingContext") or [])
+                )
+            ),
+            _safe_cell(
+                "\n".join(_workbook_method_lines(summary.get("otherKnownMethods") or []))
             ),
             _safe_cell((item.get("review") or {}).get("note")),
         ]
@@ -286,10 +378,21 @@ def write_sampling_workbook(
         showColumnStripes=False,
     )
     sheet.add_table(table)
-    widths = [28, 34, 20, 22, 23, 24, 48, 24, 24, 20, 30, 22, 34]
+    widths = [28, 34, 20, 22, 23, 22, 24, 48, 24, 24, 24, 34, 34, 34, 34]
     for index, width in enumerate(widths, start=1):
         sheet.column_dimensions[chr(64 + index)].width = width
     sheet.row_dimensions[1].height = 30
+    for row in sheet.iter_rows(min_row=2):
+        estimated_lines = max(
+            sum(
+                max(1, ceil(len(line) / max(widths[cell.column - 1] - 3, 1)))
+                for line in str(cell.value or "").splitlines()
+            )
+            for cell in row
+        )
+        sheet.row_dimensions[row[0].row].height = min(
+            180, max(30, estimated_lines * 15)
+        )
 
     notes = workbook.create_sheet("说明")
     notes.sheet_view.showGridLines = False
@@ -298,8 +401,10 @@ def write_sampling_workbook(
         ["清单编号", list_id],
         ["导出时间", exported_at],
         ["商品数量", len(items)],
-        ["字段说明", "风险方向、成分与方法均来自导出时已保存的页面 Evidence、人工 Review 与抽检辅助建议。"],
-        ["Evidence qualification", "seller_managed_primary 表示主要线索来自商家管理内容；user_generated_auxiliary_only 仅表示用户生成内容辅助线索。"],
+        ["字段说明", "页面功效线索记录页面说了什么；可能风险方向仅记录已核验知识映射结果。"],
+        ["页面证据性质", "商家管理内容主要证据表示存在商家可管理的页面内容；用户生成内容辅助线索不能等同商家宣传。"],
+        ["风险映射证据性质", "记录抽检辅助建议中已保存的证据适用边界，不从页面来源反推。"],
+        ["方法分层", "建议参考方法可直接供后续人工判断；需补充信息的方法尚不能确定适用性；其他已知方法不是直接建议。"],
         ["免责声明", SAMPLING_DISCLAIMER],
     ]
     for row in note_rows:
@@ -313,7 +418,9 @@ def write_sampling_workbook(
     notes.column_dimensions["B"].width = 88
     notes.row_dimensions[5].height = 42
     notes.row_dimensions[6].height = 54
-    notes.row_dimensions[7].height = 72
+    notes.row_dimensions[7].height = 48
+    notes.row_dimensions[8].height = 54
+    notes.row_dimensions[9].height = 72
     destination.parent.mkdir(parents=True, exist_ok=True)
     workbook.save(destination)
 
@@ -435,7 +542,7 @@ class SamplingExportService:
             "historicalCountBeforeExport": int(
                 (snapshot.get("sampling") or {}).get("historicalCount") or 0
             ),
-            "summary": _sampling_summary(snapshot, inspection),
+            "summary": _sampling_summary(snapshot, inspection, evidence),
             "evidence": evidence,
             "inspection": inspection,
             "productContext": deepcopy(inspection.get("context") or {}),
@@ -655,6 +762,8 @@ class SamplingExportService:
         result = deepcopy(payload)
         validated = validate_list_id(list_id)
         for item in result.get("items") or []:
+            if int(result.get("schemaVersion") or 1) == 1:
+                _normalize_v1_item(item)
             for asset in item.get("frozenAssets") or []:
                 frozen_path = str(asset.get("frozenPath") or "")
                 asset["url"] = (

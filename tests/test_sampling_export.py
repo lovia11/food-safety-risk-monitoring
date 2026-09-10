@@ -22,7 +22,11 @@ from src.sampling_store import SamplingStore
 from tests.test_data_store import create_run
 
 
-def write_recommendation(product_root: Path, label: str = "助眠相关宣传线索") -> None:
+def write_recommendation(
+    product_root: Path,
+    label: str = "助眠相关宣传线索",
+    evidence_qualification: str = "seller_managed_primary",
+) -> None:
     write_json(
         product_root / "inspection_context.json",
         {
@@ -46,7 +50,7 @@ def write_recommendation(product_root: Path, label: str = "助眠相关宣传线
                     "risk_category": "sleep",
                     "risk_labels": [label],
                     "possible_risk_summary": "页面中发现助眠相关宣传线索。",
-                    "evidence_qualification": "seller_managed_primary",
+                    "evidence_qualification": evidence_qualification,
                     "substance_follow_ups": [
                         {
                             "substance_id": "substance-1",
@@ -71,8 +75,32 @@ def write_recommendation(product_root: Path, label: str = "助眠相关宣传线
                                     "source_date": "2026-01-01",
                                 }
                             ],
-                            "methods_needing_context": [],
-                            "other_known_methods": [],
+                            "methods_needing_context": [
+                                {
+                                    "method_id": "method-context",
+                                    "method_no": "BJS CONTEXT 002",
+                                    "method_name": "需补充信息的方法",
+                                    "method_type": "screening",
+                                    "method_status": "current",
+                                    "applicability_status": "insufficient_context",
+                                    "applicability_reason": "需要确认商品剂型",
+                                    "source_name": "测试已核验来源",
+                                    "source_reference": "https://example.invalid/context",
+                                }
+                            ],
+                            "other_known_methods": [
+                                {
+                                    "method_id": "method-other",
+                                    "method_no": "BJS OTHER 003",
+                                    "method_name": "其他已知方法",
+                                    "method_type": "screening",
+                                    "method_status": "superseded",
+                                    "applicability_status": "not_applicable",
+                                    "applicability_reason": "不适用于当前商品信息",
+                                    "source_name": "测试历史来源",
+                                    "source_reference": "https://example.invalid/other",
+                                }
+                            ],
                         }
                     ],
                 }
@@ -129,6 +157,13 @@ class SamplingExportServiceTest(unittest.TestCase):
             note,
         )
 
+    def set_evidence_origin(self, content_origin: str) -> None:
+        with self.data_store.transaction() as connection:
+            connection.execute(
+                "UPDATE evidence SET content_origin = ? WHERE snapshot_id = ?",
+                (content_origin, self.snapshot_id),
+            )
+
     def test_export_freezes_json_xlsx_and_clears_only_membership(self):
         self.add_current("+人工备注公式")
         metadata = self.service.export_current(confirmed=True)
@@ -145,8 +180,18 @@ class SamplingExportServiceTest(unittest.TestCase):
         snapshot_path = list_root / "sampling_list_snapshot.json"
         workbook_path = list_root / "sampling_list.xlsx"
         payload = read_json(snapshot_path)
+        self.assertEqual(payload["schemaVersion"], 2)
         self.assertEqual(payload["items"][0]["sourceSnapshotId"], self.snapshot_id)
-        self.assertEqual(payload["items"][0]["summary"]["substances"], ["测试关注成分"])
+        summary = payload["items"][0]["summary"]
+        self.assertEqual(summary["pageEffectClues"], ["助眠"])
+        self.assertEqual(summary["riskDirections"], ["助眠相关宣传线索"])
+        self.assertEqual(summary["pageEvidenceQualification"], "seller_managed_primary")
+        self.assertEqual(summary["riskEvidenceQualifications"], ["seller_managed_primary"])
+        self.assertEqual(summary["substances"], ["测试关注成分"])
+        self.assertEqual([item["methodId"] for item in summary["suggestedMethods"]], ["method-1"])
+        self.assertEqual([item["methodId"] for item in summary["methodsNeedingContext"]], ["method-context"])
+        self.assertEqual([item["methodId"] for item in summary["otherKnownMethods"]], ["method-other"])
+        self.assertEqual(summary["otherKnownMethods"][0]["methodStatus"], "superseded")
         self.assertTrue(payload["items"][0]["frozenAssets"])
         self.assertTrue(
             all(
@@ -163,9 +208,16 @@ class SamplingExportServiceTest(unittest.TestCase):
         sheet = workbook["抽检辅助清单"]
         self.assertEqual(sheet["A2"].value, "'=危险公式商品")
         self.assertNotEqual(sheet["A2"].data_type, "f")
-        self.assertEqual(sheet["M2"].value, "'+人工备注公式")
+        self.assertEqual(sheet["F1"].value, "页面功效线索")
+        self.assertEqual(sheet["G1"].value, "可能风险方向")
+        self.assertEqual(sheet["L1"].value, "建议参考方法/标准")
+        self.assertIn("BJS TEST 001", sheet["L2"].value)
+        self.assertNotIn("BJS OTHER 003", sheet["L2"].value)
+        self.assertIn("BJS CONTEXT 002", sheet["M2"].value)
+        self.assertIn("BJS OTHER 003", sheet["N2"].value)
+        self.assertEqual(sheet["O2"].value, "'+人工备注公式")
         self.assertEqual(sheet["B2"].hyperlink.target, "https://item.taobao.com/item.htm?id=123")
-        self.assertEqual(workbook["说明"]["B7"].value, SAMPLING_DISCLAIMER)
+        self.assertEqual(workbook["说明"]["B9"].value, SAMPLING_DISCLAIMER)
 
         with sqlite3.connect(self.data_store.database_path) as connection:
             index_row = connection.execute(
@@ -278,9 +330,96 @@ class SamplingExportServiceTest(unittest.TestCase):
         metadata = self.service.export_current(confirmed=True)
         item = self.service.get_history(metadata["listId"])["items"][0]
         self.assertEqual(item["summary"]["substances"], [])
-        self.assertEqual(item["summary"]["methods"], [])
-        self.assertEqual(item["summary"]["riskDirections"], ["助眠"])
+        self.assertEqual(item["summary"]["suggestedMethods"], [])
+        self.assertEqual(item["summary"]["methodsNeedingContext"], [])
+        self.assertEqual(item["summary"]["otherKnownMethods"], [])
+        self.assertEqual(item["summary"]["pageEffectClues"], ["助眠"])
+        self.assertEqual(item["summary"]["riskDirections"], [])
+        self.assertEqual(
+            item["summary"]["pageEvidenceQualification"],
+            "seller_managed_primary",
+        )
         self.assertEqual(item["disclaimer"], SAMPLING_DISCLAIMER)
+
+    def test_ugc_only_without_risk_mapping_has_direct_page_qualification(self):
+        self.set_evidence_origin("user_generated")
+        product_root = self.run_root / "products" / "123"
+        (product_root / "inspection_recommendation.json").unlink()
+        (product_root / "inspection_context.json").unlink()
+        self.add_current()
+
+        metadata = self.service.export_current(confirmed=True)
+        item = self.service.get_history(metadata["listId"])["items"][0]
+        self.assertEqual(item["summary"]["pageEffectClues"], ["助眠"])
+        self.assertEqual(item["summary"]["riskDirections"], [])
+        self.assertEqual(
+            item["summary"]["pageEvidenceQualification"],
+            "user_generated_auxiliary_only",
+        )
+        self.assertEqual(item["summary"]["riskEvidenceQualifications"], [])
+
+        workbook = load_workbook(
+            self.output / "sampling_lists" / metadata["listId"] / "sampling_list.xlsx"
+        )
+        row = workbook["抽检辅助清单"]
+        self.assertEqual(row["I2"].value, "用户生成内容辅助线索")
+        self.assertIsNone(row["J2"].value)
+
+    def test_ugc_only_with_mapped_auxiliary_result_keeps_qualifications_separate(self):
+        self.set_evidence_origin("user_generated")
+        write_recommendation(
+            self.run_root / "products" / "123",
+            evidence_qualification="user_generated_auxiliary_only",
+        )
+        self.add_current()
+
+        metadata = self.service.export_current(confirmed=True)
+        summary = self.service.get_history(metadata["listId"])["items"][0]["summary"]
+        self.assertEqual(
+            summary["pageEvidenceQualification"], "user_generated_auxiliary_only"
+        )
+        self.assertEqual(
+            summary["riskEvidenceQualifications"],
+            ["user_generated_auxiliary_only"],
+        )
+
+    def test_v1_history_is_read_without_treating_unclassified_methods_as_suggested(self):
+        self.add_current()
+        metadata = self.service.export_current(confirmed=True)
+        snapshot_path = (
+            self.output
+            / "sampling_lists"
+            / metadata["listId"]
+            / "sampling_list_snapshot.json"
+        )
+        payload = read_json(snapshot_path)
+        item = payload["items"][0]
+        legacy_method = item["summary"]["suggestedMethods"][0]
+        payload["schemaVersion"] = 1
+        item["inspection"] = {}
+        item["summary"] = {
+            "riskDirections": ["助眠"],
+            "evidenceQualifications": ["seller_managed_primary"],
+            "substances": ["测试关注成分"],
+            "methods": [legacy_method],
+        }
+        write_json(snapshot_path, payload)
+        with sqlite3.connect(self.data_store.database_path) as connection:
+            connection.execute(
+                "UPDATE sampling_lists SET snapshot_sha256 = ? WHERE list_id = ?",
+                (file_sha256(snapshot_path), metadata["listId"]),
+            )
+
+        history = self.service.get_history(metadata["listId"])
+        summary = history["items"][0]["summary"]
+        self.assertEqual(history["schemaVersion"], 1)
+        self.assertEqual(summary["pageEffectClues"], ["助眠"])
+        self.assertEqual(summary["riskDirections"], [])
+        self.assertEqual(summary["suggestedMethods"], [])
+        self.assertEqual(
+            [item["methodId"] for item in summary["legacyUnclassifiedMethods"]],
+            ["method-1"],
+        )
 
     def test_history_index_rebuilds_without_original_run_or_source_entities(self):
         self.add_current()
@@ -329,10 +468,14 @@ class SamplingExportServiceTest(unittest.TestCase):
                     "sourceTaskDisplayName": "任务",
                     "collectedAt": "2026-09-10T10:00:00+08:00",
                     "summary": {
+                        "pageEffectClues": [],
                         "riskDirections": [],
-                        "evidenceQualifications": [],
+                        "pageEvidenceQualification": "not_recorded",
+                        "riskEvidenceQualifications": [],
                         "substances": [],
-                        "methods": [],
+                        "suggestedMethods": [],
+                        "methodsNeedingContext": [],
+                        "otherKnownMethods": [],
                     },
                     "evidence": [],
                     "review": {"note": "=1+1"},
@@ -348,8 +491,8 @@ class SamplingExportServiceTest(unittest.TestCase):
         self.assertIsNone(row["B2"].value)
         self.assertIsNone(row["B2"].hyperlink)
         self.assertEqual(row["C2"].value, "'-unsafe")
-        self.assertEqual(row["M2"].value, "'=1+1")
-        self.assertTrue(all(row.cell(2, column).data_type != "f" for column in range(1, 14)))
+        self.assertEqual(row["O2"].value, "'=1+1")
+        self.assertTrue(all(row.cell(2, column).data_type != "f" for column in range(1, 16)))
 
 
 if __name__ == "__main__":

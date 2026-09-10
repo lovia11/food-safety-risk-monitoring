@@ -1804,7 +1804,7 @@ a {
 
 .sampling-table {
   width: 100%;
-  min-width: 1420px;
+  min-width: 1580px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -1956,7 +1956,13 @@ a {
 .sampling-method-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; padding: 9px 10px; border-left: 3px solid #38bdf8; background: #f5faff; }
 .sampling-method-list article + article { margin-top: 6px; }
 .sampling-method-list article strong { font-size: 12px; }
+.sampling-method-list article small { grid-column: 1 / -1; color: #64748b; font-size: 11px; }
 .sampling-method-list article p { grid-column: 1 / -1; margin: 0; color: #718095; font-size: 11px; }
+.needs-context-methods article { border-left-color: #f59e0b; background: #fffbeb; }
+.sampling-method-disclosure { margin-top: 12px; border: 1px solid #dbe4ee; border-radius: 8px; background: #f8fafc; }
+.sampling-method-disclosure > summary { cursor: pointer; padding: 9px 11px; color: #526174; font-size: 12px; font-weight: 600; }
+.sampling-method-disclosure > p { margin: 0; padding: 0 11px 8px; color: #718095; font-size: 11px; }
+.sampling-method-disclosure .sampling-method-list { margin: 0; padding: 0 10px 10px; }
 
 .sampling-evidence-list { display: grid; gap: 8px; }
 .sampling-evidence-list article { padding: 10px 11px; border: 1px solid #e0e7ef; border-radius: 8px; background: #fafcfe; }

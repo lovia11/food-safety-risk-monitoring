@@ -147,7 +147,7 @@ export function HistoricalListView({ selectedListId }: HistoricalListViewProps) 
               </div>
               <div className="readonly-inline-note">
                 <FileCheck2 size={16} />
-                以下展示导出时保存的 Evidence、Review 与抽检辅助建议，不会读取最新快照重算。
+                以下展示导出时保存的页面证据、人工复核结果和抽检辅助建议，不随商品后续变化而更新。
               </div>
               <div className="sampling-history-table-card">
                 <SamplingListTable

@@ -4,15 +4,31 @@ export function samplingMethodLabel(method: SamplingMethodSummary) {
   return [method.methodNo, method.methodName].filter(Boolean).join(" · ");
 }
 
-export function samplingMethods(item: SamplingItem) {
-  return item.summary.methods.filter(
+function visibleMethods(methods: SamplingMethodSummary[] | undefined) {
+  return (methods ?? []).filter(
     (method) => method.methodNo || method.methodName,
   );
+}
+
+export function samplingMethodGroups(item: SamplingItem) {
+  return {
+    suggested: visibleMethods(item.summary.suggestedMethods),
+    needsContext: visibleMethods(item.summary.methodsNeedingContext),
+    otherKnown: visibleMethods(item.summary.otherKnownMethods),
+    legacyUnclassified: visibleMethods(
+      item.summary.legacyUnclassifiedMethods ?? item.summary.methods,
+    ),
+  };
+}
+
+export function suggestedSamplingMethods(item: SamplingItem) {
+  return samplingMethodGroups(item).suggested;
 }
 
 export function evidenceQualificationLabel(value: string) {
   if (value === "seller_managed_primary") return "商家管理内容主要线索";
   if (value === "user_generated_auxiliary_only") return "用户生成内容辅助线索";
+  if (value === "not_recorded") return "未记录";
   return value || "未记录";
 }
 

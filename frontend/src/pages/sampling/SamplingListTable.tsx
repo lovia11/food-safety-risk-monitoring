@@ -2,7 +2,10 @@ import { ExternalLink, Eye, Trash2 } from "lucide-react";
 
 import type { SamplingItem } from "../../api/contracts";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
-import { samplingMethodLabel, samplingMethods } from "../../domain/sampling";
+import {
+  samplingMethodLabel,
+  suggestedSamplingMethods,
+} from "../../domain/sampling";
 import { StatusBadge } from "../../components/StatusBadge";
 
 type SamplingListTableProps = {
@@ -35,9 +38,10 @@ export function SamplingListTable({
             <th scope="col">商品</th>
             <th scope="col">商品链接</th>
             <th scope="col">来源排查</th>
+            <th scope="col">页面功效线索</th>
             <th scope="col">可能风险方向</th>
             <th scope="col">建议关注/检测成分</th>
-            <th scope="col">相关方法/标准</th>
+            <th scope="col">建议参考方法/标准</th>
             <th scope="col">加入时间</th>
             <th scope="col">历史曾纳入</th>
             <th scope="col">操作</th>
@@ -46,7 +50,7 @@ export function SamplingListTable({
         <tbody>
           {items.map((item) => {
             const productUrl = safeHttpUrl(item.productUrl);
-            const methods = samplingMethods(item);
+            const suggestedMethods = suggestedSamplingMethods(item);
             return (
               <tr
                 key={`${item.ordinal}-${item.productId}`}
@@ -82,12 +86,17 @@ export function SamplingListTable({
                     {item.sourceTaskDisplayName || item.sourceTaskId}
                   </strong>
                   <small className="table-secondary-text">
-                    Snapshot {item.sourceSnapshotId}
+                    采集记录 ID {item.sourceSnapshotId}
                   </small>
                 </td>
                 <td>
                   <span className="clamped-cell">
-                    {textList(item.summary.riskDirections, "暂无已保存线索")}
+                    {textList(item.summary.pageEffectClues, "暂无页面功效线索")}
+                  </span>
+                </td>
+                <td>
+                  <span className="clamped-cell">
+                    {textList(item.summary.riskDirections, "暂无已核验映射")}
                   </span>
                 </td>
                 <td>
@@ -97,9 +106,9 @@ export function SamplingListTable({
                 </td>
                 <td>
                   <span className="clamped-cell">
-                    {methods.length
-                      ? methods.map(samplingMethodLabel).join("、")
-                      : "暂无已核验方法"}
+                    {suggestedMethods.length
+                      ? suggestedMethods.map(samplingMethodLabel).join("、")
+                      : "暂无建议参考方法"}
                   </span>
                 </td>
                 <td>{formatDateTime(item.addedAt)}</td>

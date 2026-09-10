@@ -74,8 +74,8 @@ function ExportDialog({
         </button>
       </div>
       <p>
-        将生成 Excel，同时冻结一份只读历史清单并清空当前 Membership。
-        已完成的人工 Review、页面 Evidence 和抽检辅助建议均不会改变。
+        将生成 Excel，同时冻结一份只读历史清单并清空当前清单。
+        已完成的人工复核、页面证据和抽检辅助建议均会保留。
       </p>
       <div className="export-dialog-actions">
         <button type="button" className="secondary-button" onClick={onCancel} disabled={exporting} autoFocus>取消</button>
@@ -175,7 +175,7 @@ export function SamplingListPage({ view, listId }: SamplingListPageProps) {
     <div className="sampling-current-workspace" data-detail-open={Boolean(selectedItem)}>
       <section className="sampling-table-card" aria-label="当前抽检清单表格">
         <div className="sampling-section-heading">
-          <div><h2>当前条目</h2><p>共 {data.count} 件商品，一件 Product 一条</p></div>
+          <div><h2>当前条目</h2><p>共 {data.count} 件商品，同一商品仅保留一条记录</p></div>
           <span>导出后当前清单将清空</span>
         </div>
         <SamplingListTable
@@ -196,7 +196,7 @@ export function SamplingListPage({ view, listId }: SamplingListPageProps) {
       <PageHeader
         eyebrow="抽检管理"
         title="抽检辅助清单"
-        description="当前清单管理 Product Membership；历史清单以导出时冻结事实供查看与重新下载。"
+        description="汇总从商品总览和专项排查中纳入的商品；导出后形成可查看和重新下载的只读历史记录。"
         actions={view === "current" && data?.items.length ? (
           <button type="button" className="primary-button" onClick={() => setConfirmingExport(true)}>
             <FileSpreadsheet size={16} />导出当前抽检辅助清单（{data.count}）

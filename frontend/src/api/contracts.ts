@@ -37,6 +37,7 @@ export type SamplingMethodSummary = {
   methodId: string;
   methodNo: string;
   methodName: string;
+  methodStatus: string;
   applicabilityStatus: string;
   applicabilityReason: string;
   sourceName: string;
@@ -53,10 +54,17 @@ export type SamplingItem = SamplingMembership & {
   detectedEffects: string[];
   historicalCountBeforeExport: number;
   summary: {
+    pageEffectClues: string[];
     riskDirections: string[];
-    evidenceQualifications: string[];
+    pageEvidenceQualification: string;
+    riskEvidenceQualifications: string[];
     substances: string[];
-    methods: SamplingMethodSummary[];
+    suggestedMethods: SamplingMethodSummary[];
+    methodsNeedingContext: SamplingMethodSummary[];
+    otherKnownMethods: SamplingMethodSummary[];
+    legacyUnclassifiedMethods?: SamplingMethodSummary[];
+    methods?: SamplingMethodSummary[];
+    evidenceQualifications?: string[];
   };
   evidence: Evidence[];
   inspection: InspectionView;

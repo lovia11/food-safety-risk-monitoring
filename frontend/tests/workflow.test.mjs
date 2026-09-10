@@ -4,7 +4,8 @@ import test from "node:test";
 import { queueMatches } from "../src/domain/reviewQueue.ts";
 import {
   evidenceQualificationLabel,
-  samplingMethods,
+  samplingMethodGroups,
+  suggestedSamplingMethods,
 } from "../src/domain/sampling.ts";
 import { shouldResumeTask } from "../src/domain/task.ts";
 
@@ -36,16 +37,31 @@ test("archive resumes only interrupted resumable tasks", () => {
   );
 });
 
-test("sampling presentation uses only frozen method facts", () => {
+test("sampling presentation keeps frozen method categories separate", () => {
+  const suggested = { methodId: "m1", methodNo: "BJS TEST", methodName: "建议方法" };
+  const needsContext = { methodId: "m2", methodNo: "BJS CONTEXT", methodName: "待判断方法" };
+  const otherKnown = { methodId: "m3", methodNo: "BJS OTHER", methodName: "其他方法" };
   const item = {
     summary: {
-      methods: [
-        { methodId: "m1", methodNo: "BJS TEST", methodName: "已核验方法" },
-        { methodId: "empty", methodNo: "", methodName: "" },
-      ],
+      suggestedMethods: [suggested, { methodId: "empty", methodNo: "", methodName: "" }],
+      methodsNeedingContext: [needsContext],
+      otherKnownMethods: [otherKnown],
     },
   };
-  assert.deepEqual(samplingMethods(item), [item.summary.methods[0]]);
+  assert.deepEqual(suggestedSamplingMethods(item), [suggested]);
+  assert.deepEqual(samplingMethodGroups(item), {
+    suggested: [suggested],
+    needsContext: [needsContext],
+    otherKnown: [otherKnown],
+    legacyUnclassified: [],
+  });
+});
+
+test("legacy unclassified methods are not promoted to suggested methods", () => {
+  const legacy = { methodId: "legacy", methodNo: "OLD", methodName: "旧版方法" };
+  const item = { summary: { methods: [legacy] } };
+  assert.deepEqual(suggestedSamplingMethods(item), []);
+  assert.deepEqual(samplingMethodGroups(item).legacyUnclassified, [legacy]);
 });
 
 test("sampling evidence qualification is presented in user language", () => {
@@ -57,4 +73,5 @@ test("sampling evidence qualification is presented in user language", () => {
     evidenceQualificationLabel("user_generated_auxiliary_only"),
     "用户生成内容辅助线索",
   );
+  assert.equal(evidenceQualificationLabel("not_recorded"), "未记录");
 });
