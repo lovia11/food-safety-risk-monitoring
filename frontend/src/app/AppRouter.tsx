@@ -5,12 +5,16 @@ import { InspectionArchivePage } from "../pages/inspections/InspectionArchivePag
 import { InspectionWorkspacePage } from "../pages/inspections/InspectionWorkspacePage";
 import { NewInspectionPage } from "../pages/inspections/NewInspectionPage";
 import { ProductOverviewPage } from "../pages/products/ProductOverviewPage";
-import { CurrentSamplingPage } from "../pages/sampling/CurrentSamplingPage";
+import { SamplingListPage } from "../pages/sampling/SamplingListPage";
 
 export type AppRoute =
   | { section: "products"; productId?: string }
   | { section: "inspections"; taskId?: string }
-  | { section: "sampling"; listId?: string };
+  | {
+      section: "sampling";
+      view: "current" | "history";
+      listId?: string;
+    };
 
 function parseHash(hash: string): AppRoute {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
@@ -28,6 +32,7 @@ function parseHash(hash: string): AppRoute {
   if (parts[0] === "sampling") {
     return {
       section: "sampling",
+      view: parts[1] === "history" ? "history" : "current",
       listId: parts[1] === "history" ? decode(parts[2]) : undefined,
     };
   }
@@ -60,7 +65,7 @@ export function AppRouter() {
       ) : route.section === "inspections" ? (
         route.taskId === "new" ? <NewInspectionPage /> : route.taskId ? <InspectionWorkspacePage taskId={route.taskId} /> : <InspectionArchivePage />
       ) : (
-        <CurrentSamplingPage />
+        <SamplingListPage view={route.view} listId={route.listId} />
       )}
     </AppShell>
   );

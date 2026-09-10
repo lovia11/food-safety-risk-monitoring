@@ -82,6 +82,7 @@ export function Sidebar({
               className="sidebar-link"
               data-active={active}
               aria-current={active ? "page" : undefined}
+              aria-label={!expanded ? item.label : undefined}
               title={!expanded ? item.label : undefined}
             >
               <Icon size={18} aria-hidden="true" />

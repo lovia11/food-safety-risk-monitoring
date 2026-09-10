@@ -2,12 +2,8 @@ import { Check, ListPlus, RotateCcw, Save, Trash2, TriangleAlert } from "lucide-
 import { useEffect, useState } from "react";
 
 import type { Review, SamplingStatus } from "../api/contracts";
-import {
-  addSamplingItem,
-  removeSamplingItem,
-  saveReviewDecision,
-  updateReview,
-} from "../api/products";
+import { saveReviewDecision, updateReview } from "../api/products";
+import { addSamplingItem, removeSamplingItem } from "../api/sampling";
 import { useAppState } from "../app/AppState";
 import { reviewPresentation } from "../domain/presentation";
 import { StatusBadge } from "./StatusBadge";

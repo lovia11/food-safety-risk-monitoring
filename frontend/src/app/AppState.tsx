@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import { getSamplingList } from "../api/products";
+import { getSamplingList } from "../api/sampling";
 
 type AppStateValue = {
   currentSamplingCount: number | null;

@@ -33,9 +33,89 @@ export type SamplingMembership = {
   review?: Review;
 };
 
+export type SamplingMethodSummary = {
+  methodId: string;
+  methodNo: string;
+  methodName: string;
+  applicabilityStatus: string;
+  applicabilityReason: string;
+  sourceName: string;
+  sourceReference: string;
+};
+
+export type SamplingItem = SamplingMembership & {
+  ordinal: number;
+  sourceTaskDisplayName: string;
+  productName: string;
+  productUrl: string;
+  shopName: string;
+  collectedAt: string | null;
+  detectedEffects: string[];
+  historicalCountBeforeExport: number;
+  summary: {
+    riskDirections: string[];
+    evidenceQualifications: string[];
+    substances: string[];
+    methods: SamplingMethodSummary[];
+  };
+  evidence: Evidence[];
+  inspection: InspectionView;
+  productContext: ProductContext;
+  review: Review;
+  recommendationGaps: {
+    unmappedEvidence: Array<Record<string, unknown>>;
+    compositionGaps: Array<Record<string, unknown>>;
+    knowledgeGaps: Array<Record<string, unknown>>;
+  };
+  disclaimer: string;
+  frozenAssets: FrozenSamplingAsset[];
+};
+
 export type SamplingList = {
-  items: SamplingMembership[];
+  items: SamplingItem[];
   count: number;
+};
+
+export type FrozenSamplingAsset = {
+  kind: string;
+  sourcePath: string;
+  frozenPath: string;
+  sha256: string;
+  url?: string | null;
+};
+
+export type HistoricalSamplingListMetadata = {
+  listId: string;
+  status: "exported";
+  exportedAt: string;
+  itemCount: number;
+  snapshotPath: string;
+  workbookPath: string;
+  snapshotSha256: string;
+  workbookSha256: string;
+  createdAt: string;
+  updatedAt: string;
+  detailUrl: string;
+  downloadUrl: string;
+};
+
+export type HistoricalSamplingListPage = {
+  lists: HistoricalSamplingListMetadata[];
+  count: number;
+};
+
+export type HistoricalSamplingList = {
+  schemaVersion: number;
+  listId: string;
+  status: "exported";
+  createdAt: string;
+  exportedAt: string;
+  itemCount: number;
+  workbookFile: string;
+  workbookSha256: string;
+  disclaimer: string;
+  items: SamplingItem[];
+  downloadUrl: string;
 };
 
 export type ReviewDecisionResult = {
