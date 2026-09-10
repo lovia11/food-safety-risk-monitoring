@@ -101,6 +101,30 @@ class TaskBusinessSummaryTest(unittest.TestCase):
         self.assertEqual(partial["businessStatus"], "partial_error")
         self.assertEqual(partial["actionLabel"], "查看执行结果")
 
+    def test_terminal_task_does_not_mark_zero_of_one_analysis_as_done(self):
+        summary = self.store.get_task_business_summary("run-a")
+        archive = {
+            **summary["archiveSummary"],
+            "detailCompleted": 1,
+            "detailTarget": 1,
+            "analysisCompleted": 0,
+            "analysisTarget": 1,
+            "analysisFailed": 1,
+            "pendingReview": 0,
+            "completedReview": 0,
+        }
+        projected = task_business_dto(
+            {
+                "task": {"stage": "completed_with_errors"},
+                "runtime": {"active": False, "resumable": False},
+            },
+            {**summary, "archiveSummary": archive},
+        )
+        states = {item["key"]: item["state"] for item in projected["flow"]}
+        self.assertEqual(states["detail"], "done")
+        self.assertEqual(states["analysis"], "failed")
+        self.assertEqual(states["review"], "future")
+
 
 if __name__ == "__main__":
     unittest.main()

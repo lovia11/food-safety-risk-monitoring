@@ -20,6 +20,24 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def write_completed_snapshot(options, review_required=False):
     run_root = options.output_root / options.run_id
+    write_json(
+        run_root / "products" / "123" / "meta.json",
+        {
+            "productId": "123",
+            "imageCount": 1,
+            "images": [],
+            "screenshots": [],
+        },
+    )
+    write_json(
+        run_root / "products" / "123" / "analysis.json",
+        {
+            "product_id": "123",
+            "detected_effects": ["助眠"] if review_required else [],
+            "review_required": review_required,
+            "evidence_details": [],
+        },
+    )
     candidate = {
         "product_id": "123",
         "product_name": "测试商品",

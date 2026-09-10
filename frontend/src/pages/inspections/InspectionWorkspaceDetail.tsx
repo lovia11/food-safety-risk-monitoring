@@ -119,15 +119,22 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
       </section>
       <RecommendationPanel inspection={workspace.inspection} />
       {needsProductContext(workspace.inspection) && <ProductContextForm context={workspace.inspection.context} saving={savingContext} onSave={saveContext} />}
-      <ReviewActions
-        snapshotId={snapshotId}
-        productId={workspace.snapshot.productId}
-        review={workspace.review}
-        sampling={workspace.sampling}
-        addedFrom="inspection_workspace"
-        weakEvidence={evidenceGroups.seller.length === 0 && evidenceGroups.ugc.length > 0}
-        onChanged={async (change) => { await load(); await onChanged(change); }}
-      />
+      {workspace.snapshot.readiness.reviewEligible ? (
+        <ReviewActions
+          snapshotId={snapshotId}
+          productId={workspace.snapshot.productId}
+          review={workspace.review}
+          sampling={workspace.sampling}
+          addedFrom="inspection_workspace"
+          weakEvidence={evidenceGroups.seller.length === 0 && evidenceGroups.ugc.length > 0}
+          onChanged={async (change) => { await load(); await onChanged(change); }}
+        />
+      ) : (
+        <section className="detail-section review-section">
+          <h3>人工复核</h3>
+          <div className="inline-message">该页面快照尚未完成线索分析，暂不可进行人工复核。</div>
+        </section>
+      )}
     </article>
   );
 }

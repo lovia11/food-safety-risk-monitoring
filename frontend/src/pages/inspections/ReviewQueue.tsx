@@ -11,6 +11,7 @@ const queuePresentation = {
   current: { label: "已纳入当前清单", tone: "success" },
   reviewed_follow_up: { label: "已复核 / 当前未在清单", tone: "info" },
   no_further_action: { label: "暂不纳入", tone: "neutral" },
+  not_eligible: { label: "尚不可复核", tone: "neutral" },
 } as const;
 
 type ReviewQueueProps = {
@@ -30,13 +31,14 @@ export function ReviewQueue({
   onSelect,
   pendingCompleted,
 }: ReviewQueueProps) {
-  const filtered = products.filter((item) => queueMatches(item, filter));
+  const eligibleProducts = products.filter((item) => item.readiness.reviewEligible);
+  const filtered = eligibleProducts.filter((item) => queueMatches(item, filter));
   return (
     <aside className="review-queue" aria-label="商品复核队列">
       <div className="queue-header">
         <div>
           <p>商品队列</p>
-          <strong>{products.length} 件商品快照</strong>
+          <strong>{eligibleProducts.length} 件可复核快照</strong>
         </div>
         <ListChecks size={18} />
       </div>
@@ -80,7 +82,7 @@ export function ReviewQueue({
             </button>
           );
         }) : (
-          <div className="queue-empty">该筛选下没有商品。</div>
+          <div className="queue-empty">该筛选下没有可复核商品。</div>
         )}
       </div>
     </aside>

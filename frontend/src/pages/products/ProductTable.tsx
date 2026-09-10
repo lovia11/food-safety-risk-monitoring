@@ -60,7 +60,9 @@ export function ProductTable({
         </thead>
         <tbody>
           {products.map((product) => {
-            const review = reviewPresentation[product.review.status];
+            const review = !product.readiness.reviewEligible && product.review.status === "pending"
+              ? { label: "尚不可复核", tone: "neutral" as const }
+              : reviewPresentation[product.review.status];
             const analysis = productAnalysisPresentation(product.status);
             const selected = selectedProductId === product.productId;
             return (

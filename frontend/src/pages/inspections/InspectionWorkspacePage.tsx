@@ -7,7 +7,7 @@ import { getTask } from "../../api/tasks";
 import { EmptyState } from "../../components/EmptyState";
 import { LoadingState } from "../../components/LoadingState";
 import { StatusBadge } from "../../components/StatusBadge";
-import { flowSteps, taskFlowIndex, taskStatusPresentation } from "../../domain/task";
+import { taskFlowSteps, taskStatusPresentation } from "../../domain/task";
 import { InspectionWorkspaceDetail } from "./InspectionWorkspaceDetail";
 import { ManualActionBanner } from "./ManualActionBanner";
 import { type QueueFilter, ReviewQueue } from "./ReviewQueue";
@@ -23,16 +23,15 @@ const workspaceQuery = (taskId: string) => ({
 });
 
 function FlowStrip({ task }: { task: TaskDetail }) {
-  const activeIndex = taskFlowIndex(task.stage);
-  const reviewed = task.archiveSummary.recommendFollowUpCount + task.archiveSummary.noFurtherActionCount;
-  const total = reviewed + task.archiveSummary.pendingReview;
   return (
     <ol className="task-flow" aria-label="排查流程">
-      {flowSteps.map((step, index) => (
-        <li key={step} data-state={index < activeIndex ? "done" : index === activeIndex ? "active" : "future"}>
-          <span>{index < activeIndex ? <Check size={13} /> : index + 1}</span>
-          <strong>{step}</strong>
-          {index === 3 && total > 0 && <small>{reviewed}/{total}</small>}
+      {taskFlowSteps(task).map((step, index) => (
+        <li key={step.key} data-state={step.state}>
+          <span>{step.state === "done" ? <Check size={13} /> : index + 1}</span>
+          <strong>{step.label}</strong>
+          {step.target > 0 && step.key !== "search" && (
+            <small>{step.completed}/{step.target}</small>
+          )}
         </li>
       ))}
     </ol>
@@ -65,13 +64,18 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
     setError("");
     try {
       const [, items] = await Promise.all([loadTask(), loadProducts()]);
+      const reviewable = items.filter((item) => item.readiness.reviewEligible);
       if (!initialized.current) {
-        const pending = items.find((item) => item.sampling.decisionStatus === "pending");
+        const pending = reviewable.find((item) => item.sampling.decisionStatus === "pending");
         setFilter(pending ? "pending" : "all");
-        setSelectedSnapshotId((pending || items[0])?.snapshotId || "");
+        setSelectedSnapshotId((pending || reviewable[0])?.snapshotId || "");
         initialized.current = true;
       } else {
-        setSelectedSnapshotId((current) => current || items[0]?.snapshotId || "");
+        setSelectedSnapshotId((current) => (
+          reviewable.some((item) => item.snapshotId === current)
+            ? current
+            : reviewable[0]?.snapshotId || ""
+        ));
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "排查工作区加载失败");

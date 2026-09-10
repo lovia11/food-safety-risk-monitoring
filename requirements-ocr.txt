@@ -1,5 +1,6 @@
-# PaddlePaddle CPU inference engine follows the official PaddleOCR quick start.
+# Validated OCR runtime: CPython 3.10.x (historical successful run: 3.10.0), CPU.
 paddlepaddle==3.2.0
-paddleocr>=3.0,<4
+paddleocr==3.7.0
+paddlex==3.7.2
 Pillow>=10,<13
 

@@ -174,6 +174,16 @@ class WebContractTest(unittest.TestCase):
     def test_existing_run_keeps_full_batch_after_single_product_resume(self):
         with tempfile.TemporaryDirectory() as temporary:
             run_root = Path(temporary) / "run"
+            for product_id, image_count in (("1", 2), ("2", 3)):
+                write_json(
+                    run_root / "products" / product_id / "meta.json",
+                    {
+                        "productId": product_id,
+                        "imageCount": image_count,
+                        "images": [],
+                        "screenshots": [],
+                    },
+                )
             write_json(
                 run_root / "search" / "search_candidates.json",
                 {

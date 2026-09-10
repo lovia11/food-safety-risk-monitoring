@@ -8,10 +8,15 @@ import {
   samplingMethodGroups,
   suggestedSamplingMethods,
 } from "../src/domain/sampling.ts";
-import { buildWebTaskRequest, shouldResumeTask } from "../src/domain/task.ts";
+import {
+  buildWebTaskRequest,
+  shouldResumeTask,
+  taskFlowSteps,
+} from "../src/domain/task.ts";
 
 test("pending snapshot remains in pending queue when product has a membership", () => {
   const item = {
+    readiness: { reviewEligible: true },
     sampling: {
       decisionStatus: "pending",
       inCurrentList: true,
@@ -21,6 +26,20 @@ test("pending snapshot remains in pending queue when product has a membership", 
 
   assert.equal(queueMatches(item, "pending"), true);
   assert.equal(queueMatches(item, "current"), false);
+});
+
+test("non-analysis-ready snapshots never enter the review queue", () => {
+  const item = {
+    readiness: { reviewEligible: false },
+    sampling: {
+      decisionStatus: "not_eligible",
+      inCurrentList: false,
+      sourceSnapshotId: null,
+    },
+  };
+
+  assert.equal(queueMatches(item, "all"), false);
+  assert.equal(queueMatches(item, "pending"), false);
 });
 
 test("archive resumes only interrupted resumable tasks", () => {
@@ -36,6 +55,16 @@ test("archive resumes only interrupted resumable tasks", () => {
     shouldResumeTask({ businessStatus: "partial_error", resumable: true }),
     false,
   );
+});
+
+test("workflow renders backend step outcomes without inferring from terminal stage", () => {
+  const flow = [
+    { key: "search", label: "搜索商品", state: "done", completed: 4, target: 4 },
+    { key: "detail", label: "采集详情", state: "partial", completed: 2, target: 3 },
+    { key: "analysis", label: "线索识别", state: "failed", completed: 0, target: 1 },
+    { key: "review", label: "人工复核", state: "future", completed: 0, target: 0 },
+  ];
+  assert.deepEqual(taskFlowSteps({ flow }), flow);
 });
 
 test("web quick task analyzes every selected candidate up to the user limit", () => {

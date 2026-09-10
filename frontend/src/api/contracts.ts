@@ -17,7 +17,22 @@ export type SamplingStatus = {
     | "current"
     | "reviewed_follow_up"
     | "no_further_action"
-    | "pending";
+    | "pending"
+    | "not_eligible";
+};
+
+export type PipelineReadiness = {
+  detailCollected: boolean;
+  ocrInputReady: boolean;
+  ocrReady: boolean;
+  analysisReady: boolean;
+  reviewEligible: boolean;
+  reason:
+    | "eligible"
+    | "detail_not_collected"
+    | "ocr_input_missing"
+    | "ocr_not_ready"
+    | "analysis_not_ready";
 };
 
 export type SamplingMembership = {
@@ -164,6 +179,7 @@ export type SnapshotSummary = {
     sellerManagedEvidence: number;
     ugcEvidence: number;
   };
+  readiness: PipelineReadiness;
   representativeEvidence: {
     text: string;
     contentOrigin: string;
@@ -334,14 +350,28 @@ export type TaskBusinessStatus =
   | "interrupted";
 
 export type TaskArchiveSummary = {
+  searchCandidates: number;
   detailCompleted: number;
   detailTarget: number;
+  detailFailed: number;
+  analysisCompleted: number;
+  analysisTarget: number;
+  analysisFailed: number;
   clueProducts: number;
   pendingReview: number;
+  completedReview: number;
   recommendFollowUpCount: number;
   noFurtherActionCount: number;
   currentSamplingItems: number;
   errorCount: number;
+};
+
+export type TaskFlowStep = {
+  key: "search" | "detail" | "analysis" | "review";
+  label: string;
+  state: "future" | "active" | "done" | "partial" | "failed";
+  completed: number;
+  target: number;
 };
 
 export type ManualActionState = {
@@ -372,6 +402,7 @@ export type TaskSummary = {
   active: boolean;
   resumable: boolean;
   manualAction: ManualActionState;
+  flow: TaskFlowStep[];
   archiveSummary: TaskArchiveSummary;
   url: string;
 };

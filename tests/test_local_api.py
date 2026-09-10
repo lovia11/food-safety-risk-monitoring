@@ -380,6 +380,15 @@ class LocalApiHelpersTest(unittest.TestCase):
             web_root.mkdir()
             (web_root / "index.html").write_text("ok", encoding="utf-8")
             write_json(
+                run_root / "products" / "123" / "meta.json",
+                {
+                    "productId": "123",
+                    "imageCount": 1,
+                    "images": [],
+                    "screenshots": [],
+                },
+            )
+            write_json(
                 run_root / "products" / "123" / "analysis.json",
                 {
                     "detected_effects": ["助眠"],
@@ -427,6 +436,8 @@ class LocalApiHelpersTest(unittest.TestCase):
                         "product_id": "123",
                         "product_name": "测试商品",
                         "product_url": "https://item.taobao.com/item.htm?id=123",
+                        "original_image_count": 1,
+                        "ocr_image_count": 1,
                         "crawl_status": "success",
                         "review_required": True,
                     }
@@ -547,6 +558,25 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertEqual(target_page["products"][0]["productId"], "456")
                 self.assertEqual(target_page["products"][0]["targetId"], "target-1")
                 self.assertEqual(target_page["products"][0]["targetName"], "酸枣仁")
+                ineligible_request = Request(
+                    f"{base}/api/snapshots/{target_page['products'][0]['snapshotId']}/review-decision",
+                    data=json.dumps(
+                        {
+                            "decision": "no_further_action",
+                            "added_from": "inspection_workspace",
+                        }
+                    ).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(ineligible_request)
+                self.assertEqual(raised.exception.code, 409)
+                self.assertEqual(
+                    json.load(raised.exception)["error"]["code"],
+                    "review_not_eligible",
+                )
+                raised.exception.close()
                 with urlopen(
                     f"{base}/api/products?target_id=target-1&page=2&page_size=20"
                 ) as response:

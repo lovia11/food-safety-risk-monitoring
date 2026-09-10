@@ -20,6 +20,10 @@ from src.inspection_reference import (
     InspectionConfigValidationError,
     validate_inspection_config,
 )
+from src.pipeline_contract import (
+    evaluate_pipeline_readiness,
+    review_eligibility_sql,
+)
 from src.risk_substance_reference import (
     RiskSubstanceConfigValidationError,
     validate_risk_substance_config,
@@ -69,6 +73,10 @@ class SnapshotNotFoundError(DataStoreError):
 
 class ReviewValidationError(DataStoreError):
     """A review update contains an unsupported value."""
+
+
+class ReviewEligibilityError(ReviewValidationError):
+    """The Snapshot has not completed the analysis required for Review."""
 
 
 class ProductFilterValidationError(DataStoreError):
@@ -2035,6 +2043,13 @@ class DataStore:
 
     @staticmethod
     def _snapshot_dict(row: sqlite3.Row) -> dict[str, Any]:
+        readiness = evaluate_pipeline_readiness(
+            status=row["status"],
+            meta_path=row["meta_path"],
+            analysis_path=row["analysis_path"],
+            original_image_count=row["original_image_count"],
+            ocr_image_count=row["ocr_image_count"],
+        )
         return {
             "snapshotId": row["snapshot_id"],
             "productId": row["product_id"],
@@ -2067,6 +2082,7 @@ class DataStore:
                 "sellerManagedEvidence": int(row["seller_evidence_count"] or 0),
                 "ugcEvidence": int(row["ugc_evidence_count"] or 0),
             },
+            "readiness": readiness.to_api(),
             "representativeEvidence": (
                 {
                     "text": row["representative_evidence_text"],
@@ -2087,6 +2103,10 @@ class DataStore:
                 "sourceSnapshotId": row["current_source_snapshot_id"],
                 "historicalCount": int(row["historical_count"] or 0),
                 "decisionStatus": (
+                    "not_eligible"
+                    if row["review_status"] == "pending"
+                    and not readiness.review_eligible
+                    else
                     "pending"
                     if row["review_status"] == "pending"
                     else "no_further_action"
@@ -2215,6 +2235,8 @@ class DataStore:
                 raise ReviewValidationError("人工复核状态不合法")
             clauses.append("r.review_status = ?")
             values.append(review_status)
+            if review_status == "pending":
+                clauses.append(review_eligibility_sql("s"))
         if effect:
             clauses.append("s.detected_effects_json LIKE ?")
             values.append(f'%"{effect}"%')
@@ -2427,18 +2449,32 @@ class DataStore:
             ).fetchone()
             if task is None:
                 raise SnapshotNotFoundError("任务索引不存在")
+            eligibility = review_eligibility_sql("s")
             counts = connection.execute(
-                """
+                f"""
                 SELECT
                     COUNT(*) AS product_count,
                     SUM(CASE WHEN s.status IN (
                         'detail_collected', 'processing_ocr_analysis',
                         'failed_processing', 'success'
-                    ) THEN 1 ELSE 0 END) AS detail_completed,
+                    ) AND NULLIF(TRIM(s.meta_path), '') IS NOT NULL
+                        THEN 1 ELSE 0 END) AS detail_completed,
+                    SUM(CASE WHEN s.status IN (
+                        'failed_collection', 'failed_preparation'
+                    ) THEN 1 ELSE 0 END) AS detail_failed,
+                    SUM(CASE WHEN {eligibility} THEN 1 ELSE 0 END)
+                        AS analysis_completed,
+                    SUM(CASE WHEN s.status = 'failed_processing'
+                        OR (s.status = 'success' AND NOT {eligibility})
+                        THEN 1 ELSE 0 END) AS analysis_failed,
                     SUM(CASE WHEN s.detected_effects_json != '[]' THEN 1 ELSE 0 END)
                         AS clue_products,
-                    SUM(CASE WHEN r.review_status = 'pending' THEN 1 ELSE 0 END)
+                    SUM(CASE WHEN r.review_status = 'pending' AND {eligibility}
+                        THEN 1 ELSE 0 END)
                         AS pending_review,
+                    SUM(CASE WHEN r.review_status != 'pending' AND {eligibility}
+                        THEN 1 ELSE 0 END)
+                        AS completed_review,
                     SUM(CASE WHEN r.review_status = 'recommend_follow_up' THEN 1 ELSE 0 END)
                         AS recommend_follow_up,
                     SUM(CASE WHEN r.review_status = 'no_further_action' THEN 1 ELSE 0 END)
@@ -2466,6 +2502,10 @@ class DataStore:
             or task["keyword"]
             or task["task_id"]
         )
+        product_count = int(counts["product_count"] or 0)
+        configured_detail_target = int(task["detail_limit"] or product_count)
+        detail_target = min(configured_detail_target, product_count)
+        detail_completed = int(counts["detail_completed"] or 0)
         return {
             "taskId": task["task_id"],
             "displayName": display_name,
@@ -2476,10 +2516,16 @@ class DataStore:
             "createdAt": task["created_at"],
             "updatedAt": task["updated_at"],
             "archiveSummary": {
-                "detailCompleted": int(counts["detail_completed"] or 0),
-                "detailTarget": int(task["detail_limit"] or counts["product_count"] or 0),
+                "searchCandidates": product_count,
+                "detailCompleted": detail_completed,
+                "detailTarget": detail_target,
+                "detailFailed": int(counts["detail_failed"] or 0),
+                "analysisCompleted": int(counts["analysis_completed"] or 0),
+                "analysisTarget": detail_completed,
+                "analysisFailed": int(counts["analysis_failed"] or 0),
                 "clueProducts": int(counts["clue_products"] or 0),
                 "pendingReview": int(counts["pending_review"] or 0),
+                "completedReview": int(counts["completed_review"] or 0),
                 "recommendFollowUpCount": int(counts["recommend_follow_up"] or 0),
                 "noFurtherActionCount": int(counts["no_further_action"] or 0),
                 "currentSamplingItems": current_sampling,
@@ -2539,6 +2585,42 @@ class DataStore:
             )
         return review
 
+    def snapshot_readiness_in_transaction(
+        self,
+        connection: sqlite3.Connection,
+        snapshot_id: str,
+    ) -> dict[str, Any]:
+        row = connection.execute(
+            """
+            SELECT status, meta_path, analysis_path,
+                   original_image_count, ocr_image_count
+            FROM product_snapshots
+            WHERE snapshot_id = ?
+            """,
+            (snapshot_id,),
+        ).fetchone()
+        if row is None:
+            raise SnapshotNotFoundError("商品快照不存在")
+        return evaluate_pipeline_readiness(
+            status=row["status"],
+            meta_path=row["meta_path"],
+            analysis_path=row["analysis_path"],
+            original_image_count=row["original_image_count"],
+            ocr_image_count=row["ocr_image_count"],
+        ).to_api()
+
+    def require_review_eligible(
+        self,
+        connection: sqlite3.Connection,
+        snapshot_id: str,
+    ) -> dict[str, Any]:
+        readiness = self.snapshot_readiness_in_transaction(connection, snapshot_id)
+        if not readiness["reviewEligible"]:
+            raise ReviewEligibilityError(
+                "当前商品快照尚未完成Phase3分析，不能进行人工复核。"
+            )
+        return readiness
+
     def save_review(
         self,
         connection: sqlite3.Connection,
@@ -2554,11 +2636,7 @@ class DataStore:
         if len(note) > 2000:
             raise ReviewValidationError("复核备注不能超过2000个字符")
         reviewed_at = None if review_status == "pending" else iso_now()
-        exists = connection.execute(
-            "SELECT 1 FROM product_snapshots WHERE snapshot_id = ?", (snapshot_id,)
-        ).fetchone()
-        if exists is None:
-            raise SnapshotNotFoundError("商品快照不存在")
+        self.require_review_eligible(connection, snapshot_id)
         connection.execute(
             """
             INSERT INTO reviews (snapshot_id, review_status, review_note, reviewed_at)

@@ -17,6 +17,7 @@ from src.inspection_runtime import (
     INSPECTION_RECOMMENDATION_FILE,
 )
 from src.phase5_batch import build_batch_record
+from src.pipeline_contract import evaluate_pipeline_readiness
 from src.runtime import iso_now, read_json, write_json
 
 
@@ -280,6 +281,7 @@ def _product_view(
     product_root = run_root / "products" / product_id
     meta = _read_optional_json(product_root / "meta.json", {})
     analysis = _read_optional_json(product_root / "analysis.json", {})
+    assets = _product_assets(run_root, product_id)
     risk_record = dict(record)
     for field in (
         "detected_effects",
@@ -293,6 +295,17 @@ def _product_view(
     ):
         if field in analysis:
             risk_record[field] = analysis[field]
+    counts = {
+        "originalImages": int(record.get("original_image_count") or 0),
+        "ocrImages": int(record.get("ocr_image_count") or 0),
+    }
+    readiness = evaluate_pipeline_readiness(
+        status=status_code,
+        meta_path=assets["metaPath"],
+        analysis_path=assets["analysisPath"],
+        original_image_count=counts["originalImages"],
+        ocr_image_count=counts["ocrImages"],
+    )
     return {
         "id": product_id,
         "rank": rank if rank is not None else meta.get("rank"),
@@ -303,34 +316,30 @@ def _product_view(
         "productUrl": record.get("product_url") or "",
         "collectedAt": meta.get("crawlTime"),
         "status": _status_view(status_code),
-        "counts": {
-            "originalImages": int(record.get("original_image_count") or 0),
-            "ocrImages": int(record.get("ocr_image_count") or 0),
-        },
+        "counts": counts,
+        "readiness": readiness.to_api(),
         "risk": _risk_view(risk_record),
         "inspection": _inspection_view(run_root, product_id),
-        "assets": _product_assets(run_root, product_id),
+        "assets": assets,
         "errors": record.get("errors") or [],
     }
 
 
-def _statistics(batch_payload: dict[str, Any], records: list[dict[str, Any]]) -> dict[str, int]:
-    statuses = [str(item.get("crawl_status") or "") for item in records]
-    detail_count = sum(
-        int(item.get("original_image_count") or 0) > 0
-        or str(item.get("crawl_status") or "") in DETAIL_AVAILABLE_STATUSES
-        for item in records
-    )
+def _statistics(
+    batch_payload: dict[str, Any], products: list[dict[str, Any]]
+) -> dict[str, int]:
+    statuses = [str((item.get("status") or {}).get("code") or "") for item in products]
+    readiness = [item.get("readiness") or {} for item in products]
     return {
         "searchRaw": int(batch_payload.get("search_raw_count") or 0),
         "searchDeduplicated": int(batch_payload.get("search_deduplicated_count") or 0),
-        "selectedProducts": len(records),
-        "detailCollectedProducts": detail_count,
-        "analyzedProducts": sum(code == "success" for code in statuses),
-        "originalImages": sum(int(item.get("original_image_count") or 0) for item in records),
-        "ocrImages": sum(int(item.get("ocr_image_count") or 0) for item in records),
-        "clueProducts": sum(bool(item.get("detected_effects")) for item in records),
-        "reviewRequiredProducts": sum(item.get("review_required") is True for item in records),
+        "selectedProducts": len(products),
+        "detailCollectedProducts": sum(bool(item.get("detailCollected")) for item in readiness),
+        "analyzedProducts": sum(bool(item.get("analysisReady")) for item in readiness),
+        "originalImages": sum(int((item.get("counts") or {}).get("originalImages") or 0) for item in products),
+        "ocrImages": sum(int((item.get("counts") or {}).get("ocrImages") or 0) for item in products),
+        "clueProducts": sum(bool((item.get("risk") or {}).get("detectedEffects")) for item in products),
+        "reviewRequiredProducts": sum((item.get("risk") or {}).get("reviewRequired") is True for item in products),
         "failedProducts": sum(code.startswith("failed") for code in statuses),
     }
 
@@ -363,7 +372,7 @@ def build_web_snapshot(
             "terminal": stage in TERMINAL_STAGES,
             "message": message,
         },
-        "statistics": _statistics(batch_payload, records),
+        "statistics": _statistics(batch_payload, product_views),
         "products": product_views,
         "exports": {
             "productsJson": "products.json",

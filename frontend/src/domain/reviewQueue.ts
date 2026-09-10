@@ -16,8 +16,9 @@ export const queueFilters: Array<{ value: QueueFilter; label: string }> = [
 ];
 
 export function queueMatches(
-  item: Pick<SnapshotSummary, "sampling">,
+  item: Pick<SnapshotSummary, "sampling" | "readiness">,
   filter: QueueFilter,
 ) {
-  return filter === "all" || item.sampling.decisionStatus === filter;
+  return item.readiness.reviewEligible
+    && (filter === "all" || item.sampling.decisionStatus === filter);
 }

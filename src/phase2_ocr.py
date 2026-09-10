@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
+import re
 import statistics
 import sys
 import time
@@ -41,6 +43,14 @@ class OCRRuntime:
     cv2: Any
     numpy: Any
     model_info: dict[str, Any]
+
+
+class OCRStageError(RuntimeError):
+    """The OCR stage did not produce any usable image result."""
+
+
+class OCRRuntimeCompatibilityError(OCRStageError):
+    """The installed OCR runtime cannot satisfy the requested model contract."""
 
 
 def iso_now() -> str:
@@ -116,6 +126,85 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _installed_version(distribution: str) -> str:
+    try:
+        return importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return "not-installed"
+
+
+def _version_tuple(value: str) -> tuple[int, ...]:
+    match = re.match(r"^(\d+(?:\.\d+)*)", value)
+    return tuple(int(part) for part in match.group(1).split(".")) if match else ()
+
+
+def validate_ocr_runtime_compatibility(
+    ocr_version: str,
+    paddleocr_version: str,
+    paddlex_version: str | None = None,
+    paddlepaddle_version: str | None = None,
+    python_version: tuple[int, int] | None = None,
+) -> None:
+    """Fail before model construction for known incompatible combinations."""
+
+    if ocr_version == "PP-OCRv6" and _version_tuple(paddleocr_version) < (3, 7, 0):
+        raise OCRRuntimeCompatibilityError(
+            "PP-OCRv6需要paddleocr>=3.7.0；"
+            f"当前检测到paddleocr=={paddleocr_version}。"
+            "请按requirements-ocr.txt重建或同步当前Python环境。"
+        )
+    if ocr_version == "PP-OCRv6" and paddlex_version is not None:
+        if _version_tuple(paddlex_version) < (3, 7, 2):
+            raise OCRRuntimeCompatibilityError(
+                "PP-OCRv6稳定基线需要paddlex>=3.7.2；"
+                f"当前检测到paddlex=={paddlex_version}。"
+            )
+    if paddlepaddle_version is not None and paddlepaddle_version != "3.2.0":
+        raise OCRRuntimeCompatibilityError(
+            "当前项目OCR稳定基线需要paddlepaddle==3.2.0；"
+            f"当前检测到paddlepaddle=={paddlepaddle_version}。"
+        )
+    actual_python = python_version or sys.version_info[:2]
+    if tuple(actual_python) != (3, 10):
+        raise OCRRuntimeCompatibilityError(
+            "当前项目OCR稳定基线需要Python 3.10.x；"
+            f"当前检测到Python {actual_python[0]}.{actual_python[1]}。"
+        )
+
+
+def ocr_environment_info(
+    ocr_version: str,
+    model_source: str,
+    score_threshold: float,
+    device: str = "cpu",
+) -> dict[str, Any]:
+    paddle_version = _installed_version("paddlepaddle")
+    return {
+        "pythonVersion": ".".join(str(part) for part in sys.version_info[:3]),
+        "paddlepaddleVersion": paddle_version,
+        # Keep the historical key readable for existing run consumers.
+        "paddleVersion": paddle_version,
+        "paddleocrVersion": _installed_version("paddleocr"),
+        "paddlexVersion": _installed_version("paddlex"),
+        "ocrVersion": ocr_version,
+        "modelSource": model_source,
+        "device": device,
+        "scoreThreshold": score_threshold,
+    }
+
+
+def _record_stage_error(output_dir: Path, exc: BaseException) -> None:
+    write_json(
+        output_dir / "stage_error.json",
+        {
+            "status": "failed",
+            "failedAt": iso_now(),
+            "errorType": type(exc).__name__,
+            "message": str(exc),
+        },
+    )
+
+
 def ocr_image_numbers_from_meta(product_root: Path) -> set[int] | None:
     meta_path = product_root / "meta.json"
     if not meta_path.exists():
@@ -160,6 +249,14 @@ def create_ocr_runtime(
     import numpy as np
     import paddle
     import paddleocr as paddleocr_package
+    import paddlex as paddlex_package
+
+    validate_ocr_runtime_compatibility(
+        ocr_version,
+        str(paddleocr_package.__version__),
+        str(paddlex_package.__version__),
+        str(paddle.__version__),
+    )
     from paddleocr import PaddleOCR
 
     print(f"Initializing PaddleOCR {ocr_version} on CPU", flush=True)
@@ -177,8 +274,11 @@ def create_ocr_runtime(
         cv2=cv2,
         numpy=np,
         model_info={
+            "pythonVersion": ".".join(str(part) for part in sys.version_info[:3]),
+            "paddlepaddleVersion": paddle.__version__,
             "paddleVersion": paddle.__version__,
             "paddleocrVersion": paddleocr_package.__version__,
+            "paddlexVersion": paddlex_package.__version__,
             "ocrVersion": ocr_version,
             "modelSource": model_source,
             "device": paddle.get_device(),
@@ -293,22 +393,35 @@ def run_ocr(
     runtime: OCRRuntime | None = None,
 ) -> Path:
     product_root = product_root.resolve()
-    if image_numbers is None:
-        image_numbers = ocr_image_numbers_from_meta(product_root)
-    images = select_images(
-        product_root / "images" / "original",
-        start,
-        end,
-        image_numbers=image_numbers,
-    )
-    if not images:
-        raise FileNotFoundError("没有找到符合编号范围的原始详情图片")
-
     output_dir = product_root / "ocr"
     output_dir.mkdir(parents=True, exist_ok=True)
+    model_info = ocr_environment_info(
+        ocr_version,
+        model_source,
+        score_threshold,
+    )
+    write_json(output_dir / "run_info.json", model_info)
+    if image_numbers is None:
+        image_numbers = ocr_image_numbers_from_meta(product_root)
+    image_dir = product_root / "images" / "original"
+    images = (
+        select_images(image_dir, start, end, image_numbers=image_numbers)
+        if image_dir.is_dir()
+        else []
+    )
+    if not images:
+        error = FileNotFoundError("没有找到符合OCR选择规则的原始详情图片")
+        _record_stage_error(output_dir, error)
+        raise error
+
     started_at = iso_now()
     started_clock = time.perf_counter()
-    runtime = runtime or create_ocr_runtime(cache_dir, ocr_version, model_source)
+    if runtime is None:
+        try:
+            runtime = create_ocr_runtime(cache_dir, ocr_version, model_source)
+        except Exception as exc:
+            _record_stage_error(output_dir, exc)
+            raise
     engine = runtime.engine
     cv2 = runtime.cv2
     np = runtime.numpy
@@ -384,12 +497,33 @@ def run_ocr(
     combined_text = "\n\n".join(combined_sections).strip() + "\n"
     (output_dir / "combined_text.txt").write_text(combined_text, encoding="utf-8")
     elapsed = time.perf_counter() - started_clock
-    model_info = dict(runtime.model_info)
+    model_info.update(runtime.model_info)
+    model_info["pythonVersion"] = model_info.get("pythonVersion") or ".".join(
+        str(part) for part in sys.version_info[:3]
+    )
+    model_info["paddlepaddleVersion"] = model_info.get(
+        "paddlepaddleVersion", model_info.get("paddleVersion", "unknown")
+    )
+    model_info["paddleVersion"] = model_info["paddlepaddleVersion"]
+    model_info["paddlexVersion"] = model_info.get(
+        "paddlexVersion", _installed_version("paddlex")
+    )
+    model_info["ocrVersion"] = ocr_version
+    model_info["modelSource"] = model_source
+    model_info["device"] = model_info.get("device") or "cpu"
     model_info["scoreThreshold"] = score_threshold
     write_json(output_dir / "run_info.json", model_info)
     report = build_report(product_root, manifest, model_info, started_at, elapsed)
     report_path = product_root / "phase2_ocr_report.md"
     report_path.write_text(report, encoding="utf-8")
+    success_count = sum(item.get("status") == "success" for item in manifest)
+    if success_count == 0:
+        error = OCRStageError(
+            f"OCR阶段失败：{len(manifest)}张输入图片均未产生可用OCR结果"
+        )
+        _record_stage_error(output_dir, error)
+        raise error
+    (output_dir / "stage_error.json").unlink(missing_ok=True)
     return report_path
 
 

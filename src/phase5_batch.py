@@ -209,8 +209,32 @@ def successful_ocr_count(product_root: Path) -> int:
     manifest_path = product_root / "ocr" / "manifest.json"
     if not manifest_path.exists():
         return 0
-    manifest = read_json(manifest_path)
-    return sum(item.get("status") == "success" for item in manifest)
+    try:
+        manifest = read_json(manifest_path)
+    except (OSError, ValueError, TypeError):
+        return 0
+    if not isinstance(manifest, list):
+        return 0
+    resolved_root = product_root.resolve()
+    count = 0
+    for item in manifest:
+        if not isinstance(item, dict) or item.get("status") != "success":
+            continue
+        artifact_paths = []
+        for field in ("textPath", "jsonPath"):
+            value = str(item.get(field) or "").replace("\\", "/").lstrip("/")
+            if not value:
+                break
+            try:
+                path = (resolved_root / value).resolve()
+            except (OSError, RuntimeError):
+                break
+            if not path.is_relative_to(resolved_root) or not path.is_file():
+                break
+            artifact_paths.append(path)
+        if len(artifact_paths) == 2:
+            count += 1
+    return count
 
 
 def screenshot_path_for_batch(meta: dict[str, Any], product_id: str) -> str:
@@ -449,8 +473,9 @@ def run_batch(
                     start=int(image_range[0]),
                     end=int(image_range[1]),
                 )
-            if not (product_root / "ocr" / "manifest.json").exists():
-                raise FileNotFoundError("缺少 OCR manifest")
+            ocr_count = successful_ocr_count(product_root)
+            if ocr_count == 0:
+                raise ValueError("OCR未产生任何具备完整文本和JSON产物的成功图片")
             run_analysis(product_root, rule_config, write_run_outputs=False)
             state["status"] = "success"
         except Exception as exc:

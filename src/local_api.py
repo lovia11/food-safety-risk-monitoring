@@ -15,6 +15,7 @@ from src.data_store import (
     DEFAULT_MONITOR_CONFIG_PATHS,
     DataStore,
     ProductFilterValidationError,
+    ReviewEligibilityError,
     ReviewValidationError,
     SnapshotNotFoundError,
 )
@@ -51,6 +52,7 @@ from src.manual_action_gate import (
     ManualActionGenerationError,
     ManualActionNotWaitingError,
 )
+from src.pipeline_contract import project_task_flow
 from src.task_runtime import (
     ActiveTaskError,
     TaskManager,
@@ -165,6 +167,7 @@ def task_business_dto(raw: dict[str, Any], summary: dict[str, Any]) -> dict[str,
     label, action = BUSINESS_STATUS_PRESENTATION[business_status]
     if business_status == "interrupted" and runtime.get("resumable"):
         action = "继续任务"
+    flow = project_task_flow(stage, bool(runtime.get("active")), archive)
     return {
         **summary,
         "id": summary["taskId"],
@@ -176,6 +179,7 @@ def task_business_dto(raw: dict[str, Any], summary: dict[str, Any]) -> dict[str,
         "active": bool(runtime.get("active")),
         "resumable": bool(runtime.get("resumable")),
         "manualAction": raw.get("manualAction"),
+        "flow": flow,
         "url": f"/api/tasks/{summary['taskId']}",
     }
 
@@ -674,6 +678,9 @@ def create_handler(
                         str(payload.get("status") or ""),
                         str(payload.get("note") or ""),
                     )
+                except ReviewEligibilityError as exc:
+                    self._error(409, "review_not_eligible", str(exc))
+                    return
                 except ReviewValidationError as exc:
                     self._error(400, "invalid_review", str(exc))
                     return
@@ -773,6 +780,9 @@ def create_handler(
                     )
                 except ReviewDecisionValidationError as exc:
                     self._error(400, "invalid_review_decision", str(exc))
+                    return
+                except ReviewEligibilityError as exc:
+                    self._error(409, "review_not_eligible", str(exc))
                     return
                 except (ReviewValidationError, SamplingValidationError) as exc:
                     self._error(400, "invalid_review_decision", str(exc))

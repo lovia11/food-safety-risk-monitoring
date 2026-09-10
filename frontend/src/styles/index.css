@@ -1549,6 +1549,10 @@ a {
 .task-flow li[data-state="done"] > span { background: #bbf7d0; }
 .task-flow li[data-state="active"] { background: #eff8fe; color: #075985; }
 .task-flow li[data-state="active"] > span { background: #bae6fd; }
+.task-flow li[data-state="partial"] { background: #fff7ed; color: #9a3412; }
+.task-flow li[data-state="partial"] > span { background: #fed7aa; }
+.task-flow li[data-state="failed"] { background: #fef2f2; color: #991b1b; }
+.task-flow li[data-state="failed"] > span { background: #fecaca; }
 .task-flow small { margin-left: auto; }
 
 .inspection-split {

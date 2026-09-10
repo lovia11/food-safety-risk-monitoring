@@ -274,18 +274,25 @@ export function ProductDetailPanel({
                   onSave={handleContextSave}
                 />
               )}
-              <ReviewActions
-                snapshotId={selectedSnapshotId}
-                productId={workspace.snapshot.productId}
-                review={workspace.review}
-                sampling={workspace.sampling}
-                addedFrom="product_overview"
-                weakEvidence={evidenceGroups.seller.length === 0 && evidenceGroups.ugc.length > 0}
-                onChanged={async () => {
-                  await loadWorkspace(selectedSnapshotId);
-                  onProductChanged();
-                }}
-              />
+              {workspace.snapshot.readiness.reviewEligible ? (
+                <ReviewActions
+                  snapshotId={selectedSnapshotId}
+                  productId={workspace.snapshot.productId}
+                  review={workspace.review}
+                  sampling={workspace.sampling}
+                  addedFrom="product_overview"
+                  weakEvidence={evidenceGroups.seller.length === 0 && evidenceGroups.ugc.length > 0}
+                  onChanged={async () => {
+                    await loadWorkspace(selectedSnapshotId);
+                    onProductChanged();
+                  }}
+                />
+              ) : (
+                <section className="detail-section review-section">
+                  <h3>人工复核</h3>
+                  <div className="inline-message">该页面快照尚未完成线索分析，暂不可进行人工复核。</div>
+                </section>
+              )}
             </>
           ) : null}
         </>
