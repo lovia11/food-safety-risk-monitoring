@@ -6,6 +6,7 @@ import {
   addSamplingItem,
   removeSamplingItem,
   saveReviewDecision,
+  updateReview,
 } from "../api/products";
 import { useAppState } from "../app/AppState";
 import { reviewPresentation } from "../domain/presentation";
@@ -98,6 +99,19 @@ export function ReviewActions({
     }
   };
 
+  const saveNote = async () => {
+    setSaving(true);
+    try {
+      await updateReview(snapshotId, review.status, note);
+      await onChanged();
+      pushToast("人工备注已保存", "success");
+    } catch (reason) {
+      pushToast(reason instanceof Error ? reason.message : "人工备注保存失败", "danger");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const presentation = reviewPresentation[review.status];
   return (
     <section className="detail-section review-section">
@@ -149,6 +163,9 @@ export function ReviewActions({
         {sampling.inCurrentList ? (
           <>
             <span className="current-membership-label"><Check size={16} />已在当前抽检清单</span>
+            <button type="button" className="secondary-button" disabled={saving} onClick={() => void saveNote()}>
+              <Save size={15} /> 保存备注
+            </button>
             <button type="button" className="danger-button" disabled={saving} onClick={() => void remove()}>
               <Trash2 size={15} /> 移出当前清单
             </button>

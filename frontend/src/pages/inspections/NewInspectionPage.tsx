@@ -27,7 +27,11 @@ export function NewInspectionPage() {
         setTargets(targetData);
         setTargetId(targetData[0]?.target_id || "");
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "创建选项加载失败"))
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(reason instanceof Error ? reason.message : "创建选项加载失败");
+        }
+      })
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
