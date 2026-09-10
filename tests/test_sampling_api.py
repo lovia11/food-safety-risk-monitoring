@@ -102,6 +102,53 @@ class SamplingApiTest(unittest.TestCase):
         )
         self.assertEqual(excluded["sampling"]["decisionStatus"], "no_further_action")
         self.assertEqual(self.request("/api/sampling-list")["count"], 0)
+        with self.assertRaises(HTTPError) as raised:
+            self.request(
+                "/api/sampling-list/items",
+                "POST",
+                {
+                    "product_id": "123",
+                    "source_snapshot_id": self.snapshot_id,
+                    "added_from": "product_overview",
+                },
+            )
+        self.assertEqual(raised.exception.code, 409)
+        conflict = json.load(raised.exception)
+        raised.exception.close()
+        self.assertEqual(
+            conflict["error"]["code"], "sampling_membership_restore_conflict"
+        )
+        self.assertEqual(
+            conflict["error"]["message"],
+            "当前人工复核结论已变化，不能恢复旧的抽检清单状态。",
+        )
+        self.assertEqual(self.request("/api/sampling-list")["count"], 0)
+        self.assertEqual(
+            self.store.get_snapshot(self.snapshot_id)["review"]["status"],
+            "no_further_action",
+        )
+
+    def test_pending_snapshot_cannot_be_added_through_restore_endpoint(self):
+        with self.assertRaises(HTTPError) as raised:
+            self.request(
+                "/api/sampling-list/items",
+                "POST",
+                {
+                    "product_id": "123",
+                    "source_snapshot_id": self.snapshot_id,
+                    "added_from": "inspection_workspace",
+                },
+            )
+        self.assertEqual(raised.exception.code, 409)
+        payload = json.load(raised.exception)
+        raised.exception.close()
+        self.assertEqual(
+            payload["error"]["code"], "sampling_membership_restore_conflict"
+        )
+        self.assertEqual(self.request("/api/sampling-list")["count"], 0)
+        self.assertEqual(
+            self.store.get_snapshot(self.snapshot_id)["review"]["status"], "pending"
+        )
 
     def test_client_cannot_forge_task_relationship(self):
         for path, payload in (

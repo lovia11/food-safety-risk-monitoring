@@ -142,24 +142,55 @@ class TaskManager:
         configure_manual_action = getattr(pipeline, "set_manual_action_adapter", None)
         if callable(configure_manual_action):
             run_root = self._run_root(str(options.run_id or ""))
+            on_waiting, on_resolved = self._manual_action_callbacks(run_root)
             configure_manual_action(
                 WebManualActionAdapter(
                     task_id=run_root.name,
                     gate=self.manual_action_gate,
                     blocker_checker=blocker_reason,
-                    on_waiting=lambda state: self._set_stage(
-                        run_root,
-                        "waiting_for_manual_action",
-                        f"等待在项目浏览器中完成{state['reason']}",
-                    ),
-                    on_resolved=lambda _state: self._set_stage(
-                        run_root,
-                        "searching",
-                        "淘宝验证已解除，正在继续搜索商品",
-                    ),
+                    on_waiting=on_waiting,
+                    on_resolved=on_resolved,
                 )
             )
         return pipeline
+
+    def _manual_action_callbacks(self, run_root: Path):
+        """Preserve the real pipeline presentation while validation is pending."""
+
+        resume_state: dict[str, str | None] = {"stage": None, "message": None}
+
+        def on_waiting(state: dict[str, Any]) -> None:
+            if resume_state["stage"] is None:
+                try:
+                    snapshot = read_json(run_root / "web_snapshot.json")
+                except (OSError, ValueError, TypeError, FileNotFoundError):
+                    snapshot = {}
+                task = snapshot.get("task") or {}
+                stage = str(task.get("stage") or "").strip()
+                if stage not in {"manual_action_required", "waiting_for_manual_action"}:
+                    resume_state["stage"] = stage or None
+                    resume_state["message"] = (
+                        str(task.get("message") or "").strip() or None
+                    )
+            self._set_stage(
+                run_root,
+                "waiting_for_manual_action",
+                f"等待在项目浏览器中完成{state['reason']}",
+            )
+
+        def on_resolved(_state: dict[str, Any]) -> None:
+            stage = resume_state["stage"]
+            if stage is None:
+                return
+            self._set_stage(
+                run_root,
+                stage,
+                resume_state["message"] or STAGE_PRESENTATION.get(stage, stage),
+            )
+            resume_state["stage"] = None
+            resume_state["message"] = None
+
+        return on_waiting, on_resolved
 
     def _notify_index(self, run_root: Path) -> None:
         if self.task_indexer is None or not (run_root / "web_snapshot.json").is_file():

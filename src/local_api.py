@@ -26,10 +26,13 @@ from src.inspection_runtime import (
     database_path_for_output_root,
 )
 from src.runtime import read_json
-from src.review_decision import ReviewDecisionService, ReviewDecisionValidationError
+from src.review_decision import (
+    ReviewDecisionService,
+    ReviewDecisionValidationError,
+    SamplingMembershipRestoreConflictError,
+)
 from src.sampling_store import (
     SamplingMembershipNotFoundError,
-    SamplingSnapshotNotFoundError,
     SamplingStore,
     SamplingValidationError,
 )
@@ -138,9 +141,9 @@ def task_business_dto(raw: dict[str, Any], summary: dict[str, Any]) -> dict[str,
     archive = summary["archiveSummary"]
     if stage in {"manual_action_required", "waiting_for_manual_action"}:
         business_status = "waiting_for_manual_action"
-    elif stage == "interrupted":
+    elif stage in {"interrupted", "failed"}:
         business_status = "interrupted"
-    elif stage in {"failed", "completed_with_errors"}:
+    elif stage == "completed_with_errors":
         business_status = "partial_error"
     elif stage in {"completed", "collection_completed"}:
         business_status = (
@@ -694,15 +697,22 @@ def create_handler(
                     )
                     return
                 try:
-                    membership = sampling_store.add(
+                    membership = review_decisions.restore_membership(
                         str(payload.get("product_id") or ""),
                         str(payload.get("source_snapshot_id") or ""),
                         str(payload.get("added_from") or ""),
                     )
+                except SamplingMembershipRestoreConflictError as exc:
+                    self._error(
+                        409,
+                        "sampling_membership_restore_conflict",
+                        str(exc),
+                    )
+                    return
                 except SamplingValidationError as exc:
                     self._error(400, "invalid_sampling_item", str(exc))
                     return
-                except SamplingSnapshotNotFoundError as exc:
+                except SnapshotNotFoundError as exc:
                     self._error(404, "snapshot_not_found", str(exc))
                     return
                 self._json(200, {"membership": membership})

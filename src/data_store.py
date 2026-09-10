@@ -470,6 +470,7 @@ class DataStore:
         """
 
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             yield connection
 
     def initialize(self) -> None:
@@ -2086,13 +2087,13 @@ class DataStore:
                 "sourceSnapshotId": row["current_source_snapshot_id"],
                 "historicalCount": int(row["historical_count"] or 0),
                 "decisionStatus": (
-                    "current"
-                    if row["current_source_snapshot_id"] is not None
+                    "pending"
+                    if row["review_status"] == "pending"
                     else "no_further_action"
                     if row["review_status"] == "no_further_action"
+                    else "current"
+                    if row["current_source_snapshot_id"] is not None
                     else "reviewed_follow_up"
-                    if row["review_status"] == "recommend_follow_up"
-                    else "pending"
                 ),
             },
         }

@@ -71,7 +71,7 @@ class SamplingStore:
         return connection
 
     @staticmethod
-    def _validate_added_from(added_from: str) -> str:
+    def validate_added_from(added_from: str) -> str:
         value = str(added_from or "").strip()
         if value not in ADDED_FROM_VALUES:
             raise SamplingValidationError("added_from不合法")
@@ -100,7 +100,7 @@ class SamplingStore:
     ) -> dict[str, Any]:
         """Idempotently create one membership without replacing its source."""
 
-        origin = self._validate_added_from(added_from)
+        origin = self.validate_added_from(added_from)
         existing = connection.execute(
             "SELECT * FROM sampling_list_memberships WHERE product_id = ?",
             (product_id,),

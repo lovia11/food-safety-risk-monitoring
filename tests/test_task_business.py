@@ -69,6 +69,38 @@ class TaskBusinessSummaryTest(unittest.TestCase):
         self.assertEqual(review["businessStatusLabel"], "待人工复核")
         self.assertEqual(review["actionLabel"], "继续人工复核")
 
+    def test_failed_task_is_interrupted_and_only_resumable_failure_can_continue(self):
+        summary = self.store.get_task_business_summary("run-a")
+        resumable = task_business_dto(
+            {
+                "task": {"stage": "failed"},
+                "runtime": {"active": False, "resumable": True},
+            },
+            summary,
+        )
+        self.assertEqual(resumable["businessStatus"], "interrupted")
+        self.assertEqual(resumable["actionLabel"], "继续任务")
+
+        not_resumable = task_business_dto(
+            {
+                "task": {"stage": "failed"},
+                "runtime": {"active": False, "resumable": False},
+            },
+            summary,
+        )
+        self.assertEqual(not_resumable["businessStatus"], "interrupted")
+        self.assertEqual(not_resumable["actionLabel"], "查看执行结果")
+
+        partial = task_business_dto(
+            {
+                "task": {"stage": "completed_with_errors"},
+                "runtime": {"active": False, "resumable": True},
+            },
+            summary,
+        )
+        self.assertEqual(partial["businessStatus"], "partial_error")
+        self.assertEqual(partial["actionLabel"], "查看执行结果")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,6 +61,52 @@ class ReviewDecisionServiceTest(unittest.TestCase):
         self.assertEqual(snapshot["review"]["status"], "recommend_follow_up")
         self.assertEqual(snapshot["sampling"]["decisionStatus"], "reviewed_follow_up")
 
+    def test_new_snapshot_review_does_not_replace_existing_membership_source(self):
+        self.service.decide(
+            self.snapshot_id, "recommend_follow_up", "inspection_workspace"
+        )
+        create_run(self.output_root, "run-b", product_id="123")
+        self.data_store.import_all_runs()
+        new_snapshot_id = self.data_store.list_products(task_id="run-b")[0][
+            "snapshotId"
+        ]
+
+        result = self.service.decide(
+            new_snapshot_id,
+            "recommend_follow_up",
+            "inspection_workspace",
+            "新快照同样建议跟进",
+        )
+
+        self.assertEqual(result["review"]["status"], "recommend_follow_up")
+        self.assertEqual(
+            result["membership"]["sourceSnapshotId"], self.snapshot_id
+        )
+        self.assertEqual(result["sampling"]["sourceSnapshotId"], self.snapshot_id)
+        self.assertEqual(result["sampling"]["decisionStatus"], "current")
+
+    def test_new_snapshot_no_further_action_removes_membership_from_old_snapshot(self):
+        self.service.decide(
+            self.snapshot_id, "recommend_follow_up", "inspection_workspace"
+        )
+        create_run(self.output_root, "run-b", product_id="123")
+        self.data_store.import_all_runs()
+        new_snapshot_id = self.data_store.list_products(task_id="run-b")[0][
+            "snapshotId"
+        ]
+
+        result = self.service.decide(
+            new_snapshot_id,
+            "no_further_action",
+            "inspection_workspace",
+            "新快照决定暂不纳入",
+        )
+
+        self.assertEqual(result["review"]["status"], "no_further_action")
+        self.assertIsNone(result["membership"])
+        self.assertIsNone(self.sampling_store.get("123"))
+        self.assertEqual(result["sampling"]["decisionStatus"], "no_further_action")
+
     def test_membership_failure_rolls_back_review(self):
         class FailingSamplingStore(SamplingStore):
             def ensure_membership(self, connection, **kwargs):

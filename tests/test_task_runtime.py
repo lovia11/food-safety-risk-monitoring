@@ -361,6 +361,90 @@ class TaskRuntimeTest(unittest.TestCase):
             self.assertTrue(manager.wait_for_idle())
             self.assertEqual(manager.get_task("resume_task")["task"]["stage"], "completed")
 
+    def test_runtime_owned_failed_task_can_resume(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary)
+            run_root = output_root / "failed_resume_task"
+            write_json(
+                run_root / "task_request.json",
+                {
+                    "task_id": "failed_resume_task",
+                    "keyword": "酸枣仁",
+                    "candidate_limit": 2,
+                    "detail_limit": 1,
+                    "runtime_owned": True,
+                },
+            )
+            write_json(
+                run_root / "run_config.json",
+                {
+                    "keyword": "酸枣仁",
+                    "resolved_candidate_limit": 2,
+                    "resolved_detail_limit": 1,
+                },
+            )
+            write_json(
+                run_root / "search" / "search_candidates.json",
+                {"keyword": "酸枣仁", "candidates": []},
+            )
+            write_json(run_root / "batch_state.json", [])
+            write_web_snapshot(
+                run_root,
+                {"keyword": "酸枣仁", "candidates": []},
+                [],
+                "failed",
+                "任务失败但断点完整",
+            )
+
+            class ResumePipeline:
+                def __init__(self, options):
+                    self.options = options
+
+                def resume_processing(self, collect_pending_details=False):
+                    self.assert_collect_pending = collect_pending_details
+                    write_completed_snapshot(self.options)
+
+            manager = TaskManager(output_root, pipeline_factory=ResumePipeline)
+            self.assertTrue(
+                manager.get_task("failed_resume_task")["runtime"]["resumable"]
+            )
+            manager.resume_task("failed_resume_task")
+            self.assertTrue(manager.wait_for_idle())
+            self.assertEqual(
+                manager.get_task("failed_resume_task")["task"]["stage"],
+                "completed",
+            )
+
+    def test_manual_action_restores_the_stage_and_message_that_entered_the_gate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary)
+            run_root = output_root / "manual-stage"
+            manager = TaskManager(output_root, pipeline_factory=SuccessfulPipeline)
+            on_waiting, on_resolved = manager._manual_action_callbacks(run_root)
+
+            for stage, message in (
+                ("searching", "正在执行真实商品搜索"),
+                ("collecting_details", "正在采集第 1/2 个商品详情"),
+            ):
+                write_web_snapshot(
+                    run_root,
+                    {"keyword": "酸枣仁", "candidates": []},
+                    [],
+                    stage,
+                    message,
+                )
+
+                on_waiting({"reason": "淘宝人工验证"})
+                waiting = read_json(run_root / "web_snapshot.json")["task"]
+                self.assertEqual(waiting["stage"], "waiting_for_manual_action")
+
+                on_resolved({})
+                restored = read_json(run_root / "web_snapshot.json")["task"]
+                self.assertEqual(restored["stage"], stage)
+                self.assertEqual(restored["message"], message)
+                if stage == "collecting_details":
+                    self.assertNotIn("继续搜索商品", restored["message"])
+
     def test_stale_runtime_task_is_marked_interrupted(self):
         with tempfile.TemporaryDirectory() as temporary:
             output_root = Path(temporary)

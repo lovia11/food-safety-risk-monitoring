@@ -61,12 +61,16 @@ export function ReviewActions({
     try {
       await saveReviewDecision(snapshotId, decision, addedFrom, note);
       await refresh({ type: "decision", decision });
-      pushToast(
+      const keepsExistingSource =
         decision === "recommend_follow_up"
-          ? "已完成复核并加入当前抽检清单"
-          : "已记录暂不纳入",
-        "success",
-      );
+        && sampling.inCurrentList
+        && sampling.sourceSnapshotId !== snapshotId;
+      const successMessage = keepsExistingSource
+          ? "本次快照已复核；当前清单仍基于原有页面快照。"
+          : decision === "recommend_follow_up"
+            ? "已完成复核并加入当前抽检清单"
+            : "已记录暂不纳入";
+      pushToast(successMessage, "success");
     } catch (reason) {
       pushToast(reason instanceof Error ? reason.message : "人工决策保存失败", "danger");
     } finally {
@@ -113,19 +117,59 @@ export function ReviewActions({
   };
 
   const presentation = reviewPresentation[review.status];
+  const needsReview = sampling.decisionStatus === "pending";
+  const membershipFromAnotherSnapshot =
+    sampling.inCurrentList && sampling.sourceSnapshotId !== snapshotId;
+  const statusPresentation =
+    sampling.decisionStatus === "current"
+      ? { label: "已纳入当前清单", tone: "success" as const }
+      : sampling.decisionStatus === "reviewed_follow_up"
+        ? { label: "已复核 / 建议跟进", tone: "info" as const }
+        : presentation;
+
+  const decisionButtons = (
+    <>
+      <button
+        type="button"
+        className="secondary-button"
+        disabled={saving}
+        onClick={() => void decide("no_further_action")}
+      >
+        <Save size={15} /> 暂不纳入
+      </button>
+      <button
+        type="button"
+        className="primary-button"
+        disabled={saving}
+        onClick={() => void decide("recommend_follow_up")}
+      >
+        {sampling.decisionStatus === "reviewed_follow_up"
+          ? <RotateCcw size={15} />
+          : <ListPlus size={15} />}
+        {membershipFromAnotherSnapshot
+          ? "本次快照建议跟进"
+          : sampling.decisionStatus === "reviewed_follow_up"
+            ? "重新加入抽检清单"
+            : "加入抽检清单"}
+      </button>
+    </>
+  );
+
   return (
     <section className="detail-section review-section">
       <div className="review-heading">
         <h3>人工复核与抽检清单</h3>
-        <StatusBadge tone={sampling.inCurrentList ? "success" : presentation.tone}>
-          {sampling.inCurrentList
-            ? "已纳入当前清单"
-            : sampling.decisionStatus === "reviewed_follow_up"
-              ? "已复核 / 建议跟进"
-              : presentation.label}
+        <StatusBadge tone={statusPresentation.tone}>
+          {statusPresentation.label}
         </StatusBadge>
       </div>
 
+      {needsReview && membershipFromAnotherSnapshot && (
+        <div className="inline-message">
+          <TriangleAlert size={17} />
+          该商品已在当前抽检清单中，当前清单依据来自另一条页面快照；本次页面快照仍需单独复核。
+        </div>
+      )}
       {sampling.decisionStatus === "reviewed_follow_up" && (
         <div className="inline-message">
           <Check size={17} /> 已完成复核并建议跟进，当前未在抽检清单中。
@@ -160,7 +204,9 @@ export function ReviewActions({
       )}
 
       <div className="review-decision-actions">
-        {sampling.inCurrentList ? (
+        {needsReview ? (
+          decisionButtons
+        ) : sampling.decisionStatus === "current" ? (
           <>
             <span className="current-membership-label"><Check size={16} />已在当前抽检清单</span>
             <button type="button" className="secondary-button" disabled={saving} onClick={() => void saveNote()}>
@@ -171,25 +217,7 @@ export function ReviewActions({
             </button>
           </>
         ) : (
-          <>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={saving}
-              onClick={() => void decide("no_further_action")}
-            >
-              <Save size={15} /> 暂不纳入
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={saving}
-              onClick={() => void decide("recommend_follow_up")}
-            >
-              {sampling.decisionStatus === "reviewed_follow_up" ? <RotateCcw size={15} /> : <ListPlus size={15} />}
-              {sampling.decisionStatus === "reviewed_follow_up" ? "重新加入抽检清单" : "加入抽检清单"}
-            </button>
-          </>
+          decisionButtons
         )}
       </div>
     </section>

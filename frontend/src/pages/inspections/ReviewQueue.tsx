@@ -2,16 +2,9 @@ import { CheckCircle2, FileText, ListChecks, MessageSquareText } from "lucide-re
 
 import type { SnapshotSummary } from "../../api/contracts";
 import { StatusBadge } from "../../components/StatusBadge";
+import { queueFilters, queueMatches, type QueueFilter } from "../../domain/reviewQueue";
 
-export type QueueFilter = "all" | "pending" | "current" | "reviewed_follow_up" | "no_further_action";
-
-export const queueFilters: Array<{ value: QueueFilter; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "pending", label: "待复核" },
-  { value: "current", label: "已纳入当前清单" },
-  { value: "reviewed_follow_up", label: "已复核/当前未在清单" },
-  { value: "no_further_action", label: "暂不纳入" },
-];
+export type { QueueFilter } from "../../domain/reviewQueue";
 
 const queuePresentation = {
   pending: { label: "待复核", tone: "warning" },
@@ -19,10 +12,6 @@ const queuePresentation = {
   reviewed_follow_up: { label: "已复核 / 当前未在清单", tone: "info" },
   no_further_action: { label: "暂不纳入", tone: "neutral" },
 } as const;
-
-export function queueMatches(item: SnapshotSummary, filter: QueueFilter) {
-  return filter === "all" || item.sampling.decisionStatus === filter;
-}
 
 type ReviewQueueProps = {
   products: SnapshotSummary[];

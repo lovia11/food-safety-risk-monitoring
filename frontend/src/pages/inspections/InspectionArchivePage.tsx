@@ -8,7 +8,7 @@ import { LoadingState } from "../../components/LoadingState";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useToast } from "../../components/ToastProvider";
 import { formatDateTime } from "../../domain/product";
-import { taskStatusPresentation } from "../../domain/task";
+import { shouldResumeTask, taskStatusPresentation } from "../../domain/task";
 import { PageHeader } from "../../layout/PageHeader";
 
 function TaskCard({ task }: { task: TaskSummary }) {
@@ -16,7 +16,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
   const { pushToast } = useToast();
   const status = taskStatusPresentation[task.businessStatus];
   const open = async () => {
-    if (task.businessStatus === "interrupted" && task.resumable) {
+    if (shouldResumeTask(task)) {
       setResuming(true);
       try {
         await resumeTask(task.taskId);
