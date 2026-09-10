@@ -2497,15 +2497,22 @@ class DataStore:
         return [self._snapshot_dict(row) for row in rows]
 
     def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
-        sql = self._base_snapshot_query() + " WHERE s.snapshot_id = ?"
         with self._connect() as connection:
-            row = connection.execute(sql, (snapshot_id,)).fetchone()
-            if row is None:
-                raise SnapshotNotFoundError("商品快照不存在")
-            evidence_rows = connection.execute(
-                "SELECT * FROM evidence WHERE snapshot_id = ? ORDER BY ordinal",
-                (snapshot_id,),
-            ).fetchall()
+            return self.get_snapshot_in_transaction(connection, snapshot_id)
+
+    def get_snapshot_in_transaction(
+        self, connection: sqlite3.Connection, snapshot_id: str
+    ) -> dict[str, Any]:
+        """Read one complete Snapshot using an existing consistent transaction."""
+
+        sql = self._base_snapshot_query() + " WHERE s.snapshot_id = ?"
+        row = connection.execute(sql, (snapshot_id,)).fetchone()
+        if row is None:
+            raise SnapshotNotFoundError("商品快照不存在")
+        evidence_rows = connection.execute(
+            "SELECT * FROM evidence WHERE snapshot_id = ? ORDER BY ordinal",
+            (snapshot_id,),
+        ).fetchall()
         result = self._snapshot_dict(row)
         result["evidence"] = [
             {

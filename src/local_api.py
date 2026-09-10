@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,16 @@ from src.sampling_store import (
     SamplingMembershipNotFoundError,
     SamplingStore,
     SamplingValidationError,
+)
+from src.sampling_export import (
+    SamplingExportConflictError,
+    SamplingExportError,
+    SamplingExportInProgressError,
+    SamplingExportService,
+    SamplingExportValidationError,
+    SamplingHistoryIntegrityError,
+    SamplingHistoryNotFoundError,
+    SamplingListEmptyError,
 )
 from src.manual_action_gate import (
     ManualActionGenerationError,
@@ -171,7 +182,7 @@ def task_business_dto(raw: dict[str, Any], summary: dict[str, Any]) -> dict[str,
 
 def create_handler(
     output_root: Path,
-    web_root: Path = Path("web"),
+    web_root: Path = Path("frontend/dist"),
     task_manager: TaskManager | None = None,
     data_store: DataStore | None = None,
     monitor_config: Path | tuple[Path, ...] | list[Path] | None = DEFAULT_MONITOR_CONFIG_PATHS,
@@ -207,6 +218,9 @@ def create_handler(
             store.import_monitor_config(config_path)
     store.import_all_runs()
     sampling_store = SamplingStore(store.database_path)
+    sampling_export = SamplingExportService(store, sampling_store, resolved_output)
+    sampling_export.recover_preparing()
+    sampling_export.rebuild_history_index()
     review_decisions = ReviewDecisionService(store, sampling_store)
     manager = task_manager or TaskManager(
         resolved_output,
@@ -251,7 +265,9 @@ def create_handler(
                 self._error(400, "invalid_json", "请求体不是有效的UTF-8 JSON")
                 return None
 
-        def _send_file(self, destination: Path) -> None:
+        def _send_file(
+            self, destination: Path, *, download_name: str | None = None
+        ) -> None:
             body = destination.read_bytes()
             content_type = mimetypes.guess_type(destination.name)[0]
             if content_type is None:
@@ -263,6 +279,11 @@ def create_handler(
                 content_type += "; charset=utf-8"
             self.send_response(200)
             self._common_headers(content_type, len(body))
+            if download_name:
+                safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", download_name)
+                self.send_header(
+                    "Content-Disposition", f'attachment; filename="{safe_name}"'
+                )
             self.end_headers()
             self.wfile.write(body)
 
@@ -325,10 +346,61 @@ def create_handler(
                 self._json(200, store.list_product_filter_options())
                 return
             if path == "/api/sampling-list":
-                items = sampling_store.list_current()
-                self._json(200, {"items": items, "count": len(items)})
+                try:
+                    self._json(200, sampling_export.list_current())
+                except SamplingExportError as exc:
+                    self._error(409, "sampling_list_unavailable", str(exc))
+                return
+            if path == "/api/sampling-lists":
+                self._json(200, sampling_export.list_history())
                 return
             parts = [unquote(item) for item in path.split("/") if item]
+            if len(parts) == 3 and parts[:2] == ["api", "sampling-lists"]:
+                try:
+                    self._json(200, sampling_export.get_history(parts[2]))
+                except SamplingExportValidationError as exc:
+                    self._error(400, "invalid_sampling_list_id", str(exc))
+                except SamplingHistoryNotFoundError as exc:
+                    self._error(404, "sampling_list_not_found", str(exc))
+                except SamplingHistoryIntegrityError as exc:
+                    self._error(500, "sampling_list_integrity_error", str(exc))
+                return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "sampling-lists"]
+                and parts[3] == "download"
+            ):
+                try:
+                    workbook = sampling_export.workbook_path(parts[2])
+                except SamplingExportValidationError as exc:
+                    self._error(400, "invalid_sampling_list_id", str(exc))
+                    return
+                except SamplingHistoryNotFoundError as exc:
+                    self._error(404, "sampling_list_not_found", str(exc))
+                    return
+                except SamplingHistoryIntegrityError as exc:
+                    self._error(500, "sampling_list_integrity_error", str(exc))
+                    return
+                self._send_file(workbook, download_name=f"{parts[2]}.xlsx")
+                return
+            if (
+                len(parts) >= 5
+                and parts[:2] == ["api", "sampling-lists"]
+                and parts[3] == "files"
+            ):
+                try:
+                    asset = sampling_export.asset_path(parts[2], "/".join(parts[4:]))
+                except SamplingExportValidationError as exc:
+                    self._error(400, "invalid_sampling_list_id", str(exc))
+                    return
+                except SamplingHistoryNotFoundError as exc:
+                    self._error(404, "sampling_asset_not_found", str(exc))
+                    return
+                except SamplingHistoryIntegrityError as exc:
+                    self._error(500, "sampling_list_integrity_error", str(exc))
+                    return
+                self._send_file(asset)
+                return
             if len(parts) == 3 and parts[:2] == ["api", "monitor-targets"]:
                 target = store.get_monitor_target(parts[2])
                 if target is None:
@@ -615,6 +687,34 @@ def create_handler(
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
             path = urlparse(self.path).path
             parts = [unquote(item) for item in path.split("/") if item]
+            if path == "/api/sampling-list/export":
+                payload = self._read_json_body()
+                if payload is None:
+                    return
+                if not isinstance(payload, dict):
+                    self._error(400, "invalid_sampling_export", "请求体必须是JSON对象")
+                    return
+                try:
+                    history = sampling_export.export_current(
+                        confirmed=payload.get("confirmed") is True
+                    )
+                except SamplingExportValidationError as exc:
+                    self._error(400, "invalid_sampling_export", str(exc))
+                    return
+                except SamplingListEmptyError as exc:
+                    self._error(409, "sampling_list_empty", str(exc))
+                    return
+                except SamplingExportInProgressError as exc:
+                    self._error(409, "sampling_export_in_progress", str(exc))
+                    return
+                except SamplingExportConflictError as exc:
+                    self._error(409, "sampling_export_conflict", str(exc))
+                    return
+                except SamplingExportError as exc:
+                    self._error(500, "sampling_export_failed", str(exc))
+                    return
+                self._json(201, {"list": history})
+                return
             if path == "/api/tasks":
                 payload = self._read_json_body()
                 if payload is None:
@@ -795,7 +895,7 @@ def create_handler(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="启动本地任务与结果服务")
     parser.add_argument("--output-root", type=Path, default=Path("output"))
-    parser.add_argument("--web-root", type=Path, default=Path("web"))
+    parser.add_argument("--web-root", type=Path, default=Path("frontend/dist"))
     parser.add_argument(
         "--database",
         type=Path,

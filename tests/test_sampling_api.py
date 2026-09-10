@@ -11,6 +11,7 @@ from src.data_store import DataStore
 from src.local_api import create_handler
 from src.task_runtime import TaskManager
 from tests.test_data_store import create_run
+from tests.test_sampling_export import write_recommendation
 
 
 class SamplingApiTest(unittest.TestCase):
@@ -18,7 +19,13 @@ class SamplingApiTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.output = self.root / "output"
-        create_run(self.output, "run-a", product_id="123")
+        run_root = create_run(
+            self.output,
+            "run-a",
+            product_id="123",
+            display_name="API 抽检排查",
+        )
+        write_recommendation(run_root / "products" / "123")
         self.store = DataStore(self.root / "data" / "app.db", self.output)
         self.store.initialize()
         self.store.import_all_runs()
@@ -59,6 +66,10 @@ class SamplingApiTest(unittest.TestCase):
         )
         with urlopen(request) as response:
             return json.load(response)
+
+    def request_bytes(self, path):
+        with urlopen(self.base + path) as response:
+            return response.status, response.headers, response.read()
 
     def test_review_decision_and_membership_lifecycle(self):
         added = self.request(
@@ -173,6 +184,69 @@ class SamplingApiTest(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(HTTPError) as raised:
                 self.request(path, "POST", payload)
             self.assertEqual(raised.exception.code, 400)
+            raised.exception.close()
+
+    def test_export_history_detail_and_repeated_download_use_frozen_fact(self):
+        self.request(
+            f"/api/snapshots/{self.snapshot_id}/review-decision",
+            "POST",
+            {
+                "decision": "recommend_follow_up",
+                "added_from": "inspection_workspace",
+                "note": "API冻结备注",
+            },
+        )
+        current = self.request("/api/sampling-list")
+        self.assertEqual(current["count"], 1)
+        self.assertEqual(current["items"][0]["sourceTaskDisplayName"], "API 抽检排查")
+        self.assertEqual(
+            current["items"][0]["summary"]["substances"], ["测试关注成分"]
+        )
+
+        exported = self.request(
+            "/api/sampling-list/export", "POST", {"confirmed": True}
+        )
+        history = exported["list"]
+        list_id = history["listId"]
+        self.assertEqual(history["status"], "exported")
+        self.assertEqual(self.request("/api/sampling-list")["count"], 0)
+
+        histories = self.request("/api/sampling-lists")
+        self.assertEqual(histories["count"], 1)
+        self.assertEqual(histories["lists"][0]["listId"], list_id)
+        detail = self.request(f"/api/sampling-lists/{list_id}")
+        self.assertEqual(detail["items"][0]["review"]["note"], "API冻结备注")
+        self.assertEqual(detail["items"][0]["sourceSnapshotId"], self.snapshot_id)
+
+        first = self.request_bytes(f"/api/sampling-lists/{list_id}/download")
+        second = self.request_bytes(f"/api/sampling-lists/{list_id}/download")
+        self.assertEqual(first[0], 200)
+        self.assertEqual(first[2][:2], b"PK")
+        self.assertEqual(first[2], second[2])
+        self.assertIn("attachment", first[1].get("Content-Disposition", ""))
+
+    def test_export_requires_confirmation_and_nonempty_current_list(self):
+        for payload, expected_code in (({"confirmed": False}, 400), ({"confirmed": True}, 409)):
+            with self.subTest(payload=payload), self.assertRaises(HTTPError) as raised:
+                self.request("/api/sampling-list/export", "POST", payload)
+            self.assertEqual(raised.exception.code, expected_code)
+            body = json.load(raised.exception)
+            raised.exception.close()
+            self.assertIn(
+                body["error"]["code"],
+                {"invalid_sampling_export", "sampling_list_empty"},
+            )
+
+    def test_history_routes_reject_invalid_ids_and_unlisted_assets(self):
+        for path, expected_code in (
+            ("/api/sampling-lists/%2E%2E", 400),
+            ("/api/sampling-lists/SL-NOT-FOUND", 404),
+            ("/api/sampling-lists/SL-NOT-FOUND/download", 404),
+            ("/api/sampling-lists/SL-NOT-FOUND/files/%2E%2E/secret", 404),
+        ):
+            with self.subTest(path=path), self.assertRaises(HTTPError) as raised:
+                self.request(path)
+            self.assertEqual(raised.exception.code, expected_code)
             raised.exception.close()
 
 

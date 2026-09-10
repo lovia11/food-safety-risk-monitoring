@@ -1,19 +1,23 @@
-"""Repository for the current Sampling Membership relationship.
+"""Repository for current Membership and frozen-list metadata/index rows.
 
 This module deliberately has no Review, evidence, recommendation, or UI rules.
-Historical frozen-list export remains a later-phase concern.
+Frozen JSON/XLSX content is owned by the application export service.
 """
 
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from src.runtime import iso_now
-
-
 ADDED_FROM_VALUES = {"product_overview", "inspection_workspace"}
+
+
+def _membership_now() -> str:
+    """Use sub-second identity so a remove/restore cannot mimic a frozen row."""
+
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="microseconds")
 
 
 class SamplingStoreError(RuntimeError):
@@ -57,8 +61,23 @@ def _membership_dict(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+def _history_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "listId": row["list_id"],
+        "status": row["status"],
+        "exportedAt": row["exported_at"],
+        "itemCount": int(row["item_count"] or 0),
+        "snapshotPath": row["snapshot_path"],
+        "workbookPath": row["workbook_path"],
+        "snapshotSha256": row["snapshot_sha256"],
+        "workbookSha256": row["workbook_sha256"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
 class SamplingStore:
-    """Read and mutate only current Sampling Membership rows."""
+    """Mutate Sampling rows without reading or changing Review facts."""
 
     def __init__(self, database_path: Path) -> None:
         self.database_path = database_path.resolve()
@@ -107,7 +126,7 @@ class SamplingStore:
         ).fetchone()
         if existing is not None:
             return _membership_dict(existing)
-        now = iso_now()
+        now = _membership_now()
         connection.execute(
             """
             INSERT INTO sampling_list_memberships (
@@ -196,16 +215,21 @@ class SamplingStore:
 
     def list_current(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT sm.*, s.product_name, s.shop_name, s.collected_at,
-                       r.review_status, r.review_note, r.reviewed_at
-                FROM sampling_list_memberships sm
-                JOIN product_snapshots s ON s.snapshot_id = sm.source_snapshot_id
-                JOIN reviews r ON r.snapshot_id = sm.source_snapshot_id
-                ORDER BY sm.added_at DESC, sm.product_id
-                """
-            ).fetchall()
+            return self.list_current_in_transaction(connection)
+
+    def list_current_in_transaction(
+        self, connection: sqlite3.Connection
+    ) -> list[dict[str, Any]]:
+        rows = connection.execute(
+            """
+            SELECT sm.*, s.product_name, s.shop_name, s.collected_at,
+                   r.review_status, r.review_note, r.reviewed_at
+            FROM sampling_list_memberships sm
+            JOIN product_snapshots s ON s.snapshot_id = sm.source_snapshot_id
+            JOIN reviews r ON r.snapshot_id = sm.source_snapshot_id
+            ORDER BY sm.added_at, sm.product_id
+            """
+        ).fetchall()
         return [_membership_dict(row) for row in rows]
 
     def count_current(self) -> int:
@@ -214,4 +238,196 @@ class SamplingStore:
                 connection.execute(
                     "SELECT COUNT(*) FROM sampling_list_memberships"
                 ).fetchone()[0]
+            )
+
+    def create_preparing(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        list_id: str,
+        snapshot_path: str,
+        workbook_path: str,
+        created_at: str,
+    ) -> dict[str, Any]:
+        connection.execute(
+            """
+            INSERT INTO sampling_lists (
+                list_id, status, exported_at, item_count,
+                snapshot_path, workbook_path,
+                snapshot_sha256, workbook_sha256,
+                created_at, updated_at
+            ) VALUES (?, 'preparing', NULL, 0, ?, ?, '', '', ?, ?)
+            """,
+            (list_id, snapshot_path, workbook_path, created_at, created_at),
+        )
+        row = connection.execute(
+            "SELECT * FROM sampling_lists WHERE list_id = ?", (list_id,)
+        ).fetchone()
+        return _history_dict(row)
+
+    def finalize_export(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        list_id: str,
+        exported_at: str,
+        item_count: int,
+        snapshot_sha256: str,
+        workbook_sha256: str,
+        items: list[dict[str, Any]],
+        frozen_memberships: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        updated = connection.execute(
+            """
+            UPDATE sampling_lists
+            SET status = 'exported', exported_at = ?, item_count = ?,
+                snapshot_sha256 = ?, workbook_sha256 = ?, updated_at = ?
+            WHERE list_id = ?
+            """,
+            (
+                exported_at,
+                item_count,
+                snapshot_sha256,
+                workbook_sha256,
+                exported_at,
+                list_id,
+            ),
+        )
+        if updated.rowcount != 1:
+            raise SamplingStoreError("历史抽检清单元数据不存在")
+        connection.execute(
+            "DELETE FROM sampling_list_item_index WHERE list_id = ?", (list_id,)
+        )
+        for item in items:
+            connection.execute(
+                """
+                INSERT INTO sampling_list_item_index (
+                    list_id, ordinal, product_id,
+                    source_snapshot_id, source_task_id
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    list_id,
+                    int(item["ordinal"]),
+                    str(item["productId"]),
+                    str(item["sourceSnapshotId"]),
+                    str(item["sourceTaskId"]),
+                ),
+            )
+        for membership in frozen_memberships:
+            connection.execute(
+                """
+                DELETE FROM sampling_list_memberships
+                WHERE product_id = ? AND source_snapshot_id = ?
+                  AND source_task_id = ? AND added_from = ?
+                  AND added_at = ? AND updated_at = ?
+                """,
+                (
+                    membership["productId"],
+                    membership["sourceSnapshotId"],
+                    membership["sourceTaskId"],
+                    membership["addedFrom"],
+                    membership["addedAt"],
+                    membership["updatedAt"],
+                ),
+            )
+        row = connection.execute(
+            "SELECT * FROM sampling_lists WHERE list_id = ?", (list_id,)
+        ).fetchone()
+        return _history_dict(row)
+
+    def rebuild_exported(
+        self,
+        *,
+        list_id: str,
+        exported_at: str,
+        item_count: int,
+        snapshot_path: str,
+        workbook_path: str,
+        snapshot_sha256: str,
+        workbook_sha256: str,
+        created_at: str,
+        items: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Idempotently rebuild history metadata/index from a frozen JSON fact."""
+
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                """
+                INSERT INTO sampling_lists (
+                    list_id, status, exported_at, item_count,
+                    snapshot_path, workbook_path,
+                    snapshot_sha256, workbook_sha256,
+                    created_at, updated_at
+                ) VALUES (?, 'exported', ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(list_id) DO UPDATE SET
+                    status = 'exported',
+                    exported_at = excluded.exported_at,
+                    item_count = excluded.item_count,
+                    snapshot_path = excluded.snapshot_path,
+                    workbook_path = excluded.workbook_path,
+                    snapshot_sha256 = excluded.snapshot_sha256,
+                    workbook_sha256 = excluded.workbook_sha256,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    list_id,
+                    exported_at,
+                    item_count,
+                    snapshot_path,
+                    workbook_path,
+                    snapshot_sha256,
+                    workbook_sha256,
+                    created_at,
+                    exported_at,
+                ),
+            )
+            connection.execute(
+                "DELETE FROM sampling_list_item_index WHERE list_id = ?", (list_id,)
+            )
+            for item in items:
+                connection.execute(
+                    """
+                    INSERT INTO sampling_list_item_index (
+                        list_id, ordinal, product_id,
+                        source_snapshot_id, source_task_id
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        list_id,
+                        int(item["ordinal"]),
+                        str(item["productId"]),
+                        str(item["sourceSnapshotId"]),
+                        str(item["sourceTaskId"]),
+                    ),
+                )
+            row = connection.execute(
+                "SELECT * FROM sampling_lists WHERE list_id = ?", (list_id,)
+            ).fetchone()
+            return _history_dict(row)
+
+    def list_history(self, *, status: str = "exported") -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM sampling_lists
+                WHERE status = ?
+                ORDER BY COALESCE(exported_at, created_at) DESC, list_id DESC
+                """,
+                (status,),
+            ).fetchall()
+        return [_history_dict(row) for row in rows]
+
+    def get_history_metadata(self, list_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM sampling_lists WHERE list_id = ?", (list_id,)
+            ).fetchone()
+        return _history_dict(row) if row is not None else None
+
+    def delete_history(self, list_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "DELETE FROM sampling_lists WHERE list_id = ?", (list_id,)
             )
