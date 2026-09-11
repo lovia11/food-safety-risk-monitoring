@@ -136,10 +136,10 @@ def project_task_flow(
         "waiting_for_manual_action",
     }:
         detail_state = "active"
-    elif terminal or stage == "processing_ocr_analysis":
-        detail_state = "partial" if detail_completed > 0 else "failed"
     elif detail_failed > 0:
         detail_state = "partial" if detail_completed > 0 else "failed"
+    elif detail_completed > 0:
+        detail_state = "partial"
     else:
         detail_state = "future"
 
@@ -149,8 +149,10 @@ def project_task_flow(
         analysis_state = "done"
     elif active and stage == "processing_ocr_analysis":
         analysis_state = "active"
-    elif terminal or analysis_failed > 0:
+    elif analysis_failed > 0:
         analysis_state = "partial" if analysis_completed > 0 else "failed"
+    elif analysis_completed > 0:
+        analysis_state = "partial"
     else:
         analysis_state = "future"
 

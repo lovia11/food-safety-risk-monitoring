@@ -205,6 +205,31 @@ def _record_stage_error(output_dir: Path, exc: BaseException) -> None:
     )
 
 
+def record_ocr_runtime_initialization_failure(
+    product_root: Path,
+    exc: BaseException,
+    *,
+    score_threshold: float = 0.5,
+    ocr_version: str = "PP-OCRv6",
+    model_source: str = "bos",
+    device: str = "cpu",
+) -> None:
+    """Persist per-product diagnostics when the shared runtime cannot start."""
+
+    output_dir = product_root.resolve() / "ocr"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    write_json(
+        output_dir / "run_info.json",
+        ocr_environment_info(
+            ocr_version,
+            model_source,
+            score_threshold,
+            device=device,
+        ),
+    )
+    _record_stage_error(output_dir, exc)
+
+
 def ocr_image_numbers_from_meta(product_root: Path) -> set[int] | None:
     meta_path = product_root / "meta.json"
     if not meta_path.exists():

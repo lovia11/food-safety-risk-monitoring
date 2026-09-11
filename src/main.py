@@ -19,7 +19,12 @@ from src.inspection_runtime import (
     InspectionRuntime,
 )
 from src.phase1_experiment import PhaseOneCollector
-from src.phase2_ocr import OCRRuntime, create_ocr_runtime, run_ocr
+from src.phase2_ocr import (
+    OCRRuntime,
+    create_ocr_runtime,
+    record_ocr_runtime_initialization_failure,
+    run_ocr,
+)
 from src.phase3_analysis import run_analysis
 from src.phase5_batch import build_batch_record, build_batch_summary, write_batch_csv
 from src.runtime import iso_now, new_run_id, read_json, setup_run_logger, write_json
@@ -340,6 +345,7 @@ class StandalonePipeline:
             self.logger.warning("已启用--skip-ocr，仅完成搜索和详情采集，不算完整全流程验收")
             return
         runtime: OCRRuntime | None = None
+        runtime_initialization_error: Exception | None = None
         total = len(self.prepared_roots)
         for index, (product_id, product_root) in enumerate(
             self.prepared_roots.items(), start=1
@@ -372,7 +378,17 @@ class StandalonePipeline:
             self._write_state()
             try:
                 if runtime is None:
-                    runtime = create_ocr_runtime(self.options.cache_dir)
+                    if runtime_initialization_error is None:
+                        try:
+                            runtime = create_ocr_runtime(self.options.cache_dir)
+                        except Exception as exc:
+                            runtime_initialization_error = exc
+                    if runtime_initialization_error is not None:
+                        record_ocr_runtime_initialization_failure(
+                            product_root,
+                            runtime_initialization_error,
+                        )
+                        raise runtime_initialization_error
                 run_ocr(
                     product_root=product_root,
                     cache_dir=self.options.cache_dir,

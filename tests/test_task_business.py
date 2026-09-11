@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.data_store import DataStore
 from src.local_api import task_business_dto
+from src.pipeline_contract import project_task_flow
 from src.sampling_store import SamplingStore
 from tests.test_data_store import create_run
 
@@ -124,6 +125,37 @@ class TaskBusinessSummaryTest(unittest.TestCase):
         self.assertEqual(states["detail"], "done")
         self.assertEqual(states["analysis"], "failed")
         self.assertEqual(states["review"], "future")
+
+    def test_analysis_flow_requires_real_failure_evidence(self):
+        base = {
+            "searchCandidates": 1,
+            "detailCompleted": 1,
+            "detailTarget": 1,
+            "detailFailed": 0,
+            "analysisTarget": 1,
+            "pendingReview": 0,
+            "completedReview": 0,
+        }
+        cases = (
+            ("collection_completed", 0, 0, "future"),
+            ("interrupted", 0, 0, "future"),
+            ("completed_with_errors", 0, 1, "failed"),
+            ("completed_with_errors", 1, 1, "partial"),
+        )
+        for stage, completed, failed, expected in cases:
+            with self.subTest(stage=stage, completed=completed, failed=failed):
+                flow = project_task_flow(
+                    stage,
+                    False,
+                    {
+                        **base,
+                        "analysisCompleted": completed,
+                        "analysisFailed": failed,
+                        "analysisTarget": max(1, completed + failed),
+                    },
+                )
+                states = {item["key"]: item["state"] for item in flow}
+                self.assertEqual(states["analysis"], expected)
 
 
 if __name__ == "__main__":

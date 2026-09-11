@@ -2,11 +2,13 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from src.data_store import DataStore, ReviewEligibilityError
 from src.local_api import task_business_dto
+from src.main import PipelineOptions, ProductStatus, StandalonePipeline, initial_state
 from src.review_decision import ReviewDecisionService
-from src.runtime import write_json
+from src.runtime import read_json, write_json
 from src.sampling_store import SamplingStore
 from src.web_contract import write_web_snapshot
 
@@ -239,6 +241,142 @@ class MixedPipelineIntegrationTest(unittest.TestCase):
         summary = self.store.get_task_business_summary("mixed-run")["archiveSummary"]
         self.assertEqual(summary["analysisCompleted"], 1)
         self.assertEqual(summary["clueProducts"], 0)
+
+
+class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
+    def test_shared_runtime_failure_records_each_product_and_blocks_review(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="离线 OCR 初始化失败",
+                    output_root=output_root,
+                    run_id="ocr-runtime-failure",
+                )
+            )
+            candidates = []
+            for rank, product_id in enumerate(("A", "B"), start=1):
+                candidate = {
+                    "product_id": product_id,
+                    "product_name": f"商品 {product_id}",
+                    "product_url": f"https://item.example/{product_id}",
+                    "rank": rank,
+                }
+                candidates.append(candidate)
+                product_root = pipeline.products_root / product_id
+                image_path = (
+                    product_root / "images" / "original" / "original_002.png"
+                )
+                image_path.parent.mkdir(parents=True, exist_ok=True)
+                image_path.write_bytes(b"offline-image")
+                write_json(
+                    product_root / "meta.json",
+                    {
+                        "productId": product_id,
+                        "productName": candidate["product_name"],
+                        "imageCount": 1,
+                        "savedOriginalCount": 1,
+                        "ocrCandidateCount": 1,
+                        "ocrImageNumbers": [2],
+                        "images": [
+                            {
+                                "index": 2,
+                                "localPath": "images/original/original_002.png",
+                                "ocrCandidate": True,
+                            }
+                        ],
+                        "screenshots": [],
+                    },
+                )
+                pipeline.prepared_roots[product_id] = product_root
+                pipeline.state_by_id[product_id] = initial_state(candidate)
+                pipeline.state_by_id[product_id]["status"] = (
+                    ProductStatus.DETAIL_COLLECTED
+                )
+            pipeline.search_payload = {
+                "keyword": "离线 OCR 初始化失败",
+                "raw_card_count": 2,
+                "deduplicated_count": 2,
+                "candidates": candidates,
+            }
+
+            failure = RuntimeError("incompatible shared OCR runtime")
+            with patch(
+                "src.main.create_ocr_runtime", side_effect=failure
+            ) as create_runtime:
+                pipeline._process_products()
+
+            self.assertEqual(create_runtime.call_count, 1)
+            for product_id in ("A", "B"):
+                with self.subTest(product_id=product_id):
+                    product_root = pipeline.products_root / product_id
+                    self.assertEqual(
+                        pipeline.state_by_id[product_id]["status"],
+                        ProductStatus.FAILED_PROCESSING,
+                    )
+                    run_info = read_json(product_root / "ocr" / "run_info.json")
+                    self.assertEqual(
+                        set(
+                            (
+                                "pythonVersion",
+                                "paddlepaddleVersion",
+                                "paddleocrVersion",
+                                "paddlexVersion",
+                                "ocrVersion",
+                                "modelSource",
+                                "device",
+                                "scoreThreshold",
+                            )
+                        )
+                        - set(run_info),
+                        set(),
+                    )
+                    stage_error = read_json(
+                        product_root / "ocr" / "stage_error.json"
+                    )
+                    self.assertEqual(stage_error["errorType"], "RuntimeError")
+                    self.assertEqual(
+                        stage_error["message"], "incompatible shared OCR runtime"
+                    )
+                    self.assertTrue(stage_error["failedAt"])
+                    self.assertFalse((product_root / "analysis.json").exists())
+
+            pipeline.web_stage = "completed_with_errors"
+            pipeline.web_message = "OCR Runtime 初始化失败"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(
+                pipeline.run_root / "task_request.json",
+                {
+                    "task_id": pipeline.run_root.name,
+                    "task_type": "quick",
+                    "keyword": pipeline.options.keyword,
+                    "candidate_limit": 2,
+                    "detail_limit": 2,
+                },
+            )
+            store = DataStore(root / "data" / "app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            products = store.list_products(
+                task_id=pipeline.run_root.name,
+                page_size=10,
+            )
+            self.assertEqual(len(products), 2)
+            self.assertTrue(
+                all(not item["readiness"]["reviewEligible"] for item in products)
+            )
+            self.assertEqual(
+                store.list_products(
+                    task_id=pipeline.run_root.name,
+                    review_status="pending",
+                    page_size=10,
+                ),
+                [],
+            )
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
 
 
 if __name__ == "__main__":
