@@ -1,0 +1,27 @@
+[
+  {
+    "rank": 1,
+    "product_id": "fixture-product-001",
+    "status": "pending_detail_collection"
+  },
+  {
+    "rank": 2,
+    "product_id": "fixture-product-002",
+    "status": "detail_collected"
+  },
+  {
+    "rank": 3,
+    "product_id": "fixture-product-003",
+    "status": "success"
+  },
+  {
+    "rank": 4,
+    "product_id": "fixture-product-004",
+    "status": "failed_collection"
+  },
+  {
+    "rank": 5,
+    "product_id": "fixture-product-005",
+    "status": "failed_processing"
+  }
+]

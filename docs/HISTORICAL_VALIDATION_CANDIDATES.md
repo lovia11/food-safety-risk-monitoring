@@ -1,5 +1,9 @@
 # Historical Validation Candidate Audit
 
+> [!NOTE]
+> **VALIDATION SUPPORT / NON-PRODUCT-SPEC**<br>
+> 本文记录历史真实样例的选择和 provenance。它不定义产品需求、当前 operational coverage、Claim taxonomy 或监管知识覆盖。
+
 审计日期：2026-09-11  
 当前代码基线：`38904fb5c648ea4a6f66b86d6107f387041cbda4`  
 只读数据源：`D:\毕业设计\output`  

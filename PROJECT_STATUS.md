@@ -1,5 +1,9 @@
 # 项目当前状态
 
+> [!WARNING]
+> **OUTDATED STATUS — DO NOT USE AS CURRENT V2 SOURCE OF TRUTH**<br>
+> 本文仍记录旧 schema 7、V1 Web 和旧阶段状态；当前 SQLite schema 已为 8，正式 Web 已迁移至 `frontend/` React/Vite。当前状态将在 V2-0B 重建。此前内容仅作历史参考。
+
 更新时间：2026-09-05
 
 当前开发版本：v0.8-D6（Recommendation Pipeline/API/Web Integration）

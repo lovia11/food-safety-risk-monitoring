@@ -1,5 +1,9 @@
 # UI/UX 正式重构差距分析（Phase 0）
 
+> [!WARNING]
+> **HISTORICAL / NON-NORMATIVE**<br>
+> 本文是 React 重构前的 Phase 0 差距分析，不是当前 V2 实现规范。当前事实以 code/tests/config、`docs/V2_WORKSPACE_CONVERGENCE_AUDIT.md` 及后续 V2 canonical docs 为准。
+
 > 状态：Phase 0 设计基线<br>
 > 审计日期：2026-09-09<br>
 > 工作分支：`ux-redesign-v1`<br>

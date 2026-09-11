@@ -1,5 +1,10 @@
 # 淘宝食药同源风险线索发现 MVP
 
+> [!WARNING]
+> **V2 TRANSITION NOTICE**<br>
+> 当前正式 Web 为 `frontend/` 中的 React/Vite 应用，根目录旧 `web/` 已属于 V1 Legacy 并已移除。<br>
+> 本 README 等待 V2-0B canonical documentation 重写。当前实现事实优先参考 code/tests/config 和 `docs/V2_WORKSPACE_CONVERGENCE_AUDIT.md`。
+
 本项目使用本地 **Python + Playwright + Chrome + PaddleOCR**，从真实淘宝搜索结果中采集商品详情图片与页面文本，并通过配置化规则发现可能需要人工复核的功效表达。
 
 结果只表示页面风险线索，不认定商品违法、功效真实、存在非法添加或检出任何药物。
@@ -16,7 +21,7 @@
 | 统一命令行、状态隔离、断点续跑 | `main.py` / `src/main.py` | 已验证 |
 | 网页数据快照 | `src/web_contract.py` | 已对真实运行目录验证 |
 | 本地任务与业务 API | `src/local_api.py` / `src/data_store.py` | 已接入任务、商品快照、Evidence 与人工复核 |
-| 本地 Web MVP | `web/index.html` / `web/css/` / `web/js/` / `web/app.js` | 已接入跨任务 Product Workspace、真实图片/OCR/Evidence、任务与人工复核 |
+| 当前 React Web | `frontend/src/` / `frontend/package.json` | 商品总览、排查档案、抽检清单；构建产物由 Local API 服务 |
 
 项目代码不依赖 Codex、ChatGPT 桌面应用、Codex Browser 或 Chrome 控制插件。页面出现登录或滑块验证时由用户在项目打开的可见浏览器中手动完成；项目不破解验证码。
 
@@ -123,47 +128,19 @@ Selector Health 只负责记录覆盖率并输出告警，不会自动替换选�
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-## 运行本地 Web MVP
+## 运行当前 React Web
 
-为已有运行目录生成或刷新网页快照：
-
-```powershell
-.\.venv\Scripts\python.exe -m src.web_contract `
-  --run-root output\20260828_cdp_smoke2 `
-  --stage interrupted `
-  --message "真实详情采集已完成，批量OCR可断点续跑"
-```
-
-启动本地页面、任务接口和结果服务：
+先构建当前前端，再启动本地 API 与静态文件服务：
 
 ```powershell
+Set-Location frontend
+npm ci
+npm run build
+Set-Location ..
 .\.venv\Scripts\python.exe -m src.local_api --output-root output --port 8765
 ```
 
-然后在浏览器打开：
-
-```text
-http://127.0.0.1:8765/
-```
-
-页面包含风险总览、跨任务累计商品监测、风险研判、采集任务，以及基础词库和统计分析两个待开发占位页。商品工作台通过 SQLite Product API 执行服务端筛选与分页；采集任务页支持 Quick/Monitor，并由本地服务在后台调用现有 `StandalonePipeline`。当前只允许一个活动任务，浏览器需要登录或人工验证时会在任务状态中提示。
-
-结果接口：
-
-- `GET http://127.0.0.1:8765/api/health`：健康检查；
-- `GET http://127.0.0.1:8765/api/runs`：运行列表；
-- `GET http://127.0.0.1:8765/api/runs/<run_id>`：任务、统计和商品结果；
-- `GET http://127.0.0.1:8765/api/runs/<run_id>/files/<relative_path>`：图片、OCR、CSV、JSON 和报告文件。
-- `POST http://127.0.0.1:8765/api/tasks`：创建并后台启动完整采集任务；
-- `GET http://127.0.0.1:8765/api/tasks`：任务列表和当前活动任务；
-- `GET http://127.0.0.1:8765/api/tasks/<task_id>`：轮询任务状态与最新结果；
-- `POST http://127.0.0.1:8765/api/tasks/<task_id>/resume`：恢复具有完整断点文件的中断或失败任务。
-- `GET http://127.0.0.1:8765/api/products`：分页查询跨任务已索引商品，可按 MonitorTarget、关键词、任务、功效和复核状态筛选；
-- `GET http://127.0.0.1:8765/api/products/<product_id>/snapshots`：查看同一淘宝商品的历次采集快照；
-- `GET http://127.0.0.1:8765/api/snapshots/<snapshot_id>`：查看商品快照及结构化 Evidence；
-- `PUT http://127.0.0.1:8765/api/snapshots/<snapshot_id>/review`：保存该次商品快照的人工复核结论与备注。
-
-API 默认只绑定本机回环地址。Pipeline在受控后台线程中运行，HTTP创建请求不会等待整个采集过程结束；任务状态继续复用每个run中的 `web_snapshot.json`。
+然后打开 `http://127.0.0.1:8765/`。Local API 默认服务 `frontend/dist`；当前一级页面为商品总览、排查档案和抽检清单。
 
 ## 测试
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { productAnalysisPresentation } from "../src/domain/product.ts";
+import { productQueryString } from "../src/domain/productQuery.ts";
+import { reviewPresentation } from "../src/domain/presentation.ts";
 import { queueMatches } from "../src/domain/reviewQueue.ts";
 import {
   evidenceQualificationLabel,
@@ -13,6 +15,40 @@ import {
   shouldResumeTask,
   taskFlowSteps,
 } from "../src/domain/task.ts";
+
+test("product query serializes every current server-side filter and pagination field", () => {
+  const query = Object.fromEntries(new URLSearchParams(productQueryString({
+    query: "酸枣仁",
+    targetId: "target-1",
+    taskId: "task-1",
+    reviewStatus: "recommend_follow_up",
+    effect: "助眠",
+    samplingStatus: "historical_only",
+    collectedFrom: "2026-09-01",
+    collectedTo: "2026-09-12",
+    page: 2,
+    pageSize: 50,
+  })));
+
+  assert.deepEqual(query, {
+    query: "酸枣仁",
+    target_id: "target-1",
+    task_id: "task-1",
+    review_status: "recommend_follow_up",
+    effect: "助眠",
+    sampling_status: "historical_only",
+    collected_from: "2026-09-01",
+    collected_to: "2026-09-12",
+    page: "2",
+    page_size: "50",
+  });
+});
+
+test("review statuses use the current product language", () => {
+  assert.equal(reviewPresentation.pending.label, "待复核");
+  assert.equal(reviewPresentation.recommend_follow_up.label, "建议跟进");
+  assert.equal(reviewPresentation.no_further_action.label, "暂不纳入");
+});
 
 test("pending snapshot remains in pending queue when product has a membership", () => {
   const item = {

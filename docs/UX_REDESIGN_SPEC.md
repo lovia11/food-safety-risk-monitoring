@@ -1,5 +1,9 @@
 # 网络食品风险线索发现与抽检辅助筛查系统 UI/UX 重构设计书
 
+> [!WARNING]
+> **V1→V2 DESIGN BASELINE / PARTIALLY VALID / NON-NORMATIVE**<br>
+> 本文记录 Phase 1-3 重构基线，部分 Review、Sampling 与 Evidence 语义仍有价值，但不再是当前 V2 唯一规范。这些有效内容将在 V2-0B 提炼到新的 canonical docs；当前事实以 code/tests/config 和 `docs/V2_WORKSPACE_CONVERGENCE_AUDIT.md` 为准。
+
 > 文档状态：Approved-for-implementation candidate（等待 Phase 0 确认）<br>
 > 版本：UX Redesign v1 / Phase 0<br>
 > 日期：2026-09-09<br>

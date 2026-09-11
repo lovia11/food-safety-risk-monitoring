@@ -1,0 +1,33 @@
+{
+  "detected_effects": [
+    "助眠"
+  ],
+  "review_required": true,
+  "evidence_details": [
+    {
+      "effect": "助眠",
+      "text": "商家页面中的助眠表达",
+      "matched_keywords": [
+        "助眠"
+      ],
+      "source_type": "dom_product",
+      "source_label": "当前商品 DOM",
+      "content_origin": "seller_managed",
+      "source_path": "dom_text.txt",
+      "line_number": 1
+    },
+    {
+      "effect": "助眠",
+      "text": "用户评价中的助眠表达",
+      "matched_keywords": [
+        "助眠"
+      ],
+      "source_type": "dom_user_review",
+      "source_label": "用户评价",
+      "content_origin": "user_generated",
+      "source_path": "dom_text.txt",
+      "line_number": 2
+    }
+  ],
+  "excluded_evidence": []
+}

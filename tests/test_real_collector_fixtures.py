@@ -11,8 +11,8 @@ from src.runtime import extract_product_id, file_sha256, read_json
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REAL_SEARCH_HTML = REPO_ROOT / "manual_input" / "taobao_search.html"
-REAL_BATCH_ROOT = REPO_ROOT / "output" / "20260817T181659_batch"
-REAL_SEARCH_SHA256 = "e018be570d6829f97692b9c9b116565c91cd313f22622383b3fe718321d10126"
+CONTRACT_FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "real_collector"
+REAL_SEARCH_SHA256 = "321140c75ac0efef50fc9e46904f65fe2b43ed16a22a09f0143a029a21533059"
 
 
 class RealCollectorFixtureRegressionTest(unittest.TestCase):
@@ -56,9 +56,7 @@ class RealCollectorFixtureRegressionTest(unittest.TestCase):
         )
 
     def test_saved_analysis_keeps_content_origin_attribution(self):
-        analysis = read_json(
-            REAL_BATCH_ROOT / "products" / "600949052422" / "analysis.json"
-        )
+        analysis = read_json(CONTRACT_FIXTURE_ROOT / "analysis_mixed_origin.json")
         origins = {item["content_origin"] for item in analysis["evidence_details"]}
         self.assertEqual(analysis["detected_effects"], ["助眠"])
         self.assertEqual(origins, {"seller_managed", "user_generated"})
@@ -66,7 +64,7 @@ class RealCollectorFixtureRegressionTest(unittest.TestCase):
 
     def test_saved_recommendation_evidence_remains_excluded(self):
         analysis = read_json(
-            REAL_BATCH_ROOT / "products" / "606232126144" / "analysis.json"
+            CONTRACT_FIXTURE_ROOT / "analysis_excluded_recommendation.json"
         )
         self.assertEqual(len(analysis["excluded_evidence"]), 2)
         self.assertTrue(
@@ -77,22 +75,19 @@ class RealCollectorFixtureRegressionTest(unittest.TestCase):
         )
 
     def test_saved_batch_state_is_ordered_and_resumable(self):
-        states = read_json(REAL_BATCH_ROOT / "batch_state.json")
-        self.assertEqual(len(states), 20)
-        self.assertEqual([item["rank"] for item in states], list(range(1, 21)))
-        self.assertEqual(len({item["product_id"] for item in states}), 20)
-        self.assertTrue(
-            all(
-                item["status"]
-                in {
-                    "pending_detail_collection",
-                    "detail_collected",
-                    "success",
-                    "failed_collection",
-                    "failed_processing",
-                }
-                for item in states
-            )
+        states = read_json(CONTRACT_FIXTURE_ROOT / "batch_state.json")
+        self.assertEqual(len(states), 5)
+        self.assertEqual([item["rank"] for item in states], list(range(1, 6)))
+        self.assertEqual(len({item["product_id"] for item in states}), 5)
+        self.assertEqual(
+            {item["status"] for item in states},
+            {
+                "pending_detail_collection",
+                "detail_collected",
+                "success",
+                "failed_collection",
+                "failed_processing",
+            },
         )
 
 

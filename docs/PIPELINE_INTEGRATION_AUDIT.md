@@ -1,5 +1,9 @@
 # Pipeline Integration & Environment Audit
 
+> [!WARNING]
+> **HISTORICAL INTEGRATION AUDIT / RESOLVED IN PART / NON-NORMATIVE**<br>
+> 本文记录当时发现的集成问题，其中 OCR 锁定、readiness、Review eligibility 和 Task Flow 等 P0 项已由后续代码处理。当前 contract 以 code/tests 和后续 V2 canonical docs 为准。
+
 审计日期：2026-09-11
 审计分支：`ux-redesign-v1`
 审计基线：`4e00ee7822b3d6e16890a73e39a768f006130597`

@@ -1,5 +1,9 @@
 # AI 接手指南
 
+> [!WARNING]
+> **HISTORICAL / NON-NORMATIVE / PENDING ARCHIVE**<br>
+> 本文记录旧阶段实现，不是当前 V2 规范。当前事实以 code/tests/config、`docs/V2_WORKSPACE_CONVERGENCE_AUDIT.md` 及后续 V2 canonical docs 为准。
+
 本文面向没有既往对话上下文的新 ChatGPT、Codex 或开发人员。它描述 v0.7 冻结基线以及当前 v0.8-D6 Recommendation Pipeline/API/Web Integration 的代码结构、运行边界和不可轻易破坏的工程约束。项目演进原因与踩坑过程见 `docs/DEVELOPMENT_HISTORY.md`；当前完成度见根目录 `PROJECT_STATUS.md`。
 
 ## 1. Current Version

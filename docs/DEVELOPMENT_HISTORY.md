@@ -1,5 +1,9 @@
 # 项目开发与决策历史
 
+> [!WARNING]
+> **HISTORICAL TIMELINE / NON-NORMATIVE**<br>
+> 本文只解释项目演进和历史决策，不定义当前 V2 实现、状态或未来开发要求。
+
 本文不是 Changelog。它记录项目为什么采用当前技术路线、真实验证过什么、在哪些地方失败过，以及后续开发不能遗忘的边界。内容依据 Git history、稳定 tag、当前代码与测试、`collection_experiment.md`、`docs/output_inventory.md` 和保留的真实 `output/<run_id>` 整理。
 
 为避免把实现和验收混在一起，本文使用以下口径：

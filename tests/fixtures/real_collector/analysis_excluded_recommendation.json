@@ -1,0 +1,23 @@
+{
+  "detected_effects": [],
+  "review_required": false,
+  "evidence_details": [],
+  "excluded_evidence": [
+    {
+      "text": "推荐区域商品文案一",
+      "source_type": "dom_recommendation",
+      "source_label": "推荐商品区域",
+      "content_origin": "seller_managed",
+      "source_path": "dom_text.txt",
+      "line_number": 1
+    },
+    {
+      "text": "推荐区域商品文案二",
+      "source_type": "dom_recommendation",
+      "source_label": "推荐商品区域",
+      "content_origin": "seller_managed",
+      "source_path": "dom_text.txt",
+      "line_number": 2
+    }
+  ]
+}
