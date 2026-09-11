@@ -7,6 +7,7 @@ __pycache__/
 
 # Runtime evidence and local browser state are generated per machine.
 output/
+archive/
 *.log
 
 # Local SQLite business index (rebuildable from output run snapshots).
