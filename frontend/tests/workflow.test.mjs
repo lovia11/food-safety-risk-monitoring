@@ -1,7 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { productAnalysisPresentation } from "../src/domain/product.ts";
+import {
+  analysisStatePresentation,
+  productCluePresentation,
+} from "../src/domain/analysis.ts";
+import {
+  groupEvidence,
+  partitionEvidenceGroups,
+} from "../src/domain/evidence.ts";
+import { clampLightboxZoom, moveLightboxIndex } from "../src/domain/media.ts";
+import {
+  isProductRowActivationKey,
+  productAnalysisPresentation,
+  productThumbnailSource,
+  snapshotTimelineMode,
+} from "../src/domain/product.ts";
 import { productQueryString } from "../src/domain/productQuery.ts";
 import { reviewPresentation } from "../src/domain/presentation.ts";
 import { queueMatches } from "../src/domain/reviewQueue.ts";
@@ -150,6 +164,213 @@ test("product overview distinguishes search-only candidates from analyzed produc
     productAnalysisPresentation("success").label,
     "已完成详情和线索分析",
   );
+});
+
+const eligibleReadiness = {
+  detailCollected: true,
+  ocrInputReady: true,
+  ocrReady: true,
+  analysisReady: true,
+  reviewEligible: true,
+  reason: "eligible",
+};
+
+function inspection(overrides = {}) {
+  return {
+    available: true,
+    recommendationStatus: "available",
+    context: {
+      product_category: null,
+      product_form: null,
+      confirmed_ingredient_contexts: [],
+      context_evidence: [],
+    },
+    riskFindings: [],
+    unmappedEvidence: [],
+    compositionGaps: [],
+    knowledgeGaps: [],
+    disclaimer: "",
+    recommendationPath: null,
+    contextPath: null,
+    error: null,
+    ...overrides,
+  };
+}
+
+function evidence(id, overrides = {}) {
+  return {
+    evidenceId: id,
+    effect: "助眠",
+    text: "深度睡眠",
+    matchedKeywords: ["睡眠"],
+    sourceType: "ocr",
+    sourceLabel: "详情图 OCR",
+    contentOrigin: "seller_managed",
+    sourcePath: "ocr/original_001.txt",
+    lineNumber: 1,
+    ...overrides,
+  };
+}
+
+test("analysis presentation distinguishes not analyzed, zero evidence, and unavailable recommendation", () => {
+  const notAnalyzed = analysisStatePresentation({
+    readiness: { ...eligibleReadiness, analysisReady: false, reviewEligible: false },
+    evidence: [],
+    detectedEffects: [],
+    inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
+  });
+  const zeroEvidence = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [],
+    detectedEffects: [],
+    inspection: inspection(),
+  });
+  const unavailable = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [evidence("e1")],
+    detectedEffects: ["助眠"],
+    inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
+  });
+
+  assert.equal(notAnalyzed.code, "NOT_ANALYZED");
+  assert.equal(zeroEvidence.code, "ANALYZED_ZERO_EVIDENCE");
+  assert.equal(unavailable.code, "RECOMMENDATION_UNAVAILABLE");
+  assert.equal(
+    productCluePresentation({
+      readiness: { ...eligibleReadiness, analysisReady: false },
+      detectedEffects: [],
+    }),
+    "尚未完成线索分析",
+  );
+  assert.equal(
+    productCluePresentation({ readiness: eligibleReadiness, detectedEffects: [] }),
+    "已分析，未发现当前规则线索",
+  );
+});
+
+test("analysis presentation distinguishes unmapped evidence and recommendation errors", () => {
+  const unmapped = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [evidence("e1")],
+    detectedEffects: ["助眠"],
+    inspection: inspection(),
+  });
+  const errored = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [evidence("e1")],
+    detectedEffects: ["助眠"],
+    inspection: inspection({ recommendationStatus: "error", error: { message: "boom" } }),
+  });
+
+  assert.equal(unmapped.code, "EVIDENCE_UNMAPPED");
+  assert.match(unmapped.message, /尚未建立.*映射/);
+  assert.equal(errored.code, "RECOMMENDATION_ERROR");
+  assert.match(errored.message, /人工复核仍然可用/);
+});
+
+test("analysis presentation distinguishes mapped risk without and with verified methods", () => {
+  const finding = {
+    risk_category: "sleep",
+    risk_labels: ["助眠相关宣传线索"],
+    possible_risk_summary: "",
+    evidence_qualification: "seller_managed_primary",
+    substance_follow_ups: [{
+      substance_id: "s1",
+      canonical_name: "示例物质",
+      english_name: "",
+      cas_no: "",
+      regulatory_context_note: "",
+      follow_up_status: "needs_context_review",
+      suggested_methods: [],
+      methods_needing_context: [],
+      other_known_methods: [],
+      reason: "",
+    }],
+  };
+  const withoutMethod = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [evidence("e1")],
+    detectedEffects: ["助眠"],
+    inspection: inspection({ riskFindings: [finding] }),
+  });
+  const withMethod = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [evidence("e1")],
+    detectedEffects: ["助眠"],
+    inspection: inspection({
+      riskFindings: [{
+        ...finding,
+        substance_follow_ups: [{
+          ...finding.substance_follow_ups[0],
+          suggested_methods: [{ method_id: "m1" }],
+        }],
+      }],
+    }),
+  });
+
+  assert.equal(withoutMethod.code, "RISK_MAPPED_NO_METHOD");
+  assert.equal(withMethod.code, "RECOMMENDATION_AVAILABLE");
+});
+
+test("evidence records group by source asset and merge duplicate snippets without losing identities", () => {
+  const records = [
+    evidence("e1", { matchedKeywords: ["睡眠"], lineNumber: 2 }),
+    evidence("e2", { matchedKeywords: ["安神"], effect: "安神", lineNumber: 4 }),
+    evidence("e3", { text: "失眠多梦易醒安神", lineNumber: 6 }),
+    evidence("e4", { text: "茶养助眠膏", lineNumber: 8 }),
+    evidence("e5", { text: "轻松入睡", lineNumber: 10 }),
+    evidence("e6", { text: "夜间好眠", lineNumber: 12 }),
+    evidence("u1", {
+      sourceType: "dom_user_review",
+      sourceLabel: "用户评价",
+      contentOrigin: "user_generated",
+      sourcePath: "page/dom_text.txt#review",
+      text: "用户说睡得好",
+    }),
+    evidence("u2", {
+      sourceType: "dom_user_review",
+      sourceLabel: "用户评价",
+      contentOrigin: "user_generated",
+      sourcePath: "page/dom_text.txt#review",
+      text: "用户说更精神",
+    }),
+  ];
+  const groups = groupEvidence(records);
+  const parts = partitionEvidenceGroups(groups);
+
+  assert.equal(parts.seller.length, 1);
+  assert.equal(parts.seller[0].recordCount, 6);
+  assert.equal(parts.seller[0].snippets.length, 5);
+  assert.deepEqual(parts.seller[0].snippets[0].evidenceIds, ["e1", "e2"]);
+  assert.deepEqual(parts.seller[0].snippets[0].matchedKeywords, ["睡眠", "安神"]);
+  assert.equal(parts.ugc.length, 1);
+  assert.equal(parts.ugc[0].recordCount, 2);
+});
+
+test("excluded other-product evidence stays outside seller and UGC evidence", () => {
+  const parts = partitionEvidenceGroups(groupEvidence([
+    evidence("seller"),
+    evidence("ugc", { contentOrigin: "user_generated", sourceType: "dom_user_review" }),
+    evidence("noise", { contentOrigin: "excluded_other_product", sourceType: "ocr" }),
+  ]));
+  assert.equal(parts.seller.length, 1);
+  assert.equal(parts.ugc.length, 1);
+  assert.equal(parts.excluded.length, 1);
+});
+
+test("thumbnail, row activation, timeline, and lightbox helpers are deterministic", () => {
+  assert.equal(productThumbnailSource("/local/image.png", false), "/local/image.png");
+  assert.equal(productThumbnailSource("/local/image.png", true), null);
+  assert.equal(productThumbnailSource(null, false), null);
+  assert.equal(isProductRowActivationKey("Enter"), true);
+  assert.equal(isProductRowActivationKey(" "), true);
+  assert.equal(isProductRowActivationKey("Escape"), false);
+  assert.equal(snapshotTimelineMode(1), "compact");
+  assert.equal(snapshotTimelineMode(2), "timeline");
+  assert.equal(clampLightboxZoom(0.1), 0.5);
+  assert.equal(clampLightboxZoom(9), 2.5);
+  assert.equal(moveLightboxIndex(0, -1, 3), 2);
+  assert.equal(moveLightboxIndex(2, 1, 3), 0);
 });
 
 test("sampling presentation keeps frozen method categories separate", () => {

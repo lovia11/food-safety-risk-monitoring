@@ -151,6 +151,7 @@ export type ReviewDecisionResult = {
 
 export type SnapshotSummary = {
   snapshotId: string;
+  thumbnailUrl: string | null;
   productId: string;
   taskId: string;
   taskDisplayName: string;

@@ -384,10 +384,27 @@ class LocalApiHelpersTest(unittest.TestCase):
                 {
                     "productId": "123",
                     "imageCount": 1,
-                    "images": [],
+                    "images": [
+                        {
+                            "index": 1,
+                            "localPath": "images/original/original_001.png",
+                            "naturalWidth": 640,
+                            "naturalHeight": 640,
+                        }
+                    ],
                     "screenshots": [],
                 },
             )
+            thumbnail_path = (
+                run_root
+                / "products"
+                / "123"
+                / "images"
+                / "original"
+                / "original_001.png"
+            )
+            thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+            thumbnail_path.write_bytes(b"local-thumbnail")
             write_json(
                 run_root / "products" / "123" / "analysis.json",
                 {
@@ -527,6 +544,10 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertIsNone(products[0]["targetName"])
                 self.assertEqual(products[0]["snapshotCount"], 1)
                 self.assertEqual(
+                    products[0]["thumbnailUrl"],
+                    f"/api/snapshots/{products[0]['snapshotId']}/thumbnail",
+                )
+                self.assertEqual(
                     products[0]["sampling"],
                     {
                         "inCurrentList": False,
@@ -536,6 +557,9 @@ class LocalApiHelpersTest(unittest.TestCase):
                     },
                 )
                 snapshot_id = products[0]["snapshotId"]
+                with urlopen(f"{base}{products[0]['thumbnailUrl']}") as response:
+                    self.assertEqual(response.headers.get_content_type(), "image/png")
+                    self.assertEqual(response.read(), b"local-thumbnail")
                 with urlopen(f"{base}/api/product-filter-options") as response:
                     filter_options = json.load(response)
                 self.assertIn(

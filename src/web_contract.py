@@ -257,6 +257,45 @@ def _product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
     }
 
 
+def build_product_assets(run_root: Path, product_id: str) -> dict[str, Any]:
+    """Read only the local product asset inventory for a validated run/product."""
+
+    return _product_assets(run_root, product_id)
+
+
+def select_product_thumbnail_asset(assets: dict[str, Any]) -> str | None:
+    """Choose a stable local thumbnail without depending on a remote image URL."""
+
+    for key in ("thumbnail", "mainImage"):
+        explicit = assets.get(key)
+        if isinstance(explicit, str) and explicit:
+            return explicit
+
+    images = [
+        item
+        for item in (assets.get("originalImages") or [])
+        if isinstance(item, dict) and item.get("path")
+    ]
+    for item in images:
+        width = item.get("width")
+        height = item.get("height")
+        if not isinstance(width, (int, float)) or not isinstance(height, (int, float)):
+            continue
+        if width < 160 or height < 160:
+            continue
+        ratio = width / height if height else 0
+        if 0.45 <= ratio <= 2.4:
+            return str(item["path"])
+    if images:
+        return str(images[0]["path"])
+
+    overview = assets.get("overview")
+    if isinstance(overview, str) and overview:
+        return overview
+    screenshots = [item for item in (assets.get("screenshots") or []) if item]
+    return str(screenshots[0]) if screenshots else None
+
+
 def build_snapshot_artifacts(run_root: Path, product_id: str) -> dict[str, Any]:
     """Read file-backed assets and D6 output for one run-scoped snapshot.
 

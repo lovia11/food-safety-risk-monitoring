@@ -3,7 +3,7 @@
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- Verified commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+- V2-1 starting commit: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
 - SQLite schema: 8
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
@@ -12,6 +12,8 @@
 
 - Search/Discovery → Detail → OCR → Phase3 → degradable Inspection Recommendation
 - Product Overview and Snapshot workspace with Evidence, context and Review
+- Local Snapshot thumbnails, whole-row keyboard navigation, compact Snapshot summary/timeline, and source-grouped Evidence review
+- In-app image Lightbox/OCR viewer and explicit analysis/knowledge/recommendation presentation states
 - Snapshot-scoped Review with server-enforced analysis readiness
 - Product-scoped current Sampling Membership and frozen historical list export
 - Web manual-action coordination without HTTP-thread browser control
@@ -27,7 +29,7 @@
 
 ## Current Validation
 
-V2-0B validation: Python 397 discovered / 396 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 12/12; typecheck and production build passed.
+V2-1 validation: affected Python suites 40 discovered / 39 passed / 1 skipped; frontend workflow 18/18; frontend typecheck and production build passed. Five historical real products were inspected at 1440px and 1080px without live collection.
 
 ## Known Limitations
 
@@ -35,10 +37,10 @@ ProductFact/declared origin, HealthFoodIdentity/official lookup, final Claim Tax
 
 ## Current Development Phase
 
-V2-0B — canonical architecture and development baseline.
+V2-1 — Core UX implemented and validated.
 
 ## Next Gate
 
-V2-1 Core UX: thumbnail, row click, detail summary, Evidence Source Group presentation, lightbox, compact single-Snapshot timeline, and explicit knowledge states. Do not begin it until V2-0B is approved.
+V2-2 ProductFact and declared origin. It remains a separate gate and has not started.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

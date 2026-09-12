@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -24,6 +24,8 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-1 — Core UX
 
+- **Status:** COMPLETE — implemented and validated against the five-product Historical Validation Set without live collection.
+
 - **Goal:** Improve the product-reading workspace without changing business semantics.
 - **Why:** Analysts need faster source-oriented scanning and fewer repetitive evidence cards.
 - **Dependencies:** V2-0 and current workspace DTO contracts.
@@ -36,6 +38,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Testing:** Workflow, typecheck, build, keyboard/lightbox behavior, 1440/1080, long title, missing image, zero/unmapped Evidence, recommendation error, historical Snapshot.
 - **Real-world validation:** Inspect approved historical real products; live collection only under separate approval.
 - **Exit criteria:** All required states are distinguishable and traceable with no fabricated data or duplicated Evidence-source cards.
+- **Implemented result:** Local derived thumbnails, whole-row keyboard navigation, Snapshot summary, compact single-Snapshot presentation, source-oriented Evidence grouping, in-app image/OCR viewers, explicit analysis/knowledge states, and independent region/origin presentation are present. Evidence identities, Review/Sampling semantics, schema, pipeline, and governed knowledge are unchanged.
 
 ## V2-2 — ProductFact and declared origin
 

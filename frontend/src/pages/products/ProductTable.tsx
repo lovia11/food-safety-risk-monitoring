@@ -1,8 +1,14 @@
 import { ArrowRight, History } from "lucide-react";
 
 import type { SnapshotSummary } from "../../api/contracts";
+import { ProductThumbnail } from "../../components/ProductThumbnail";
 import { StatusBadge } from "../../components/StatusBadge";
-import { formatDateTime, productAnalysisPresentation } from "../../domain/product";
+import { productCluePresentation } from "../../domain/analysis";
+import {
+  formatDateTime,
+  isProductRowActivationKey,
+  productAnalysisPresentation,
+} from "../../domain/product";
 import { reviewPresentation } from "../../domain/presentation";
 
 type ProductTableProps = {
@@ -66,19 +72,41 @@ export function ProductTable({
             const analysis = productAnalysisPresentation(product.status);
             const selected = selectedProductId === product.productId;
             return (
-              <tr key={product.productId} data-selected={selected}>
+              <tr
+                key={product.productId}
+                data-selected={selected}
+                role="link"
+                tabIndex={0}
+                aria-label={`查看 ${product.productName || product.productId} 的详情`}
+                onClick={(event) => {
+                  const target = event.target as HTMLElement;
+                  if (target.closest("a,button,input,select,textarea,[data-row-interactive]")) return;
+                  onSelect(product.productId);
+                }}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget || !isProductRowActivationKey(event.key)) return;
+                  event.preventDefault();
+                  onSelect(product.productId);
+                }}
+              >
                 <td className="product-name-cell">
-                  <button type="button" onClick={() => onSelect(product.productId)}>
-                    <strong title={product.productName}>{product.productName || "未命名商品"}</strong>
-                    <span>{product.shopName || "店铺未记录"}</span>
-                    <small>ID {product.productId}</small>
-                    <StatusBadge tone={analysis.tone}>{analysis.label}</StatusBadge>
-                  </button>
+                  <div className="product-identity">
+                    <ProductThumbnail
+                      src={product.thumbnailUrl}
+                      alt={product.productName || `商品 ${product.productId}`}
+                    />
+                    <div>
+                      <strong title={product.productName}>{product.productName || "未命名商品"}</strong>
+                      <span>{product.shopName || "店铺未记录"}</span>
+                      <small>ID {product.productId}</small>
+                      <StatusBadge tone={analysis.tone}>{analysis.label}</StatusBadge>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <div className="region-cell">
-                    <span><small>搜索页地区</small>{product.region || "未记录"}</span>
-                    <span><small>商品产地</small><em>待采集</em></span>
+                    <span><small>搜索页地区</small><strong>{product.region || "—"}</strong></span>
+                    <span><small>商品标称产地</small><strong>—</strong></span>
                   </div>
                 </td>
                 <td>
@@ -88,7 +116,7 @@ export function ProductTable({
                         <StatusBadge key={effect} tone="warning">{effect}</StatusBadge>
                       ))
                     ) : (
-                      <span className="muted-cell">暂无明确方向</span>
+                      <span className="muted-cell">{productCluePresentation(product)}</span>
                     )}
                     {product.detectedEffects.length > 2 && (
                       <small>另有 {product.detectedEffects.length - 2} 项</small>
@@ -102,15 +130,7 @@ export function ProductTable({
                   <span className="history-count"><History size={14} />{product.snapshotCount} 次</span>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className="row-action"
-                    onClick={() => onSelect(product.productId)}
-                    aria-label={`查看 ${product.productName || product.productId} 的详情`}
-                    title="查看详情"
-                  >
-                    <ArrowRight size={17} />
-                  </button>
+                  <span className="row-action" aria-hidden="true"><ArrowRight size={17} /></span>
                 </td>
               </tr>
             );

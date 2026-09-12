@@ -2,15 +2,15 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
 > Owner: Project
 
-This document describes only behavior implemented at the verified commit. Future requirements belong in the other canonical V2 documents.
+This document describes implemented behavior through the V2-1 delivery. Future requirements belong in the other canonical V2 documents.
 
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- Verified HEAD: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+- V2-1 starting HEAD: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
 - SQLite schema: 8
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
@@ -50,6 +50,18 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
 
+## Current product-reading UX
+
+- Product Overview derives a local saved-asset thumbnail URL for each representative Snapshot. Missing or unreadable assets fall back to one consistent placeholder; no remote marketplace image is required.
+- Every Product row is a pointer-accessible and keyboard-accessible detail target while preserving independent-control boundaries.
+- Product Detail and Inspection Workspace share a Snapshot summary for page clues, seller/UGC Evidence counts, knowledge-bridge state, and Review state.
+- A single Snapshot uses a compact timestamp/source row; two or more Snapshots use the selectable timeline.
+- Evidence records remain unchanged as facts. The React presentation groups them by `content_origin`, `source_type`, and source asset/context, collapses repeated snippets for reading, and retains all Evidence IDs in the group model.
+- Seller-managed Evidence is primary, UGC is explicitly auxiliary, and excluded-other-product content is outside the primary counts.
+- Saved images and OCR text open in an in-application modal. Image preview supports close/escape/backdrop, previous/next, zoom, viewport containment, and the Evidence associated with the active image.
+- Analysis presentation distinguishes not analyzed, analyzed with zero Evidence, Evidence without a verified mapping, mapped Risk without a verified Method, available Recommendation, unavailable Recommendation, and Recommendation error.
+- Search-page region and product-declared origin are independent keys. The latter is currently displayed as `—`; no origin fact is inferred or persisted.
+
 ## Current OCR environment
 
 The reproducible supported baseline is:
@@ -88,6 +100,7 @@ The 106-object Reference is not 106-object operational search coverage. Only ena
 - Historical Validation Set: five real sample products under `historical_validation_20260911`, intended for deterministic test/demo support without live collection.
 - Its scope is described in `HISTORICAL_VALIDATION_CANDIDATES.md`; it is not representative production coverage.
 - V2-0B validation: Python 397 discovered / 396 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 12/12; frontend typecheck and production build passed.
+- V2-1 validation: affected Python suites 40 discovered / 39 passed / 1 skipped; frontend workflow 18/18; frontend typecheck and production build passed. The five-product historical set was inspected at 1440px and 1080px with no page-level horizontal overflow or browser console error.
 
 ## Known limitations and future changes
 

@@ -65,3 +65,18 @@ export function productAnalysisPresentation(status: string): {
   }
   return { label: "处理状态待确认", tone: "neutral" };
 }
+
+export function productThumbnailSource(
+  source: string | null | undefined,
+  failed: boolean,
+) {
+  return source && !failed ? source : null;
+}
+
+export function isProductRowActivationKey(key: string) {
+  return key === "Enter" || key === " ";
+}
+
+export function snapshotTimelineMode(snapshotCount: number) {
+  return snapshotCount <= 1 ? "compact" : "timeline";
+}

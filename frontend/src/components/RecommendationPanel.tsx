@@ -5,6 +5,7 @@ import type {
   InspectionView,
   SubstanceFollowUp,
 } from "../api/contracts";
+import type { AnalysisStatePresentation } from "../domain/analysis";
 import { KNOWLEDGE_GAP_MESSAGE } from "../domain/recommendation";
 import { safeHttpUrl } from "../domain/product";
 import { StatusBadge } from "./StatusBadge";
@@ -118,25 +119,31 @@ function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
   );
 }
 
-export function RecommendationPanel({ inspection }: { inspection: InspectionView }) {
-  if (inspection.recommendationStatus === "error") {
+export function RecommendationPanel({
+  inspection,
+  analysis,
+}: {
+  inspection: InspectionView;
+  analysis: AnalysisStatePresentation;
+}) {
+  if (analysis.code === "RECOMMENDATION_ERROR") {
     return (
       <section className="detail-section">
         <h3><FlaskConical size={17} />抽检辅助建议</h3>
-        <div className="inline-message" data-tone="danger">
+        <div className="inline-message" data-tone="warning">
           <AlertCircle size={17} />
-          <span>{inspection.error?.message || "该次快照的抽检辅助建议暂时无法读取。"}</span>
+          <span>{analysis.message}{inspection.error?.message ? `（${inspection.error.message}）` : ""}</span>
         </div>
       </section>
     );
   }
-  if (!inspection.available) {
+  if (analysis.code !== "RECOMMENDATION_AVAILABLE" && analysis.code !== "RISK_MAPPED_NO_METHOD") {
     return (
       <section className="detail-section">
         <h3><FlaskConical size={17} />抽检辅助建议</h3>
-        <div className="inline-message">
+        <div className="inline-message" data-tone={analysis.tone}>
           <BookOpenCheck size={17} />
-          <span>该次快照尚无可用的抽检辅助建议文件，页面证据与人工复核仍可查看。</span>
+          <span>{analysis.message}</span>
         </div>
       </section>
     );
@@ -151,6 +158,12 @@ export function RecommendationPanel({ inspection }: { inspection: InspectionView
   return (
     <section className="detail-section recommendation-section">
       <h3><FlaskConical size={17} />抽检辅助建议</h3>
+      {analysis.code === "RISK_MAPPED_NO_METHOD" && (
+        <div className="inline-message" data-tone="warning">
+          <BookOpenCheck size={17} />
+          <span>{analysis.message}</span>
+        </div>
+      )}
       {inspection.riskFindings.length === 0 ? (
         <div className="inline-message">
           <BookOpenCheck size={17} />

@@ -2052,6 +2052,7 @@ class DataStore:
         )
         return {
             "snapshotId": row["snapshot_id"],
+            "thumbnailUrl": f"/api/snapshots/{row['snapshot_id']}/thumbnail",
             "productId": row["product_id"],
             "taskId": row["task_id"],
             "taskDisplayName": row["task_display_name"],

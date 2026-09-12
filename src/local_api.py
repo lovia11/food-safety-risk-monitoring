@@ -60,7 +60,12 @@ from src.task_runtime import (
     TaskNotResumableError,
     TaskValidationError,
 )
-from src.web_contract import build_snapshot_artifacts, snapshot_existing_run
+from src.web_contract import (
+    build_product_assets,
+    build_snapshot_artifacts,
+    select_product_thumbnail_asset,
+    snapshot_existing_run,
+)
 
 
 def resolve_run_root(output_root: Path, run_id: str) -> Path:
@@ -479,6 +484,48 @@ def create_handler(
                         "count": len(snapshots),
                     },
                 )
+                return
+            if (
+                len(parts) == 4
+                and parts[:2] == ["api", "snapshots"]
+                and parts[3] == "thumbnail"
+            ):
+                try:
+                    detail = store.get_snapshot(parts[2])
+                    run_root = resolve_run_root(
+                        resolved_output,
+                        str((detail.get("paths") or {}).get("run") or ""),
+                    )
+                    product_id = str(detail.get("productId") or "")
+                    resolve_product_root(run_root, product_id)
+                    assets = build_product_assets(run_root, product_id)
+                    relative_path = select_product_thumbnail_asset(assets)
+                    if not relative_path:
+                        self._error(
+                            404,
+                            "snapshot_thumbnail_not_found",
+                            "该商品快照没有可用的本地缩略图",
+                        )
+                        return
+                    destination = resolve_run_file(run_root, relative_path)
+                except SnapshotNotFoundError as exc:
+                    self._error(404, "snapshot_not_found", str(exc))
+                    return
+                except ValueError:
+                    self._error(
+                        409,
+                        "snapshot_artifact_path_invalid",
+                        "商品快照的缩略图文件索引路径不合法",
+                    )
+                    return
+                if not destination.is_file():
+                    self._error(
+                        404,
+                        "snapshot_thumbnail_not_found",
+                        "该商品快照没有可用的本地缩略图",
+                    )
+                    return
+                self._send_file(destination)
                 return
             if len(parts) == 3 and parts[:2] == ["api", "snapshots"]:
                 try:
