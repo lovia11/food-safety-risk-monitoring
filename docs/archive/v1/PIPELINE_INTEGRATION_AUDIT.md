@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 integration stabilization audit
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md`, `docs/SYSTEM_V2_ARCHITECTURE.md`, and `docs/TEST_ACCEPTANCE_V2.md`
+
 # Pipeline Integration & Environment Audit
 
 > [!WARNING]

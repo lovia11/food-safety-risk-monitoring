@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 UX redesign specification
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/PRODUCT_REQUIREMENTS_V2.md`, `docs/DOMAIN_MODEL_V2.md`, and `docs/UX_SPEC_V2.md`
+
 # 网络食品风险线索发现与抽检辅助筛查系统 UI/UX 重构设计书
 
 > [!WARNING]

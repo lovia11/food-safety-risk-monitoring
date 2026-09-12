@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 AI handoff
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `AGENTS.md` and `docs/CURRENT_SYSTEM_STATUS.md`
+
 # AI 接手指南
 
 > [!WARNING]

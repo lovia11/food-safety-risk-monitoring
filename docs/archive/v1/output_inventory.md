@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: Pre-V2 output inventory
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md` and `docs/SYSTEM_V2_ARCHITECTURE.md`
+
 # 历史输出目录清单
 
 更新时间：2026-09-02

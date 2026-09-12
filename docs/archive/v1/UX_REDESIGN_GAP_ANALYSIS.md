@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 UX redesign gap analysis
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md` and `docs/UX_SPEC_V2.md`
+
 # UI/UX 正式重构差距分析（Phase 0）
 
 > [!WARNING]

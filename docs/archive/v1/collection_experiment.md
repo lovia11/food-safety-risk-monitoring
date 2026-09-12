@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: Pre-V2 collection experiment
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md` and `docs/TEST_ACCEPTANCE_V2.md`
+
 # 单商品图片采集对比实验
 
 > **Standalone 验收说明（后补）**：本报告中的真实页面数据由 Codex 浏览器调试能力辅助采集，用于证明 DOM、页面资源和截图三种路线的可行性。项目已据此编写 `src/phase1_experiment.py`，但当时及当前环境均未安装 Python Playwright，尚未在完全关闭 Codex 的普通终端中完成真实单商品复跑。因此，本报告属于“页面侦察与方法验证”，不能作为 standalone Playwright 采集器已经验收的证明。

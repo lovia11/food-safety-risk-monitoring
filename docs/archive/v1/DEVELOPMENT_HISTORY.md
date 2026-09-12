@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 development history
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md` and `docs/decisions/README.md`
+
 # 项目开发与决策历史
 
 > [!WARNING]

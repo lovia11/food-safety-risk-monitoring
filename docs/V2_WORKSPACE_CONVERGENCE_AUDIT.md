@@ -1,5 +1,8 @@
 # V2-0 Workspace Convergence Audit
 
+> **V2-0 GOVERNANCE RECORD**
+> This audit records the pre-convergence workspace state. Current normative guidance is in `AGENTS.md` and the canonical V2 documents; later V2-0A actions resolved the recorded convergence gate.
+
 审计日期：2026-09-12<br>
 本地工作区：`D:\毕业设计-ux`<br>
 审计分支：`ux-redesign-v1`<br>

@@ -1,3 +1,8 @@
+> **ARCHIVED / NON-NORMATIVE**
+> Original baseline: V1 SearchQuery pilot
+> Archived at: 2026-09-12 (V2-0B)
+> Superseded by: `docs/CURRENT_SYSTEM_STATUS.md`, `docs/KNOWLEDGE_GOVERNANCE.md`, and `docs/IMPLEMENTATION_ROADMAP_V2.md`
+
 # v0.6-C1 SearchQuery Pilot 验证记录
 
 验证日期：2026-09-03  
