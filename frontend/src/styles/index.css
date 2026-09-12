@@ -1109,6 +1109,63 @@ a {
   font-size: 13px;
 }
 
+.declared-origin-fact,
+.declared-origin-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.declared-origin-fact {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.declared-origin-summary {
+  flex-wrap: wrap;
+}
+
+.declared-origin-summary > strong {
+  color: #263548;
+}
+
+.declared-origin-summary > span,
+.declared-origin-values span {
+  color: #7b899b;
+  font-size: 11px;
+}
+
+.declared-origin-summary button,
+.product-fact-traces button {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.declared-origin-values {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.declared-origin-values li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
 .text-link,
 .method-item a,
 .evidence-actions a {
@@ -1550,6 +1607,35 @@ a {
 .ocr-text-modal { width: min(860px, calc(100vw - 56px)); }
 .ocr-text-body { min-height: 280px; overflow: auto; }
 .ocr-text-body pre { margin: 0; padding: 18px; white-space: pre-wrap; color: #334155; font: 12px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+.product-fact-modal { width: min(760px, calc(100vw - 56px)); }
+
+.product-fact-traces {
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+}
+
+.product-fact-note {
+  margin: 0 0 12px;
+  color: #68778a;
+  font-size: 12px;
+}
+
+.product-fact-traces article {
+  padding: 12px;
+  border: 1px solid #dfe6ed;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.product-fact-traces article + article { margin-top: 9px; }
+.product-fact-traces header { display: flex; align-items: center; gap: 7px; }
+.product-fact-traces header strong { color: #263548; font-size: 13px; }
+.product-fact-traces header span { color: #7b899b; font-size: 11px; }
+.product-fact-traces blockquote { margin: 9px 0; padding-left: 10px; border-left: 2px solid #7dd3fc; color: #46566b; font-size: 12px; line-height: 1.55; white-space: pre-line; }
+.product-fact-traces code { display: block; overflow-wrap: anywhere; color: #8795a7; font-size: 11px; }
+.product-fact-traces article > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 
 .inline-message button {
   min-height: 26px;

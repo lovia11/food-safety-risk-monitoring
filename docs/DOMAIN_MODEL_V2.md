@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This is the domain-design prerequisite for future schema and API work. “Future” entities are proposals, not schema 8 claims or migration authorization.
+This is the domain-design prerequisite for future schema and API work. ProductFact is current in schema 9; entities explicitly labeled “Future” remain proposals rather than migration authorization.
 
 ## 1. Modeling rules
 
@@ -26,7 +26,7 @@ This is the domain-design prerequisite for future schema and API work. “Future
 | Product | Stable marketplace item identity, normally marketplace product ID. | Cross-run; mutable presentation aggregates, stable identity. | Has many ProductSnapshots and at most one current SamplingMembership. | **Current.** SQLite. |
 | ProductSnapshot | One concrete observation, identified by `snapshot_id`. | Product + Task + observed-time scoped; source facts immutable after capture. | Owns Evidence, analysis, ProductFacts, ClaimSignals, Review, and recommendation. | **Current** core; future relations extend it. SQLite index + run artifacts. |
 | Evidence | Source-preserving observation, identified by `evidence_id`. | Snapshot-scoped; immutable historical observation. | Points to exact artifact/source text, origin class and analysis hit. | **Current.** SQLite index with underlying run artifact authority. |
-| ProductFact | Normalized page fact with raw source and verification state. | Snapshot-scoped; derived record can be superseded, source immutable. | Derived from exact DOM/OCR/image artifact; used by context and identity logic. | **Future.** Proposed domain table/read model after V2-2 migration gate. |
+| ProductFact | Normalized page fact with raw source and verification state. | Snapshot-scoped; derived projection is rebuildable, source immutable. | Derived from exact DOM/OCR artifact; future context and identity logic may consume it only through separately approved contracts. | **Current V2-2.** `product_facts.json` authority + generic SQLite table/read model; only `declared_origin` exists. |
 | ClaimSignal | Actual page expression classified into a claim concept, identified per source occurrence/group. | Snapshot-scoped; derived and versioned. | Comes from Evidence/ProductFact; may map to taxonomy, function, or risk only through governed links. | **Future.** Domain records plus provenance; current Effect hits are legacy operational clues. |
 | ClaimTaxonomyTerm | Governed normalized claim concept. | Knowledge-dataset scoped; versioned lifecycle. | May represent official, marketing, risk, or disease/treatment vocabularies without conflating them. | **Future.** Governed dataset + query index. |
 | HealthFoodIdentity | Resolution for whether a Snapshot matches an official health-food product. | Snapshot-scoped assessment; re-evaluable under recorded sources. | Uses page identity clues and registry records; never logo-only. | **Future.** Domain/read model with evidence links. |
@@ -60,9 +60,9 @@ The following are observations and therefore Snapshot-scoped unless a future rev
 
 Current Sampling Membership is intentionally Product-scoped. Its `source_snapshot_id` explains the evidentiary basis and may differ from the Snapshot currently being reviewed.
 
-## 4. ProductFact proposal — FUTURE CHANGE
+## 4. ProductFact contract — CURRENT V2-2
 
-Proposed fields:
+Generic fields:
 
 ```text
 fact_id
@@ -79,9 +79,13 @@ verification_state
 created_at
 ```
 
-This is a domain proposal, not a schema migration. Before implementation, V2-2 must decide cardinality, typed value representation, conflict handling, review/supersession semantics, and API compatibility.
+Schema 9 added only the generic `product_facts` table and its indexes. `product_facts.json` is the derived artifact authority; SQLite rows are deleted and rebuilt for each imported Snapshot without modifying Review, Sampling, Evidence, Analysis or source artifacts.
 
-`source_type` identifies DOM/OCR/image/manual/official-registry origin; `content_origin` distinguishes seller-managed, UGC, and excluded context. A value without an exact source is not a ProductFact.
+The current cardinality is one retained fact per explicit source occurrence. A normalized value can therefore have multiple DOM/OCR sources. Equal values present as `single` with multiple sources; distinct values present as `conflict`. The system does not choose a winner. Missing facts present as `none`/`—` and never create placeholder rows.
+
+Only `fact_type=declared_origin` is implemented. `verification_state=extracted` records a conservative page extraction, not independent geographic verification. New fact types, human fact editing/supersession, and official-registry facts require separate gates.
+
+`source_type` currently distinguishes seller-managed DOM parameters and detail-image OCR. `content_origin` remains explicit. A value without an exact source is not a ProductFact. Search region, title-only wording, UGC/Q&A, shipping/seller/manufacturer/warehouse location and raw-material origin are explicit non-sources for `declared_origin`.
 
 ## 5. Health-food identity proposal — FUTURE CHANGE
 

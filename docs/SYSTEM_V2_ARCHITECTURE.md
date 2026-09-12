@@ -25,7 +25,7 @@ StandalonePipeline
     ↓
 output/<run_id>/ artifacts
     ↓ import/index
-DataStore (SQLite schema 8)
+DataStore (SQLite schema 9)
     ↓
 ReviewDecisionService / SamplingStore / SamplingExportService
 ```
@@ -42,6 +42,8 @@ ReviewDecisionService / SamplingStore / SamplingExportService
 ### 1.2 Current pipeline artifacts and stage contract
 
 Search writes run/task state and Candidate facts. Successful Detail collection produces a product directory with `meta.json` and captured source artifacts, including original images when available. OCR preserves `ocr/run_info.json`, `ocr/manifest.json`, diagnostic errors, and combined text as appropriate. Phase3 writes `analysis.json`. InspectionRuntime may write `inspection_recommendation.json`.
+
+After OCR artifacts are available, the independent ProductFact extractor reads existing DOM/OCR artifacts and writes `product_facts.json`. Extraction is degradable and never changes Phase3 inputs, Analysis readiness, Review eligibility or Product status. Existing successful products can be backfilled offline without re-running collection, OCR or Phase3.
 
 The authoritative predicate in `src/pipeline_contract.py` distinguishes:
 
@@ -68,8 +70,8 @@ Recommendation is not a Review gate. A successful analysis with zero Evidence is
 
 | Store | Current role |
 |---|---|
-| `output/<run_id>/` | Raw and processed run facts, evidence inputs, analysis and recommendation artifacts. |
-| `data/app.db` | Query/read index, imported run relationships, human Review, mutable current Sampling Membership, frozen-list index. |
+| `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, analysis and recommendation artifacts. |
+| `data/app.db` | Query/read index including ProductFact projections, imported run relationships, human Review, mutable current Sampling Membership, frozen-list index. |
 | Frozen JSON/XLSX/evidence export | Immutable historical sampling-list fact at export time. |
 | Governed `config/*.json` | Versioned operational/reference knowledge loaded by current runtime. |
 
@@ -79,24 +81,25 @@ SQLite run-derived data can be re-imported, but the database also contains human
 
 The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. Old contract compatibility retained by the backend does not make an old frontend current.
 
-Workspace DTOs combine Snapshot, Evidence, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility independently.
+Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility independently.
 
 ## 2. Current domain separation
 
 - Product is stable marketplace identity; ProductSnapshot is one observed state.
 - Evidence and Review are Snapshot-scoped.
+- ProductFact is Snapshot-scoped derived data with exact artifact provenance. The current implementation supports only `declared_origin`.
 - Current Sampling Membership is Product-scoped and records a source Snapshot.
 - Inspection Recommendation is derived from Evidence, Product Context, and versioned knowledge.
 - Review repositories do not write Membership; Sampling repositories do not write Review. Application services own compound transactions.
 - Historical Sampling item identifiers are frozen identifiers; they need not retain foreign keys to live ProductSnapshots or Tasks.
 
-## 3. Target V2 architecture — FUTURE CHANGE
+## 3. Target V2 architecture
 
-The following components are target design, not current implementation:
+The ProductFact branch below is current for `declared_origin`; the other branches and read models remain target design until their own gates are accepted:
 
 ```text
 Current artifact pipeline
-    ├─ ProductFact Extractor
+    ├─ ProductFact Extractor (current: declared_origin)
     ├─ HealthFood Identity Resolver
     ├─ Claim Analyzer
     ├─ Claim Consistency Assessor
@@ -110,9 +113,9 @@ Current artifact pipeline
           └─ Knowledge API
 ```
 
-### 3.1 ProductFact Extractor
+### 3.1 ProductFact Extractor — CURRENT V2-2
 
-Extracts structured facts only from identifiable Snapshot artifacts. It preserves raw value, normalized value, exact source, extraction method, and verification state. It must not infer origin from search region or addresses.
+Extracts structured facts only from identifiable Snapshot artifacts. It preserves raw value, normalized value, exact source, extraction method, and verification state. `product_facts.json` is the derived artifact authority; the generic SQLite `product_facts` table is a rebuildable projection. The current allowlist covers explicit declared-origin labels in seller-managed DOM parameter sections and conservative labeled detail-image OCR. It never infers origin from search region, title/UGC wording, shipping data, raw-material origin or addresses.
 
 ### 3.2 HealthFood Identity Resolver
 
@@ -132,7 +135,7 @@ Analytics will expose governed metric definitions and denominators, not ad hoc f
 
 ## 4. Provenance architecture
 
-Every future automatically extracted ProductFact, ClaimSignal, or identity clue must support this trace:
+Every automatically extracted ProductFact, and every future ClaimSignal or identity clue, must support this trace:
 
 ```text
 ProductSnapshot

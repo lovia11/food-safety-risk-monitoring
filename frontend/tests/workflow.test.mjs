@@ -18,6 +18,12 @@ import {
 } from "../src/domain/product.ts";
 import { productQueryString } from "../src/domain/productQuery.ts";
 import { reviewPresentation } from "../src/domain/presentation.ts";
+import {
+  declaredOriginText,
+  productFactArtifactPath,
+  productFactSourceLabel,
+  productFactSourcesForValue,
+} from "../src/domain/productFacts.ts";
 import { queueMatches } from "../src/domain/reviewQueue.ts";
 import {
   evidenceQualificationLabel,
@@ -371,6 +377,34 @@ test("thumbnail, row activation, timeline, and lightbox helpers are deterministi
   assert.equal(clampLightboxZoom(9), 2.5);
   assert.equal(moveLightboxIndex(0, -1, 3), 2);
   assert.equal(moveLightboxIndex(2, 1, 3), 0);
+});
+
+test("declared origin presentation keeps none, provenance, and conflicts explicit", () => {
+  const dom = {
+    factId: "dom",
+    normalizedValue: "中国大陆",
+    sourceType: "dom_parameter",
+    sourcePath: "dom_text.txt#L10-L11",
+  };
+  const ocr = {
+    factId: "ocr",
+    normalizedValue: "河北邢台",
+    sourceType: "ocr_detail_image",
+    sourcePath: "ocr/original_003.txt#L7",
+  };
+  const none = { state: "none", values: [], sources: [] };
+  const conflict = {
+    state: "conflict",
+    values: ["中国大陆", "河北邢台"],
+    sources: [dom, ocr],
+  };
+
+  assert.equal(declaredOriginText(none), "—");
+  assert.equal(declaredOriginText(conflict), "存在多个声明");
+  assert.equal(productFactSourceLabel("dom_parameter"), "详情参数");
+  assert.equal(productFactSourceLabel("ocr_detail_image"), "详情图 OCR");
+  assert.equal(productFactArtifactPath(ocr), "ocr/original_003.txt");
+  assert.deepEqual(productFactSourcesForValue(conflict, "河北邢台"), [ocr]);
 });
 
 test("sampling presentation keeps frozen method categories separate", () => {

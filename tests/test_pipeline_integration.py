@@ -378,6 +378,87 @@ class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
                 handler.close()
                 pipeline.logger.removeHandler(handler)
 
+    def test_product_fact_extractor_failure_is_degradable_after_ocr(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="离线 ProductFact 降级",
+                    output_root=output_root,
+                    run_id="product-fact-degraded",
+                )
+            )
+            product_id = "A"
+            candidate = {
+                "product_id": product_id,
+                "product_name": "商品 A",
+                "product_url": "https://item.example/A",
+                "rank": 1,
+            }
+            product_root = pipeline.products_root / product_id
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            (product_root / "analysis.json").unlink()
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.state_by_id[product_id]["status"] = ProductStatus.DETAIL_COLLECTED
+            pipeline.search_payload = {
+                "keyword": pipeline.options.keyword,
+                "raw_card_count": 1,
+                "deduplicated_count": 1,
+                "candidates": [candidate],
+            }
+
+            def write_analysis(target: Path, *_args, **_kwargs):
+                write_json(
+                    target / "analysis.json",
+                    {
+                        "product_id": product_id,
+                        "detected_effects": [],
+                        "review_required": False,
+                        "risk_reason": "分析已完成",
+                        "evidence_details": [],
+                    },
+                )
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr", return_value=product_root / "phase2_ocr_report.md"),
+                patch("src.main.extract_product_facts", side_effect=RuntimeError("fact writer failed")),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+            ):
+                pipeline._process_products()
+
+            self.assertEqual(
+                pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS
+            )
+            self.assertTrue((product_root / "analysis.json").is_file())
+            self.assertFalse((product_root / "product_facts.json").exists())
+            pipeline.web_stage = "completed"
+            pipeline.web_message = "完成"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(
+                pipeline.run_root / "task_request.json",
+                {
+                    "task_id": pipeline.run_root.name,
+                    "task_type": "quick",
+                    "keyword": pipeline.options.keyword,
+                    "candidate_limit": 1,
+                    "detail_limit": 1,
+                },
+            )
+            store = DataStore(root / "data" / "app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            snapshot = store.list_products(task_id=pipeline.run_root.name)[0]
+            self.assertTrue(snapshot["readiness"]["reviewEligible"])
+            detail = store.get_snapshot(snapshot["snapshotId"])
+            self.assertEqual(detail["declaredOrigin"]["state"], "none")
+
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
 
 if __name__ == "__main__":
     unittest.main()

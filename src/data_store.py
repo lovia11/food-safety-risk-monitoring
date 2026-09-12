@@ -24,6 +24,7 @@ from src.pipeline_contract import (
     evaluate_pipeline_readiness,
     review_eligibility_sql,
 )
+from src.product_facts import load_product_facts, present_declared_origin
 from src.risk_substance_reference import (
     RiskSubstanceConfigValidationError,
     validate_risk_substance_config,
@@ -47,7 +48,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -544,6 +545,22 @@ class DataStore:
                     UNIQUE(snapshot_id, ordinal)
                 );
 
+                CREATE TABLE IF NOT EXISTS product_facts (
+                    fact_id TEXT PRIMARY KEY,
+                    snapshot_id TEXT NOT NULL REFERENCES product_snapshots(snapshot_id)
+                        ON DELETE CASCADE,
+                    fact_type TEXT NOT NULL,
+                    normalized_value TEXT NOT NULL,
+                    raw_value TEXT NOT NULL,
+                    source_type TEXT NOT NULL,
+                    content_origin TEXT NOT NULL,
+                    source_path TEXT NOT NULL,
+                    source_text TEXT NOT NULL,
+                    extraction_method TEXT NOT NULL,
+                    verification_state TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS reviews (
                     snapshot_id TEXT PRIMARY KEY REFERENCES product_snapshots(snapshot_id)
                         ON DELETE CASCADE,
@@ -559,6 +576,10 @@ class DataStore:
                     ON product_snapshots(product_id, collected_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_evidence_snapshot
                     ON evidence(snapshot_id, ordinal);
+                CREATE INDEX IF NOT EXISTS idx_product_facts_snapshot
+                    ON product_facts(snapshot_id, fact_type, fact_id);
+                CREATE INDEX IF NOT EXISTS idx_product_facts_type_value
+                    ON product_facts(fact_type, normalized_value);
                 CREATE INDEX IF NOT EXISTS idx_reviews_status
                     ON reviews(review_status);
 
@@ -1792,6 +1813,7 @@ class DataStore:
             item for item in (snapshot.get("products") or []) if isinstance(item, dict)
         ]
         imported_evidence = 0
+        imported_product_facts = 0
         with self._connect() as connection:
             existing_task = connection.execute(
                 "SELECT display_name FROM tasks WHERE task_id = ?", (task_id,)
@@ -1984,6 +2006,39 @@ class DataStore:
                         ),
                     )
                 imported_evidence += len(evidence_items)
+                connection.execute(
+                    "DELETE FROM product_facts WHERE snapshot_id = ?", (snapshot_id,)
+                )
+                facts = load_product_facts(
+                    run_root / "products" / product_id / "product_facts.json",
+                    expected_snapshot_id=snapshot_id,
+                )
+                for item in facts:
+                    connection.execute(
+                        """
+                        INSERT INTO product_facts (
+                            fact_id, snapshot_id, fact_type, normalized_value,
+                            raw_value, source_type, content_origin, source_path,
+                            source_text, extraction_method, verification_state,
+                            created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            item["factId"],
+                            item["snapshotId"],
+                            item["factType"],
+                            item["normalizedValue"],
+                            item["rawValue"],
+                            item["sourceType"],
+                            item["contentOrigin"],
+                            item["sourcePath"],
+                            item["sourceText"],
+                            item["extractionMethod"],
+                            item["verificationState"],
+                            item["createdAt"],
+                        ),
+                    )
+                imported_product_facts += len(facts)
             discovery = _read_optional_json(
                 run_root / "search" / "discovery_summary.json", {}
             )
@@ -2036,6 +2091,7 @@ class DataStore:
             "tasks": 1,
             "products": len(products),
             "evidence": imported_evidence,
+            "product_facts": imported_product_facts,
             "candidate_hits": len(
                 (discovery.get("candidate_hits") or []) if isinstance(discovery, dict) else []
             ),
@@ -2560,6 +2616,14 @@ class DataStore:
             "SELECT * FROM evidence WHERE snapshot_id = ? ORDER BY ordinal",
             (snapshot_id,),
         ).fetchall()
+        fact_rows = connection.execute(
+            """
+            SELECT * FROM product_facts
+            WHERE snapshot_id = ?
+            ORDER BY fact_type, normalized_value, source_type, source_path, fact_id
+            """,
+            (snapshot_id,),
+        ).fetchall()
         result = self._snapshot_dict(row)
         result["evidence"] = [
             {
@@ -2575,6 +2639,24 @@ class DataStore:
             }
             for item in evidence_rows
         ]
+        result["productFacts"] = [
+            {
+                "factId": item["fact_id"],
+                "snapshotId": item["snapshot_id"],
+                "factType": item["fact_type"],
+                "normalizedValue": item["normalized_value"],
+                "rawValue": item["raw_value"],
+                "sourceType": item["source_type"],
+                "contentOrigin": item["content_origin"],
+                "sourcePath": item["source_path"],
+                "sourceText": item["source_text"],
+                "extractionMethod": item["extraction_method"],
+                "verificationState": item["verification_state"],
+                "createdAt": item["created_at"],
+            }
+            for item in fact_rows
+        ]
+        result["declaredOrigin"] = present_declared_origin(result["productFacts"])
         return result
 
     def update_review(
@@ -2691,6 +2773,7 @@ class DataStore:
                     "products",
                     "product_snapshots",
                     "evidence",
+                    "product_facts",
                     "reviews",
                     "sampling_list_memberships",
                     "sampling_lists",

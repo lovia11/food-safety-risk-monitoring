@@ -17,7 +17,7 @@ Every implementation report states the starting commit, changed files, schema/AP
 - Links resolve and canonical documents link to the right authority.
 - Terminology matches the registry in Product Requirements.
 - Current implementation and Future changes are distinguishable.
-- Active docs identify schema 8 as the sole current schema; prior-version details remain only in archived or explicit migration history.
+- Active docs identify schema 9 as the sole current schema; prior-version details remain only in archived or explicit migration history.
 - Retired IA and `web/` do not appear as current.
 - Archived material is marked non-normative and is never cited as a higher authority.
 - A cold-start reader can answer the 16 canonical baseline questions without chat context.
@@ -54,7 +54,7 @@ Required deterministic coverage:
 
 Required visual acceptance at 1440px and 1080px includes list-only and split-detail modes. Typecheck and production build are mandatory. Do not loop indefinitely for minor pixel differences.
 
-## 5. ProductFact gate — Future V2-2
+## 5. ProductFact gate — Current V2-2
 
 At minimum test:
 
@@ -66,6 +66,10 @@ At minimum test:
 - normalization does not overwrite raw value;
 - search-page region, seller location and manufacturer location are never inferred as declared origin;
 - re-import and historical Snapshot behavior preserve scope and provenance.
+- strong-label allowlist and explicit exclusions cover title-only, UGC/Q&A, search region, shipping/seller/manufacturer/warehouse locations, raw-material origin and isolated OCR place wording;
+- schema 8→9 migration preserves all pre-existing entity rows and human business state;
+- extraction failure remains degradable and cannot change Analysis readiness or Review eligibility;
+- DTO/presentation retains equal-value multi-source provenance and exposes conflicts without arbitration.
 
 Real validation includes clear-origin, missing-origin and conflicting-origin pages reviewed against the artifact.
 

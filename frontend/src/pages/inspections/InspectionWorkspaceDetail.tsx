@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SnapshotWorkspace } from "../../api/contracts";
 import { getSnapshotWorkspace, updateInspectionContext } from "../../api/products";
 import { EmptyState } from "../../components/EmptyState";
+import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
 import { LoadingState } from "../../components/LoadingState";
 import { ProductContextForm } from "../../components/ProductContextForm";
@@ -100,7 +101,17 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
           <div><dt>所属排查</dt><dd>{workspace.snapshot.taskDisplayName}</dd></div>
           <div><dt>Snapshot 采集时间</dt><dd>{formatDateTime(workspace.snapshot.collectedAt)}</dd></div>
           <div><dt>搜索页地区</dt><dd>{workspace.snapshot.region || "—"}</dd></div>
-          <div><dt>商品标称产地</dt><dd>—</dd></div>
+          <div>
+            <dt>商品标称产地</dt>
+            <dd>
+              <DeclaredOriginFact
+                origin={workspace.declaredOrigin}
+                assets={workspace.assets}
+                runId={workspace.snapshot.taskId}
+                productId={workspace.snapshot.productId}
+              />
+            </dd>
+          </div>
         </dl>
         {productUrl && <a className="text-link" href={productUrl} target="_blank" rel="noreferrer">打开保存的商品链接 <ExternalLink size={14} /></a>}
       </section>

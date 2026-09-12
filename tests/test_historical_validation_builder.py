@@ -198,6 +198,12 @@ class HistoricalValidationBuilderTest(unittest.TestCase):
         for item in ALLOW_LIST:
             meta = read_json(validation_root / "products" / item.product_id / "meta.json")
             self.assertEqual(meta["crawlTime"], self.collected_at[item.product_id])
+            facts = read_json(
+                validation_root / "products" / item.product_id / "product_facts.json"
+            )
+            self.assertEqual(facts["schemaVersion"], 1)
+            self.assertEqual(facts["facts"], [])
+        self.assertTrue(all(item["productFactCount"] == 0 for item in manifest["items"]))
         negative_root = validation_root / "products" / ALLOW_LIST[2].product_id
         self.assertFalse((negative_root / "inspection_recommendation.json").read_text(encoding="utf-8").find('"historical": true') >= 0)
         self.assertTrue(

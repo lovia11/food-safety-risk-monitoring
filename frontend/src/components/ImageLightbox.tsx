@@ -1,7 +1,9 @@
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import type { ProductFact } from "../api/contracts";
 import type { EvidenceSourceGroup } from "../domain/evidence";
+import { productFactSourceLabel } from "../domain/productFacts";
 import {
   LIGHTBOX_ZOOM_STEP,
   clampLightboxZoom,
@@ -14,6 +16,7 @@ export type LightboxImage = {
   url: string;
   label: string;
   evidenceGroups: EvidenceSourceGroup[];
+  factSources?: ProductFact[];
 };
 
 type ImageLightboxProps = {
@@ -112,9 +115,18 @@ export function ImageLightbox({
             ><ChevronRight size={22} /></button>
           )}
         </div>
-        <aside className="lightbox-evidence" aria-label="当前图片对应证据">
-          <h3>当前图片对应 Evidence</h3>
-          {active.evidenceGroups.length ? active.evidenceGroups.map((group) => (
+        <aside
+          className="lightbox-evidence"
+          aria-label={active.factSources?.length ? "当前图片对应商品事实" : "当前图片对应证据"}
+        >
+          <h3>{active.factSources?.length ? "当前图片对应商品事实" : "当前图片对应 Evidence"}</h3>
+          {active.factSources?.length ? active.factSources.map((source) => (
+            <section key={source.factId}>
+              <strong>{source.normalizedValue}</strong>
+              <span>{productFactSourceLabel(source.sourceType)}</span>
+              <p>{source.sourceText}</p>
+            </section>
+          )) : active.evidenceGroups.length ? active.evidenceGroups.map((group) => (
             <section key={group.key}>
               <strong>{group.sourceLabel}</strong>
               <span>{group.recordCount} 条命中</span>

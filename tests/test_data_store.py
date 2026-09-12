@@ -7,6 +7,7 @@ from src.data_store import (
     DataStore,
     ReviewValidationError,
     SnapshotNotFoundError,
+    make_snapshot_id,
 )
 from src.runtime import read_json, write_json
 from src.web_contract import write_web_snapshot
@@ -114,6 +115,45 @@ def create_run(
     return run_root
 
 
+def write_declared_origin_artifact(
+    run_root: Path,
+    product_id: str,
+    values: list[tuple[str, str]],
+) -> None:
+    snapshot_id = make_snapshot_id(run_root.name, product_id)
+    facts = []
+    for ordinal, (value, source_type) in enumerate(values, start=1):
+        facts.append(
+            {
+                "factId": f"pf_{run_root.name}_{product_id}_{ordinal}",
+                "snapshotId": snapshot_id,
+                "factType": "declared_origin",
+                "normalizedValue": value,
+                "rawValue": value,
+                "sourceType": source_type,
+                "contentOrigin": "seller_managed",
+                "sourcePath": (
+                    "dom_text.txt#L1" if source_type == "dom_parameter"
+                    else f"ocr/original_{ordinal:03d}.txt#L1"
+                ),
+                "sourceText": f"产地：{value}",
+                "extractionMethod": "test_fixture",
+                "verificationState": "extracted",
+                "createdAt": "2026-09-12T12:00:00+08:00",
+            }
+        )
+    write_json(
+        run_root / "products" / product_id / "product_facts.json",
+        {
+            "schemaVersion": 1,
+            "extractorVersion": "test",
+            "generatedAt": "2026-09-12T12:00:00+08:00",
+            "facts": facts,
+            "diagnostics": [],
+        },
+    )
+
+
 class DataStoreTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -143,6 +183,7 @@ class DataStoreTest(unittest.TestCase):
                 "products",
                 "product_snapshots",
                 "evidence",
+                "product_facts",
                 "reviews",
                 "monitor_datasets",
                 "monitor_targets",
@@ -162,7 +203,7 @@ class DataStoreTest(unittest.TestCase):
             }
             <= tables
         )
-        self.assertEqual(version, 8)
+        self.assertEqual(version, 9)
 
     def test_schema_7_migration_is_additive_and_preserves_review(self):
         run_root = create_run(self.output_root, "legacy_run")
@@ -193,7 +234,7 @@ class DataStoreTest(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 8)
+        self.assertEqual(version, 9)
         self.assertIn("display_name", task_columns)
         self.assertTrue(
             {
@@ -207,6 +248,46 @@ class DataStoreTest(unittest.TestCase):
         self.assertEqual(migrated_review["status"], "recommend_follow_up")
         self.assertEqual(migrated_review["note"], "保留旧复核")
         self.assertIsNotNone(migrated_review["reviewedAt"])
+
+    def test_schema_8_to_9_migration_adds_generic_facts_and_preserves_entities(self):
+        run_root = create_run(self.output_root, "schema8_run")
+        self.store.import_run(run_root)
+        snapshot_id = make_snapshot_id("schema8_run", "123")
+        self.store.update_review(snapshot_id, "recommend_follow_up", "人工结论保留")
+        before = self.store.table_counts()
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.executescript(
+                """
+                DROP TABLE product_facts;
+                PRAGMA user_version = 8;
+                """
+            )
+
+        migrated = DataStore(self.store.database_path, self.output_root)
+        migrated.initialize()
+        after = migrated.table_counts()
+        with sqlite3.connect(self.store.database_path) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            fact_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(product_facts)")
+            }
+        self.assertEqual(version, 9)
+        for table, count in before.items():
+            if table != "product_facts":
+                self.assertEqual(after[table], count, table)
+        self.assertEqual(after["product_facts"], 0)
+        self.assertEqual(
+            migrated.get_snapshot(snapshot_id)["review"]["note"],
+            "人工结论保留",
+        )
+        self.assertTrue(
+            {
+                "fact_id", "snapshot_id", "fact_type", "normalized_value",
+                "raw_value", "source_type", "content_origin", "source_path",
+                "source_text", "extraction_method", "verification_state", "created_at",
+            }
+            <= fact_columns
+        )
 
     def _import_monitor_seed(self, *, include_second_target: bool = False):
         config = self.root / "monitor_targets.json"
@@ -383,6 +464,63 @@ class DataStoreTest(unittest.TestCase):
         self.assertEqual(len(detail["evidence"]), 1)
         self.assertEqual(detail["evidence"][0]["sourceType"], "ocr")
         self.assertEqual(detail["evidence"][0]["contentOrigin"], "seller_managed")
+
+    def test_imports_product_facts_and_projects_same_value_multi_source(self):
+        run_root = create_run(self.output_root, "facts_run")
+        write_declared_origin_artifact(
+            run_root,
+            "123",
+            [("中国大陆", "dom_parameter"), ("中国大陆", "ocr_detail_image")],
+        )
+        imported = self.store.import_run(run_root)
+        snapshot_id = make_snapshot_id("facts_run", "123")
+        detail = self.store.get_snapshot(snapshot_id)
+        self.assertEqual(imported["product_facts"], 2)
+        self.assertEqual(len(detail["productFacts"]), 2)
+        self.assertEqual(detail["declaredOrigin"]["state"], "single")
+        self.assertEqual(detail["declaredOrigin"]["values"], ["中国大陆"])
+        self.assertEqual(len(detail["declaredOrigin"]["sources"]), 2)
+
+    def test_product_facts_are_snapshot_scoped_and_conflicts_are_retained(self):
+        older = create_run(self.output_root, "facts_old")
+        write_declared_origin_artifact(older, "123", [("中国大陆", "dom_parameter")])
+        newer = create_run(
+            self.output_root,
+            "facts_new",
+            collected_at="2026-09-03T10:00:00+08:00",
+        )
+        write_declared_origin_artifact(
+            newer,
+            "123",
+            [("中国大陆", "dom_parameter"), ("河北邢台", "ocr_detail_image")],
+        )
+        self.store.import_run(older)
+        self.store.import_run(newer)
+        old_detail = self.store.get_snapshot(make_snapshot_id("facts_old", "123"))
+        new_detail = self.store.get_snapshot(make_snapshot_id("facts_new", "123"))
+        self.assertEqual(old_detail["declaredOrigin"]["state"], "single")
+        self.assertEqual(new_detail["declaredOrigin"]["state"], "conflict")
+        self.assertEqual(new_detail["declaredOrigin"]["values"], ["中国大陆", "河北邢台"])
+
+    def test_reimport_reconciles_fact_projection_without_touching_review(self):
+        run_root = create_run(self.output_root, "facts_reimport")
+        snapshot_id = make_snapshot_id("facts_reimport", "123")
+        self.store.import_run(run_root)
+        self.store.update_review(snapshot_id, "no_further_action", "持久人工备注")
+        write_declared_origin_artifact(run_root, "123", [("安徽省", "dom_parameter")])
+        self.store.import_run(run_root)
+        self.store.import_run(run_root)
+        detail = self.store.get_snapshot(snapshot_id)
+        self.assertEqual(self.store.table_counts()["product_facts"], 1)
+        self.assertEqual(detail["declaredOrigin"]["values"], ["安徽省"])
+        self.assertEqual(detail["review"]["note"], "持久人工备注")
+
+        (run_root / "products" / "123" / "product_facts.json").unlink()
+        self.store.import_run(run_root)
+        detail = self.store.get_snapshot(snapshot_id)
+        self.assertEqual(detail["declaredOrigin"]["state"], "none")
+        self.assertTrue(detail["readiness"]["reviewEligible"])
+        self.assertEqual(detail["review"]["note"], "持久人工备注")
 
     def test_review_starts_pending(self):
         self.store.import_run(create_run(self.output_root, "run_a"))

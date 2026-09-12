@@ -16,6 +16,7 @@ import {
   updateInspectionContext,
 } from "../../api/products";
 import { Drawer } from "../../components/Drawer";
+import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EmptyState } from "../../components/EmptyState";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
 import { LoadingState } from "../../components/LoadingState";
@@ -197,7 +198,17 @@ export function ProductDetailPanel({
                   <div><dt>所属排查</dt><dd>{workspace.snapshot.taskDisplayName}</dd></div>
                   <div><dt>采集时间</dt><dd>{formatDateTime(workspace.snapshot.collectedAt)}</dd></div>
                   <div><dt>搜索页地区</dt><dd>{workspace.snapshot.region || "—"}</dd></div>
-                  <div><dt>商品标称产地</dt><dd>—</dd></div>
+                  <div>
+                    <dt>商品标称产地</dt>
+                    <dd>
+                      <DeclaredOriginFact
+                        origin={workspace.declaredOrigin}
+                        assets={workspace.assets}
+                        runId={workspace.snapshot.taskId}
+                        productId={workspace.snapshot.productId}
+                      />
+                    </dd>
+                  </div>
                   <div>
                     <dt>抽检清单</dt>
                     <dd>

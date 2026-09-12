@@ -33,7 +33,7 @@ function sourceContextPath(value: string) {
 }
 
 export function evidenceAssetKey(value: string | null | undefined) {
-  const normalized = normalizedPath(value);
+  const normalized = normalizedPath(value).split("#", 1)[0];
   const filename = normalized.split("/").at(-1) || "";
   const stem = filename.replace(/\.(txt|json|png|jpe?g|webp|bmp)$/i, "");
   return /^original_\d+$/i.test(stem) ? stem : null;

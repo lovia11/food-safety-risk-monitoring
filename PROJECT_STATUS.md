@@ -3,8 +3,8 @@
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- V2-1 starting commit: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-- SQLite schema: 8
+- V2-2 starting commit: `e6acc4345d3ef4c702c40d78c9fb2e2a179fe75d`
+- SQLite schema: 9
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
 
@@ -18,6 +18,7 @@
 - Product-scoped current Sampling Membership and frozen historical list export
 - Web manual-action coordination without HTTP-thread browser control
 - Deterministic Historical Validation support
+- Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
 
 ## Current Coverage
 
@@ -29,18 +30,18 @@
 
 ## Current Validation
 
-V2-1 validation: affected Python suites 40 discovered / 39 passed / 1 skipped; frontend workflow 18/18; frontend typecheck and production build passed. Five historical real products were inspected at 1440px and 1080px without live collection.
+V2-2 validation: Python 414 discovered / 413 passed / 1 skipped; frontend workflow 19/19; frontend typecheck and production build passed. It includes A–L extraction fixtures, schema 8→9 preservation, idempotent import/API coverage, Historical Validation generation, and offline 1440px/1080px source-trace inspection. The five-product set produced six provenance-bearing facts, including one explicit conflict.
 
 ## Known Limitations
 
-ProductFact/declared origin, HealthFoodIdentity/official lookup, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and broad Operational Search coverage are Future V2 work. The system does not make legality, efficacy, laboratory-detection, enforcement, or risk-probability conclusions.
+HealthFoodIdentity/official lookup, additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and broad Operational Search coverage are Future V2 work. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-1 — Core UX implemented and validated.
+V2-2 — ProductFact Foundation + Declared Origin implemented and validated.
 
 ## Next Gate
 
-V2-2 ProductFact and declared origin. It remains a separate gate and has not started.
+V2-3 HealthFoodIdentity remains a separate gate and has not started. Do not begin it without explicit approval and an official-registry acquisition contract.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This specification governs the V2 interaction model. Sections labeled Future V2-1 or later are requirements, not current implementation claims.
+This specification governs the V2 interaction model. V2-1 and V2-2 sections describe current behavior; later Future sections remain requirements rather than implementation claims.
 
 ## 1. Global UI principles
 
@@ -41,7 +41,7 @@ The sidebar expands for the product list, automatically collapses when a Product
 
 最近采集 means the latest Snapshot time. 历史记录 means Product Snapshot count. Task/source traceability stays in Product Detail and Snapshot timeline rather than occupying a main cross-task table column.
 
-### 3.2 Future V2-1 interaction
+### 3.2 Current V2-1 interaction
 
 - Restore a product thumbnail of approximately 48–56px.
 - Make the row clickable while preserving explicit keyboard and action affordances.
@@ -59,11 +59,13 @@ Region is a key/value presentation with independent meanings:
 
 Never label the existing search `region` as 产地、商品产地, or 生产地. Never write or show `商品产地待采集`. A missing declared origin is `—`.
 
+`商品标称产地` is Snapshot-scoped. A single explicit value displays the value plus its page-source type. Equal values from multiple sources display one value with a source count; different explicit values display `存在多个声明` and every value/source without choosing one. `查看依据` shows the exact source text and artifact path. OCR sources can open their existing saved original in the same Lightbox used by Evidence.
+
 ## 4. Product Detail
 
 The workspace uses an independently scrollable product list and right detail panel. Snapshot selection controls every Snapshot-bound section: Evidence, recommendation, context, and Review must all correspond to the selected Snapshot.
 
-### 4.1 Future V2-1 summary
+### 4.1 Current V2-1 summary
 
 The header pairs a product image with product identity and presents four ordered summaries:
 
@@ -92,7 +94,7 @@ Seller-managed Evidence is primary and expanded by default. UGC Evidence is auxi
 
 Only offer 查看原图、查看OCR全文, or 查看页面截图 when the underlying asset is available and safe. Do not show inert buttons.
 
-## 6. Image preview — Future V2-1
+## 6. Image preview — Current V2-1
 
 The primary evidence-browsing flow uses:
 

@@ -21,13 +21,13 @@ export function OcrTextModal({ url, title, onClose }: OcrTextModalProps) {
     setError("");
     fetch(url, { signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`OCR 全文读取失败（${response.status}）`);
+        if (!response.ok) throw new Error(`来源文本读取失败（${response.status}）`);
         return response.text();
       })
       .then(setText)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) {
-          setError(reason instanceof Error ? reason.message : "OCR 全文读取失败");
+          setError(reason instanceof Error ? reason.message : "来源文本读取失败");
         }
       })
       .finally(() => {
@@ -39,7 +39,7 @@ export function OcrTextModal({ url, title, onClose }: OcrTextModalProps) {
   return (
     <Modal title={title} className="ocr-text-modal" onClose={onClose}>
       <div className="ocr-text-body">
-        {loading ? <LoadingState label="正在读取 OCR 全文" /> : error ? (
+        {loading ? <LoadingState label="正在读取来源文本" /> : error ? (
           <div className="inline-message" data-tone="danger">
             <AlertCircle size={17} /> {error}
           </div>

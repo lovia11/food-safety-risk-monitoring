@@ -559,6 +559,11 @@ def create_handler(
                 )
                 snapshot = dict(detail)
                 evidence = snapshot.pop("evidence", [])
+                product_facts = snapshot.pop("productFacts", [])
+                declared_origin = snapshot.pop(
+                    "declaredOrigin",
+                    {"state": "none", "values": [], "sources": []},
+                )
                 review = snapshot.pop("review")
                 sampling = snapshot.pop("sampling")
                 self._json(
@@ -566,6 +571,8 @@ def create_handler(
                     {
                         "snapshot": snapshot,
                         "evidence": evidence,
+                        "productFacts": product_facts,
+                        "declaredOrigin": declared_origin,
                         "review": review,
                         "assets": artifacts["assets"],
                         "inspection": artifacts["inspection"],

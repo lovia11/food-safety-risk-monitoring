@@ -242,6 +242,27 @@ export type Evidence = {
   lineNumber: number | null;
 };
 
+export type ProductFact = {
+  factId: string;
+  snapshotId: string;
+  factType: "declared_origin";
+  normalizedValue: string;
+  rawValue: string;
+  sourceType: "dom_parameter" | "ocr_detail_image" | string;
+  contentOrigin: "seller_managed" | string;
+  sourcePath: string;
+  sourceText: string;
+  extractionMethod: string;
+  verificationState: "extracted" | string;
+  createdAt: string;
+};
+
+export type DeclaredOrigin = {
+  state: "none" | "single" | "conflict";
+  values: string[];
+  sources: ProductFact[];
+};
+
 export type ProductAssets = {
   overview: string | null;
   screenshots: string[];
@@ -330,6 +351,8 @@ export type InspectionView = {
 export type SnapshotWorkspace = {
   snapshot: Omit<SnapshotSummary, "review" | "sampling">;
   evidence: Evidence[];
+  productFacts: ProductFact[];
+  declaredOrigin: DeclaredOrigin;
   review: Review;
   assets: ProductAssets;
   inspection: InspectionView;

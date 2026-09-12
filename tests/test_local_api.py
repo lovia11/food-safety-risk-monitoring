@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
 
-from src.data_store import DataStore
+from src.data_store import DataStore, make_snapshot_id
 from src.local_api import (
     create_handler,
     list_run_snapshots,
@@ -441,6 +441,46 @@ class LocalApiHelpersTest(unittest.TestCase):
                     "disclaimer": "仅用于抽检辅助筛查。",
                 },
             )
+            snapshot_id = make_snapshot_id("run-1", "123")
+            write_json(
+                run_root / "products" / "123" / "product_facts.json",
+                {
+                    "schemaVersion": 1,
+                    "extractorVersion": "test",
+                    "generatedAt": "2026-09-12T12:00:00+08:00",
+                    "facts": [
+                        {
+                            "factId": "pf_api_dom",
+                            "snapshotId": snapshot_id,
+                            "factType": "declared_origin",
+                            "normalizedValue": "中国大陆",
+                            "rawValue": "中国大陆",
+                            "sourceType": "dom_parameter",
+                            "contentOrigin": "seller_managed",
+                            "sourcePath": "dom_text.txt#L12-L13",
+                            "sourceText": "中国大陆\n产地",
+                            "extractionMethod": "dom_parameter_value_before_label",
+                            "verificationState": "extracted",
+                            "createdAt": "2026-09-12T12:00:00+08:00",
+                        },
+                        {
+                            "factId": "pf_api_ocr",
+                            "snapshotId": snapshot_id,
+                            "factType": "declared_origin",
+                            "normalizedValue": "河北邢台",
+                            "rawValue": "河北邢台",
+                            "sourceType": "ocr_detail_image",
+                            "contentOrigin": "seller_managed",
+                            "sourcePath": "ocr/original_001.txt#L1",
+                            "sourceText": "产地：河北邢台",
+                            "extractionMethod": "ocr_labeled_same_line",
+                            "verificationState": "extracted",
+                            "createdAt": "2026-09-12T12:00:00+08:00",
+                        },
+                    ],
+                    "diagnostics": [],
+                },
+            )
             write_web_snapshot(
                 run_root,
                 {
@@ -647,6 +687,13 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertEqual(workspace["snapshot"]["taskId"], "run-1")
                 self.assertEqual(workspace["evidence"][0]["text"], "帮助睡眠")
                 self.assertEqual(workspace["review"]["status"], "pending")
+                self.assertEqual(len(workspace["productFacts"]), 2)
+                self.assertEqual(workspace["declaredOrigin"]["state"], "conflict")
+                self.assertEqual(
+                    workspace["declaredOrigin"]["values"],
+                    ["中国大陆", "河北邢台"],
+                )
+                self.assertNotIn("productFacts", workspace["snapshot"])
                 self.assertFalse(workspace["sampling"]["inCurrentList"])
                 self.assertEqual(
                     workspace["inspection"]["recommendationStatus"], "available"

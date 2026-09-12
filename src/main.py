@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from src.data_store import make_snapshot_id
 from src.discovery import DiscoveryCoordinator
 from src.inspection_runtime import (
     DEFAULT_INSPECTION_CONFIG_PATH,
@@ -27,6 +28,7 @@ from src.phase2_ocr import (
 )
 from src.phase3_analysis import run_analysis
 from src.phase5_batch import build_batch_record, build_batch_summary, write_batch_csv
+from src.product_facts import extract_product_facts
 from src.runtime import iso_now, new_run_id, read_json, setup_run_logger, write_json
 from src.taobao_live import BrowserSettings, LiveSearchCollector, launch_browser_session
 from src.web_contract import write_web_snapshot
@@ -186,6 +188,21 @@ class StandalonePipeline:
         )
         write_json(self.state_path, ordered)
         self._write_web_snapshot()
+
+    def _extract_product_facts(self, product_id: str, product_root: Path) -> None:
+        """Run the degradable artifact-only fact extractor for one Snapshot."""
+
+        try:
+            extract_product_facts(
+                product_root,
+                make_snapshot_id(self.run_root.name, product_id),
+            )
+        except Exception:
+            # ProductFact is enrichment.  An unexpected writer/filesystem error
+            # must not change OCR, Phase 3, Review eligibility or Product status.
+            self.logger.exception(
+                "商品%s ProductFact抽取失败；继续执行风险分析", product_id
+            )
 
     def _records_and_batch_payload(
         self,
@@ -356,6 +373,8 @@ class StandalonePipeline:
                 product_root / INSPECTION_RECOMMENDATION_FILE
             ).is_file()
             if state.get("status") == ProductStatus.SUCCESS and analysis_exists:
+                if not (product_root / "product_facts.json").is_file():
+                    self._extract_product_facts(product_id, product_root)
                 if self.inspection_runtime is None or recommendation_exists:
                     self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
                     continue
@@ -394,6 +413,7 @@ class StandalonePipeline:
                     cache_dir=self.options.cache_dir,
                     runtime=runtime,
                 )
+                self._extract_product_facts(product_id, product_root)
                 run_analysis(
                     product_root,
                     self.options.rule_config,

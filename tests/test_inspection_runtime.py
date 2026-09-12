@@ -100,7 +100,7 @@ class InspectionRuntimeTest(unittest.TestCase):
         self.assertEqual(read_json(destination), expected)
         self.assertEqual(list(self.product_root.glob(".*.tmp")), [])
 
-    def test_reference_bootstrap_is_idempotent_and_schema_stays_seven(self):
+    def test_reference_bootstrap_is_idempotent_and_schema_stays_current(self):
         store = DataStore(self.root / "second.db", self.output_root)
         first = bootstrap_inspection_references(
             store, INSPECTION_CONFIG, RISK_CONFIG
@@ -113,7 +113,7 @@ class InspectionRuntimeTest(unittest.TestCase):
         self.assertEqual(store.table_counts()["inspection_methods"], 5)
         self.assertEqual(store.table_counts()["risk_substance_mappings"], 8)
         with sqlite3.connect(store.database_path) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 8)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 9)
 
     def test_context_options_come_from_verified_sqlite_reference(self):
         options = self.runtime.store.list_inspection_context_options()

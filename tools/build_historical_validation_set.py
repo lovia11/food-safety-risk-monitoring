@@ -21,13 +21,14 @@ from typing import Any, Iterable
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.data_store import DEFAULT_MONITOR_CONFIG_PATHS, DataStore
+from src.data_store import DEFAULT_MONITOR_CONFIG_PATHS, DataStore, make_snapshot_id
 from src.inspection_runtime import (
     INSPECTION_RECOMMENDATION_ERROR_FILE,
     INSPECTION_RECOMMENDATION_FILE,
     InspectionRuntime,
 )
 from src.phase5_batch import build_batch_record, build_batch_summary, write_batch_csv
+from src.product_facts import extract_product_facts
 from src.runtime import iso_now, read_json, write_json
 from src.web_contract import build_web_snapshot
 
@@ -330,6 +331,11 @@ def build_validation_set(
             item: ValidationItem = source["item"]
             product_root = products_root / item.product_id
             copied = _copy_item(source, product_root)
+            product_facts = extract_product_facts(
+                product_root,
+                make_snapshot_id(run_id, item.product_id),
+                generated_at=import_time,
+            )
             recommendation_status = "available"
             try:
                 recommendation_runtime.generate(product_root)
@@ -364,6 +370,7 @@ def build_validation_set(
                     "ocrSuccessCount": source["ocr_success_count"],
                     "ocrTotalCount": source["ocr_total_count"],
                     "evidenceCount": source["evidence_count"],
+                    "productFactCount": len(product_facts["facts"]),
                     "currentRecommendationStatus": recommendation_status,
                 }
             )

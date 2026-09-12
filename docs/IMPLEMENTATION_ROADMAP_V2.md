@@ -42,18 +42,21 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-2 — ProductFact and declared origin
 
+- **Status:** COMPLETE — implemented with schema 8→9 additive migration and validated against deterministic and five-product offline artifacts.
+
 - **Goal:** Introduce provenance-bearing structured facts, starting with explicit product-declared origin.
 - **Why:** Current search region cannot answer origin questions and free-form extraction must be auditable.
 - **Dependencies:** V2-1 evidence browsing and approved ProductFact contract.
 - **In Scope:** ProductFact extraction/storage/API; `declared_origin`; source/conflict/missing/review states; DOM/OCR source support.
 - **Out of Scope:** Inferring origin from search region or addresses; broad fact ontology; health-food identity decision.
 - **Domain impact:** Adds ProductFact as a Snapshot-scoped derived entity.
-- **Schema impact:** Additive migration only after proposal review; preserve schema 8 data and re-import behavior.
+- **Schema impact:** Additive schema 8→9 generic `product_facts` table/indexes; schema 8 data, Review/Sampling and re-import behavior are preserved.
 - **Data requirements:** Real positive, missing, conflicting DOM/OCR origin fixtures with exact source paths.
 - **UX impact:** Independent 搜索页地区 and 商品标称产地 key/value display; missing is `—`.
 - **Testing:** Provenance, normalization, conflicts, DOM/OCR sources, missing origin, and explicit non-inference tests.
 - **Real-world validation:** Small reviewed product set containing clear, absent, and conflicting origin statements.
 - **Exit criteria:** Every stored origin is Snapshot-scoped and source-reconstructable; no false “待采集” value or geographic inference.
+- **Implemented result:** Artifact-only extraction writes deterministic, provenance-bearing `product_facts.json`; import builds an idempotent SQLite projection; Workspace DTO/UI exposes none/single/conflict states and DOM/OCR source trace. Extraction failure is degradable and does not alter Analysis/Review eligibility.
 
 ## V2-3 — Health-food identity
 
