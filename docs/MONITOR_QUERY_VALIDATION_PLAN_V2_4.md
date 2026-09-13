@@ -2,9 +2,11 @@
 
 > Status: **NOT YET VALIDATED**
 >
-> Planned batch: `v2-4b-batch-01`
+> Planned batch: Wave 1 uses `v2-4b-batch-01a`; later waves require a separate human gate
 >
-> Planned sample: first 10 unique assessable Search Results per Query
+> Collection ceiling: first 15 unique Search Result cards per Query
+>
+> Promotion evaluation sample: first 10 unique assessable Search Results per Query, in original search order
 >
 > Scope: search-only; no Detail, OCR, Phase3, Review, or Sampling
 
@@ -35,10 +37,18 @@ Official source: `https://www.nhc.gov.cn/wjw/gfxwj/200203/5e9768a72af64db89acb45
 
 ```powershell
 python tools/validate_monitor_queries.py `
-  --batch v2-4b-batch-01 `
+  --batch v2-4b-batch-01a `
   --dry-run `
-  --max-results 10 `
+  --max-results 15 `
+  --target food-medicine-2002-007 `
+  --target food-medicine-2002-010 `
+  --target food-medicine-2002-028 `
+  --target food-medicine-2002-038 `
+  --target food-medicine-2002-071 `
+  --target food-medicine-2002-076 `
   --output output/query_validation
 ```
 
-The V2-4A dry run only resolves configuration and prints 12 Targets/Queries, sample size, and destination. It must not import Playwright, launch a browser, or contact Taobao. Live execution belongs exclusively to the separately authorized V2-4B gate.
+The unfiltered V2-4A dry run resolves all 12 disabled candidates. The Wave 1 command above is intentionally narrowed to the six separately authorized Targets. A dry run only resolves configuration and prints Targets/Queries, limits, and destination; it must not import Playwright, launch a browser, or contact Taobao. Live execution belongs exclusively to the separately authorized V2-4B gate.
+
+The collection ceiling and promotion evaluation sample are deliberately different. A bounded live run stops after at most 15 unique Search Result cards (or natural exhaustion/blocker). Human review then evaluates the first 10 unique assessable results in original search order. If fewer than 10 assessable results remain after the 15-card ceiling, the decision is `hold`; collection must not continue through unbounded pagination to fill the sample. The fixed `70%`, five-relevant-result, ten-assessable-result, and systematic-scope-issue gates remain unchanged.

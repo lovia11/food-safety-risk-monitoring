@@ -65,11 +65,121 @@ def _title_rows(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _review_result_cards(
+    candidates: list[dict[str, Any]],
+    *,
+    raw_artifact_refs: list[str],
+) -> tuple[list[dict[str, Any]], int]:
+    """Keep first-seen rank while deduplicating only by marketplace Product ID."""
+
+    result: list[dict[str, Any]] = []
+    by_product_id: dict[str, dict[str, Any]] = {}
+    duplicate_count = 0
+    for fallback_rank, candidate in enumerate(candidates, start=1):
+        rank = candidate.get("rank") or fallback_rank
+        product_id = str(candidate.get("product_id") or "").strip()
+        occurrence = {
+            "rank": rank,
+            "productId": product_id or None,
+            "title": candidate.get("product_name") or "",
+            "shop": candidate.get("shop_name") or "",
+            "price": candidate.get("price_text") or None,
+            "cardMetadata": {
+                "searchRegion": candidate.get("region") or None,
+                "salesText": candidate.get("sales_text") or None,
+                "platform": candidate.get("platform") or None,
+                "sourceProductUrl": candidate.get("source_product_url")
+                or candidate.get("product_url")
+                or None,
+                "thumbnailUrl": candidate.get("snapshot_image_path") or None,
+            },
+        }
+        if not product_id or product_id not in by_product_id:
+            canonical = {
+                **occurrence,
+                "duplicateOccurrences": [],
+                "rawArtifactRefs": list(raw_artifact_refs),
+            }
+            result.append(canonical)
+            if product_id:
+                by_product_id[product_id] = canonical
+            continue
+        duplicate_count += 1
+        by_product_id[product_id]["duplicateOccurrences"].append(occurrence)
+    return result, duplicate_count
+
+
+def _review_queue_record(
+    query_record: dict[str, Any],
+    result_cards: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "batchId": query_record.get("batchId"),
+        "targetId": query_record.get("targetId"),
+        "queryId": query_record.get("queryId"),
+        "queryText": query_record.get("queryText"),
+        "reviewStatus": query_record.get("reviewStatus"),
+        "evaluationRule": "first_10_unique_assessable_in_original_search_order",
+        "results": [
+            {
+                **card,
+                "reviewedLabel": None,
+                "reviewedAt": None,
+                "reviewNote": None,
+            }
+            for card in result_cards
+        ],
+    }
+
+
+def _markdown_cell(value: Any) -> str:
+    return str(value or "—").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+
+def _review_queue_markdown(queue: dict[str, Any]) -> str:
+    lines = [
+        f"# Human Review Queue — {queue['queryText']}",
+        "",
+        f"- Batch: `{queue['batchId']}`",
+        f"- Target: `{queue['targetId']}`",
+        f"- Query: `{queue['queryId']}`",
+        "- Evaluation: first 10 unique assessable results in original search order",
+        "- All labels and notes are intentionally blank pending human review.",
+        "",
+        "| Rank | Product ID | Title | Shop | Price | Card metadata | Duplicate occurrences | Reviewed label | Review note | Raw artifact |",
+        "|---:|---|---|---|---:|---|---:|---|---|---|",
+    ]
+    for card in queue.get("results") or []:
+        metadata = card.get("cardMetadata") or {}
+        metadata_text = "; ".join(
+            f"{key}={value}"
+            for key, value in metadata.items()
+            if value not in {None, ""}
+        )
+        raw_ref = next(iter(card.get("rawArtifactRefs") or []), "")
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_cell(card.get("rank")),
+                    _markdown_cell(card.get("productId")),
+                    _markdown_cell(card.get("title")),
+                    _markdown_cell(card.get("shop")),
+                    _markdown_cell(card.get("price")),
+                    _markdown_cell(metadata_text),
+                    str(len(card.get("duplicateOccurrences") or [])),
+                    "",
+                    "",
+                    _markdown_cell(raw_ref),
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def _contract_record(batch_id: str, record: dict[str, Any]) -> dict[str, Any]:
-    diagnostics = record.get("diagnostics_path")
-    raw_refs = [diagnostics] if diagnostics else []
-    if diagnostics:
-        raw_refs.append(str(Path(diagnostics).with_name("search_candidates.json")).replace("\\", "/"))
+    raw_refs = list(record.get("raw_artifact_refs") or [])
     return {
         "batchId": batch_id,
         "targetId": record.get("target_id"),
@@ -79,8 +189,11 @@ def _contract_record(batch_id: str, record: dict[str, Any]) -> dict[str, Any]:
         "startedAt": record.get("started_at"),
         "completedAt": record.get("completed_at"),
         "executionStatus": record.get("execution_status"),
-        "resultCount": int(record.get("actual_candidates") or 0),
+        "resultCount": int(record.get("raw_result_count") or 0),
+        "rawResultCount": int(record.get("raw_result_count") or 0),
         "uniqueResultCount": int(record.get("unique_result_count") or 0),
+        "duplicateCount": int(record.get("duplicate_count") or 0),
+        "resultCards": list(record.get("result_cards") or []),
         "labels": {
             "relevant_food": [],
             "raw_medicinal_or_nonfood_scope": [],
@@ -99,6 +212,9 @@ def _contract_record(batch_id: str, record: dict[str, Any]) -> dict[str, Any]:
         if record.get("execution_status") == "completed"
         else "not_reviewed",
         "rawSourceArtifactRefs": raw_refs,
+        "blocker": record.get("stop_reason")
+        if record.get("execution_status") == "failed"
+        else None,
         "error": (
             {
                 "type": record.get("error_type"),
@@ -113,10 +229,24 @@ def _contract_record(batch_id: str, record: dict[str, Any]) -> dict[str, Any]:
 def _write_validation_state(run_root: Path, summary: dict[str, Any]) -> None:
     write_json(run_root / "query_validation_results.json", summary)
     queries_root = run_root / "queries"
+    review_root = run_root / "review"
     for record in summary.get("results") or []:
+        contract_record = _contract_record(run_root.name, record)
         write_json(
             queries_root / f"{record['query_id']}.json",
-            _contract_record(run_root.name, record),
+            contract_record,
+        )
+        review_queue = _review_queue_record(
+            contract_record,
+            contract_record["resultCards"],
+        )
+        review_json_path = review_root / f"{record['query_id']}.json"
+        write_json(review_json_path, review_queue)
+        review_markdown_path = review_root / f"{record['query_id']}.md"
+        review_markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        review_markdown_path.write_text(
+            _review_queue_markdown(review_queue),
+            encoding="utf-8",
         )
     query_entries = []
     for path in sorted(queries_root.glob("*.json")) if queries_root.is_dir() else []:
@@ -129,8 +259,24 @@ def _write_validation_state(run_root: Path, summary: dict[str, Any]) -> None:
                 "executionStatus": item.get("executionStatus"),
                 "reviewStatus": item.get("reviewStatus"),
                 "artifact": path.relative_to(run_root).as_posix(),
+                "reviewQueue": {
+                    "json": f"review/{item['queryId']}.json",
+                    "markdown": f"review/{item['queryId']}.md",
+                },
             }
         )
+    completed_count = sum(
+        item.get("executionStatus") == "completed" for item in query_entries
+    )
+    failed_count = sum(item.get("executionStatus") == "failed" for item in query_entries)
+    if summary.get("status") == "running":
+        manifest_status = "running"
+    elif query_entries and failed_count == 0:
+        manifest_status = "complete"
+    elif completed_count:
+        manifest_status = "partial"
+    else:
+        manifest_status = "failed"
     write_json(
         run_root / "manifest.json",
         {
@@ -140,8 +286,9 @@ def _write_validation_state(run_root: Path, summary: dict[str, Any]) -> None:
             "searchOnly": True,
             "startedAt": summary.get("started_at"),
             "completedAt": summary.get("completed_at"),
-            "maxResults": summary.get("candidate_limit"),
-            "status": summary.get("status"),
+            "collectionRawLimit": summary.get("candidate_limit"),
+            "evaluationSampleSize": 10,
+            "status": manifest_status,
             "queries": query_entries,
         },
     )
@@ -211,20 +358,38 @@ def run_search_validation(
                 detail_limit=1,
             )
             candidates = payload.get("candidates") or []
-            unique_product_ids = {
-                str(candidate.get("product_id") or "")
-                for candidate in candidates
-                if isinstance(candidate, dict) and candidate.get("product_id")
-            }
+            raw_artifact_refs = [
+                (
+                    query_root.relative_to(run_root)
+                    / "search"
+                    / artifact_name
+                ).as_posix()
+                for artifact_name in (
+                    "search_candidates.json",
+                    "search_candidates.csv",
+                    "search_diagnostics.json",
+                    "search_results.png",
+                    "search_page.html",
+                    "scroll_states.json",
+                )
+            ]
+            result_cards, duplicate_count = _review_result_cards(
+                candidates,
+                raw_artifact_refs=raw_artifact_refs,
+            )
             record.update(
                 {
                     "execution_status": "completed",
                     "actual_candidates": len(candidates),
-                    "unique_result_count": len(unique_product_ids),
+                    "raw_result_count": len(candidates),
+                    "unique_result_count": len(result_cards),
+                    "duplicate_count": duplicate_count,
                     "raw_card_count": int(payload.get("raw_card_count") or 0),
                     "stop_reason": payload.get("search_stop_reason") or "unknown",
                     "selector_health": payload.get("selector_health") or {},
                     "titles": _title_rows(candidates),
+                    "result_cards": result_cards,
+                    "raw_artifact_refs": raw_artifact_refs,
                     "diagnostics_path": (
                         query_root.relative_to(run_root)
                         / "search"
@@ -235,10 +400,27 @@ def run_search_validation(
                 }
             )
         except Exception as exc:
+            failure_raw_refs = [
+                (
+                    query_root.relative_to(run_root)
+                    / "search"
+                    / artifact_name
+                ).as_posix()
+                for artifact_name in (
+                    "search_diagnostics.json",
+                    "search_error.png",
+                    "search_error.html",
+                )
+            ]
             record.update(
                 {
                     "execution_status": "failed",
                     "actual_candidates": 0,
+                    "raw_result_count": 0,
+                    "unique_result_count": 0,
+                    "duplicate_count": 0,
+                    "result_cards": [],
+                    "raw_artifact_refs": failure_raw_refs,
                     "stop_reason": "error",
                     "error_type": type(exc).__name__,
                     "error_message": str(exc),

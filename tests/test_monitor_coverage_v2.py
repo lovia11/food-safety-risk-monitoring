@@ -178,6 +178,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
             selected=selected,
         )
         self.assertEqual(plan["queryCount"], 12)
+        self.assertEqual(plan["collectionRawLimit"], 10)
+        self.assertEqual(plan["evaluationSampleSize"], 10)
         self.assertTrue(plan["dryRun"])
         self.assertTrue(
             all(item["validationStatus"] == "candidate_unvalidated" for item in plan["queries"])
@@ -205,6 +207,39 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertEqual(plan["queryCount"], 12)
         self.assertEqual(plan["plannedResultSampleSize"], 10)
         self.assertFalse(destination.exists())
+
+    def test_wave_one_dry_run_separates_collection_ceiling_from_review_sample(self):
+        config = validate_monitor_config(read_json(REFERENCE_CONFIG))
+        target_ids = {
+            "food-medicine-2002-007",
+            "food-medicine-2002-010",
+            "food-medicine-2002-028",
+            "food-medicine-2002-038",
+            "food-medicine-2002-071",
+            "food-medicine-2002-076",
+        }
+        selected = select_validation_queries(config, target_ids=target_ids)
+        plan = validation_dry_run(
+            batch_id="v2-4b-batch-01a",
+            output_root=self.root / "query-validation",
+            max_results=15,
+            selected=selected,
+        )
+        self.assertEqual(plan["queryCount"], 6)
+        self.assertEqual(plan["collectionRawLimit"], 15)
+        self.assertEqual(plan["evaluationSampleSize"], 10)
+        self.assertEqual(plan["plannedResultSampleSize"], 10)
+        self.assertEqual(
+            [item["targetId"] for item in plan["queries"]],
+            [
+                "food-medicine-2002-007",
+                "food-medicine-2002-010",
+                "food-medicine-2002-028",
+                "food-medicine-2002-038",
+                "food-medicine-2002-071",
+                "food-medicine-2002-076",
+            ],
+        )
 
 
 if __name__ == "__main__":

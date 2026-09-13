@@ -78,7 +78,9 @@ def validation_dry_run(
         "batchId": batch_id,
         "dryRun": True,
         "searchOnly": True,
-        "plannedResultSampleSize": max_results,
+        "collectionRawLimit": max_results,
+        "evaluationSampleSize": 10,
+        "plannedResultSampleSize": 10,
         "outputDestination": str((output_root / batch_id).resolve()),
         "queryCount": len(selected),
         "queries": [

@@ -43,6 +43,37 @@ class PartialFailureCollector(FakeCollector):
         return super().collect(keyword, candidate_limit, detail_limit)
 
 
+class DuplicateCollector(FakeCollector):
+    def collect(self, keyword, candidate_limit, detail_limit):
+        payload = super().collect(keyword, candidate_limit, detail_limit)
+        payload["candidates"] = [
+            {
+                "rank": 1,
+                "product_id": "1001",
+                "product_name": "第一件商品",
+                "shop_name": "店铺一",
+                "price_text": "12.80",
+                "region": "浙江",
+                "source_product_url": "https://item.taobao.com/item.htm?id=1001",
+            },
+            {
+                "rank": 2,
+                "product_id": "1001",
+                "product_name": "第一件商品（重复推荐位）",
+                "shop_name": "店铺一",
+                "price_text": "13.00",
+                "source_product_url": "https://item.taobao.com/item.htm?id=1001",
+            },
+            {
+                "rank": 3,
+                "product_id": "1002",
+                "product_name": "第二件商品",
+                "shop_name": "店铺二",
+            },
+        ]
+        return payload
+
+
 class SearchQueryValidationTest(unittest.TestCase):
     def setUp(self):
         FakeCollector.calls = []
@@ -95,15 +126,25 @@ class SearchQueryValidationTest(unittest.TestCase):
             saved = read_json(run_root / "query_validation_results.json")
             manifest = read_json(run_root / "manifest.json")
             query_artifact = read_json(run_root / "queries" / "query-1.json")
+            review_queue = read_json(run_root / "review" / "query-1.json")
+            review_markdown = (run_root / "review" / "query-1.md").read_text(
+                encoding="utf-8"
+            )
         self.assertEqual(summary["status"], "completed")
         self.assertEqual(len(saved["results"][0]["titles"]), 10)
         self.assertEqual(saved["results"][0]["actual_candidates"], 10)
         self.assertEqual(saved["results"][0]["stop_reason"], "candidate_limit_reached")
         self.assertEqual(FakeCollector.calls[0][1:3], (10, 1))
         self.assertTrue(manifest["searchOnly"])
+        self.assertEqual(manifest["status"], "complete")
+        self.assertEqual(manifest["collectionRawLimit"], 10)
+        self.assertEqual(manifest["evaluationSampleSize"], 10)
         self.assertEqual(manifest["queries"][0]["artifact"], "queries/query-1.json")
         self.assertEqual(query_artifact["batchId"], "pilot-run")
         self.assertEqual(query_artifact["uniqueResultCount"], 10)
+        self.assertEqual(query_artifact["rawResultCount"], 10)
+        self.assertEqual(query_artifact["duplicateCount"], 0)
+        self.assertEqual(len(query_artifact["resultCards"]), 10)
         self.assertEqual(
             set(query_artifact["labels"]),
             {
@@ -115,6 +156,54 @@ class SearchQueryValidationTest(unittest.TestCase):
             },
         )
         self.assertIsNone(query_artifact["decision"])
+        self.assertTrue(
+            all(item["reviewedLabel"] is None for item in review_queue["results"])
+        )
+        self.assertTrue(
+            all(item["reviewedAt"] is None for item in review_queue["results"])
+        )
+        self.assertTrue(
+            all(item["reviewNote"] is None for item in review_queue["results"])
+        )
+        self.assertIn("All labels and notes are intentionally blank", review_markdown)
+
+    def test_review_queue_uses_stable_product_id_dedup_and_original_rank(self):
+        selected = [
+            (
+                {"target_id": "target-1", "standard_name": "山楂"},
+                {
+                    "query_id": "query-1",
+                    "query_text": "山楂",
+                    "query_source": "standard_name",
+                    "validation_status": "candidate_unvalidated",
+                },
+            )
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            run_root = Path(temporary) / "dedup-batch"
+            run_search_validation(
+                context=object(),
+                run_root=run_root,
+                logger=logging.getLogger("search-query-validation-dedup-test"),
+                selected=selected,
+                candidate_limit=15,
+                pause_seconds=0,
+                collector_factory=DuplicateCollector,
+            )
+            query_artifact = read_json(run_root / "queries" / "query-1.json")
+            review_queue = read_json(run_root / "review" / "query-1.json")
+        self.assertEqual(query_artifact["rawResultCount"], 3)
+        self.assertEqual(query_artifact["uniqueResultCount"], 2)
+        self.assertEqual(query_artifact["duplicateCount"], 1)
+        self.assertEqual(
+            [item["rank"] for item in query_artifact["resultCards"]],
+            [1, 3],
+        )
+        self.assertEqual(
+            query_artifact["resultCards"][0]["duplicateOccurrences"][0]["rank"],
+            2,
+        )
+        self.assertIsNone(review_queue["results"][0]["reviewedLabel"])
 
     def test_unknown_query_id_is_rejected_before_browser_use(self):
         config = {
@@ -167,6 +256,7 @@ class SearchQueryValidationTest(unittest.TestCase):
         self.assertEqual(len(manifest["queries"]), 2)
         self.assertEqual(failed["executionStatus"], "failed")
         self.assertEqual(failed["error"]["type"], "RuntimeError")
+        self.assertEqual(manifest["status"], "partial")
         self.assertEqual([query["query_id"] for _, query in remaining], ["query-failed"])
 
 
