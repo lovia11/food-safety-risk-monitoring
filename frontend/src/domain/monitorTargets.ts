@@ -33,6 +33,16 @@ export function canCreateMonitorTask(target: MonitorTarget | undefined) {
   return target?.availability === "operational" && target.validated_queries.length > 0;
 }
 
+export function monitorAvailabilityLabel(target: MonitorTarget) {
+  if (
+    target.availability === "paused" &&
+    target.queries.some((query) => query.validation_status === "rejected_low_relevance")
+  ) {
+    return "搜索策略待完善";
+  }
+  return MONITOR_AVAILABILITY_LABELS[target.availability];
+}
+
 export function monitorAvailabilityMessage(target: MonitorTarget) {
   if (target.availability === "query_pending") return QUERY_PENDING_MESSAGE;
   if (target.availability === "paused") {

@@ -47,12 +47,12 @@ class MonitorCoverageV2Test(unittest.TestCase):
             {
                 "reference_target_count": 106,
                 "targets_with_query_count": 18,
-                "operational_target_count": 14,
-                "enabled_query_count": 17,
-                "validated_query_count": 17,
-                "disabled_query_count": 4,
-                "candidate_query_count": 2,
-                "paused_target_count": 2,
+                "operational_target_count": 15,
+                "enabled_query_count": 18,
+                "validated_query_count": 18,
+                "disabled_query_count": 3,
+                "candidate_query_count": 0,
+                "paused_target_count": 3,
             },
         )
         self.assertEqual(
@@ -69,8 +69,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
             if target["dataset_status"] == "verified_reference"
         ]
         self.assertEqual(len(reference), 106)
-        self.assertEqual(len(formal_operational), 14)
-        self.assertEqual(len(operational), 15)  # includes the independent development seed
+        self.assertEqual(len(formal_operational), 15)
+        self.assertEqual(len(operational), 16)  # includes the independent development seed
         self.assertTrue(
             all(target["availability"] == "operational" for target in operational)
         )
@@ -90,18 +90,20 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertEqual(mountain_yam["availability"], "operational")
         self.assertEqual(mountain_yam["validated_query_count"], 1)
         self.assertEqual(mountain_yam["validated_queries"][0]["query_text"], "山药")
-        self.assertEqual(lily["availability"], "query_pending")
-        self.assertEqual(lily["candidate_query_count"], 1)
+        self.assertEqual(lily["availability"], "paused")
+        self.assertEqual(lily["candidate_query_count"], 0)
         self.assertEqual(lily["validated_queries"], [])
+        self.assertEqual(lily["queries"][0]["validation_status"], "rejected_low_relevance")
+        self.assertIn("观察相关率50%", lily["availability_reason"])
         self.assertEqual(angelica["availability"], "paused")
         self.assertIn("中药材/饮片", angelica["availability_reason"])
         self.assertEqual(angelica["validated_queries"], [])
 
-    def test_candidate_and_paused_queries_are_never_operational(self):
+    def test_rejected_and_paused_queries_are_never_operational(self):
         reference = self.store.list_monitor_targets(scope="reference")
-        candidate = next(item for item in reference if item["standard_name"] == "百合")["queries"][0]
+        rejected = next(item for item in reference if item["standard_name"] == "百合")["queries"][0]
         paused = next(item for item in reference if item["standard_name"] == "当归")["queries"][0]
-        self.assertFalse(is_operational_query(candidate))
+        self.assertFalse(is_operational_query(rejected))
         self.assertFalse(is_operational_query(paused))
 
     def test_reference_only_target_is_rejected_by_server_business_guard(self):
@@ -170,7 +172,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
     def test_validation_ledger_covers_every_governed_final_query(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         ledger = validate_validation_ledger(config, read_json(LEDGER))
-        self.assertEqual(len(ledger["records"]), 19)
+        self.assertEqual(len(ledger["records"]), 21)
         wave_one = {
             item["query_text"]: item
             for item in ledger["records"]
@@ -193,26 +195,25 @@ class MonitorCoverageV2Test(unittest.TestCase):
             wave_two_a["莲子"]["artifact_manifest_sha256"],
             "b5acfc84635c4f5103ac2a10e0524b90bd065f68d26830f8b07464c25094fe54",
         )
-
-    def test_unfiltered_dry_run_selects_only_two_remaining_wave_two_b_candidates(self):
-        config = validate_monitor_config(read_json(REFERENCE_CONFIG))
-        selected = select_validation_queries(config)
-        plan = validation_dry_run(
-            batch_id="v2-4b-batch-01",
-            output_root=self.root / "query-validation",
-            max_results=10,
-            selected=selected,
-        )
-        self.assertEqual(plan["queryCount"], 2)
+        wave_two_b = {
+            item["query_text"]: item
+            for item in ledger["records"]
+            if item["batch_id"] == "v2-4b-batch-02b"
+        }
+        self.assertEqual(set(wave_two_b), {"百合", "菊花"})
+        self.assertEqual(wave_two_b["百合"]["decision"], "reject")
+        self.assertEqual(wave_two_b["百合"]["relevance_rate"], 0.5)
+        self.assertEqual(wave_two_b["菊花"]["decision"], "promote")
+        self.assertEqual(wave_two_b["菊花"]["relevance_rate"], 1.0)
         self.assertEqual(
-            {item["standardName"] for item in plan["queries"]}, {"百合", "菊花"}
+            wave_two_b["百合"]["artifact_manifest_sha256"],
+            "c130bb453df91397bab926a722ef759d56fee038def2bdeb12dcfc145cb3b16e",
         )
-        self.assertEqual(plan["collectionRawLimit"], 10)
-        self.assertEqual(plan["evaluationSampleSize"], 10)
-        self.assertTrue(plan["dryRun"])
-        self.assertTrue(
-            all(item["validationStatus"] == "candidate_unvalidated" for item in plan["queries"])
-        )
+
+    def test_unfiltered_dry_run_has_no_remaining_standard_name_candidates(self):
+        config = validate_monitor_config(read_json(REFERENCE_CONFIG))
+        with self.assertRaisesRegex(ValueError, "没有符合条件"):
+            select_validation_queries(config)
 
     def test_validation_tool_dry_run_prints_plan_without_creating_runtime_output(self):
         destination = self.root / "validation-output"
@@ -231,10 +232,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
                     str(REFERENCE_CONFIG),
                 ]
             )
-        plan = json.loads(stdout.getvalue())
-        self.assertEqual(result, 0)
-        self.assertEqual(plan["queryCount"], 2)
-        self.assertEqual(plan["plannedResultSampleSize"], 10)
+        self.assertEqual(result, 2)
+        self.assertEqual(stdout.getvalue(), "")
         self.assertFalse(destination.exists())
 
     def test_wave_one_dry_run_separates_collection_ceiling_from_review_sample(self):
@@ -305,6 +304,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "food-medicine-2002-032",
             "food-medicine-2002-045",
             "food-medicine-2002-060",
+            "food-medicine-2002-064",
         ]
         for target_id in promoted_ids:
             created = manager.create_task(
@@ -317,7 +317,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             )
             self.assertEqual(created["runtime"]["request"]["targetId"], target_id)
             self.assertTrue(manager.wait_for_idle())
-        self.assertEqual(len(captured), 9)
+        self.assertEqual(len(captured), 10)
         self.assertTrue(
             all(
                 options.search_queries[0]["query_source"] == "standard_name"

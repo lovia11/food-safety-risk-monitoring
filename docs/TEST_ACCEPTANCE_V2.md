@@ -125,7 +125,7 @@ Every governed dataset change tests:
 - UI/API reads the same runtime dataset;
 - per-layer coverage metrics use correct denominators.
 
-### 8.1 Monitor coverage gate — Current V2-4 Wave 2A
+### 8.1 Monitor coverage gate — Current V2-4 Wave 2B
 
 - `scope=reference` returns exactly 106 formal Reference targets; default/`scope=operational` returns only targets satisfying the strict operational predicate.
 - Every enabled Query is `search_validated`; every enabled target has at least one enabled validated Query.
@@ -138,7 +138,9 @@ Every governed dataset change tests:
 - 山楂、沙棘、罗汉果、黑芝麻、蜂蜜 are operational through enabled `search_validated` standard-name Queries. 乌梅 remains visible as disabled `paused_scope_issue` and cannot pass the server execution guard.
 - The manifest hash and decision notes are retained in the ledger; collection Query/raw artifacts remain immutable when reviewed artifacts are finalized.
 - 山药、赤小豆、枸杞子、莲子 are operational through enabled `search_validated` standard-name Queries; their ledger metrics are program-derived from the explicit Wave 2A human labels.
-- The 莲子 review skips ambiguous Rank 4 and uses Rank 11 as the tenth assessable result. 百合 and 菊花 remain disabled `candidate_unvalidated` Wave 2B Queries.
+- The 莲子 review skips ambiguous Rank 4 and uses Rank 11 as the tenth assessable result.
+- 菊花 is operational through its enabled `search_validated` standard-name Query. The standard-name 百合 Query is disabled `rejected_low_relevance`; the 百合 MonitorTarget remains Reference-visible, non-operational, and server-rejected for task creation.
+- A rejected Query is never enabled. Rejecting a Query does not remove or mark invalid its MonitorTarget, and the UI presents the target as needing a usable search strategy rather than as unsupported.
 
 ## 9. Pipeline and Review gate
 

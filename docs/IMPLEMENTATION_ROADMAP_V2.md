@@ -78,7 +78,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-4 — Monitor coverage
 
-**Status:** IN PROGRESS — V2-4A foundation complete; Wave 1 and Wave 2A collection/human-reviewed governance complete; Wave 2B pending its next human Gate. V2-4 as a whole is not complete.
+**Status:** IN PROGRESS — V2-4A foundation and all planned standard-name waves are governed; refined 百合 strategy validation remains. V2-4 as a whole is not complete.
 
 - **Goal:** Expand operational SearchQuery coverage safely while exposing all 106 Reference targets.
 - **Why:** Reference breadth and reliable discovery are different quality dimensions.
@@ -95,6 +95,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **V2-4A result:** 106 formal targets are searchable in task creation; 5 are operational, 12 first-batch candidates remain disabled/unvalidated, and 当归 remains paused. The batch plan is [MONITOR_QUERY_VALIDATION_PLAN_V2_4.md](MONITOR_QUERY_VALIDATION_PLAN_V2_4.md).
 - **V2-4 Wave 1 result:** 5 standard-name Queries/Targets (山楂、沙棘、罗汉果、黑芝麻、蜂蜜) were promoted; 乌梅 was held as disabled `paused_scope_issue`. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md).
 - **V2-4 Wave 2A result:** 4 standard-name Queries/Targets (山药、赤小豆、枸杞子、莲子) were promoted. Operational Reference coverage is now 14/106; 百合 and 菊花 remain disabled Wave 2B candidates. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md).
+- **V2-4 Wave 2B result:** 菊花 was promoted; the standard-name 百合 Query was rejected at 50% observed relevance while its MonitorTarget remains in the Reference. Operational Reference coverage is 15/106. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md).
 
 ## V2-5 — Claim taxonomy
 

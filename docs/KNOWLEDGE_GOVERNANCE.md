@@ -83,7 +83,9 @@ The fixed V2-4 promotion gate is at least 10 unique assessable results, observed
 
 V2-4 Wave 1 applied that gate to six standard-name Queries. 山楂、沙棘、罗汉果、黑芝麻、蜂蜜 were promoted after human review; 乌梅 remains disabled with `paused_scope_issue` because stable medicinal-material/medicinal-use scope mixing was observed despite meeting the 70% numeric floor. The reviewed record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Product-form observations remain notes rather than implicit new Queries.
 
-Wave 2A applied the same unchanged gate to 山药、赤小豆、枸杞子、莲子; all four standard-name Queries were promoted after explicit human review. Their record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md). 百合 and 菊花 remain unvalidated Wave 2B candidates, and all observed product forms remain notes rather than implicit new Queries.
+Wave 2A applied the same unchanged gate to 山药、赤小豆、枸杞子、莲子; all four standard-name Queries were promoted after explicit human review. Their record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md).
+
+Wave 2B promoted the standard-name 菊花 Query and rejected the standard-name 百合 Query at 50% observed relevance. This rejects only the Query strategy; the official 百合 MonitorTarget remains in the Reference and may receive a new provenance-backed `manually_curated` candidate under a separate collection/review gate. The record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md).
 
 ### 4.2 Claims and official functions
 

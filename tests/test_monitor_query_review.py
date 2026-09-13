@@ -80,6 +80,29 @@ class MonitorQueryReviewTest(unittest.TestCase):
         self.assertEqual(metrics["ambiguousSkipped"], 1)
         self.assertEqual(metrics["relevanceRate"], 0.9)
 
+    def test_wave_two_b_metrics_preserve_lily_rejection_and_chrysanthemum_promotion(self):
+        lily_rows = review_queue(10)["results"]
+        for row in lily_rows:
+            row["reviewedLabel"] = (
+                "relevant_food"
+                if row["rank"] in {1, 3, 5, 6, 10}
+                else "raw_medicinal_or_nonfood_scope"
+            )
+        lily = calculate_review_metrics(lily_rows)
+        self.assertEqual(lily["assessableCount"], 10)
+        self.assertEqual(lily["relevantCount"], 5)
+        self.assertEqual(lily["rawMedicinalOrNonfoodScopeCount"], 5)
+        self.assertEqual(lily["relevanceRate"], 0.5)
+
+        chrysanthemum_rows = review_queue(10)["results"]
+        for row in chrysanthemum_rows:
+            row["reviewedLabel"] = "relevant_food"
+        chrysanthemum = calculate_review_metrics(chrysanthemum_rows)
+        self.assertEqual(chrysanthemum["assessableCount"], 10)
+        self.assertEqual(chrysanthemum["relevantCount"], 10)
+        self.assertEqual(chrysanthemum["rawMedicinalOrNonfoodScopeCount"], 0)
+        self.assertEqual(chrysanthemum["relevanceRate"], 1.0)
+
     def test_hold_preserves_numeric_pass_and_systematic_scope_issue(self):
         assignments = [
             {

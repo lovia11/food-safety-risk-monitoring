@@ -5,9 +5,9 @@ import type { MonitorTarget, MonitorTargetList, TaskList } from "../../api/contr
 import { createTask, getMonitorTargets, getTasks } from "../../api/tasks";
 import { LoadingState } from "../../components/LoadingState";
 import {
-  MONITOR_AVAILABILITY_LABELS,
   canCreateMonitorTask,
   filterMonitorTargets,
+  monitorAvailabilityLabel,
   monitorAvailabilityMessage,
   type MonitorAvailabilityFilter,
 } from "../../domain/monitorTargets";
@@ -204,7 +204,7 @@ function MonitorTargetPicker({
           >
             <span className="monitor-target-row-main">
               <span className="monitor-target-name">{target.standard_name}</span>
-              <span className="monitor-availability-badge" data-availability={target.availability}>{MONITOR_AVAILABILITY_LABELS[target.availability]}</span>
+              <span className="monitor-availability-badge" data-availability={target.availability}>{monitorAvailabilityLabel(target)}</span>
               {selectedTarget?.target_id === target.target_id && <Check size={15} aria-hidden="true" />}
             </span>
             {target.availability === "operational" ? (

@@ -14,6 +14,7 @@ import {
   QUERY_PENDING_MESSAGE,
   canCreateMonitorTask,
   filterMonitorTargets,
+  monitorAvailabilityLabel,
   monitorAvailabilityMessage,
 } from "../src/domain/monitorTargets.ts";
 import {
@@ -216,10 +217,18 @@ test("monitor reference picker searches all availability states and exposes vali
 
 test("non-operational monitor targets cannot create tasks", () => {
   const pending = monitorTarget("山药", "query_pending");
+  const rejectedStrategy = {
+    ...monitorTarget("百合", "paused"),
+    availability_reason: "标准名称‘百合’已完成真实搜索验证，但药材语境混入较高，当前未启用。可继续验证更精确的食品搜索策略。",
+    queries: [{ query_id: "lily-base", query_text: "百合", validation_status: "rejected_low_relevance" }],
+  };
   const paused = monitorTarget("当归", "paused");
   assert.equal(canCreateMonitorTask(pending), false);
+  assert.equal(canCreateMonitorTask(rejectedStrategy), false);
   assert.equal(canCreateMonitorTask(paused), false);
   assert.equal(monitorAvailabilityMessage(pending), QUERY_PENDING_MESSAGE);
+  assert.equal(monitorAvailabilityLabel(rejectedStrategy), "搜索策略待完善");
+  assert.match(monitorAvailabilityMessage(rejectedStrategy), /标准名称‘百合’已完成真实搜索验证/);
   assert.match(monitorAvailabilityMessage(paused), /中药材/);
 });
 

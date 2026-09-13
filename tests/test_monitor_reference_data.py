@@ -93,7 +93,7 @@ class MonitorReferenceDataTest(unittest.TestCase):
         self.assertEqual(self.store.table_counts()["monitor_datasets"], 1)
         targets = self.store.list_monitor_targets()
         self.assertEqual(len(targets), 106)
-        self.assertEqual(sum(target["enabled"] for target in targets), 14)
+        self.assertEqual(sum(target["enabled"] for target in targets), 15)
         self.assertTrue(
             all(target["dataset_status"] == "verified_reference" for target in targets)
         )

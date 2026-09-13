@@ -87,10 +87,11 @@ Counts below are computed from the governed configuration at the verified commit
 |---|---:|
 | Official Reference MonitorTargets | 106 / 106 |
 | Reference targets with any governed Query | 18 |
-| Operational Reference targets | 14 / 106 |
-| Enabled / validated Reference queries | 17 / 17 |
-| Candidate, disabled Reference queries | 2 |
-| Paused Reference targets | 2 |
+| Operational Reference targets | 15 / 106 |
+| Enabled / validated Reference queries | 18 / 18 |
+| Candidate, disabled Reference queries | 0 |
+| Rejected, disabled Reference queries | 1 |
+| Paused Reference targets | 3 |
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
 | Evidence-to-risk Bridge mappings | 3 |
@@ -101,7 +102,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Method applicability records | 37 |
 | Substance regulatory contexts | 1 |
 
-The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. V2-4 Wave 1 promoted the standard-name Queries for 山楂、沙棘、罗汉果、黑芝麻、蜂蜜. Wave 2A promoted 山药、赤小豆、枸杞子、莲子. 乌梅 remains disabled `paused_scope_issue` because human review confirmed stable medicinal-material/medicinal-use scope mixing; 当归 remains paused for its earlier recorded scope issue. 百合 and 菊花 remain disabled and unvalidated for Wave 2B. The separate development seed is not merged into the verified Reference count.
+The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. V2-4 Wave 1 promoted the standard-name Queries for 山楂、沙棘、罗汉果、黑芝麻、蜂蜜. Wave 2A promoted 山药、赤小豆、枸杞子、莲子. Wave 2B promoted 菊花 and rejected the standard-name 百合 Query after its observed relevance was 50%; the 百合 MonitorTarget remains in the Reference with no executable strategy. 乌梅 remains disabled `paused_scope_issue` because human review confirmed stable medicinal-material/medicinal-use scope mixing; 当归 remains paused for its earlier recorded scope issue. The separate development seed is not merged into the verified Reference count.
 
 ## Current validation support
 
@@ -113,7 +114,7 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-3 source support is documented in [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md). Ordinary tests use a governed recorded official response; live official lookup is best-effort and never a CI dependency.
 - The five-product Historical Validation Set contains no valid registration/filing identifier and no positive strong identity candidate. Product `674221193698` has an explicit negative `是否保健食品…否` parameter and remains `no_indicator`; the other four also remain `no_indicator`. No historical artifact was edited or re-OCRed.
 - V2-3 validation: Python 441 discovered / 440 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 22/22; frontend typecheck and production build passed. Identifier, provider, matching, degradation, schema 9→10 and artifact rebuild contracts are covered. Product Detail plus page/official evidence dialogs were inspected locally at 1440px and 1080px without page-level horizontal overflow or new browser console errors.
-- V2-4A established full Reference visibility, three-state availability, strict Query lifecycle/execution guards, a tracked validation ledger, and a search-only batch artifact contract. V2-4 Wave 1 completed six standard-name Query reviews: five were promoted and 乌梅 was held. Wave 2A then promoted 山药、赤小豆、枸杞子、莲子 after bounded collection and human review. The immutable result records are [Batch 01A](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md) and [Batch 02A](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md).
+- V2-4A established full Reference visibility, three-state availability, strict Query lifecycle/execution guards, a tracked validation ledger, and a search-only batch artifact contract. V2-4 Wave 1 completed six standard-name Query reviews: five were promoted and 乌梅 was held. Wave 2A promoted 山药、赤小豆、枸杞子、莲子. Wave 2B promoted 菊花 and rejected only the standard-name 百合 search strategy, not its MonitorTarget. The immutable result records are [Batch 01A](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md), [Batch 02A](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md), and [Batch 02B](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md).
 - V2-4A validation: Python 452 discovered / 451 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. The new task picker was inspected locally at 1440px and 1080px with all 106 options, no horizontal overflow, correct operational/pending/paused behavior, and no new browser console warnings/errors.
 - V2-4B2 validation: Python 459 discovered / 458 passed / 1 skipped; targeted Monitor review/governance tests 45/45; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Offline local UI acceptance confirmed the five promoted Targets are searchable and runnable, while 乌梅 remains visible as `暂缓` with its action disabled and the scope-mixing reason shown.
 - V2-4B4 validation: Python 460 discovered / 459 passed / 1 skipped; targeted Monitor review/governance tests 46/46; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Offline local UI acceptance confirmed 山药、赤小豆、枸杞子、莲子 each expose only the promoted standard-name Query and are runnable; 乌梅 remains disabled as `暂缓`, while 百合、菊花 remain disabled in the `待验证` state. No live collection or external network access was used.
@@ -125,7 +126,7 @@ The following are **not implemented** at this baseline:
 - **FUTURE CHANGE:** final ClaimTaxonomy and claim-consistency assessment.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- **V2-4 IN PROGRESS:** Wave 2B bounded collection and human-reviewed governance for 百合、菊花 require the next explicit human Gate.
+- **V2-4 IN PROGRESS:** the planned standard-name waves are governed; a refined 百合 food-scope search strategy still requires bounded collection and final human review.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 

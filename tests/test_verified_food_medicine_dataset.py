@@ -143,6 +143,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 "赤小豆",
                 "枸杞子",
                 "莲子",
+                "菊花",
             },
         )
         enabled_queries = [
@@ -157,9 +158,9 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             for query in target["queries"]
             if query["validation_status"] == "candidate_unvalidated"
         ]
-        self.assertEqual(len(enabled_queries), 17)
+        self.assertEqual(len(enabled_queries), 18)
         self.assertTrue(all(query["validation_status"] == "search_validated" for query in enabled_queries))
-        self.assertEqual(len(candidate_queries), 2)
+        self.assertEqual(len(candidate_queries), 0)
         self.assertTrue(all(not query["enabled"] for query in candidate_queries))
         danggui = next(target for target in configured_targets if target["standard_name"] == "当归")
         self.assertFalse(danggui["enabled"])
@@ -170,6 +171,10 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
         self.assertFalse(ume["queries"][0]["enabled"])
         self.assertEqual(ume["queries"][0]["validation_status"], "paused_scope_issue")
         self.assertIn("系统性范围混杂", ume["queries"][0]["query_note"])
+        lily = next(target for target in configured_targets if target["standard_name"] == "百合")
+        self.assertFalse(lily["enabled"])
+        self.assertEqual(lily["queries"][0]["validation_status"], "rejected_low_relevance")
+        self.assertFalse(lily["queries"][0]["enabled"])
         self.assertIn("仅作为香辛料和调味品使用", self.payload["description"])
 
     def test_development_seed_is_independent_and_acid_jujube_is_not_overwritten(self):
@@ -245,7 +250,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             try:
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     listed = json.load(response)
-                self.assertEqual(listed["count"], 15)
+                self.assertEqual(listed["count"], 16)
                 self.assertEqual(
                     {target["standard_name"] for target in listed["targets"]},
                     {
@@ -263,6 +268,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                         "赤小豆",
                         "枸杞子",
                         "莲子",
+                        "菊花",
                     },
                 )
                 self.assertIn(
@@ -276,8 +282,8 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 with urlopen(f"{base}/api/monitor-targets?scope=reference") as response:
                     reference = json.load(response)
                 self.assertEqual(reference["count"], 106)
-                self.assertEqual(reference["coverage"]["operational_target_count"], 14)
-                self.assertEqual(reference["coverage"]["candidate_query_count"], 2)
+                self.assertEqual(reference["coverage"]["operational_target_count"], 15)
+                self.assertEqual(reference["coverage"]["candidate_query_count"], 0)
                 danggui = next(
                     target for target in reference["targets"]
                     if target["standard_name"] == "当归"
@@ -292,6 +298,12 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 self.assertNotIn(
                     "乌梅", {target["standard_name"] for target in listed["targets"]}
                 )
+                lily = next(
+                    target for target in reference["targets"]
+                    if target["standard_name"] == "百合"
+                )
+                self.assertEqual(lily["availability"], "paused")
+                self.assertIn("观察相关率50%", lily["availability_reason"])
                 with urlopen(
                     f"{base}/api/monitor-targets/food-medicine-2002-078"
                 ) as response:
