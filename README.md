@@ -30,7 +30,7 @@ Set-Location ..
 .\.venv\Scripts\python.exe -m src.local_api --output-root output --port 8765
 ```
 
-服务由 `ThreadingHTTPServer` 提供，默认读取 `frontend/dist`，使用 SQLite schema 9（含 Snapshot-scoped ProductFact 查询投影），并从版本化配置加载监测、风险和检验知识。运行参数可用以下命令查看：
+服务由 `ThreadingHTTPServer` 提供，默认读取 `frontend/dist`，使用 SQLite schema 10（含 Snapshot-scoped ProductFact、HealthFoodIdentity 与官方 Registry Record 查询投影），并从版本化配置加载监测、风险和检验知识。运行参数可用以下命令查看：
 
 ```powershell
 .\.venv\Scripts\python.exe -m src.local_api --help

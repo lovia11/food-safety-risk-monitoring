@@ -103,6 +103,8 @@ Mappings additionally record stable IDs, source basis text where available, scop
 - Official records retain registration/filing identifier, product identity, holder/manufacturer where applicable, official functions, source, status, and temporal scope.
 - Page logo or OCR number creates only a candidate.
 - Verification requires authoritative lookup and documented matching; unavailable and mismatch states remain distinct.
+- Current V2-3 online support is best-effort and governed by [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md). Raw responses retain retrieval time and SHA-256; normalized records retain the source URL. A governed imported official snapshot is an allowed fallback, while third-party databases are not authoritative.
+- Official function strings are preserved verbatim. No synonym, 24-function taxonomy, Claim equivalence, risk mapping or legality inference is created by registry import.
 
 ## 5. Forbidden inference
 

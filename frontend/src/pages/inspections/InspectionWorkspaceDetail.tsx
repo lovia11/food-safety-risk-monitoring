@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
 import { LoadingState } from "../../components/LoadingState";
+import { HealthFoodIdentitySection } from "../../components/HealthFoodIdentitySection";
 import { ProductContextForm } from "../../components/ProductContextForm";
 import { ProductSnapshotSummary } from "../../components/ProductSnapshotSummary";
 import { RecommendationPanel } from "../../components/RecommendationPanel";
@@ -115,6 +116,12 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
         </dl>
         {productUrl && <a className="text-link" href={productUrl} target="_blank" rel="noreferrer">打开保存的商品链接 <ExternalLink size={14} /></a>}
       </section>
+      <HealthFoodIdentitySection
+        identity={workspace.healthFoodIdentity}
+        assets={workspace.assets}
+        runId={workspace.snapshot.taskId}
+        productId={workspace.snapshot.productId}
+      />
       <EvidenceReviewSection
         evidence={workspace.evidence}
         assets={workspace.assets}

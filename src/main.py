@@ -26,6 +26,11 @@ from src.phase2_ocr import (
     record_ocr_runtime_initialization_failure,
     run_ocr,
 )
+from src.health_food_identity import extract_health_food_identity
+from src.health_food_registry import (
+    HealthFoodRegistryProvider,
+    OfficialOnlineProvider,
+)
 from src.phase3_analysis import run_analysis
 from src.phase5_batch import build_batch_record, build_batch_summary, write_batch_csv
 from src.product_facts import extract_product_facts
@@ -150,6 +155,11 @@ class StandalonePipeline:
         self.web_message = "正在初始化本地采集任务"
         self.inspection_runtime: InspectionRuntime | None = None
         self.manual_action_adapter: Any | None = None
+        self.health_food_registry_provider: HealthFoodRegistryProvider | None = (
+            OfficialOnlineProvider(
+                options.output_root.resolve() / "_registry_cache" / "health_food"
+            )
+        )
 
     def set_inspection_runtime(
         self, inspection_runtime: InspectionRuntime | None
@@ -162,6 +172,13 @@ class StandalonePipeline:
         """Attach the Web gate adapter without changing standalone CLI behavior."""
 
         self.manual_action_adapter = adapter
+
+    def set_health_food_registry_provider(
+        self, provider: HealthFoodRegistryProvider | None
+    ) -> None:
+        """Inject an offline/test provider or explicitly disable online lookup."""
+
+        self.health_food_registry_provider = provider
 
     def _generate_inspection_recommendation(self, product_root: Path) -> bool:
         if self.inspection_runtime is None:
@@ -202,6 +219,22 @@ class StandalonePipeline:
             # must not change OCR, Phase 3, Review eligibility or Product status.
             self.logger.exception(
                 "商品%s ProductFact抽取失败；继续执行风险分析", product_id
+            )
+
+    def _extract_health_food_identity(
+        self, product_id: str, product_root: Path
+    ) -> None:
+        """Run degradable identity enrichment outside Taobao and readiness."""
+
+        try:
+            extract_health_food_identity(
+                product_root,
+                make_snapshot_id(self.run_root.name, product_id),
+                provider=self.health_food_registry_provider,
+            )
+        except Exception:
+            self.logger.exception(
+                "商品%s 保健食品身份抽取失败；继续执行风险分析", product_id
             )
 
     def _records_and_batch_payload(
@@ -375,6 +408,8 @@ class StandalonePipeline:
             if state.get("status") == ProductStatus.SUCCESS and analysis_exists:
                 if not (product_root / "product_facts.json").is_file():
                     self._extract_product_facts(product_id, product_root)
+                if not (product_root / "health_food_identity.json").is_file():
+                    self._extract_health_food_identity(product_id, product_root)
                 if self.inspection_runtime is None or recommendation_exists:
                     self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
                     continue
@@ -414,6 +449,7 @@ class StandalonePipeline:
                     runtime=runtime,
                 )
                 self._extract_product_facts(product_id, product_root)
+                self._extract_health_food_identity(product_id, product_root)
                 run_analysis(
                     product_root,
                     self.options.rule_config,

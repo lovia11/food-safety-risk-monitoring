@@ -20,12 +20,13 @@ StandalonePipeline
     ├─ Search / Discovery
     ├─ Product Detail collection
     ├─ OCR
+    ├─ Health-food identity enrichment
     ├─ Phase3 analysis
     └─ Inspection Recommendation
     ↓
 output/<run_id>/ artifacts
     ↓ import/index
-DataStore (SQLite schema 9)
+DataStore (SQLite schema 10)
     ↓
 ReviewDecisionService / SamplingStore / SamplingExportService
 ```
@@ -43,7 +44,7 @@ ReviewDecisionService / SamplingStore / SamplingExportService
 
 Search writes run/task state and Candidate facts. Successful Detail collection produces a product directory with `meta.json` and captured source artifacts, including original images when available. OCR preserves `ocr/run_info.json`, `ocr/manifest.json`, diagnostic errors, and combined text as appropriate. Phase3 writes `analysis.json`. InspectionRuntime may write `inspection_recommendation.json`.
 
-After OCR artifacts are available, the independent ProductFact extractor reads existing DOM/OCR artifacts and writes `product_facts.json`. Extraction is degradable and never changes Phase3 inputs, Analysis readiness, Review eligibility or Product status. Existing successful products can be backfilled offline without re-running collection, OCR or Phase3.
+After OCR artifacts are available, the independent ProductFact extractor reads existing DOM/OCR artifacts and writes `product_facts.json`. The HealthFood Identity enrichment then reads the same bounded seller-managed sources, optionally queries the official registry through a cached provider, and writes `health_food_identity.json`. Both enrichments are degradable and never change Phase3 inputs, Analysis readiness, Review eligibility or Product status. Existing successful products can be backfilled offline without re-running collection, OCR or Phase3.
 
 The authoritative predicate in `src/pipeline_contract.py` distinguishes:
 
@@ -70,8 +71,9 @@ Recommendation is not a Review gate. A successful analysis with zero Evidence is
 
 | Store | Current role |
 |---|---|
-| `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, analysis and recommendation artifacts. |
-| `data/app.db` | Query/read index including ProductFact projections, imported run relationships, human Review, mutable current Sampling Membership, frozen-list index. |
+| `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, `health_food_identity.json`, analysis and recommendation artifacts. |
+| `output/_registry_cache/health_food/` | Best-effort official query cache with raw JSON, hash, retrieval time and normalized result; never committed. |
+| `data/app.db` | Query/read index including ProductFact/HealthFoodIdentity/normalized registry projections, imported run relationships, human Review, mutable current Sampling Membership, frozen-list index. |
 | Frozen JSON/XLSX/evidence export | Immutable historical sampling-list fact at export time. |
 | Governed `config/*.json` | Versioned operational/reference knowledge loaded by current runtime. |
 
@@ -81,13 +83,14 @@ SQLite run-derived data can be re-imported, but the database also contains human
 
 The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. Old contract compatibility retained by the backend does not make an old frontend current.
 
-Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility independently.
+Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently.
 
 ## 2. Current domain separation
 
 - Product is stable marketplace identity; ProductSnapshot is one observed state.
 - Evidence and Review are Snapshot-scoped.
 - ProductFact is Snapshot-scoped derived data with exact artifact provenance. The current implementation supports only `declared_origin`.
+- HealthFoodIdentity is Snapshot-scoped; HealthFoodRegistryRecord is an official identifier-keyed reusable projection. Neither rewrites Product, Review, Sampling, Evidence or Risk.
 - Current Sampling Membership is Product-scoped and records a source Snapshot.
 - Inspection Recommendation is derived from Evidence, Product Context, and versioned knowledge.
 - Review repositories do not write Membership; Sampling repositories do not write Review. Application services own compound transactions.
@@ -95,12 +98,12 @@ Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presenta
 
 ## 3. Target V2 architecture
 
-The ProductFact branch below is current for `declared_origin`; the other branches and read models remain target design until their own gates are accepted:
+The ProductFact and HealthFood Identity branches below are current; the other branches and read models remain target design until their own gates are accepted:
 
 ```text
 Current artifact pipeline
     ├─ ProductFact Extractor (current: declared_origin)
-    ├─ HealthFood Identity Resolver
+    ├─ HealthFood Identity Resolver (current)
     ├─ Claim Analyzer
     ├─ Claim Consistency Assessor
     └─ Knowledge Resolver
@@ -117,9 +120,9 @@ Current artifact pipeline
 
 Extracts structured facts only from identifiable Snapshot artifacts. It preserves raw value, normalized value, exact source, extraction method, and verification state. `product_facts.json` is the derived artifact authority; the generic SQLite `product_facts` table is a rebuildable projection. The current allowlist covers explicit declared-origin labels in seller-managed DOM parameter sections and conservative labeled detail-image OCR. It never infers origin from search region, title/UGC wording, shipping data, raw-material origin or addresses.
 
-### 3.2 HealthFood Identity Resolver
+### 3.2 HealthFood Identity Resolver — CURRENT V2-3
 
-Creates an identity candidate from page clues, then compares it with official registration/filing data. Candidate, verified, conflict, not-found, and insufficient states remain distinct.
+Creates clues and registration/filing candidates only from current-product seller-managed DOM and detail-image OCR. UGC and recommendation-area DOM are excluded. Ambiguous OCR characters are retained without correction or lookup. A provider abstraction supports low-frequency cached official lookup and governed imported snapshots. A found record becomes `verified_match` only when an explicit page product name equals the official product name after formatting-only normalization; title-only similarity is insufficient. Candidate, unavailable, not-found, unverified relation, mismatch and conflict states remain distinct. See [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md).
 
 ### 3.3 Claim Analyzer and consistency assessor
 

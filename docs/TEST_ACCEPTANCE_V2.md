@@ -17,7 +17,7 @@ Every implementation report states the starting commit, changed files, schema/AP
 - Links resolve and canonical documents link to the right authority.
 - Terminology matches the registry in Product Requirements.
 - Current implementation and Future changes are distinguishable.
-- Active docs identify schema 9 as the sole current schema; prior-version details remain only in archived or explicit migration history.
+- Active docs identify schema 10 as the sole current schema; prior-version details remain only in archived or explicit migration history.
 - Retired IA and `web/` do not appear as current.
 - Archived material is marked non-normative and is never cited as a higher authority.
 - A cold-start reader can answer the 16 canonical baseline questions without chat context.
@@ -73,7 +73,7 @@ At minimum test:
 
 Real validation includes clear-origin, missing-origin and conflicting-origin pages reviewed against the artifact.
 
-## 6. HealthFoodIdentity gate — Future V2-3
+## 6. HealthFoodIdentity gate — Current V2-3
 
 At minimum test:
 
@@ -85,6 +85,15 @@ At minimum test:
 - conflicting page clues;
 - record version/effective-state behavior;
 - no boolean collapse and no automatic legal conclusion.
+- current/legacy registration and filing formats, whitespace/punctuation/case normalization, invalid length/year and non-supported historical formats;
+- ambiguous OCR characters retained without correction or lookup;
+- UGC and recommendation-area exclusion, duplicate-source retention and multi-identifier conflict;
+- found/not-found/unavailable/malformed provider results, fresh cache reuse, raw artifact/hash and normalized-record parsing;
+- official health functions preserved verbatim with absent fields left `null`/`[]`;
+- exact/formatting-only product-name match, missing strong name, title-only insufficiency and mismatch;
+- schema 9→10 preservation, idempotent re-import, SQLite rebuild from artifact and old-run compatibility;
+- identity/provider failure cannot alter Analysis, Review or Sampling;
+- all ten states, separate page/official evidence, source link and OCR Lightbox behavior in frontend workflow coverage.
 
 Real validation compares a bounded set with official records and preserves the lookup source/time.
 

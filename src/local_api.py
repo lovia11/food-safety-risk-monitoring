@@ -564,6 +564,7 @@ def create_handler(
                     "declaredOrigin",
                     {"state": "none", "values": [], "sources": []},
                 )
+                health_food_identity = snapshot.pop("healthFoodIdentity")
                 review = snapshot.pop("review")
                 sampling = snapshot.pop("sampling")
                 self._json(
@@ -573,6 +574,7 @@ def create_handler(
                         "evidence": evidence,
                         "productFacts": product_facts,
                         "declaredOrigin": declared_origin,
+                        "healthFoodIdentity": health_food_identity,
                         "review": review,
                         "assets": artifacts["assets"],
                         "inspection": artifacts["inspection"],

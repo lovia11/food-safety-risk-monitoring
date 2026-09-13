@@ -7,6 +7,7 @@ import {
 } from "../domain/analysis";
 import type { EvidencePartitions } from "../domain/evidence";
 import { reviewPresentation } from "../domain/presentation";
+import { healthFoodIdentityPresentation } from "../domain/healthFoodIdentity";
 import { formatDateTime } from "../domain/product";
 import { ProductThumbnail } from "./ProductThumbnail";
 import { StatusBadge } from "./StatusBadge";
@@ -27,6 +28,7 @@ export function ProductSnapshotSummary({
   const review = workspace.snapshot.readiness.reviewEligible
     ? reviewPresentation[workspace.review.status]
     : { label: "尚不可复核", tone: "neutral" as const };
+  const healthFood = healthFoodIdentityPresentation[workspace.healthFoodIdentity.state];
 
   return (
     <section className="snapshot-summary">
@@ -44,6 +46,7 @@ export function ProductSnapshotSummary({
         <div className="snapshot-summary-statuses">
           <StatusBadge tone={analysis.tone}>{analysis.label}</StatusBadge>
           <StatusBadge tone={review.tone}>{review.label}</StatusBadge>
+          <StatusBadge tone={healthFood.tone}>{healthFood.summary}</StatusBadge>
         </div>
       </div>
       <dl className="snapshot-summary-grid">

@@ -167,6 +167,7 @@ export type SnapshotSummary = {
   detectedEffects: string[];
   reviewRequired: boolean | null;
   analysisSummary: string;
+  healthFoodIdentityState: HealthFoodIdentityState;
   paths: {
     run: string;
     product: string;
@@ -263,6 +264,86 @@ export type DeclaredOrigin = {
   sources: ProductFact[];
 };
 
+export type HealthFoodIdentityState =
+  | "no_indicator"
+  | "candidate_indicator_only"
+  | "candidate_identifier"
+  | "identifier_ambiguous"
+  | "registry_lookup_unavailable"
+  | "registry_record_not_found"
+  | "registry_record_found_identity_unverified"
+  | "verified_match"
+  | "identity_mismatch"
+  | "conflict";
+
+export type HealthFoodIdentitySource = {
+  sourceType: string;
+  sourcePath: string;
+  sourceText: string;
+  contentOrigin: "seller_managed";
+  extractionMethod: string;
+};
+
+export type HealthFoodClue = HealthFoodIdentitySource & {
+  clueId: string;
+  clueType: string;
+  text: string;
+};
+
+export type HealthFoodIdentifierCandidate = HealthFoodIdentitySource & {
+  candidateId: string;
+  rawValue: string;
+  normalizedValue: string;
+  identifierType: string;
+  formatState: "valid_current" | "legacy_identifier_candidate" | "ambiguous_ocr" | "invalid";
+};
+
+export type HealthFoodRegistryRecord = {
+  identifier: string;
+  identifierType: string;
+  productName: string | null;
+  registrantOrFiler: string | null;
+  registrantAddress: string | null;
+  issueOrFilingDate: string | null;
+  validUntil: string | null;
+  status: string | null;
+  officialHealthFunctions: string[];
+  functionalOrMarkerIngredients: string[];
+  suitablePopulation: string | null;
+  unsuitablePopulation: string | null;
+  specification: string | null;
+  sourceName: string;
+  sourceReference: string;
+  retrievedAt: string;
+  rawArtifactHash: string;
+  rawArtifactPath: string | null;
+};
+
+export type HealthFoodIdentity = {
+  state: HealthFoodIdentityState;
+  clues: HealthFoodClue[];
+  identifiers: HealthFoodIdentifierCandidate[];
+  registryRecord: HealthFoodRegistryRecord | null;
+  productMatch: {
+    state: "not_assessed" | "unverified" | "strong_match" | "mismatch" | "conflict";
+    pageProductNames: Array<HealthFoodIdentitySource & { value: string }>;
+    officialProductName: string | null;
+    titleAuxiliary: string | null;
+    matchingRule: string;
+  };
+  verification: {
+    status: "not_attempted" | "found" | "not_found" | "unavailable" | "malformed";
+    queriedIdentifier: string | null;
+    queriedAt: string | null;
+    error: string | null;
+    rawArtifactPath?: string | null;
+    rawArtifactSha256?: string | null;
+  };
+  officialSource: { name: string; reference: string };
+  gaps: string[];
+  diagnostics: Record<string, unknown>;
+};
+
 export type ProductAssets = {
   overview: string | null;
   screenshots: string[];
@@ -353,6 +434,7 @@ export type SnapshotWorkspace = {
   evidence: Evidence[];
   productFacts: ProductFact[];
   declaredOrigin: DeclaredOrigin;
+  healthFoodIdentity: HealthFoodIdentity;
   review: Review;
   assets: ProductAssets;
   inspection: InspectionView;

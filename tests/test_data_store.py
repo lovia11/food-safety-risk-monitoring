@@ -154,6 +154,76 @@ def write_declared_origin_artifact(
     )
 
 
+def write_health_food_identity_artifact(run_root: Path, product_id: str) -> None:
+    snapshot_id = make_snapshot_id(run_root.name, product_id)
+    write_json(
+        run_root / "products" / product_id / "health_food_identity.json",
+        {
+            "schemaVersion": 1,
+            "extractorVersion": "test-health-food-identity-v1",
+            "generatedAt": "2026-09-13T10:00:00+08:00",
+            "snapshotId": snapshot_id,
+            "clues": [{"clueId": "hfc_test", "text": "保健食品"}],
+            "identifierCandidates": [
+                {
+                    "candidateId": "hfi_test",
+                    "rawValue": "国食健注G20190188",
+                    "normalizedValue": "国食健注G20190188",
+                    "identifierType": "registration_current_domestic",
+                    "formatState": "valid_current",
+                    "sourceType": "ocr_detail_image",
+                    "sourcePath": "ocr/original_001.txt#L2",
+                    "sourceText": "国食健注G20190188",
+                    "contentOrigin": "seller_managed",
+                    "extractionMethod": "test_fixture",
+                }
+            ],
+            "officialLookup": {
+                "status": "found",
+                "queriedIdentifier": "国食健注G20190188",
+                "sourceName": "国家市场监督管理总局特殊食品信息查询平台",
+                "sourceReference": "https://ypzsx.gsxt.gov.cn/specialfood/",
+                "queriedAt": "2026-09-13T10:00:00+08:00",
+                "rawArtifactPath": "reference/health_food/test/raw.json",
+                "rawArtifactSha256": "abc123",
+                "error": None,
+                "record": {
+                    "identifier": "国食健注G20190188",
+                    "identifierType": "registration_current_domestic",
+                    "productName": "谷宜甘牌谷胱甘肽茶多酚片",
+                    "registrantOrFiler": "山东金城生物药业有限公司",
+                    "registrantAddress": "测试地址",
+                    "issueOrFilingDate": "2025-01-20",
+                    "validUntil": "2030-01-19",
+                    "status": None,
+                    "officialHealthFunctions": ["官方功能原文"],
+                    "functionalOrMarkerIngredients": [],
+                    "suitablePopulation": None,
+                    "unsuitablePopulation": None,
+                    "specification": "0.4g/片",
+                    "sourceName": "国家市场监督管理总局特殊食品信息查询平台",
+                    "sourceReference": "https://ypzsx.gsxt.gov.cn/specialfood/",
+                    "retrievedAt": "2026-09-13T10:00:00+08:00",
+                    "rawArtifactHash": "abc123",
+                    "rawArtifactPath": "reference/health_food/test/raw.json",
+                },
+            },
+            "identityAssessment": {
+                "state": "verified_match",
+                "productMatch": {
+                    "state": "strong_match",
+                    "pageProductNames": [{"value": "谷宜甘牌谷胱甘肽茶多酚片"}],
+                    "officialProductName": "谷宜甘牌谷胱甘肽茶多酚片",
+                    "titleAuxiliary": None,
+                    "matchingRule": "formatting_normalized_exact_equality",
+                },
+            },
+            "gaps": [],
+            "diagnostics": {"registryLookupAttempted": True},
+        },
+    )
+
+
 class DataStoreTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -184,6 +254,8 @@ class DataStoreTest(unittest.TestCase):
                 "product_snapshots",
                 "evidence",
                 "product_facts",
+                "health_food_identities",
+                "health_food_registry_records",
                 "reviews",
                 "monitor_datasets",
                 "monitor_targets",
@@ -203,7 +275,7 @@ class DataStoreTest(unittest.TestCase):
             }
             <= tables
         )
-        self.assertEqual(version, 9)
+        self.assertEqual(version, 10)
 
     def test_schema_7_migration_is_additive_and_preserves_review(self):
         run_root = create_run(self.output_root, "legacy_run")
@@ -234,7 +306,7 @@ class DataStoreTest(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 9)
+        self.assertEqual(version, 10)
         self.assertIn("display_name", task_columns)
         self.assertTrue(
             {
@@ -271,7 +343,7 @@ class DataStoreTest(unittest.TestCase):
             fact_columns = {
                 row[1] for row in connection.execute("PRAGMA table_info(product_facts)")
             }
-        self.assertEqual(version, 9)
+        self.assertEqual(version, 10)
         for table, count in before.items():
             if table != "product_facts":
                 self.assertEqual(after[table], count, table)
@@ -288,6 +360,59 @@ class DataStoreTest(unittest.TestCase):
             }
             <= fact_columns
         )
+
+    def test_schema_9_to_10_migration_adds_health_food_tables_and_preserves_all_entities(self):
+        run_root = create_run(self.output_root, "schema9_run")
+        write_declared_origin_artifact(run_root, "123", [("中国大陆", "dom_parameter")])
+        self.store.import_run(run_root)
+        self.store.import_monitor_config(PROJECT_ROOT / "config" / "monitor_targets.development.json")
+        self.store.import_inspection_config(PROJECT_ROOT / "config" / "inspection_reference.json")
+        self.store.import_risk_substance_config(PROJECT_ROOT / "config" / "risk_substance_reference.json")
+        snapshot_id = make_snapshot_id("schema9_run", "123")
+        self.store.update_review(snapshot_id, "recommend_follow_up", "人工结论保留")
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute(
+                "INSERT INTO sampling_list_memberships VALUES (?, ?, ?, ?, ?, ?)",
+                ("123", snapshot_id, "schema9_run", "product_overview", "2026-09-13T09:00:00+08:00", "2026-09-13T09:00:00+08:00"),
+            )
+            connection.execute(
+                "INSERT INTO sampling_lists VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                ("list-old", "exported", "2026-09-13T09:00:00+08:00", 1, "snapshot.json", "list.xlsx", "sha-json", "sha-xlsx", "2026-09-13T09:00:00+08:00", "2026-09-13T09:00:00+08:00"),
+            )
+            connection.execute(
+                "INSERT INTO sampling_list_item_index VALUES (?, ?, ?, ?, ?)",
+                ("list-old", 1, "123", snapshot_id, "schema9_run"),
+            )
+        connection.close()
+        before = self.store.table_counts()
+        with sqlite3.connect(self.store.database_path) as connection:
+            connection.executescript(
+                """
+                DROP TABLE health_food_identities;
+                DROP TABLE health_food_registry_records;
+                PRAGMA user_version = 9;
+                """
+            )
+
+        migrated = DataStore(self.store.database_path, self.output_root)
+        migrated.initialize()
+        after = migrated.table_counts()
+        with sqlite3.connect(self.store.database_path) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            tables = {
+                row[0] for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+        self.assertEqual(version, 10)
+        for table, count in before.items():
+            if table not in {"health_food_identities", "health_food_registry_records"}:
+                self.assertEqual(after[table], count, table)
+        self.assertEqual(after["health_food_identities"], 0)
+        self.assertEqual(after["health_food_registry_records"], 0)
+        self.assertTrue({"health_food_identities", "health_food_registry_records"} <= tables)
+        self.assertEqual(migrated.get_snapshot(snapshot_id)["review"]["note"], "人工结论保留")
 
     def _import_monitor_seed(self, *, include_second_target: bool = False):
         config = self.root / "monitor_targets.json"
@@ -480,6 +605,40 @@ class DataStoreTest(unittest.TestCase):
         self.assertEqual(detail["declaredOrigin"]["state"], "single")
         self.assertEqual(detail["declaredOrigin"]["values"], ["中国大陆"])
         self.assertEqual(len(detail["declaredOrigin"]["sources"]), 2)
+
+    def test_health_food_identity_reimport_and_database_rebuild_are_artifact_backed(self):
+        run_root = create_run(self.output_root, "health_identity_run")
+        write_health_food_identity_artifact(run_root, "123")
+        snapshot_id = make_snapshot_id("health_identity_run", "123")
+        first = self.store.import_run(run_root)
+        self.store.update_review(snapshot_id, "no_further_action", "人工状态不得改变")
+        second = self.store.import_run(run_root)
+        detail = self.store.get_snapshot(snapshot_id)
+        self.assertEqual(first["health_food_identities"], 1)
+        self.assertEqual(second["health_food_identities"], 1)
+        self.assertEqual(self.store.table_counts()["health_food_identities"], 1)
+        self.assertEqual(self.store.table_counts()["health_food_registry_records"], 1)
+        self.assertEqual(detail["healthFoodIdentity"]["state"], "verified_match")
+        self.assertEqual(
+            detail["healthFoodIdentity"]["registryRecord"]["officialHealthFunctions"],
+            ["官方功能原文"],
+        )
+        self.assertEqual(detail["review"]["note"], "人工状态不得改变")
+
+        rebuilt = DataStore(self.root / "data" / "rebuilt.db", self.output_root)
+        rebuilt.initialize()
+        rebuilt.import_run(run_root)
+        rebuilt_detail = rebuilt.get_snapshot(snapshot_id)
+        self.assertEqual(rebuilt_detail["healthFoodIdentity"]["state"], "verified_match")
+        self.assertEqual(rebuilt.table_counts()["health_food_registry_records"], 1)
+
+    def test_old_run_without_health_food_artifact_imports_as_no_indicator(self):
+        run_root = create_run(self.output_root, "old_without_identity")
+        result = self.store.import_run(run_root)
+        detail = self.store.get_snapshot(make_snapshot_id("old_without_identity", "123"))
+        self.assertEqual(result["health_food_identities"], 0)
+        self.assertEqual(detail["healthFoodIdentity"]["state"], "no_indicator")
+        self.assertEqual(detail["healthFoodIdentityState"], "no_indicator")
 
     def test_product_facts_are_snapshot_scoped_and_conflicts_are_retained(self):
         older = create_run(self.output_root, "facts_old")

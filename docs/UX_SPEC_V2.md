@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This specification governs the V2 interaction model. V2-1 and V2-2 sections describe current behavior; later Future sections remain requirements rather than implementation claims.
+This specification governs the V2 interaction model. V2-1 through V2-3 sections describe current behavior; later Future sections remain requirements rather than implementation claims.
 
 ## 1. Global UI principles
 
@@ -133,6 +133,14 @@ If a pending Snapshot belongs to a Product already sampled from another Snapshot
 The analyst may complete the Snapshot Review without silently replacing the Membership source. After a follow-up decision, state that the current list still uses the original Snapshot. Updating the source is a separate future design decision.
 
 Atomic “加入抽检清单” and “暂不纳入” application operations follow the Product Requirements. Standalone “移出当前清单” changes Membership only.
+
+## 8.1 Health-food identity — Current V2-3
+
+Product Detail and Inspection Workspace include a calm, secondary `保健食品身份` section. Summary presentation is limited to `普通 / 未确认`, `保健食品待核验`, `保健食品 · 已核验`, or `身份信息待复核`; only backend state `verified_match` receives the verified label.
+
+The detail section distinguishes all backend states: no indicator, indicator only, identifier candidate, ambiguous OCR, lookup unavailable, record not found, record found/relation unverified, verified match, mismatch and conflict. It never uses `假蓝帽`, `假保健食品` or `违法产品`.
+
+`查看页面依据` opens an in-app source trace and reuses the existing OCR Lightbox/source viewer. `查看官方依据` opens a separate in-app official-record modal with identifier, official product name, registration/filing subject, dates, official health-function text and query time; opening the official source is secondary. Page evidence is never merged into Phase3 Evidence, and official evidence is never presented as page content.
 
 ## 9. Loading, empty and error behavior
 

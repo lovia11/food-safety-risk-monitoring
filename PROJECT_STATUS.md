@@ -3,8 +3,8 @@
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- V2-2 starting commit: `e6acc4345d3ef4c702c40d78c9fb2e2a179fe75d`
-- SQLite schema: 9
+- V2-3 starting commit: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
+- SQLite schema: 10
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
 
@@ -19,6 +19,7 @@
 - Web manual-action coordination without HTTP-thread browser control
 - Deterministic Historical Validation support
 - Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
+- Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 
 ## Current Coverage
 
@@ -30,18 +31,18 @@
 
 ## Current Validation
 
-V2-2 validation: Python 414 discovered / 413 passed / 1 skipped; frontend workflow 19/19; frontend typecheck and production build passed. It includes A–L extraction fixtures, schema 8→9 preservation, idempotent import/API coverage, Historical Validation generation, and offline 1440px/1080px source-trace inspection. The five-product set produced six provenance-bearing facts, including one explicit conflict.
+V2-3 validation: Python 441 discovered / 440 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 22/22; frontend typecheck and production build passed. It includes identifier/source/provider/matching fixtures, schema 9→10 preservation, idempotent import/rebuild/API coverage, degradable pipeline integration, a recorded official positive response, and local 1440px/1080px detail/modal inspection without page-level horizontal overflow or new console errors. The five-product Historical Validation Set remains unmodified and all five products resolve to `no_indicator`.
 
 ## Known Limitations
 
-HealthFoodIdentity/official lookup, additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and broad Operational Search coverage are Future V2 work. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and broad Operational Search coverage are Future V2 work. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-2 — ProductFact Foundation + Declared Origin implemented and validated.
+V2-3 — HealthFood Identity & Official Registry Verification implemented and validated; awaiting acceptance.
 
 ## Next Gate
 
-V2-3 HealthFoodIdentity remains a separate gate and has not started. Do not begin it without explicit approval and an official-registry acquisition contract.
+V2-4 Monitor coverage remains a separate gate. Do not begin it before V2-3 is accepted.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

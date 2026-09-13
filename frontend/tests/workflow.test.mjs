@@ -11,6 +11,13 @@ import {
 } from "../src/domain/evidence.ts";
 import { clampLightboxZoom, moveLightboxIndex } from "../src/domain/media.ts";
 import {
+  healthFoodArtifactPath,
+  healthFoodIdentityPresentation,
+  healthFoodSourceLabel,
+  isVerifiedHealthFoodIdentity,
+} from "../src/domain/healthFoodIdentity.ts";
+import { readFileSync } from "node:fs";
+import {
   isProductRowActivationKey,
   productAnalysisPresentation,
   productThumbnailSource,
@@ -405,6 +412,45 @@ test("declared origin presentation keeps none, provenance, and conflicts explici
   assert.equal(productFactSourceLabel("ocr_detail_image"), "详情图 OCR");
   assert.equal(productFactArtifactPath(ocr), "ocr/original_003.txt");
   assert.deepEqual(productFactSourcesForValue(conflict, "河北邢台"), [ocr]);
+});
+
+test("health-food identity presents every backend state without promoting candidates", () => {
+  const expected = {
+    no_indicator: "—",
+    candidate_indicator_only: "检测到身份线索",
+    candidate_identifier: "注册信息待核验",
+    identifier_ambiguous: "编号字符待确认",
+    registry_lookup_unavailable: "官方查询暂不可用",
+    registry_record_not_found: "官方记录未找到",
+    registry_record_found_identity_unverified: "官方记录存在 · 对应关系待确认",
+    verified_match: "官方记录已核验",
+    identity_mismatch: "页面与官方记录存在差异",
+    conflict: "身份候选存在冲突",
+  };
+  for (const [state, label] of Object.entries(expected)) {
+    assert.equal(healthFoodIdentityPresentation[state].label, label);
+    assert.equal(isVerifiedHealthFoodIdentity(state), state === "verified_match");
+  }
+  assert.equal(healthFoodIdentityPresentation.candidate_identifier.summary, "保健食品待核验");
+  assert.equal(healthFoodIdentityPresentation.verified_match.summary, "保健食品 · 已核验");
+});
+
+test("health-food page evidence tolerates legacy sources without path metadata", () => {
+  assert.equal(healthFoodSourceLabel(undefined), "页面依据");
+  assert.equal(healthFoodArtifactPath(undefined), null);
+  assert.equal(healthFoodArtifactPath("ocr\\original_001.txt#L2"), "ocr/original_001.txt");
+});
+
+test("health-food detail keeps page evidence, official evidence, functions and OCR lightbox explicit", () => {
+  const source = readFileSync(
+    new URL("../src/components/HealthFoodIdentitySection.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /查看页面依据/);
+  assert.match(source, /查看官方依据/);
+  assert.match(source, /officialHealthFunctions/);
+  assert.match(source, /ImageLightbox/);
+  assert.match(source, /打开官方来源/);
 });
 
 test("sampling presentation keeps frozen method categories separate", () => {

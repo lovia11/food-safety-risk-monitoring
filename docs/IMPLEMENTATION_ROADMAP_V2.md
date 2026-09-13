@@ -60,6 +60,8 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-3 — Health-food identity
 
+- **Status:** COMPLETE — implemented with schema 9→10 additive migration, a governed official-source adapter contract, offline official positive fixture and Snapshot workspace UI.
+
 - **Goal:** Resolve health-food identity against authoritative registration/filing records.
 - **Why:** Page logos and numbers are clues, not verified identity.
 - **Dependencies:** V2-2 provenance model and an approved official-registry acquisition contract.
@@ -72,6 +74,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Testing:** Required identity fixtures, source availability, temporal/version behavior, and path security.
 - **Real-world validation:** Manually compare a bounded set against official records.
 - **Exit criteria:** Verified identities reproduce the official match; all other cases remain explicit candidate/conflict/not-found/insufficient states.
+- **Implemented result:** Seller-managed DOM/OCR candidate extraction, strict current/legacy identifier handling, no OCR character guessing, cached/degradable official provider plus imported-snapshot provider, verbatim official function retention, conservative exact product-name matching, artifact-backed import/rebuild, ten-state API/UI presentation and separate page/official source traces. Claim consistency remains out of scope.
 
 ## V2-4 — Monitor coverage
 

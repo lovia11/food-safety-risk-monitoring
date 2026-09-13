@@ -690,6 +690,9 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertEqual(len(workspace["productFacts"]), 2)
                 self.assertEqual(workspace["declaredOrigin"]["state"], "conflict")
                 self.assertEqual(
+                    workspace["healthFoodIdentity"]["state"], "no_indicator"
+                )
+                self.assertEqual(
                     workspace["declaredOrigin"]["values"],
                     ["中国大陆", "河北邢台"],
                 )

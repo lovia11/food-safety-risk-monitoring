@@ -16,6 +16,11 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
+from src.health_food_identity import (
+    HEALTH_FOOD_IDENTITY_FILE,
+    load_health_food_identity,
+    present_health_food_identity,
+)
 from src.inspection_reference import (
     InspectionConfigValidationError,
     validate_inspection_config,
@@ -48,7 +53,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -561,6 +566,52 @@ class DataStore:
                     created_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS health_food_registry_records (
+                    identifier TEXT PRIMARY KEY,
+                    identifier_type TEXT NOT NULL,
+                    product_name TEXT,
+                    registrant_or_filer TEXT,
+                    registrant_address TEXT,
+                    issue_or_filing_date TEXT,
+                    valid_until TEXT,
+                    status TEXT,
+                    official_health_functions_json TEXT NOT NULL DEFAULT '[]',
+                    functional_or_marker_ingredients_json TEXT NOT NULL DEFAULT '[]',
+                    suitable_population TEXT,
+                    unsuitable_population TEXT,
+                    specification TEXT,
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    retrieved_at TEXT NOT NULL,
+                    raw_artifact_hash TEXT NOT NULL,
+                    raw_artifact_path TEXT,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS health_food_identities (
+                    snapshot_id TEXT PRIMARY KEY
+                        REFERENCES product_snapshots(snapshot_id) ON DELETE CASCADE,
+                    state TEXT NOT NULL CHECK(state IN (
+                        'no_indicator', 'candidate_indicator_only',
+                        'candidate_identifier', 'identifier_ambiguous',
+                        'registry_lookup_unavailable', 'registry_record_not_found',
+                        'registry_record_found_identity_unverified', 'verified_match',
+                        'identity_mismatch', 'conflict'
+                    )),
+                    registry_identifier TEXT
+                        REFERENCES health_food_registry_records(identifier),
+                    extractor_version TEXT NOT NULL,
+                    artifact_path TEXT NOT NULL,
+                    clues_json TEXT NOT NULL DEFAULT '[]',
+                    identifiers_json TEXT NOT NULL DEFAULT '[]',
+                    product_match_json TEXT NOT NULL DEFAULT '{}',
+                    verification_json TEXT NOT NULL DEFAULT '{}',
+                    gaps_json TEXT NOT NULL DEFAULT '[]',
+                    diagnostics_json TEXT NOT NULL DEFAULT '{}',
+                    generated_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS reviews (
                     snapshot_id TEXT PRIMARY KEY REFERENCES product_snapshots(snapshot_id)
                         ON DELETE CASCADE,
@@ -580,6 +631,10 @@ class DataStore:
                     ON product_facts(snapshot_id, fact_type, fact_id);
                 CREATE INDEX IF NOT EXISTS idx_product_facts_type_value
                     ON product_facts(fact_type, normalized_value);
+                CREATE INDEX IF NOT EXISTS idx_health_food_identities_state
+                    ON health_food_identities(state, snapshot_id);
+                CREATE INDEX IF NOT EXISTS idx_health_food_identities_registry
+                    ON health_food_identities(registry_identifier);
                 CREATE INDEX IF NOT EXISTS idx_reviews_status
                     ON reviews(review_status);
 
@@ -1814,6 +1869,8 @@ class DataStore:
         ]
         imported_evidence = 0
         imported_product_facts = 0
+        imported_health_food_identities = 0
+        imported_health_food_registry_records: set[str] = set()
         with self._connect() as connection:
             existing_task = connection.execute(
                 "SELECT display_name FROM tasks WHERE task_id = ?", (task_id,)
@@ -2039,6 +2096,103 @@ class DataStore:
                         ),
                     )
                 imported_product_facts += len(facts)
+                connection.execute(
+                    "DELETE FROM health_food_identities WHERE snapshot_id = ?",
+                    (snapshot_id,),
+                )
+                identity_payload = load_health_food_identity(
+                    run_root / "products" / product_id / HEALTH_FOOD_IDENTITY_FILE,
+                    expected_snapshot_id=snapshot_id,
+                )
+                if identity_payload is not None:
+                    identity = present_health_food_identity(identity_payload)
+                    record = identity.get("registryRecord")
+                    registry_identifier = None
+                    if isinstance(record, dict) and str(record.get("identifier") or "").strip():
+                        registry_identifier = str(record["identifier"])
+                        connection.execute(
+                            """
+                            INSERT INTO health_food_registry_records (
+                                identifier, identifier_type, product_name,
+                                registrant_or_filer, registrant_address,
+                                issue_or_filing_date, valid_until, status,
+                                official_health_functions_json,
+                                functional_or_marker_ingredients_json,
+                                suitable_population, unsuitable_population,
+                                specification, source_name, source_reference,
+                                retrieved_at, raw_artifact_hash, raw_artifact_path,
+                                updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(identifier) DO UPDATE SET
+                                identifier_type=excluded.identifier_type,
+                                product_name=excluded.product_name,
+                                registrant_or_filer=excluded.registrant_or_filer,
+                                registrant_address=excluded.registrant_address,
+                                issue_or_filing_date=excluded.issue_or_filing_date,
+                                valid_until=excluded.valid_until,
+                                status=excluded.status,
+                                official_health_functions_json=excluded.official_health_functions_json,
+                                functional_or_marker_ingredients_json=excluded.functional_or_marker_ingredients_json,
+                                suitable_population=excluded.suitable_population,
+                                unsuitable_population=excluded.unsuitable_population,
+                                specification=excluded.specification,
+                                source_name=excluded.source_name,
+                                source_reference=excluded.source_reference,
+                                retrieved_at=excluded.retrieved_at,
+                                raw_artifact_hash=excluded.raw_artifact_hash,
+                                raw_artifact_path=excluded.raw_artifact_path,
+                                updated_at=excluded.updated_at
+                            """,
+                            (
+                                registry_identifier,
+                                str(record.get("identifierType") or "unknown"),
+                                record.get("productName"),
+                                record.get("registrantOrFiler"),
+                                record.get("registrantAddress"),
+                                record.get("issueOrFilingDate"),
+                                record.get("validUntil"),
+                                record.get("status"),
+                                _json_text(record.get("officialHealthFunctions"), []),
+                                _json_text(record.get("functionalOrMarkerIngredients"), []),
+                                record.get("suitablePopulation"),
+                                record.get("unsuitablePopulation"),
+                                record.get("specification"),
+                                str(record.get("sourceName") or ""),
+                                str(record.get("sourceReference") or ""),
+                                str(record.get("retrievedAt") or generated_at),
+                                str(record.get("rawArtifactHash") or ""),
+                                record.get("rawArtifactPath"),
+                                generated_at,
+                            ),
+                        )
+                        imported_health_food_registry_records.add(registry_identifier)
+                    connection.execute(
+                        """
+                        INSERT INTO health_food_identities (
+                            snapshot_id, state, registry_identifier,
+                            extractor_version, artifact_path, clues_json,
+                            identifiers_json, product_match_json,
+                            verification_json, gaps_json, diagnostics_json,
+                            generated_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            snapshot_id,
+                            identity["state"],
+                            registry_identifier,
+                            str(identity_payload.get("extractorVersion") or ""),
+                            f"products/{product_id}/{HEALTH_FOOD_IDENTITY_FILE}",
+                            _json_text(identity.get("clues"), []),
+                            _json_text(identity.get("identifiers"), []),
+                            _json_text(identity.get("productMatch"), {}),
+                            _json_text(identity.get("verification"), {}),
+                            _json_text(identity.get("gaps"), []),
+                            _json_text(identity.get("diagnostics"), {}),
+                            str(identity_payload.get("generatedAt") or generated_at),
+                            generated_at,
+                        ),
+                    )
+                    imported_health_food_identities += 1
             discovery = _read_optional_json(
                 run_root / "search" / "discovery_summary.json", {}
             )
@@ -2092,6 +2246,8 @@ class DataStore:
             "products": len(products),
             "evidence": imported_evidence,
             "product_facts": imported_product_facts,
+            "health_food_identities": imported_health_food_identities,
+            "health_food_registry_records": len(imported_health_food_registry_records),
             "candidate_hits": len(
                 (discovery.get("candidate_hits") or []) if isinstance(discovery, dict) else []
             ),
@@ -2126,6 +2282,7 @@ class DataStore:
                 None if row["review_required"] is None else bool(row["review_required"])
             ),
             "analysisSummary": row["analysis_summary"],
+            "healthFoodIdentityState": row["health_food_identity_state"] or "no_indicator",
             "paths": {
                 "run": row["run_path"],
                 "product": row["product_path"],
@@ -2186,6 +2343,7 @@ class DataStore:
                        t.task_id
                    ) AS task_display_name,
                    mt.standard_name AS target_name,
+                   hfi.state AS health_food_identity_state,
                    r.review_status, r.review_note, r.reviewed_at,
                    (
                        SELECT COUNT(*)
@@ -2212,6 +2370,7 @@ class DataStore:
             JOIN tasks t ON t.task_id = s.task_id
             JOIN reviews r ON r.snapshot_id = s.snapshot_id
             LEFT JOIN monitor_targets mt ON mt.target_id = t.target_id
+            LEFT JOIN health_food_identities hfi ON hfi.snapshot_id = s.snapshot_id
             LEFT JOIN sampling_list_memberships sm ON sm.product_id = s.product_id
             LEFT JOIN (
                 SELECT snapshot_id, COUNT(*) AS evidence_count,
@@ -2657,6 +2816,59 @@ class DataStore:
             for item in fact_rows
         ]
         result["declaredOrigin"] = present_declared_origin(result["productFacts"])
+        identity_row = connection.execute(
+            "SELECT * FROM health_food_identities WHERE snapshot_id = ?",
+            (snapshot_id,),
+        ).fetchone()
+        if identity_row is None:
+            result["healthFoodIdentity"] = present_health_food_identity(None)
+        else:
+            registry_record = None
+            if identity_row["registry_identifier"]:
+                registry_row = connection.execute(
+                    "SELECT * FROM health_food_registry_records WHERE identifier = ?",
+                    (identity_row["registry_identifier"],),
+                ).fetchone()
+                if registry_row is not None:
+                    registry_record = {
+                        "identifier": registry_row["identifier"],
+                        "identifierType": registry_row["identifier_type"],
+                        "productName": registry_row["product_name"],
+                        "registrantOrFiler": registry_row["registrant_or_filer"],
+                        "registrantAddress": registry_row["registrant_address"],
+                        "issueOrFilingDate": registry_row["issue_or_filing_date"],
+                        "validUntil": registry_row["valid_until"],
+                        "status": registry_row["status"],
+                        "officialHealthFunctions": _json_value(
+                            registry_row["official_health_functions_json"], []
+                        ),
+                        "functionalOrMarkerIngredients": _json_value(
+                            registry_row["functional_or_marker_ingredients_json"], []
+                        ),
+                        "suitablePopulation": registry_row["suitable_population"],
+                        "unsuitablePopulation": registry_row["unsuitable_population"],
+                        "specification": registry_row["specification"],
+                        "sourceName": registry_row["source_name"],
+                        "sourceReference": registry_row["source_reference"],
+                        "retrievedAt": registry_row["retrieved_at"],
+                        "rawArtifactHash": registry_row["raw_artifact_hash"],
+                        "rawArtifactPath": registry_row["raw_artifact_path"],
+                    }
+            verification = _json_value(identity_row["verification_json"], {})
+            result["healthFoodIdentity"] = {
+                "state": identity_row["state"],
+                "clues": _json_value(identity_row["clues_json"], []),
+                "identifiers": _json_value(identity_row["identifiers_json"], []),
+                "registryRecord": registry_record,
+                "productMatch": _json_value(identity_row["product_match_json"], {}),
+                "verification": verification,
+                "officialSource": {
+                    "name": registry_record["sourceName"] if registry_record else "国家市场监督管理总局特殊食品信息查询平台",
+                    "reference": registry_record["sourceReference"] if registry_record else "https://ypzsx.gsxt.gov.cn/specialfood/",
+                },
+                "gaps": _json_value(identity_row["gaps_json"], []),
+                "diagnostics": _json_value(identity_row["diagnostics_json"], {}),
+            }
         return result
 
     def update_review(
@@ -2774,6 +2986,8 @@ class DataStore:
                     "product_snapshots",
                     "evidence",
                     "product_facts",
+                    "health_food_identities",
+                    "health_food_registry_records",
                     "reviews",
                     "sampling_list_memberships",
                     "sampling_lists",

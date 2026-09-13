@@ -459,6 +459,102 @@ class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
                 handler.close()
                 pipeline.logger.removeHandler(handler)
 
+    def test_health_food_identity_extraction_failure_does_not_break_analysis(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pipeline = StandalonePipeline(
+                PipelineOptions(keyword="身份抽取降级", output_root=root / "output", run_id="identity-failure")
+            )
+            product_id = "A"
+            candidate = {"product_id": product_id, "product_name": "商品 A", "product_url": "https://item.example/A", "rank": 1}
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            product_root = pipeline.products_root / product_id
+            (product_root / "analysis.json").unlink()
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.search_payload = {"keyword": "身份抽取降级", "candidates": [candidate]}
+
+            def write_analysis(target, *_args, **_kwargs):
+                write_json(target / "analysis.json", {"detected_effects": [], "review_required": False, "evidence_details": []})
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr"),
+                patch("src.main.extract_health_food_identity", side_effect=RuntimeError("identity extractor failed")),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+            ):
+                pipeline._process_products()
+            self.assertEqual(pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS)
+            self.assertTrue((product_root / "analysis.json").is_file())
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_registry_unavailable_is_persisted_without_review_or_sampling_side_effects(self):
+        class UnavailableProvider:
+            def lookup(self, identifier):
+                return {
+                    "status": "unavailable",
+                    "queriedIdentifier": identifier,
+                    "sourceName": "official",
+                    "sourceReference": "https://example.invalid",
+                    "queriedAt": "2026-09-13T10:00:00+08:00",
+                    "record": None,
+                    "rawArtifactPath": None,
+                    "rawArtifactSha256": None,
+                    "error": "offline",
+                }
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(keyword="身份查询降级", output_root=output_root, run_id="registry-unavailable")
+            )
+            pipeline.set_health_food_registry_provider(UnavailableProvider())
+            product_id = "A"
+            candidate = {"product_id": product_id, "product_name": "商品 A", "product_url": "https://item.example/A", "rank": 1}
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            product_root = pipeline.products_root / product_id
+            (product_root / "analysis.json").unlink()
+            (product_root / "dom_text.txt").write_text(
+                "参数信息\n批准文号：国食健注G20190188\n图文详情", encoding="utf-8"
+            )
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.search_payload = {"keyword": "身份查询降级", "candidates": [candidate]}
+
+            def write_analysis(target, *_args, **_kwargs):
+                write_json(target / "analysis.json", {"detected_effects": [], "review_required": False, "evidence_details": []})
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr"),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+            ):
+                pipeline._process_products()
+            self.assertEqual(pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS)
+            self.assertEqual(
+                read_json(product_root / "health_food_identity.json")["identityAssessment"]["state"],
+                "registry_lookup_unavailable",
+            )
+            pipeline.web_stage = "completed"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(pipeline.run_root / "task_request.json", {"task_id": pipeline.run_root.name, "keyword": "身份查询降级", "detail_limit": 1})
+            store = DataStore(root / "data/app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            snapshot = store.list_products(task_id=pipeline.run_root.name)[0]
+            self.assertTrue(snapshot["readiness"]["reviewEligible"])
+            self.assertEqual(store.get_snapshot(snapshot["snapshotId"])["healthFoodIdentity"]["state"], "registry_lookup_unavailable")
+            with sqlite3.connect(store.database_path) as connection:
+                self.assertEqual(connection.execute("SELECT COUNT(*) FROM sampling_list_memberships").fetchone()[0], 0)
+                self.assertEqual(connection.execute("SELECT review_status FROM reviews").fetchone()[0], "pending")
+            connection.close()
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
 
 if __name__ == "__main__":
     unittest.main()

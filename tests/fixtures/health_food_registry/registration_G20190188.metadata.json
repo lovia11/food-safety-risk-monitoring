@@ -1,0 +1,11 @@
+{
+  "fixtureStatus": "recorded_official_response_not_live_status_proof",
+  "sourceName": "国家市场监督管理总局特殊食品信息查询平台",
+  "sourceUrl": "https://ypzsx.gsxt.gov.cn/specialfood/",
+  "identifier": "国食健注G20190188",
+  "retrievedAt": "2026-09-13T00:00:00+08:00",
+  "rawArtifact": "registration_G20190188.raw.json",
+  "rawSha256": "d99c96d0ed1c5da5d418ba095105a0fc38eaf102d91a0149ce42f70c27d6c9a9",
+  "containsSessionSecrets": false,
+  "note": "仅用于 provider/parser 离线测试，不代表官方记录的实时状态。"
+}

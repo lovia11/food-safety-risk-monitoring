@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This is the domain-design prerequisite for future schema and API work. ProductFact is current in schema 9; entities explicitly labeled “Future” remain proposals rather than migration authorization.
+This is the domain-design prerequisite for future schema and API work. ProductFact and HealthFoodIdentity are current in schema 10; entities explicitly labeled “Future” remain proposals rather than migration authorization.
 
 ## 1. Modeling rules
 
@@ -29,8 +29,8 @@ This is the domain-design prerequisite for future schema and API work. ProductFa
 | ProductFact | Normalized page fact with raw source and verification state. | Snapshot-scoped; derived projection is rebuildable, source immutable. | Derived from exact DOM/OCR artifact; future context and identity logic may consume it only through separately approved contracts. | **Current V2-2.** `product_facts.json` authority + generic SQLite table/read model; only `declared_origin` exists. |
 | ClaimSignal | Actual page expression classified into a claim concept, identified per source occurrence/group. | Snapshot-scoped; derived and versioned. | Comes from Evidence/ProductFact; may map to taxonomy, function, or risk only through governed links. | **Future.** Domain records plus provenance; current Effect hits are legacy operational clues. |
 | ClaimTaxonomyTerm | Governed normalized claim concept. | Knowledge-dataset scoped; versioned lifecycle. | May represent official, marketing, risk, or disease/treatment vocabularies without conflating them. | **Future.** Governed dataset + query index. |
-| HealthFoodIdentity | Resolution for whether a Snapshot matches an official health-food product. | Snapshot-scoped assessment; re-evaluable under recorded sources. | Uses page identity clues and registry records; never logo-only. | **Future.** Domain/read model with evidence links. |
-| HealthFoodRegistryRecord | Official registration/filing record, identified by authoritative registry ID/version. | Jurisdiction and effective-time scoped; versioned. | Provides official product identity and HealthFunctions with source provenance. | **Future.** Governed registry dataset/cache. |
+| HealthFoodIdentity | Resolution for whether a Snapshot matches an official health-food product. | Snapshot-scoped assessment; re-evaluable under recorded sources. | Uses page identity clues and registry records; never logo/number-only. | **Current V2-3.** `health_food_identity.json` authority + SQLite read projection. |
+| HealthFoodRegistryRecord | Official registration/filing record, identified by authoritative registry identifier. | Identifier/retrieval-time scoped; cached with freshness metadata. | Provides official product identity and verbatim official functions with source provenance. | **Current V2-3.** Raw official artifact/cache + normalized SQLite projection. |
 | HealthFunction | Official normalized function under a defined framework/version. | Knowledge-dataset and jurisdiction scope. | Linked to registry records and only to ClaimSignals through explicit mappings. | **Future.** Governed dataset. |
 | ClaimConsistencyAssessment | Evidence-bearing comparison result for one Snapshot. | Snapshot + identity/knowledge version scope; derived, reproducible. | Compares verified identity/functions with page claims and retains matches, mismatches, disease expressions and gaps. | **Future.** Derived artifact + read index. |
 | RiskSignal | Supported risk direction derived from Evidence through a verified bridge. | Snapshot-scoped; derived and versioned. | Links ClaimSignal/Evidence to RiskCategory; does not assert substance presence. | **Future explicit entity;** current bridge result is embedded in analysis/recommendation projections. |
@@ -87,19 +87,28 @@ Only `fact_type=declared_origin` is implemented. `verification_state=extracted` 
 
 `source_type` currently distinguishes seller-managed DOM parameters and detail-image OCR. `content_origin` remains explicit. A value without an exact source is not a ProductFact. Search region, title-only wording, UGC/Q&A, shipping/seller/manufacturer/warehouse location and raw-material origin are explicit non-sources for `declared_origin`.
 
-## 5. Health-food identity proposal — FUTURE CHANGE
+## 5. Health-food identity contract — CURRENT V2-3
 
-HealthFoodIdentity must represent at least:
+HealthFoodIdentity uses the following exhaustive presentation states:
 
 ```text
-candidate
-verified
+no_indicator
+candidate_indicator_only
+candidate_identifier
+identifier_ambiguous
+registry_lookup_unavailable
+registry_record_not_found
+registry_record_found_identity_unverified
+verified_match
+identity_mismatch
 conflict
-not_found
-insufficient
 ```
 
-A boolean `is_health_food` cannot represent unverified clues, mismatched registration numbers, unavailable official records, or ambiguous names. `verified` requires an authoritative record match under documented matching rules. Page imagery and OCR form candidate evidence only.
+A boolean `is_health_food` cannot represent unverified clues, mismatched registration numbers, unavailable official records, or ambiguous names. `verified_match` requires one valid unambiguous identifier candidate, an authoritative record match, and an explicit page product name equal to the official product name after formatting-only normalization. A marketplace marketing title is auxiliary and cannot satisfy this condition.
+
+`health_food_identity.json` records `clues[]`, `identifierCandidates[]`, provider lookup, product-match assessment, gaps and diagnostics. Each page candidate keeps source type/path/text, content origin and extraction method. The raw official response remains an artifact with source, retrieval time and SHA-256; SQLite schema 10 stores only normalized record fields, JSON arrays and artifact references in `health_food_registry_records` and `health_food_identities`.
+
+Official health functions are preserved verbatim as `officialHealthFunctions[]`. They are not a current HealthFunction taxonomy and are not compared with page claims until V2-5/V2-6. Identity enrichment has no Review/Sampling side effect and is not part of `reviewEligible`.
 
 ## 6. Claim separation
 
