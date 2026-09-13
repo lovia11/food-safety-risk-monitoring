@@ -125,7 +125,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
     def test_only_search_validated_pilots_are_enabled_and_candidates_stay_disabled(self):
         configured_targets = [target for target in self.targets if target["queries"]]
         self.assertEqual(len(configured_targets), 18)
-        self.assertEqual(sum(len(target["queries"]) for target in configured_targets), 21)
+        self.assertEqual(sum(len(target["queries"]) for target in configured_targets), 22)
         self.assertEqual(
             {target["standard_name"] for target in self.targets if target["enabled"]},
             {
@@ -160,7 +160,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
         ]
         self.assertEqual(len(enabled_queries), 18)
         self.assertTrue(all(query["validation_status"] == "search_validated" for query in enabled_queries))
-        self.assertEqual(len(candidate_queries), 0)
+        self.assertEqual(len(candidate_queries), 1)
         self.assertTrue(all(not query["enabled"] for query in candidate_queries))
         danggui = next(target for target in configured_targets if target["standard_name"] == "当归")
         self.assertFalse(danggui["enabled"])
@@ -175,6 +175,11 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
         self.assertFalse(lily["enabled"])
         self.assertEqual(lily["queries"][0]["validation_status"], "rejected_low_relevance")
         self.assertFalse(lily["queries"][0]["enabled"])
+        self.assertEqual(lily["queries"][1]["query_text"], "食用百合")
+        self.assertEqual(lily["queries"][1]["query_source"], "manually_curated")
+        self.assertEqual(lily["queries"][1]["validation_status"], "candidate_unvalidated")
+        self.assertFalse(lily["queries"][1]["enabled"])
+        self.assertIn("derived_from_validation_batch=v2-4b-batch-02b", lily["queries"][1]["query_note"])
         self.assertIn("仅作为香辛料和调味品使用", self.payload["description"])
 
     def test_development_seed_is_independent_and_acid_jujube_is_not_overwritten(self):
@@ -199,7 +204,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             first = store.import_monitor_config(REFERENCE_CONFIG)
             first_counts = store.table_counts()
             second = store.import_monitor_config(REFERENCE_CONFIG)
-            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 21})
+            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 22})
             self.assertEqual(second, first)
             self.assertEqual(store.table_counts(), first_counts)
             self.assertEqual(len(store.list_monitor_targets()), 106)
@@ -222,7 +227,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             ]
             self.assertEqual(len(formal), 106)
             self.assertEqual(len(development), 1)
-            self.assertEqual(store.table_counts()["search_queries"], 23)
+            self.assertEqual(store.table_counts()["search_queries"], 24)
 
     def test_api_exposes_provenance_and_hides_disabled_targets_from_task_list(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -283,7 +288,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                     reference = json.load(response)
                 self.assertEqual(reference["count"], 106)
                 self.assertEqual(reference["coverage"]["operational_target_count"], 15)
-                self.assertEqual(reference["coverage"]["candidate_query_count"], 0)
+                self.assertEqual(reference["coverage"]["candidate_query_count"], 1)
                 danggui = next(
                     target for target in reference["targets"]
                     if target["standard_name"] == "当归"

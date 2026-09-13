@@ -25,7 +25,7 @@
 ## Current Coverage
 
 - Official directory 106 / 106; 18 targets have governed Query records; 15 / 106 are operational
-- 18 enabled and validated Reference queries; 1 disabled rejected query; 0 candidate queries; 3 paused targets
+- 18 enabled and validated Reference queries; 1 disabled rejected query; 1 disabled candidate query; 3 paused targets
 - Separate development seed: 1 target / 2 queries
 - Legacy/current Phase3 clues: 5 categories / 26 keywords
 - 3 Evidence-to-risk Bridge mappings; 8 Risk-to-substance/group mappings
@@ -33,18 +33,18 @@
 
 ## Current Validation
 
-V2-4A validation passed at its recorded baseline. Wave 1 promoted five standard-name Queries and held 乌梅; Wave 2A promoted 山药、赤小豆、枸杞子、莲子. Wave 2B promoted 菊花 and rejected the standard-name 百合 Query at 50% observed relevance. 百合 remains a Reference MonitorTarget but has no executable search strategy. Deterministic coverage includes program-calculated metrics, Chinese label normalization, immutable manifest hashing, ledger integrity, operational/reference API scopes and server-side execution guards. The Historical Validation Set remains unmodified.
+V2-4A validation passed at its recorded baseline. Wave 1 promoted five standard-name Queries and held 乌梅; Wave 2A promoted 山药、赤小豆、枸杞子、莲子. Wave 2B promoted 菊花 and rejected the standard-name 百合 Query at 50% observed relevance. 百合 remains a Reference MonitorTarget but has no executable search strategy. Its disabled `manually_curated` candidate `食用百合` completed bounded search-only Batch `v2-4b-batch-02c` and awaits final human review. V2-4B6 passed 56/56 final Monitor/Query tests, 461 Python tests discovered / 460 passed / 1 skipped, frontend workflow 24/24, typecheck and production build. Deterministic coverage includes program-calculated metrics, Chinese label normalization, immutable manifest hashing, ledger integrity, operational/reference API scopes and server-side execution guards. The Historical Validation Set remains unmodified.
 
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and further validated Operational Search expansion are Future V2 work. All planned V2-4 standard-name waves are governed; a refined 百合 food-scope strategy still requires collection and final human review. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and further validated Operational Search expansion are Future V2 work. All planned V2-4 standard-name waves are governed; only final human review of the collected `食用百合` candidate remains. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-4 — IN PROGRESS. Planned standard-name waves are governed; refined 百合 strategy validation remains.
+V2-4 — IN PROGRESS. Planned standard-name waves are governed; `食用百合` collection is complete and human review remains.
 
 ## Next Gate
 
-A refined 百合 SearchQuery may run only under its separately approved bounded collection Gate and remains non-operational until a later explicit human-review decision.
+Finalize the `食用百合` review artifact under an explicit human Gate. Do not enable the Query or mark 百合 operational before that decision.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

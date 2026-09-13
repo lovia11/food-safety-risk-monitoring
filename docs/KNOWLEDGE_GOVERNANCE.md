@@ -87,6 +87,8 @@ Wave 2A applied the same unchanged gate to 山药、赤小豆、枸杞子、莲�
 
 Wave 2B promoted the standard-name 菊花 Query and rejected the standard-name 百合 Query at 50% observed relevance. This rejects only the Query strategy; the official 百合 MonitorTarget remains in the Reference and may receive a new provenance-backed `manually_curated` candidate under a separate collection/review gate. The record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md).
 
+The refined `食用百合` Query is such a candidate: its note records `derived_from_validation_batch=v2-4b-batch-02b` and the explicit scope-disambiguation rationale. Batch `v2-4b-batch-02c` completed bounded search-only collection, but the Query remains disabled `candidate_unvalidated`; no relevance metric, decision, or operational status exists before final human review.
+
 ### 4.2 Claims and official functions
 
 - Page expressions, official functions, risk-related claims, and disease/treatment expressions remain distinct.

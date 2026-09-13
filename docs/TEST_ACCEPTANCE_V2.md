@@ -141,6 +141,8 @@ Every governed dataset change tests:
 - The 莲子 review skips ambiguous Rank 4 and uses Rank 11 as the tenth assessable result.
 - 菊花 is operational through its enabled `search_validated` standard-name Query. The standard-name 百合 Query is disabled `rejected_low_relevance`; the 百合 MonitorTarget remains Reference-visible, non-operational, and server-rejected for task creation.
 - A rejected Query is never enabled. Rejecting a Query does not remove or mark invalid its MonitorTarget, and the UI presents the target as needing a usable search strategy rather than as unsupported.
+- The refined `食用百合` Query is `manually_curated`, records its Batch 02B provenance/rationale, remains disabled `candidate_unvalidated`, cannot pass the task execution guard, and leaves 百合 non-operational.
+- Batch `v2-4b-batch-02c` is search-only collection evidence: its labels, metrics, decision and promotion remain empty until explicit human review.
 
 ## 9. Pipeline and Review gate
 

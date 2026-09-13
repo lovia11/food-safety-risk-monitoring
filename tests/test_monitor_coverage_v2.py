@@ -50,8 +50,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
                 "operational_target_count": 15,
                 "enabled_query_count": 18,
                 "validated_query_count": 18,
-                "disabled_query_count": 3,
-                "candidate_query_count": 0,
+                "disabled_query_count": 4,
+                "candidate_query_count": 1,
                 "paused_target_count": 3,
             },
         )
@@ -91,19 +91,26 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertEqual(mountain_yam["validated_query_count"], 1)
         self.assertEqual(mountain_yam["validated_queries"][0]["query_text"], "山药")
         self.assertEqual(lily["availability"], "paused")
-        self.assertEqual(lily["candidate_query_count"], 0)
+        self.assertEqual(lily["candidate_query_count"], 1)
         self.assertEqual(lily["validated_queries"], [])
         self.assertEqual(lily["queries"][0]["validation_status"], "rejected_low_relevance")
+        self.assertEqual(lily["queries"][1]["query_text"], "食用百合")
+        self.assertEqual(lily["queries"][1]["query_source"], "manually_curated")
+        self.assertEqual(lily["queries"][1]["validation_status"], "candidate_unvalidated")
+        self.assertFalse(lily["queries"][1]["enabled"])
+        self.assertIn("v2-4b-batch-02b", lily["queries"][1]["query_note"])
         self.assertIn("观察相关率50%", lily["availability_reason"])
         self.assertEqual(angelica["availability"], "paused")
         self.assertIn("中药材/饮片", angelica["availability_reason"])
         self.assertEqual(angelica["validated_queries"], [])
 
-    def test_rejected_and_paused_queries_are_never_operational(self):
+    def test_candidate_rejected_and_paused_queries_are_never_operational(self):
         reference = self.store.list_monitor_targets(scope="reference")
-        rejected = next(item for item in reference if item["standard_name"] == "百合")["queries"][0]
+        lily_queries = next(item for item in reference if item["standard_name"] == "百合")["queries"]
+        rejected, candidate = lily_queries
         paused = next(item for item in reference if item["standard_name"] == "当归")["queries"][0]
         self.assertFalse(is_operational_query(rejected))
+        self.assertFalse(is_operational_query(candidate))
         self.assertFalse(is_operational_query(paused))
 
     def test_reference_only_target_is_rejected_by_server_business_guard(self):
@@ -210,10 +217,20 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "c130bb453df91397bab926a722ef759d56fee038def2bdeb12dcfc145cb3b16e",
         )
 
-    def test_unfiltered_dry_run_has_no_remaining_standard_name_candidates(self):
+    def test_unfiltered_dry_run_selects_only_refined_lily_candidate(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
-        with self.assertRaisesRegex(ValueError, "没有符合条件"):
-            select_validation_queries(config)
+        selected = select_validation_queries(config)
+        plan = validation_dry_run(
+            batch_id="v2-4b-batch-02c",
+            output_root=self.root / "query-validation",
+            max_results=15,
+            selected=selected,
+        )
+        self.assertEqual(plan["queryCount"], 1)
+        self.assertEqual(plan["queries"][0]["standardName"], "百合")
+        self.assertEqual(plan["queries"][0]["queryText"], "食用百合")
+        self.assertEqual(plan["queries"][0]["queryId"], "food-medicine-2002-022-edible-candidate")
+        self.assertEqual(plan["queries"][0]["validationStatus"], "candidate_unvalidated")
 
     def test_validation_tool_dry_run_prints_plan_without_creating_runtime_output(self):
         destination = self.root / "validation-output"
@@ -232,8 +249,10 @@ class MonitorCoverageV2Test(unittest.TestCase):
                     str(REFERENCE_CONFIG),
                 ]
             )
-        self.assertEqual(result, 2)
-        self.assertEqual(stdout.getvalue(), "")
+        plan = json.loads(stdout.getvalue())
+        self.assertEqual(result, 0)
+        self.assertEqual(plan["queryCount"], 1)
+        self.assertEqual(plan["queries"][0]["queryText"], "食用百合")
         self.assertFalse(destination.exists())
 
     def test_wave_one_dry_run_separates_collection_ceiling_from_review_sample(self):
