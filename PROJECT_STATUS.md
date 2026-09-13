@@ -3,7 +3,7 @@
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- V2-3 starting commit: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
+- V2-4A starting commit: `768f9389e3397c877bda87cf69c46816015be58f`
 - SQLite schema: 10
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
@@ -20,10 +20,12 @@
 - Deterministic Historical Validation support
 - Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
+- Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
 
 ## Current Coverage
 
-- 106 Reference MonitorTargets; 5 enabled Reference targets and 8 enabled validated queries
+- Official directory 106 / 106; 18 targets have governed Query records; 5 / 106 are operational
+- 8 enabled and validated Reference queries; 12 disabled candidate queries; 1 paused target
 - Separate development seed: 1 target / 2 queries
 - Legacy/current Phase3 clues: 5 categories / 26 keywords
 - 3 Evidence-to-risk Bridge mappings; 8 Risk-to-substance/group mappings
@@ -31,18 +33,18 @@
 
 ## Current Validation
 
-V2-3 validation: Python 441 discovered / 440 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 22/22; frontend typecheck and production build passed. It includes identifier/source/provider/matching fixtures, schema 9→10 preservation, idempotent import/rebuild/API coverage, degradable pipeline integration, a recorded official positive response, and local 1440px/1080px detail/modal inspection without page-level horizontal overflow or new console errors. The five-product Historical Validation Set remains unmodified and all five products resolve to `no_indicator`.
+V2-4A validation: Python 452 discovered / 451 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Monitor coverage tests include exact formal counts, lifecycle invariants, Reference/operational API scopes, non-operational server rejection, candidate/paused Discovery exclusion, validation ledger integrity, dry-run/no-output behavior, partial-failure artifacts, resume selection, deduplication and the task-global cap. The new task picker was inspected locally at 1440px and 1080px with 106 rendered options, correct acid-jujube/longan/query-pending/angelica behavior, no horizontal overflow, and no new console warnings/errors. The Historical Validation Set remains unmodified.
 
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and broad Operational Search coverage are Future V2 work. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and validated Operational Search expansion are Future V2 work. The 12-query V2-4B batch is **NOT YET VALIDATED**. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-3 — HealthFood Identity & Official Registry Verification implemented and validated; awaiting acceptance.
+V2-4A — Monitor Coverage Foundation & Validation Preparation complete locally; V2-4B real validation pending.
 
 ## Next Gate
 
-V2-4 Monitor coverage remains a separate gate. Do not begin it before V2-3 is accepted.
+V2-4B may begin only after V2-4A acceptance and explicit authorization for the bounded visible-browser search-only batch. Do not promote candidates before reviewed artifacts pass the frozen gate.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

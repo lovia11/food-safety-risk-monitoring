@@ -36,7 +36,7 @@ deprecated
 superseded
 ```
 
-Current governed datasets already use supported subsets of these semantics; **FUTURE CHANGE** phases may normalize lifecycle handling. Until then, do not rewrite status values without a compatibility and migration decision.
+Current governed datasets use supported subsets of these semantics. V2-4A normalizes SearchQuery lifecycle separately without changing SQLite schema. Do not rewrite other status values without a compatibility and migration decision.
 
 - `development_seed`: useful for development/tests; not verified production knowledge.
 - `reference_pending`: sourced candidate awaiting verification.
@@ -74,9 +74,12 @@ Mappings additionally record stable IDs, source basis text where available, scop
 ### 4.1 Monitor Reference and Operational Search
 
 - Reference objects come from authoritative catalogs and retain object-level source links.
-- SearchQuery variants state their source (standard name, official alias, or reviewed operational expression).
-- Each enabled operational query has a validation state and retrieval assessment.
+- SearchQuery variants state their source as `standard_name`, `official_alias`, `observed_product_form`, or `manually_curated`; guessed synonyms and generated aliases are prohibited.
+- Lifecycle is `candidate_unvalidated`, `search_validated`, `rejected_low_relevance`, `paused_scope_issue`, or `deprecated`. Each enabled query must be `search_validated`.
+- The tracked ledger preserves review decision and artifact SHA-256. Legacy pilots without V2-4 food-scope labels keep null metrics rather than reconstructed precision.
 - Expansion follows Pilot → Validated Batch → Expanded Operational Set.
+
+The fixed V2-4 promotion gate is at least 10 unique assessable results, observed relevance at least 0.70, at least 5 relevant results, and no systematic scope issue. Small samples remain on hold. This is observed sample relevance, never a recall or model-accuracy claim. See [MONITOR_QUERY_VALIDATION_PROTOCOL.md](MONITOR_QUERY_VALIDATION_PROTOCOL.md).
 
 ### 4.2 Claims and official functions
 

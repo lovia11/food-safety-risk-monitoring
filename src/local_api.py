@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from src.data_store import (
     DEFAULT_MONITOR_CONFIG_PATHS,
     DataStore,
+    MonitorConfigValidationError,
     ProductFilterValidationError,
     ReviewEligibilityError,
     ReviewValidationError,
@@ -55,6 +56,7 @@ from src.manual_action_gate import (
 from src.pipeline_contract import project_task_flow
 from src.task_runtime import (
     ActiveTaskError,
+    MonitorTargetNotOperationalError,
     TaskManager,
     TaskNotFoundError,
     TaskNotResumableError,
@@ -345,8 +347,22 @@ def create_handler(
                 )
                 return
             if path == "/api/monitor-targets":
-                targets = store.list_monitor_targets(enabled_only=True)
-                self._json(200, {"targets": targets, "count": len(targets)})
+                query = parse_qs(parsed.query)
+                scope = str((query.get("scope") or ["operational"])[0]).strip()
+                try:
+                    targets = store.list_monitor_targets(scope=scope)
+                except MonitorConfigValidationError as exc:
+                    self._error(400, "invalid_monitor_target_scope", str(exc))
+                    return
+                self._json(
+                    200,
+                    {
+                        "targets": targets,
+                        "count": len(targets),
+                        "scope": scope,
+                        "coverage": store.monitor_coverage(),
+                    },
+                )
                 return
             if path == "/api/inspection-context-options":
                 self._json(200, store.list_inspection_context_options())
@@ -789,6 +805,8 @@ def create_handler(
                         raw_task, store.get_task_business_summary(task_id)
                     )
                     self._json(202, {**raw_task, **business})
+                except MonitorTargetNotOperationalError as exc:
+                    self._error(409, "monitor_target_not_operational", str(exc))
                 except TaskValidationError as exc:
                     self._error(400, "invalid_task", str(exc))
                 except ActiveTaskError as exc:

@@ -11,6 +11,12 @@ import {
 } from "../src/domain/evidence.ts";
 import { clampLightboxZoom, moveLightboxIndex } from "../src/domain/media.ts";
 import {
+  QUERY_PENDING_MESSAGE,
+  canCreateMonitorTask,
+  filterMonitorTargets,
+  monitorAvailabilityMessage,
+} from "../src/domain/monitorTargets.ts";
+import {
   healthFoodArtifactPath,
   healthFoodIdentityPresentation,
   healthFoodSourceLabel,
@@ -166,6 +172,55 @@ test("web monitor task keeps a global analysis cap across queries", () => {
       detail_limit: 10,
     },
   );
+});
+
+function monitorTarget(name, availability, validatedQueries = []) {
+  return {
+    target_id: `target-${name}`,
+    dataset_id: "food-medicine-reference",
+    dataset_status: "verified_reference",
+    standard_name: name,
+    target_type: "food_medicine",
+    source_name: "官方目录",
+    source_reference: "https://example.test/reference",
+    source_date: "2002-02-28",
+    enabled: availability === "operational",
+    queries: validatedQueries,
+    availability,
+    availability_reason: availability === "paused" ? "基础词搜索结果主要为中药材，暂未启用" : null,
+    validated_query_count: validatedQueries.length,
+    candidate_query_count: availability === "query_pending" ? 1 : 0,
+    validated_queries: validatedQueries,
+  };
+}
+
+test("monitor reference picker searches all availability states and exposes validated chips", () => {
+  const longyanQueries = [
+    { query_id: "longyan", query_text: "龙眼肉" },
+    { query_id: "guiyuan", query_text: "桂圆" },
+  ];
+  const targets = [
+    monitorTarget("酸枣仁", "operational", [{ query_id: "suanzaoren", query_text: "酸枣仁" }]),
+    monitorTarget("龙眼肉（桂圆）", "operational", longyanQueries),
+    monitorTarget("山药", "query_pending"),
+    monitorTarget("当归", "paused"),
+  ];
+  assert.equal(filterMonitorTargets(targets, "酸枣仁", "all")[0].availability, "operational");
+  assert.deepEqual(
+    filterMonitorTargets(targets, "桂圆", "all")[0].validated_queries.map((item) => item.query_text),
+    ["龙眼肉", "桂圆"],
+  );
+  assert.equal(filterMonitorTargets(targets, "山药", "query_pending").length, 1);
+  assert.equal(filterMonitorTargets(targets, "当归", "paused").length, 1);
+});
+
+test("non-operational monitor targets cannot create tasks", () => {
+  const pending = monitorTarget("山药", "query_pending");
+  const paused = monitorTarget("当归", "paused");
+  assert.equal(canCreateMonitorTask(pending), false);
+  assert.equal(canCreateMonitorTask(paused), false);
+  assert.equal(monitorAvailabilityMessage(pending), QUERY_PENDING_MESSAGE);
+  assert.match(monitorAvailabilityMessage(paused), /中药材/);
 });
 
 test("product overview distinguishes search-only candidates from analyzed products", () => {

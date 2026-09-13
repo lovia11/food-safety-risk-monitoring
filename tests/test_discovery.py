@@ -64,12 +64,14 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
                         "query_text": "酸枣仁茶",
                         "order": 2,
                         "enabled": True,
+                        "validation_status": "search_validated",
                     },
                     {
                         "query_id": "base",
                         "query_text": "酸枣仁",
                         "order": 1,
                         "enabled": True,
+                        "validation_status": "search_validated",
                     },
                 ],
                 per_query_candidate_limit=10,
@@ -102,8 +104,10 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
             ).discover(
                 target={"target_id": "target-1", "standard_name": "酸枣仁"},
                 queries=[
-                    {"query_id": "base", "query_text": "酸枣仁", "order": 1},
-                    {"query_id": "off", "query_text": "未执行", "order": 2, "enabled": False},
+                    {"query_id": "base", "query_text": "酸枣仁", "order": 1, "enabled": True, "validation_status": "search_validated"},
+                    {"query_id": "off", "query_text": "未执行", "order": 2, "enabled": False, "validation_status": "search_validated"},
+                    {"query_id": "candidate", "query_text": "候选词", "order": 3, "enabled": False, "validation_status": "candidate_unvalidated"},
+                    {"query_id": "paused", "query_text": "暂缓词", "order": 4, "enabled": False, "validation_status": "paused_scope_issue"},
                 ],
                 per_query_candidate_limit=3,
                 detail_limit=1,

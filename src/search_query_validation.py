@@ -65,6 +65,107 @@ def _title_rows(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _contract_record(batch_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    diagnostics = record.get("diagnostics_path")
+    raw_refs = [diagnostics] if diagnostics else []
+    if diagnostics:
+        raw_refs.append(str(Path(diagnostics).with_name("search_candidates.json")).replace("\\", "/"))
+    return {
+        "batchId": batch_id,
+        "targetId": record.get("target_id"),
+        "standardName": record.get("standard_name"),
+        "queryId": record.get("query_id"),
+        "queryText": record.get("query_text"),
+        "startedAt": record.get("started_at"),
+        "completedAt": record.get("completed_at"),
+        "executionStatus": record.get("execution_status"),
+        "resultCount": int(record.get("actual_candidates") or 0),
+        "uniqueResultCount": int(record.get("unique_result_count") or 0),
+        "labels": {
+            "relevant_food": [],
+            "raw_medicinal_or_nonfood_scope": [],
+            "non_food": [],
+            "ambiguous": [],
+            "duplicate": [],
+        },
+        "metrics": {
+            "assessableCount": None,
+            "relevantCount": None,
+            "relevanceRate": None,
+        },
+        "decision": None,
+        "reviewedAt": None,
+        "reviewStatus": "pending_manual_review"
+        if record.get("execution_status") == "completed"
+        else "not_reviewed",
+        "rawSourceArtifactRefs": raw_refs,
+        "error": (
+            {
+                "type": record.get("error_type"),
+                "message": record.get("error_message"),
+            }
+            if record.get("execution_status") == "failed"
+            else None
+        ),
+    }
+
+
+def _write_validation_state(run_root: Path, summary: dict[str, Any]) -> None:
+    write_json(run_root / "query_validation_results.json", summary)
+    queries_root = run_root / "queries"
+    for record in summary.get("results") or []:
+        write_json(
+            queries_root / f"{record['query_id']}.json",
+            _contract_record(run_root.name, record),
+        )
+    query_entries = []
+    for path in sorted(queries_root.glob("*.json")) if queries_root.is_dir() else []:
+        item = read_json(path)
+        query_entries.append(
+            {
+                "targetId": item.get("targetId"),
+                "queryId": item.get("queryId"),
+                "queryText": item.get("queryText"),
+                "executionStatus": item.get("executionStatus"),
+                "reviewStatus": item.get("reviewStatus"),
+                "artifact": path.relative_to(run_root).as_posix(),
+            }
+        )
+    write_json(
+        run_root / "manifest.json",
+        {
+            "batchId": run_root.name,
+            "contractVersion": 1,
+            "phase": "search_query_validation",
+            "searchOnly": True,
+            "startedAt": summary.get("started_at"),
+            "completedAt": summary.get("completed_at"),
+            "maxResults": summary.get("candidate_limit"),
+            "status": summary.get("status"),
+            "queries": query_entries,
+        },
+    )
+
+
+def remaining_queries_for_resume(
+    run_root: Path,
+    selected: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    completed_query_ids: set[str] = set()
+    queries_root = run_root / "queries"
+    if queries_root.is_dir():
+        for path in queries_root.glob("*.json"):
+            try:
+                item = read_json(path)
+            except (OSError, ValueError, TypeError):
+                continue
+            if item.get("executionStatus") == "completed":
+                completed_query_ids.add(str(item.get("queryId") or ""))
+    return [
+        item for item in selected if item[1]["query_id"] not in completed_query_ids
+    ]
+
+
 def run_search_validation(
     *,
     context: Any,
@@ -110,10 +211,16 @@ def run_search_validation(
                 detail_limit=1,
             )
             candidates = payload.get("candidates") or []
+            unique_product_ids = {
+                str(candidate.get("product_id") or "")
+                for candidate in candidates
+                if isinstance(candidate, dict) and candidate.get("product_id")
+            }
             record.update(
                 {
                     "execution_status": "completed",
                     "actual_candidates": len(candidates),
+                    "unique_result_count": len(unique_product_ids),
                     "raw_card_count": int(payload.get("raw_card_count") or 0),
                     "stop_reason": payload.get("search_stop_reason") or "unknown",
                     "selector_health": payload.get("selector_health") or {},
@@ -140,8 +247,8 @@ def run_search_validation(
                 }
             )
             results.append(record)
-            write_json(
-                run_root / "query_validation_results.json",
+            _write_validation_state(
+                run_root,
                 {
                     "run_id": run_root.name,
                     "phase": "search_query_pilot_validation",
@@ -155,8 +262,8 @@ def run_search_validation(
             logger.error("Pilot验证停止，保留已完成结果：%s: %s", type(exc).__name__, exc)
             break
         results.append(record)
-        write_json(
-            run_root / "query_validation_results.json",
+        _write_validation_state(
+            run_root,
             {
                 "run_id": run_root.name,
                 "phase": "search_query_pilot_validation",
@@ -184,7 +291,7 @@ def run_search_validation(
         "status": status,
         "results": results,
     }
-    write_json(run_root / "query_validation_results.json", summary)
+    _write_validation_state(run_root, summary)
     return summary
 
 
@@ -209,6 +316,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--direct-browser", action="store_true")
     parser.add_argument("--non-interactive", action="store_true")
     parser.add_argument("--pause-seconds", type=float, default=3.0)
+    parser.add_argument("--resume", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args(argv)
 
@@ -226,6 +334,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"SearchQuery验证配置错误：{exc}", file=sys.stderr)
         return 2
     run_root = (args.output_root / (args.run_id or new_run_id("query_validation"))).resolve()
+    if args.resume:
+        selected = remaining_queries_for_resume(run_root, selected)
+        if not selected:
+            print(f"批次已无待执行Query：{run_root}")
+            return 0
     logger = setup_run_logger(run_root, verbose=args.verbose)
     write_json(
         run_root / "validation_request.json",

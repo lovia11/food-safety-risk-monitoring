@@ -41,7 +41,7 @@ def query_dataset() -> dict:
                         "query_text": "龙眼肉",
                         "query_type": "base",
                         "query_source": "standard_name",
-                        "validation_status": "unvalidated",
+                        "validation_status": "candidate_unvalidated",
                         "query_note": "待真实搜索验证。",
                         "order": 1,
                         "enabled": False,
@@ -52,7 +52,7 @@ def query_dataset() -> dict:
                         "query_text": "桂圆",
                         "query_type": "base",
                         "query_source": "official_alias",
-                        "validation_status": "unvalidated",
+                        "validation_status": "candidate_unvalidated",
                         "query_note": "来自官方名称括号。",
                         "order": 2,
                         "enabled": False,
@@ -92,10 +92,46 @@ class SearchQueryPolicyTest(unittest.TestCase):
             ):
                 validate_monitor_config(payload)
 
-    def test_observed_and_manual_queries_require_a_note(self):
+    def test_v2_query_lifecycle_and_manually_curated_source_are_supported(self):
+        for status in (
+            "candidate_unvalidated",
+            "search_validated",
+            "rejected_low_relevance",
+            "paused_scope_issue",
+            "deprecated",
+        ):
+            payload = query_dataset()
+            query = payload["targets"][0]["queries"][0]
+            query["validation_status"] = status
+            query["enabled"] = status == "search_validated"
+            payload["targets"][0]["enabled"] = status == "search_validated"
+            with self.subTest(status=status):
+                self.assertEqual(
+                    validate_monitor_config(payload)["targets"][0]["queries"][0][
+                        "validation_status"
+                    ],
+                    status,
+                )
+
+        curated = query_dataset()
+        query = curated["targets"][0]["queries"][0]
+        query.update(
+            {
+                "query_source": "manually_curated",
+                "query_note": "经人工记录的搜索策略，不是生成式同义词。",
+            }
+        )
+        self.assertEqual(
+            validate_monitor_config(curated)["targets"][0]["queries"][0][
+                "query_source"
+            ],
+            "manually_curated",
+        )
+
+    def test_observed_and_manually_curated_queries_require_a_note(self):
         for source, query_type in (
             ("observed_product_form", "product_form"),
-            ("manual", "base"),
+            ("manually_curated", "base"),
         ):
             payload = query_dataset()
             query = payload["targets"][0]["queries"][0]
@@ -111,7 +147,7 @@ class SearchQueryPolicyTest(unittest.TestCase):
             ):
                 validate_monitor_config(payload)
 
-    def test_unvalidated_query_cannot_be_enabled(self):
+    def test_candidate_unvalidated_query_cannot_be_enabled(self):
         payload = query_dataset()
         payload["targets"][0]["queries"][0]["enabled"] = True
         with self.assertRaisesRegex(MonitorConfigValidationError, "未经search_validated"):

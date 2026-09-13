@@ -78,6 +78,8 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-4 — Monitor coverage
 
+**Status:** V2-4A COMPLETE — governance, Reference visibility, execution guards, tooling contract, ledger, and first disabled candidate batch prepared. V2-4B REAL VALIDATION PENDING. V2-4 as a whole is not complete.
+
 - **Goal:** Expand operational SearchQuery coverage safely while exposing all 106 Reference targets.
 - **Why:** Reference breadth and reliable discovery are different quality dimensions.
 - **Dependencies:** V2-0 governance and stable discovery evaluation tooling.
@@ -85,11 +87,12 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Out of Scope:** Enabling all 106 at once, unreviewed synonym expansion, or rewriting Discovery algorithms without evidence.
 - **Domain impact:** Strengthens MonitorTarget/SearchQuery lifecycle and validation records.
 - **Schema impact:** Only if validation metadata cannot be represented; requires separate contract approval.
-- **Data requirements:** Per-query source, relevance sample, recall/precision notes, failure modes, validation date and dataset version.
+- **Data requirements:** Per-query source, observed sample relevance, result volume/duplicate/scope notes, failure modes, validation date and dataset version. Do not claim recall without a complete labeled population.
 - **UX impact:** Distinguish Reference from operational availability in task creation and Knowledge views.
 - **Testing:** Dataset integrity, stable IDs, enabled-query validation, multi-query global analysis cap, and regressions.
 - **Real-world validation:** Run bounded batches; promote only queries meeting documented acceptance.
 - **Exit criteria:** Every enabled query is traceable and validated; coverage is reported separately from the 106-reference denominator.
+- **V2-4A result:** 106 formal targets are searchable in task creation; 5 are operational, 12 first-batch candidates remain disabled/unvalidated, and 当归 remains paused. The batch plan is [MONITOR_QUERY_VALIDATION_PLAN_V2_4.md](MONITOR_QUERY_VALIDATION_PLAN_V2_4.md).
 
 ## V2-5 — Claim taxonomy
 

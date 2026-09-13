@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 from src.main import PipelineOptions, StandalonePipeline
 from src.manual_action_gate import ManualActionGate, WebManualActionAdapter
+from src.monitor_coverage import operational_queries
 from src.taobao_live import blocker_reason
 from src.runtime import iso_now, read_json, write_json
 from src.web_contract import STAGE_PRESENTATION, TERMINAL_STAGES, write_web_snapshot
@@ -25,6 +26,10 @@ TASK_REQUEST_FILE = "task_request.json"
 
 class TaskValidationError(ValueError):
     """The browser task request contains invalid public parameters."""
+
+
+class MonitorTargetNotOperationalError(TaskValidationError):
+    """A formal target exists but has no validated, enabled search strategy."""
 
 
 class ActiveTaskError(RuntimeError):
@@ -374,22 +379,13 @@ class TaskManager:
             if self.monitor_target_provider is None:
                 raise TaskValidationError("本地服务尚未配置MonitorTarget数据源")
             target = self.monitor_target_provider(str(request["target_id"]))
-            if not target or not target.get("enabled"):
-                raise TaskValidationError("MonitorTarget不存在或未启用")
-            queries = [
-                item
-                for item in (target.get("queries") or [])
-                if item.get("enabled", True)
-                and item.get("validation_status") == "search_validated"
-            ]
-            queries.sort(
-                key=lambda item: (
-                    int(item.get("order") or 0),
-                    str(item.get("query_id") or ""),
-                )
-            )
+            if not target:
+                raise TaskValidationError("MonitorTarget不存在")
+            queries = operational_queries(target)
             if not queries:
-                raise TaskValidationError("MonitorTarget没有启用的SearchQuery")
+                raise MonitorTargetNotOperationalError(
+                    "该监测对象当前没有已验证并启用的搜索策略。"
+                )
             request.update(
                 {
                     "keyword": str(target.get("standard_name") or ""),

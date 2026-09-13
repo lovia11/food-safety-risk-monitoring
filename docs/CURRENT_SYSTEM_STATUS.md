@@ -85,9 +85,12 @@ Counts below are computed from the governed configuration at the verified commit
 
 | Area | Current coverage |
 |---|---:|
-| Reference MonitorTargets | 106 |
-| Enabled Reference targets | 5 |
-| Enabled validated Reference queries | 8 |
+| Official Reference MonitorTargets | 106 / 106 |
+| Reference targets with any governed Query | 18 |
+| Operational Reference targets | 5 / 106 |
+| Enabled / validated Reference queries | 8 / 8 |
+| Candidate, disabled Reference queries | 12 |
+| Paused Reference targets | 1 |
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
 | Evidence-to-risk Bridge mappings | 3 |
@@ -98,7 +101,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Method applicability records | 37 |
 | Substance regulatory contexts | 1 |
 
-The 106-object Reference is not 106-object operational search coverage. Only enabled, validated queries are operational. The separate development seed is not merged into the verified Reference count.
+The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. The 12 V2-4B batch candidates remain disabled and unvalidated; 当归 remains paused for its recorded scope issue. The separate development seed is not merged into the verified Reference count.
 
 ## Current validation support
 
@@ -110,6 +113,8 @@ The 106-object Reference is not 106-object operational search coverage. Only ena
 - V2-3 source support is documented in [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md). Ordinary tests use a governed recorded official response; live official lookup is best-effort and never a CI dependency.
 - The five-product Historical Validation Set contains no valid registration/filing identifier and no positive strong identity candidate. Product `674221193698` has an explicit negative `是否保健食品…否` parameter and remains `no_indicator`; the other four also remain `no_indicator`. No historical artifact was edited or re-OCRed.
 - V2-3 validation: Python 441 discovered / 440 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 22/22; frontend typecheck and production build passed. Identifier, provider, matching, degradation, schema 9→10 and artifact rebuild contracts are covered. Product Detail plus page/official evidence dialogs were inspected locally at 1440px and 1080px without page-level horizontal overflow or new browser console errors.
+- V2-4A establishes full Reference visibility, three-state availability, strict Query lifecycle/execution guards, a tracked legacy-validation ledger, a search-only batch artifact contract, and a 12-Query disabled candidate plan. **V2-4B real validation is pending**; no new query was promoted by V2-4A.
+- V2-4A validation: Python 452 discovered / 451 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. The new task picker was inspected locally at 1440px and 1080px with all 106 options, no horizontal overflow, correct operational/pending/paused behavior, and no new browser console warnings/errors.
 
 ## Known limitations and future changes
 
@@ -118,7 +123,7 @@ The following are **not implemented** at this baseline:
 - **FUTURE CHANGE:** final ClaimTaxonomy and claim-consistency assessment.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- **FUTURE CHANGE:** operational search coverage beyond the currently enabled validated subset.
+- **V2-4B PENDING:** bounded real validation and reviewed promotion for selected candidate SearchQueries.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 

@@ -20,8 +20,8 @@ This is the domain-design prerequisite for future schema and API work. ProductFa
 | Entity | Purpose and identity | Scope / mutability | Provenance and relationships | Lifecycle / implementation / storage |
 |---|---|---|---|---|
 | Task | One execution/request, identified by `task_id`/run identity. | Task-scoped; runtime state mutable, historical config stable. | Owns queries, Candidates and Snapshots; display name also belongs in persistent run metadata. | **Current.** SQLite index plus run artifacts. |
-| MonitorTarget | Governed object eligible for monitoring, identified by dataset + `target_id`. | Dataset-scoped; versioned, not silently edited in place. | Has source provenance and zero or more SearchQueries. | **Current.** Governed JSON imported/indexed in SQLite. |
-| SearchQuery | Search expression identified by `query_id`. | MonitorTarget/version scope; lifecycle and enablement mutable through governance. | Belongs to one MonitorTarget; records source, validation and assessment. | **Current.** Governed JSON and SQLite read model. |
+| MonitorTarget | Governed Reference object identified by dataset + `target_id`; operational availability is derived separately. | Dataset-scoped; versioned, not silently edited in place. | Has source provenance and zero or more SearchQueries. | **Current V2-4A.** Governed JSON imported/indexed in SQLite; availability is a read projection. |
+| SearchQuery | Search strategy identified by `query_id`, not a synonym dictionary entry. | MonitorTarget/version scope; reviewed lifecycle and enablement mutable through governance. | Belongs to one MonitorTarget; records source, validation and assessment. | **Current V2-4A.** Governed JSON, tracked validation ledger and SQLite read model. |
 | CandidateHit | Search-result observation identified within task/query/result ordering. | Run/query-scoped, immutable observation. | Links Task, SearchQuery and potential Product identity; is not Detail success. | **Current.** Run artifacts and SQLite monitor tables. |
 | Product | Stable marketplace item identity, normally marketplace product ID. | Cross-run; mutable presentation aggregates, stable identity. | Has many ProductSnapshots and at most one current SamplingMembership. | **Current.** SQLite. |
 | ProductSnapshot | One concrete observation, identified by `snapshot_id`. | Product + Task + observed-time scoped; source facts immutable after capture. | Owns Evidence, analysis, ProductFacts, ClaimSignals, Review, and recommendation. | **Current** core; future relations extend it. SQLite index + run artifacts. |
@@ -59,6 +59,15 @@ The following are observations and therefore Snapshot-scoped unless a future rev
 - Evidence, analysis, recommendation and Review.
 
 Current Sampling Membership is intentionally Product-scoped. Its `source_snapshot_id` explains the evidentiary basis and may differ from the Snapshot currently being reviewed.
+
+## 3.1 MonitorTarget and SearchQuery availability — CURRENT V2-4A
+
+```text
+Operational MonitorTarget = target.enabled
+  AND exists(query.enabled AND query.validation_status == search_validated)
+```
+
+Reference targets without a runnable Query are `query_pending`; targets retained with an explicit low-relevance, scope, or deprecation decision are `paused`. Query lifecycle is `candidate_unvalidated`, `search_validated`, `rejected_low_relevance`, `paused_scope_issue`, or `deprecated`. `query_source` is `standard_name`, `official_alias`, `observed_product_form`, or `manually_curated`. Historical SQLite defaults `unvalidated`/`manual` are compatibility-only and project to current read semantics; no schema migration is introduced.
 
 ## 4. ProductFact contract — CURRENT V2-2
 

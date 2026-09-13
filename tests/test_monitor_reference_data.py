@@ -89,7 +89,7 @@ class MonitorReferenceDataTest(unittest.TestCase):
 
     def test_verified_reference_file_imports_targets_and_pilot_queries(self):
         result = self.store.import_monitor_config(REFERENCE_CONFIG)
-        self.assertEqual(result, {"datasets": 1, "targets": 106, "queries": 9})
+        self.assertEqual(result, {"datasets": 1, "targets": 106, "queries": 21})
         self.assertEqual(self.store.table_counts()["monitor_datasets"], 1)
         targets = self.store.list_monitor_targets()
         self.assertEqual(len(targets), 106)

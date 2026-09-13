@@ -122,24 +122,34 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 self.assertTrue(target["source_name"].strip())
                 self.assertEqual(target["source_date"], EXPECTED_DATES[source_reference])
 
-    def test_only_search_validated_pilots_are_enabled_and_nonpilots_are_queryless(self):
-        pilot_targets = [target for target in self.targets if target["queries"]]
-        self.assertEqual(len(pilot_targets), 6)
-        self.assertEqual(sum(len(target["queries"]) for target in pilot_targets), 9)
+    def test_only_search_validated_pilots_are_enabled_and_candidates_stay_disabled(self):
+        configured_targets = [target for target in self.targets if target["queries"]]
+        self.assertEqual(len(configured_targets), 18)
+        self.assertEqual(sum(len(target["queries"]) for target in configured_targets), 21)
         self.assertEqual(
             {target["standard_name"] for target in self.targets if target["enabled"]},
             {"酸枣仁", "茯苓", "龙眼肉（桂圆）", "铁皮石斛", "化橘红"},
         )
-        self.assertTrue(
-            all(
-                query["validation_status"] == "search_validated"
-                for target in pilot_targets
-                for query in target["queries"]
-            )
-        )
-        danggui = next(target for target in pilot_targets if target["standard_name"] == "当归")
+        enabled_queries = [
+            query
+            for target in configured_targets
+            for query in target["queries"]
+            if query["enabled"]
+        ]
+        candidate_queries = [
+            query
+            for target in configured_targets
+            for query in target["queries"]
+            if query["validation_status"] == "candidate_unvalidated"
+        ]
+        self.assertEqual(len(enabled_queries), 8)
+        self.assertTrue(all(query["validation_status"] == "search_validated" for query in enabled_queries))
+        self.assertEqual(len(candidate_queries), 12)
+        self.assertTrue(all(not query["enabled"] for query in candidate_queries))
+        danggui = next(target for target in configured_targets if target["standard_name"] == "当归")
         self.assertFalse(danggui["enabled"])
         self.assertFalse(danggui["queries"][0]["enabled"])
+        self.assertEqual(danggui["queries"][0]["validation_status"], "paused_scope_issue")
         self.assertIn("仅作为香辛料和调味品使用", self.payload["description"])
 
     def test_development_seed_is_independent_and_acid_jujube_is_not_overwritten(self):
@@ -164,7 +174,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             first = store.import_monitor_config(REFERENCE_CONFIG)
             first_counts = store.table_counts()
             second = store.import_monitor_config(REFERENCE_CONFIG)
-            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 9})
+            self.assertEqual(first, {"datasets": 1, "targets": 106, "queries": 21})
             self.assertEqual(second, first)
             self.assertEqual(store.table_counts(), first_counts)
             self.assertEqual(len(store.list_monitor_targets()), 106)
@@ -187,7 +197,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             ]
             self.assertEqual(len(formal), 106)
             self.assertEqual(len(development), 1)
-            self.assertEqual(store.table_counts()["search_queries"], 11)
+            self.assertEqual(store.table_counts()["search_queries"], 23)
 
     def test_api_exposes_provenance_and_hides_disabled_targets_from_task_list(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -228,6 +238,16 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                     "food-medicine-2019-001",
                     {target["target_id"] for target in listed["targets"]},
                 )
+                with urlopen(f"{base}/api/monitor-targets?scope=reference") as response:
+                    reference = json.load(response)
+                self.assertEqual(reference["count"], 106)
+                self.assertEqual(reference["coverage"]["operational_target_count"], 5)
+                self.assertEqual(reference["coverage"]["candidate_query_count"], 12)
+                danggui = next(
+                    target for target in reference["targets"]
+                    if target["standard_name"] == "当归"
+                )
+                self.assertEqual(danggui["availability"], "paused")
                 with urlopen(
                     f"{base}/api/monitor-targets/food-medicine-2002-078"
                 ) as response:
@@ -258,7 +278,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 root / "output",
                 monitor_target_provider=store.get_monitor_target,
             )
-            with self.assertRaisesRegex(TaskValidationError, "不存在或未启用"):
+            with self.assertRaisesRegex(TaskValidationError, "没有已验证并启用"):
                 manager.create_task(
                     {
                         "task_type": "monitor",

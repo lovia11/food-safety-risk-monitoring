@@ -35,6 +35,7 @@ from src.risk_substance_reference import (
     validate_risk_substance_config,
 )
 from src.runtime import iso_now, read_json
+from src.monitor_coverage import present_monitor_target, reference_coverage
 
 
 REVIEW_STATUSES = {"pending", "recommend_follow_up", "no_further_action"}
@@ -44,9 +45,15 @@ QUERY_SOURCES = {
     "standard_name",
     "official_alias",
     "observed_product_form",
-    "manual",
+    "manually_curated",
 }
-QUERY_VALIDATION_STATUSES = {"unvalidated", "search_validated"}
+QUERY_VALIDATION_STATUSES = {
+    "candidate_unvalidated",
+    "search_validated",
+    "rejected_low_relevance",
+    "paused_scope_issue",
+    "deprecated",
+}
 DATASET_STATUSES = {"development_seed", "reference_pending", "verified_reference"}
 DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.development.json"),
@@ -383,7 +390,7 @@ def validate_monitor_config(payload: Any) -> dict[str, Any]:
                 raise MonitorConfigValidationError(
                     f"SearchQuery {query_id} 的observed_product_form必须使用product_form类型"
                 )
-            if query_source in {"observed_product_form", "manual"} and not query_note:
+            if query_source in {"observed_product_form", "manually_curated"} and not query_note:
                 raise MonitorConfigValidationError(
                     f"SearchQuery {query_id} 的{query_source}必须记录query_note"
                 )
@@ -1699,7 +1706,14 @@ class DataStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def list_monitor_targets(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+    def list_monitor_targets(
+        self,
+        *,
+        enabled_only: bool = False,
+        scope: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if scope not in {None, "all", "operational", "reference"}:
+            raise MonitorConfigValidationError(f"不支持的MonitorTarget scope：{scope}")
         where = " WHERE t.enabled = 1" if enabled_only else ""
         with self._connect() as connection:
             targets = connection.execute(
@@ -1735,7 +1749,7 @@ class DataStore:
                     "enabled": bool(row["enabled"]),
                 }
             )
-        return [
+        raw_targets = [
             {
                 "target_id": row["target_id"],
                 "dataset_id": row["dataset_id"],
@@ -1762,6 +1776,19 @@ class DataStore:
             }
             for row in targets
         ]
+        projected = [present_monitor_target(item) for item in raw_targets]
+        if scope == "reference":
+            return [
+                item
+                for item in projected
+                if item["dataset_status"] == "verified_reference"
+            ]
+        if scope == "operational":
+            return [item for item in projected if item["availability"] == "operational"]
+        return projected
+
+    def monitor_coverage(self) -> dict[str, int]:
+        return reference_coverage(self.list_monitor_targets())
 
     def get_monitor_target(self, target_id: str) -> dict[str, Any] | None:
         return next(

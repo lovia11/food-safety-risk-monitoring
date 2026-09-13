@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.runtime import iso_now, write_json
+from src.monitor_coverage import is_operational_query
 from src.taobao_live import LiveSearchCollector
 
 
@@ -43,10 +44,10 @@ class DiscoveryCoordinator:
         per_query_candidate_limit: int,
         detail_limit: int,
     ) -> dict[str, Any]:
-        enabled = [item for item in queries if item.get("enabled", True)]
+        enabled = [item for item in queries if is_operational_query(item)]
         enabled.sort(key=lambda item: (int(item.get("order") or 0), str(item.get("query_id") or "")))
         if not enabled:
-            raise ValueError("监测对象没有启用的SearchQuery")
+            raise ValueError("监测对象没有已验证并启用的SearchQuery")
         if per_query_candidate_limit < 1 or detail_limit < 1:
             raise ValueError("候选数量和详情数量必须大于0")
 

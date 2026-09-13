@@ -559,8 +559,36 @@ export type MonitorQuery = {
 
 export type MonitorTarget = {
   target_id: string;
+  dataset_id: string;
+  dataset_status: string;
   standard_name: string;
   target_type: string;
+  source_name: string;
+  source_reference: string;
+  source_date: string | null;
   enabled: boolean;
   queries: MonitorQuery[];
+  availability: "operational" | "query_pending" | "paused";
+  availability_reason: string | null;
+  validated_query_count: number;
+  candidate_query_count: number;
+  validated_queries: MonitorQuery[];
+};
+
+export type MonitorCoverage = {
+  reference_target_count: number;
+  targets_with_query_count: number;
+  operational_target_count: number;
+  enabled_query_count: number;
+  validated_query_count: number;
+  disabled_query_count: number;
+  candidate_query_count: number;
+  paused_target_count: number;
+};
+
+export type MonitorTargetList = {
+  targets: MonitorTarget[];
+  count: number;
+  scope: "operational" | "reference";
+  coverage: MonitorCoverage;
 };

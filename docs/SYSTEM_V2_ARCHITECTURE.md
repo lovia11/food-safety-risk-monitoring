@@ -81,7 +81,7 @@ SQLite run-derived data can be re-imported, but the database also contains human
 
 ### 1.4 Current API responsibilities
 
-The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. Old contract compatibility retained by the backend does not make an old frontend current.
+The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. `GET /api/monitor-targets` defaults to the operational set for compatibility; `scope=reference` exposes all 106 formal Reference objects with `operational`, `query_pending`, or `paused` availability and derived coverage counts. Monitor task creation enforces the same operational predicate server-side. Old contract compatibility retained by the backend does not make an old frontend current.
 
 Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently.
 
@@ -95,6 +95,12 @@ Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presenta
 - Inspection Recommendation is derived from Evidence, Product Context, and versioned knowledge.
 - Review repositories do not write Membership; Sampling repositories do not write Review. Application services own compound transactions.
 - Historical Sampling item identifiers are frozen identifiers; they need not retain foreign keys to live ProductSnapshots or Tasks.
+
+### 2.1 Monitor coverage boundary — CURRENT V2-4A
+
+Governed JSON remains the authority for MonitorTarget/SearchQuery source, lifecycle, and enablement; SQLite remains the imported read model and requires no V2-4A schema change. A pure domain projection derives availability and coverage. Discovery accepts only enabled `search_validated` queries and continues to deduplicate by stable Product ID before applying one task-level Detail/analysis cap.
+
+Search-only validation artifacts live under `output/query_validation/<batch_id>/` and are never production evidence. Reviewed decisions are summarized in the tracked validation ledger; candidates cannot become operational through runtime output alone.
 
 ## 3. Target V2 architecture
 

@@ -150,6 +150,16 @@ The detail section distinguishes all backend states: no indicator, indicator onl
 - Candidate/Detail/OCR failure: show its real pipeline state rather than ordinary pending Review.
 - Recommendation unavailable: keep Evidence, context, and Review functional when analysis is ready.
 
+## 9.1 New Monitor inspection — Current V2-4A
+
+The Monitor mode selector searches all 106 formal Reference objects and states `官方目录 106项 · 当前可排查 X项`. It supports 全部、可排查、待验证、暂停 filters. Each row shows the official standard name and one of 可排查、搜索策略待验证、暂缓.
+
+Operational rows show only enabled, validated SearchQuery chips. Query-pending and paused rows remain searchable and selectable for explanation, but the primary action is disabled. Query-pending guidance is:
+
+> 该对象已纳入官方目录，但搜索策略尚未完成真实搜索验证，暂不能发起检测任务。
+
+Paused rows show the governed short reason. The Quick Task flow is unchanged and never writes its free text back into formal SearchQuery governance.
+
 ## 10. Responsive acceptance
 
 The primary acceptance widths are 1440px and 1080px. Both must cover list-only and split detail modes, expanded/collapsed sidebar, long title, missing image, zero Evidence, unmapped Evidence, recommendation error, historical Snapshot, loading, empty, and API-error states.

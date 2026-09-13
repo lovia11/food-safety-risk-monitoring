@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { MonitorTarget, TaskDetail, TaskList } from "./contracts";
+import type { MonitorTargetList, TaskDetail, TaskList } from "./contracts";
 
 export function getTasks(signal?: AbortSignal) {
   return apiRequest<TaskList>("/api/tasks", { signal });
@@ -9,12 +9,11 @@ export function getTask(taskId: string, signal?: AbortSignal) {
   return apiRequest<TaskDetail>(`/api/tasks/${encodeURIComponent(taskId)}`, { signal });
 }
 
-export async function getMonitorTargets(signal?: AbortSignal) {
-  const result = await apiRequest<{ targets: MonitorTarget[]; count: number }>(
-    "/api/monitor-targets",
-    { signal },
-  );
-  return result.targets;
+export function getMonitorTargets(
+  scope: "operational" | "reference" = "operational",
+  signal?: AbortSignal,
+) {
+  return apiRequest<MonitorTargetList>(`/api/monitor-targets?scope=${scope}`, { signal });
 }
 
 export function createTask(payload: Record<string, unknown>) {

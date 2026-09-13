@@ -1,19 +1,39 @@
-import { AlertCircle, ArrowLeft, Play, Search } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Play, Search } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import type { MonitorTarget, TaskList } from "../../api/contracts";
+import type { MonitorTarget, MonitorTargetList, TaskList } from "../../api/contracts";
 import { createTask, getMonitorTargets, getTasks } from "../../api/tasks";
 import { LoadingState } from "../../components/LoadingState";
+import {
+  MONITOR_AVAILABILITY_LABELS,
+  canCreateMonitorTask,
+  filterMonitorTargets,
+  monitorAvailabilityMessage,
+  type MonitorAvailabilityFilter,
+} from "../../domain/monitorTargets";
 import { buildWebTaskRequest } from "../../domain/task";
 import { PageHeader } from "../../layout/PageHeader";
+
+const AVAILABILITY_FILTERS: Array<{
+  value: MonitorAvailabilityFilter;
+  label: string;
+}> = [
+  { value: "all", label: "全部" },
+  { value: "operational", label: "可排查" },
+  { value: "query_pending", label: "待验证" },
+  { value: "paused", label: "暂停" },
+];
 
 export function NewInspectionPage() {
   const [mode, setMode] = useState<"quick" | "monitor">("quick");
   const [name, setName] = useState("");
   const [keyword, setKeyword] = useState("");
   const [targetId, setTargetId] = useState("");
+  const [targetSearch, setTargetSearch] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] =
+    useState<MonitorAvailabilityFilter>("all");
   const [analysisLimit, setAnalysisLimit] = useState(10);
-  const [targets, setTargets] = useState<MonitorTarget[]>([]);
+  const [targetList, setTargetList] = useState<MonitorTargetList | null>(null);
   const [tasks, setTasks] = useState<TaskList | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -21,11 +41,17 @@ export function NewInspectionPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([getTasks(controller.signal), getMonitorTargets(controller.signal)])
+    Promise.all([
+      getTasks(controller.signal),
+      getMonitorTargets("reference", controller.signal),
+    ])
       .then(([taskData, targetData]) => {
         setTasks(taskData);
-        setTargets(targetData);
-        setTargetId(targetData[0]?.target_id || "");
+        setTargetList(targetData);
+        setTargetId(
+          targetData.targets.find((target) => target.availability === "operational")
+            ?.target_id || targetData.targets[0]?.target_id || "",
+        );
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) {
@@ -36,16 +62,20 @@ export function NewInspectionPage() {
     return () => controller.abort();
   }, []);
 
+  const targets = targetList?.targets || [];
   const selectedTarget = useMemo(
     () => targets.find((target) => target.target_id === targetId),
     [targetId, targets],
   );
-  const queries = selectedTarget?.queries
-    .filter((query) => query.enabled && query.validation_status === "search_validated")
-    .sort((left, right) => left.order - right.order) || [];
+  const visibleTargets = useMemo(
+    () => filterMonitorTargets(targets, targetSearch, availabilityFilter),
+    [availabilityFilter, targetSearch, targets],
+  );
+  const monitorReady = canCreateMonitorTask(selectedTarget);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (tasks?.activeTaskId) return;
+    if (tasks?.activeTaskId || (mode === "monitor" && !monitorReady)) return;
     setSubmitting(true);
     setError("");
     try {
@@ -64,12 +94,17 @@ export function NewInspectionPage() {
     }
   };
 
-  if (loading) return <div className="page-frame"><LoadingState label="正在读取排查配置" /></div>;
+  if (loading) {
+    return <div className="page-frame"><LoadingState label="正在读取排查配置" /></div>;
+  }
   return (
     <div className="page-frame new-inspection-page">
-      <PageHeader eyebrow="排查管理" title="新建排查" description="搜索词和对象词组均来自明确输入或已保存配置。" actions={
-        <a className="secondary-button" href="#/inspections"><ArrowLeft size={15} />返回档案</a>
-      } />
+      <PageHeader
+        eyebrow="排查管理"
+        title="新建排查"
+        description="快速任务使用明确输入；检测任务仅运行已经完成真实搜索验证的对象策略。"
+        actions={<a className="secondary-button" href="#/inspections"><ArrowLeft size={15} />返回档案</a>}
+      />
       {tasks?.activeTaskId && (
         <div className="active-task-notice">
           <AlertCircle size={18} />
@@ -87,21 +122,104 @@ export function NewInspectionPage() {
         {mode === "quick" ? (
           <label>搜索关键词<div className="input-with-icon"><Search size={16} /><input required value={keyword} maxLength={80} onChange={(event) => setKeyword(event.target.value)} /></div></label>
         ) : (
-          <>
-            <label>监测对象<select required value={targetId} onChange={(event) => setTargetId(event.target.value)}>{targets.map((target) => <option key={target.target_id} value={target.target_id}>{target.standard_name}</option>)}</select></label>
-            <div className="query-preview"><strong>将使用已验证搜索词</strong>{queries.length ? <ul>{queries.map((query) => <li key={query.query_id}>{query.query_text}</li>)}</ul> : <p>该对象暂无可执行的已验证搜索词。</p>}</div>
-          </>
+          <MonitorTargetPicker
+            targetList={targetList}
+            visibleTargets={visibleTargets}
+            selectedTarget={selectedTarget}
+            targetSearch={targetSearch}
+            availabilityFilter={availabilityFilter}
+            onSearch={setTargetSearch}
+            onFilter={setAvailabilityFilter}
+            onSelect={setTargetId}
+          />
         )}
         <label>
           最多分析商品数
           <input type="number" min={1} max={50} value={analysisLimit} onChange={(event) => setAnalysisLimit(Number(event.target.value))} />
           <small>搜索结果合并去重后，最多选择这些商品继续采集详情、识别文字并分析线索。</small>
         </label>
+        {mode === "monitor" && selectedTarget && (
+          <div className="monitor-target-guidance" data-availability={selectedTarget.availability}>
+            {monitorAvailabilityMessage(selectedTarget)}
+          </div>
+        )}
         {error && <div className="inline-message" data-tone="danger"><AlertCircle size={17} />{error}</div>}
-        <button type="submit" className="primary-button start-task-button" disabled={Boolean(tasks?.activeTaskId) || submitting || (mode === "monitor" && !queries.length)}>
+        <button
+          type="submit"
+          className="primary-button start-task-button"
+          disabled={Boolean(tasks?.activeTaskId) || submitting || (mode === "monitor" && !monitorReady)}
+        >
           <Play size={16} />{submitting ? "正在启动" : "开始排查"}
         </button>
       </form>
     </div>
+  );
+}
+
+function MonitorTargetPicker({
+  targetList,
+  visibleTargets,
+  selectedTarget,
+  targetSearch,
+  availabilityFilter,
+  onSearch,
+  onFilter,
+  onSelect,
+}: {
+  targetList: MonitorTargetList | null;
+  visibleTargets: MonitorTarget[];
+  selectedTarget: MonitorTarget | undefined;
+  targetSearch: string;
+  availabilityFilter: MonitorAvailabilityFilter;
+  onSearch: (value: string) => void;
+  onFilter: (value: MonitorAvailabilityFilter) => void;
+  onSelect: (value: string) => void;
+}) {
+  const coverage = targetList?.coverage;
+  return (
+    <section className="monitor-target-picker" aria-label="监测对象">
+      <div className="monitor-target-heading">
+        <div><strong>监测对象</strong><span>完整官方 Reference，可运行范围独立标识</span></div>
+        <p>官方目录 {coverage?.reference_target_count || targetList?.count || 0}项 · 当前可排查 {coverage?.operational_target_count || 0}项</p>
+      </div>
+      <div className="input-with-icon monitor-target-search">
+        <Search size={16} />
+        <input value={targetSearch} onChange={(event) => onSearch(event.target.value)} placeholder="搜索官方标准名称或已验证搜索词" />
+      </div>
+      <div className="monitor-target-filters" aria-label="对象可用状态">
+        {AVAILABILITY_FILTERS.map((item) => (
+          <button key={item.value} type="button" data-active={availabilityFilter === item.value} onClick={() => onFilter(item.value)}>{item.label}</button>
+        ))}
+      </div>
+      <div className="monitor-target-results" role="listbox" aria-label="官方监测对象">
+        {visibleTargets.length ? visibleTargets.map((target) => (
+          <button
+            type="button"
+            role="option"
+            aria-selected={selectedTarget?.target_id === target.target_id}
+            className="monitor-target-row"
+            key={target.target_id}
+            data-selected={selectedTarget?.target_id === target.target_id}
+            onClick={() => onSelect(target.target_id)}
+          >
+            <span className="monitor-target-row-main">
+              <span className="monitor-target-name">{target.standard_name}</span>
+              <span className="monitor-availability-badge" data-availability={target.availability}>{MONITOR_AVAILABILITY_LABELS[target.availability]}</span>
+              {selectedTarget?.target_id === target.target_id && <Check size={15} aria-hidden="true" />}
+            </span>
+            {target.availability === "operational" ? (
+              <span className="monitor-query-line">
+                <span>已验证搜索词 {target.validated_query_count}</span>
+                {target.validated_queries.map((query) => <span className="monitor-query-chip" key={query.query_id}>{query.query_text}</span>)}
+              </span>
+            ) : target.availability === "paused" ? (
+              <span className="monitor-target-note">{target.availability_reason || "现有搜索策略暂缓"}</span>
+            ) : (
+              <span className="monitor-target-note">已纳入官方食药物质目录，当前尚无经过真实搜索验证的搜索策略</span>
+            )}
+          </button>
+        )) : <div className="monitor-target-empty">没有符合当前搜索与筛选条件的对象。</div>}
+      </div>
+    </section>
   );
 }
