@@ -1,8 +1,8 @@
 # Monitor Query Validation Plan V2-4
 
-> Status: **IN PROGRESS — Wave 1 reviewed; Wave 2 pending**
+> Status: **IN PROGRESS — Wave 1 and Wave 2A reviewed; Wave 2B pending**
 >
-> Completed batch: Wave 1 `v2-4b-batch-01a`; later waves require a separate human gate
+> Completed batches: Wave 1 `v2-4b-batch-01a`, Wave 2A `v2-4b-batch-02a`; Wave 2B requires a separate human gate
 >
 > Collection ceiling: first 15 unique Search Result cards per Query
 >
@@ -14,7 +14,7 @@
 
 This first bounded batch uses only the official standard name. It prioritizes query-pending Reference objects with plausible food/processed-food results while retaining likely ambiguity for explicit review. It does not pre-create product-form combinations. A later product-form candidate is allowed only when the base-query artifact repeatedly demonstrates that form.
 
-All official sources below are the 2002 Ministry of Health notice recorded on each governed MonitorTarget. Wave 1 reviewed six standard-name Query records: five are now enabled `search_validated`, while 乌梅 is disabled `paused_scope_issue`. The remaining six Wave 2 records stay disabled `candidate_unvalidated` until a separately authorized and reviewed artifact satisfies the protocol.
+All official sources below are the 2002 Ministry of Health notice recorded on each governed MonitorTarget. Wave 1 reviewed six standard-name Query records: five are enabled `search_validated`, while 乌梅 is disabled `paused_scope_issue`. Wave 2A reviewed and enabled the standard-name Queries for 山药、赤小豆、枸杞子、莲子. 百合、菊花 remain disabled `candidate_unvalidated` until a separately authorized and reviewed Wave 2B artifact satisfies the protocol.
 
 | Target | Target ID | Proposed Query | Why selected | Known ambiguity / risk |
 |---|---|---|---|---|
@@ -49,8 +49,8 @@ python tools/validate_monitor_queries.py `
   --output output/query_validation
 ```
 
-At the V2-4A baseline, the unfiltered dry run resolved all 12 disabled candidates. The completed Wave 1 command above was intentionally narrowed to six separately authorized Targets. After Wave 1 governance, an unfiltered future dry run resolves only the six remaining Wave 2 candidates. A dry run only resolves configuration and prints Targets/Queries, limits, and destination; it must not import Playwright, launch a browser, or contact Taobao.
+At the V2-4A baseline, the unfiltered dry run resolved all 12 disabled candidates. Wave 1 was intentionally narrowed to six separately authorized Targets, and Wave 2A later reviewed four of the remaining candidates. After Wave 2A governance, an unfiltered future dry run resolves only 百合 and 菊花. A dry run only resolves configuration and prints Targets/Queries, limits, and destination; it must not import Playwright, launch a browser, or contact Taobao.
 
 The collection ceiling and promotion evaluation sample are deliberately different. A bounded live run stops after at most 15 unique Search Result cards (or natural exhaustion/blocker). Human review then evaluates the first 10 unique assessable results in original search order. If fewer than 10 assessable results remain after the 15-card ceiling, the decision is `hold`; collection must not continue through unbounded pagination to fill the sample. The fixed `70%`, five-relevant-result, ten-assessable-result, and systematic-scope-issue gates remain unchanged.
 
-Wave 1 decisions and immutable manifest evidence are recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Wave 2 must not begin without its next human Gate.
+Wave 1 decisions and immutable manifest evidence are recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Wave 2A is recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md). Wave 2B must not begin without its next human Gate.

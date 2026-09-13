@@ -62,6 +62,24 @@ class MonitorQueryReviewTest(unittest.TestCase):
         self.assertEqual(metrics["ambiguousSkipped"], 1)
         self.assertEqual(metrics["relevanceRate"], 1.0)
 
+    def test_lotus_metrics_skip_rank_four_and_use_rank_eleven(self):
+        rows = review_queue()["results"]
+        for row in rows:
+            rank = row["rank"]
+            if rank == 1:
+                row["reviewedLabel"] = "raw_medicinal_or_nonfood_scope"
+            elif rank == 4:
+                row["reviewedLabel"] = "ambiguous"
+            else:
+                row["reviewedLabel"] = "relevant_food"
+        metrics = calculate_review_metrics(rows)
+        self.assertEqual(metrics["evaluationRanks"], [1, 2, 3, 5, 6, 7, 8, 9, 10, 11])
+        self.assertEqual(metrics["assessableCount"], 10)
+        self.assertEqual(metrics["relevantCount"], 9)
+        self.assertEqual(metrics["rawMedicinalOrNonfoodScopeCount"], 1)
+        self.assertEqual(metrics["ambiguousSkipped"], 1)
+        self.assertEqual(metrics["relevanceRate"], 0.9)
+
     def test_hold_preserves_numeric_pass_and_systematic_scope_issue(self):
         assignments = [
             {

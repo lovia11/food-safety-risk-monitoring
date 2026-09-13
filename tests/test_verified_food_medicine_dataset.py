@@ -139,6 +139,10 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 "罗汉果",
                 "黑芝麻",
                 "蜂蜜",
+                "山药",
+                "赤小豆",
+                "枸杞子",
+                "莲子",
             },
         )
         enabled_queries = [
@@ -153,9 +157,9 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             for query in target["queries"]
             if query["validation_status"] == "candidate_unvalidated"
         ]
-        self.assertEqual(len(enabled_queries), 13)
+        self.assertEqual(len(enabled_queries), 17)
         self.assertTrue(all(query["validation_status"] == "search_validated" for query in enabled_queries))
-        self.assertEqual(len(candidate_queries), 6)
+        self.assertEqual(len(candidate_queries), 2)
         self.assertTrue(all(not query["enabled"] for query in candidate_queries))
         danggui = next(target for target in configured_targets if target["standard_name"] == "当归")
         self.assertFalse(danggui["enabled"])
@@ -241,7 +245,7 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             try:
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     listed = json.load(response)
-                self.assertEqual(listed["count"], 11)
+                self.assertEqual(listed["count"], 15)
                 self.assertEqual(
                     {target["standard_name"] for target in listed["targets"]},
                     {
@@ -255,6 +259,10 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                         "罗汉果",
                         "黑芝麻",
                         "蜂蜜",
+                        "山药",
+                        "赤小豆",
+                        "枸杞子",
+                        "莲子",
                     },
                 )
                 self.assertIn(
@@ -268,8 +276,8 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 with urlopen(f"{base}/api/monitor-targets?scope=reference") as response:
                     reference = json.load(response)
                 self.assertEqual(reference["count"], 106)
-                self.assertEqual(reference["coverage"]["operational_target_count"], 10)
-                self.assertEqual(reference["coverage"]["candidate_query_count"], 6)
+                self.assertEqual(reference["coverage"]["operational_target_count"], 14)
+                self.assertEqual(reference["coverage"]["candidate_query_count"], 2)
                 danggui = next(
                     target for target in reference["targets"]
                     if target["standard_name"] == "当归"

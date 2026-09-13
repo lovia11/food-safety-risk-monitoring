@@ -47,11 +47,11 @@ class MonitorCoverageV2Test(unittest.TestCase):
             {
                 "reference_target_count": 106,
                 "targets_with_query_count": 18,
-                "operational_target_count": 10,
-                "enabled_query_count": 13,
-                "validated_query_count": 13,
-                "disabled_query_count": 8,
-                "candidate_query_count": 6,
+                "operational_target_count": 14,
+                "enabled_query_count": 17,
+                "validated_query_count": 17,
+                "disabled_query_count": 4,
+                "candidate_query_count": 2,
                 "paused_target_count": 2,
             },
         )
@@ -69,8 +69,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
             if target["dataset_status"] == "verified_reference"
         ]
         self.assertEqual(len(reference), 106)
-        self.assertEqual(len(formal_operational), 10)
-        self.assertEqual(len(operational), 11)  # includes the independent development seed
+        self.assertEqual(len(formal_operational), 14)
+        self.assertEqual(len(operational), 15)  # includes the independent development seed
         self.assertTrue(
             all(target["availability"] == "operational" for target in operational)
         )
@@ -79,6 +79,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
         reference = self.store.list_monitor_targets(scope="reference")
         acid = next(item for item in reference if item["standard_name"] == "酸枣仁")
         mountain_yam = next(item for item in reference if item["standard_name"] == "山药")
+        lily = next(item for item in reference if item["standard_name"] == "百合")
         angelica = next(item for item in reference if item["standard_name"] == "当归")
         self.assertEqual(acid["availability"], "operational")
         self.assertEqual([item["query_text"] for item in acid["validated_queries"]], ["酸枣仁", "酸枣仁茶"])
@@ -86,16 +87,19 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertEqual(acid["standardName"], "酸枣仁")
         self.assertEqual(acid["validatedQueryCount"], 2)
         self.assertEqual(acid["validatedQueries"], acid["validated_queries"])
-        self.assertEqual(mountain_yam["availability"], "query_pending")
-        self.assertEqual(mountain_yam["candidate_query_count"], 1)
-        self.assertEqual(mountain_yam["validated_queries"], [])
+        self.assertEqual(mountain_yam["availability"], "operational")
+        self.assertEqual(mountain_yam["validated_query_count"], 1)
+        self.assertEqual(mountain_yam["validated_queries"][0]["query_text"], "山药")
+        self.assertEqual(lily["availability"], "query_pending")
+        self.assertEqual(lily["candidate_query_count"], 1)
+        self.assertEqual(lily["validated_queries"], [])
         self.assertEqual(angelica["availability"], "paused")
         self.assertIn("中药材/饮片", angelica["availability_reason"])
         self.assertEqual(angelica["validated_queries"], [])
 
     def test_candidate_and_paused_queries_are_never_operational(self):
         reference = self.store.list_monitor_targets(scope="reference")
-        candidate = next(item for item in reference if item["standard_name"] == "山药")["queries"][0]
+        candidate = next(item for item in reference if item["standard_name"] == "百合")["queries"][0]
         paused = next(item for item in reference if item["standard_name"] == "当归")["queries"][0]
         self.assertFalse(is_operational_query(candidate))
         self.assertFalse(is_operational_query(paused))
@@ -112,7 +116,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             manager.create_task(
                 {
                     "task_type": "monitor",
-                    "target_id": "food-medicine-2002-006",
+                    "target_id": "food-medicine-2002-022",
                     "per_query_candidate_limit": 10,
                     "detail_limit": 10,
                 }
@@ -147,7 +151,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
                 data=json.dumps(
                     {
                         "task_type": "monitor",
-                        "target_id": "food-medicine-2002-006",
+                        "target_id": "food-medicine-2002-022",
                         "per_query_candidate_limit": 10,
                         "detail_limit": 10,
                     }
@@ -166,7 +170,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
     def test_validation_ledger_covers_every_governed_final_query(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         ledger = validate_validation_ledger(config, read_json(LEDGER))
-        self.assertEqual(len(ledger["records"]), 15)
+        self.assertEqual(len(ledger["records"]), 19)
         wave_one = {
             item["query_text"]: item
             for item in ledger["records"]
@@ -177,8 +181,20 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertTrue(wave_one["乌梅"]["systematic_scope_issue"])
         self.assertEqual(wave_one["山楂"]["relevant_count"], 9)
         self.assertIn("未发现系统性范围问题", wave_one["山楂"]["decision_note"])
+        wave_two_a = {
+            item["query_text"]: item
+            for item in ledger["records"]
+            if item["batch_id"] == "v2-4b-batch-02a"
+        }
+        self.assertEqual(set(wave_two_a), {"山药", "赤小豆", "枸杞子", "莲子"})
+        self.assertTrue(all(item["decision"] == "promote" for item in wave_two_a.values()))
+        self.assertEqual(wave_two_a["莲子"]["ambiguous_skipped"], 1)
+        self.assertEqual(
+            wave_two_a["莲子"]["artifact_manifest_sha256"],
+            "b5acfc84635c4f5103ac2a10e0524b90bd065f68d26830f8b07464c25094fe54",
+        )
 
-    def test_unfiltered_dry_run_selects_only_six_remaining_wave_two_candidates(self):
+    def test_unfiltered_dry_run_selects_only_two_remaining_wave_two_b_candidates(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         selected = select_validation_queries(config)
         plan = validation_dry_run(
@@ -187,7 +203,10 @@ class MonitorCoverageV2Test(unittest.TestCase):
             max_results=10,
             selected=selected,
         )
-        self.assertEqual(plan["queryCount"], 6)
+        self.assertEqual(plan["queryCount"], 2)
+        self.assertEqual(
+            {item["standardName"] for item in plan["queries"]}, {"百合", "菊花"}
+        )
         self.assertEqual(plan["collectionRawLimit"], 10)
         self.assertEqual(plan["evaluationSampleSize"], 10)
         self.assertTrue(plan["dryRun"])
@@ -214,7 +233,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             )
         plan = json.loads(stdout.getvalue())
         self.assertEqual(result, 0)
-        self.assertEqual(plan["queryCount"], 6)
+        self.assertEqual(plan["queryCount"], 2)
         self.assertEqual(plan["plannedResultSampleSize"], 10)
         self.assertFalse(destination.exists())
 
@@ -261,7 +280,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             ],
         )
 
-    def test_wave_one_promotions_pass_server_guard_without_running_network(self):
+    def test_reviewed_promotions_pass_server_guard_without_running_network(self):
         captured = []
 
         class NoNetworkPipeline:
@@ -282,6 +301,10 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "food-medicine-2002-038",
             "food-medicine-2002-071",
             "food-medicine-2002-076",
+            "food-medicine-2002-006",
+            "food-medicine-2002-032",
+            "food-medicine-2002-045",
+            "food-medicine-2002-060",
         ]
         for target_id in promoted_ids:
             created = manager.create_task(
@@ -294,7 +317,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             )
             self.assertEqual(created["runtime"]["request"]["targetId"], target_id)
             self.assertTrue(manager.wait_for_idle())
-        self.assertEqual(len(captured), 5)
+        self.assertEqual(len(captured), 9)
         self.assertTrue(
             all(
                 options.search_queries[0]["query_source"] == "standard_name"
