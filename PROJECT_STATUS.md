@@ -3,7 +3,7 @@
 ## Baseline
 
 - Branch: `ux-redesign-v1`
-- V2-4A starting commit: `768f9389e3397c877bda87cf69c46816015be58f`
+- V2-4 Wave 1 starting commit: `698b8ad482367ffbd20ba696799c47ebd372d2c3`
 - SQLite schema: 10
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
@@ -24,8 +24,8 @@
 
 ## Current Coverage
 
-- Official directory 106 / 106; 18 targets have governed Query records; 5 / 106 are operational
-- 8 enabled and validated Reference queries; 12 disabled candidate queries; 1 paused target
+- Official directory 106 / 106; 18 targets have governed Query records; 10 / 106 are operational
+- 13 enabled and validated Reference queries; 6 disabled candidate queries; 2 paused targets
 - Separate development seed: 1 target / 2 queries
 - Legacy/current Phase3 clues: 5 categories / 26 keywords
 - 3 Evidence-to-risk Bridge mappings; 8 Risk-to-substance/group mappings
@@ -33,18 +33,18 @@
 
 ## Current Validation
 
-V2-4A validation: Python 452 discovered / 451 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Monitor coverage tests include exact formal counts, lifecycle invariants, Reference/operational API scopes, non-operational server rejection, candidate/paused Discovery exclusion, validation ledger integrity, dry-run/no-output behavior, partial-failure artifacts, resume selection, deduplication and the task-global cap. The new task picker was inspected locally at 1440px and 1080px with 106 rendered options, correct acid-jujube/longan/query-pending/angelica behavior, no horizontal overflow, and no new console warnings/errors. The Historical Validation Set remains unmodified.
+V2-4A validation passed at its recorded baseline. V2-4 Wave 1 subsequently completed bounded search-only collection and human review for six standard-name Queries: five were promoted and 乌梅 was held for systematic scope mixing. Deterministic coverage includes metric calculation, Chinese label normalization, immutable manifest hashing, ledger integrity, operational/reference API scopes and server-side execution guards. V2-4B2 validation passed with Python 458/459 plus 1 skipped, targeted Monitor tests 45/45, Historical Validation builder 6/6, frontend workflow 24/24, typecheck, build, and offline local UI acceptance. The Historical Validation Set remains unmodified.
 
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and validated Operational Search expansion are Future V2 work. The 12-query V2-4B batch is **NOT YET VALIDATED**. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, final Claim Taxonomy, claim-consistency assessment, Analytics, Knowledge Base UI, and further validated Operational Search expansion are Future V2 work. V2-4 Wave 1 is governed; the six Wave 2 candidates remain unvalidated. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-4A — Monitor Coverage Foundation & Validation Preparation complete locally; V2-4B real validation pending.
+V2-4 — IN PROGRESS. Wave 1 collection and governance complete; Wave 2 pending.
 
 ## Next Gate
 
-V2-4B may begin only after V2-4A acceptance and explicit authorization for the bounded visible-browser search-only batch. Do not promote candidates before reviewed artifacts pass the frozen gate.
+V2-4 Wave 2 may begin only after an explicit human Gate for 山药、百合、赤小豆、枸杞子、莲子、菊花. Do not start a new live batch or promote candidates before reviewed artifacts pass the frozen Gate.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

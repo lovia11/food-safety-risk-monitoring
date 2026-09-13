@@ -47,12 +47,12 @@ class MonitorCoverageV2Test(unittest.TestCase):
             {
                 "reference_target_count": 106,
                 "targets_with_query_count": 18,
-                "operational_target_count": 5,
-                "enabled_query_count": 8,
-                "validated_query_count": 8,
-                "disabled_query_count": 13,
-                "candidate_query_count": 12,
-                "paused_target_count": 1,
+                "operational_target_count": 10,
+                "enabled_query_count": 13,
+                "validated_query_count": 13,
+                "disabled_query_count": 8,
+                "candidate_query_count": 6,
+                "paused_target_count": 2,
             },
         )
         self.assertEqual(
@@ -69,8 +69,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
             if target["dataset_status"] == "verified_reference"
         ]
         self.assertEqual(len(reference), 106)
-        self.assertEqual(len(formal_operational), 5)
-        self.assertEqual(len(operational), 6)  # includes the independent development seed
+        self.assertEqual(len(formal_operational), 10)
+        self.assertEqual(len(operational), 11)  # includes the independent development seed
         self.assertTrue(
             all(target["availability"] == "operational" for target in operational)
         )
@@ -166,9 +166,19 @@ class MonitorCoverageV2Test(unittest.TestCase):
     def test_validation_ledger_covers_every_governed_final_query(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         ledger = validate_validation_ledger(config, read_json(LEDGER))
-        self.assertEqual(len(ledger["records"]), 9)
+        self.assertEqual(len(ledger["records"]), 15)
+        wave_one = {
+            item["query_text"]: item
+            for item in ledger["records"]
+            if item["batch_id"] == "v2-4b-batch-01a"
+        }
+        self.assertEqual(set(wave_one), {"山楂", "乌梅", "沙棘", "罗汉果", "黑芝麻", "蜂蜜"})
+        self.assertEqual(wave_one["乌梅"]["decision"], "hold")
+        self.assertTrue(wave_one["乌梅"]["systematic_scope_issue"])
+        self.assertEqual(wave_one["山楂"]["relevant_count"], 9)
+        self.assertIn("未发现系统性范围问题", wave_one["山楂"]["decision_note"])
 
-    def test_first_batch_dry_run_selects_only_twelve_disabled_candidates(self):
+    def test_unfiltered_dry_run_selects_only_six_remaining_wave_two_candidates(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         selected = select_validation_queries(config)
         plan = validation_dry_run(
@@ -177,7 +187,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             max_results=10,
             selected=selected,
         )
-        self.assertEqual(plan["queryCount"], 12)
+        self.assertEqual(plan["queryCount"], 6)
         self.assertEqual(plan["collectionRawLimit"], 10)
         self.assertEqual(plan["evaluationSampleSize"], 10)
         self.assertTrue(plan["dryRun"])
@@ -204,7 +214,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             )
         plan = json.loads(stdout.getvalue())
         self.assertEqual(result, 0)
-        self.assertEqual(plan["queryCount"], 12)
+        self.assertEqual(plan["queryCount"], 6)
         self.assertEqual(plan["plannedResultSampleSize"], 10)
         self.assertFalse(destination.exists())
 
@@ -218,7 +228,17 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "food-medicine-2002-071",
             "food-medicine-2002-076",
         }
-        selected = select_validation_queries(config, target_ids=target_ids)
+        query_ids = {
+            "food-medicine-2002-007-base-candidate",
+            "food-medicine-2002-010-base-candidate",
+            "food-medicine-2002-028-base-candidate",
+            "food-medicine-2002-038-base-candidate",
+            "food-medicine-2002-071-base-candidate",
+            "food-medicine-2002-076-base-candidate",
+        }
+        selected = select_validation_queries(
+            config, target_ids=target_ids, query_ids=query_ids
+        )
         plan = validation_dry_run(
             batch_id="v2-4b-batch-01a",
             output_root=self.root / "query-validation",
@@ -240,6 +260,57 @@ class MonitorCoverageV2Test(unittest.TestCase):
                 "food-medicine-2002-076",
             ],
         )
+
+    def test_wave_one_promotions_pass_server_guard_without_running_network(self):
+        captured = []
+
+        class NoNetworkPipeline:
+            def __init__(self, options):
+                captured.append(options)
+
+            def run(self):
+                return None
+
+        manager = TaskManager(
+            self.root / "task-output",
+            pipeline_factory=NoNetworkPipeline,
+            monitor_target_provider=self.store.get_monitor_target,
+        )
+        promoted_ids = [
+            "food-medicine-2002-007",
+            "food-medicine-2002-028",
+            "food-medicine-2002-038",
+            "food-medicine-2002-071",
+            "food-medicine-2002-076",
+        ]
+        for target_id in promoted_ids:
+            created = manager.create_task(
+                {
+                    "task_type": "monitor",
+                    "target_id": target_id,
+                    "per_query_candidate_limit": 1,
+                    "detail_limit": 1,
+                }
+            )
+            self.assertEqual(created["runtime"]["request"]["targetId"], target_id)
+            self.assertTrue(manager.wait_for_idle())
+        self.assertEqual(len(captured), 5)
+        self.assertTrue(
+            all(
+                options.search_queries[0]["query_source"] == "standard_name"
+                and options.search_queries[0]["validation_status"] == "search_validated"
+                for options in captured
+            )
+        )
+        with self.assertRaises(MonitorTargetNotOperationalError):
+            manager.create_task(
+                {
+                    "task_type": "monitor",
+                    "target_id": "food-medicine-2002-010",
+                    "per_query_candidate_limit": 1,
+                    "detail_limit": 1,
+                }
+            )
 
 
 if __name__ == "__main__":

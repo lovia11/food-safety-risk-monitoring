@@ -81,6 +81,8 @@ Mappings additionally record stable IDs, source basis text where available, scop
 
 The fixed V2-4 promotion gate is at least 10 unique assessable results, observed relevance at least 0.70, at least 5 relevant results, and no systematic scope issue. Small samples remain on hold. This is observed sample relevance, never a recall or model-accuracy claim. See [MONITOR_QUERY_VALIDATION_PROTOCOL.md](MONITOR_QUERY_VALIDATION_PROTOCOL.md).
 
+V2-4 Wave 1 applied that gate to six standard-name Queries. 山楂、沙棘、罗汉果、黑芝麻、蜂蜜 were promoted after human review; 乌梅 remains disabled with `paused_scope_issue` because stable medicinal-material/medicinal-use scope mixing was observed despite meeting the 70% numeric floor. The reviewed record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Product-form observations remain notes rather than implicit new Queries.
+
 ### 4.2 Claims and official functions
 
 - Page expressions, official functions, risk-related claims, and disease/treatment expressions remain distinct.

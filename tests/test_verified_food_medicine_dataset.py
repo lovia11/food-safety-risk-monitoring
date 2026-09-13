@@ -128,7 +128,18 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
         self.assertEqual(sum(len(target["queries"]) for target in configured_targets), 21)
         self.assertEqual(
             {target["standard_name"] for target in self.targets if target["enabled"]},
-            {"酸枣仁", "茯苓", "龙眼肉（桂圆）", "铁皮石斛", "化橘红"},
+            {
+                "酸枣仁",
+                "茯苓",
+                "龙眼肉（桂圆）",
+                "铁皮石斛",
+                "化橘红",
+                "山楂",
+                "沙棘",
+                "罗汉果",
+                "黑芝麻",
+                "蜂蜜",
+            },
         )
         enabled_queries = [
             query
@@ -142,14 +153,19 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             for query in target["queries"]
             if query["validation_status"] == "candidate_unvalidated"
         ]
-        self.assertEqual(len(enabled_queries), 8)
+        self.assertEqual(len(enabled_queries), 13)
         self.assertTrue(all(query["validation_status"] == "search_validated" for query in enabled_queries))
-        self.assertEqual(len(candidate_queries), 12)
+        self.assertEqual(len(candidate_queries), 6)
         self.assertTrue(all(not query["enabled"] for query in candidate_queries))
         danggui = next(target for target in configured_targets if target["standard_name"] == "当归")
         self.assertFalse(danggui["enabled"])
         self.assertFalse(danggui["queries"][0]["enabled"])
         self.assertEqual(danggui["queries"][0]["validation_status"], "paused_scope_issue")
+        ume = next(target for target in configured_targets if target["standard_name"] == "乌梅")
+        self.assertFalse(ume["enabled"])
+        self.assertFalse(ume["queries"][0]["enabled"])
+        self.assertEqual(ume["queries"][0]["validation_status"], "paused_scope_issue")
+        self.assertIn("系统性范围混杂", ume["queries"][0]["query_note"])
         self.assertIn("仅作为香辛料和调味品使用", self.payload["description"])
 
     def test_development_seed_is_independent_and_acid_jujube_is_not_overwritten(self):
@@ -225,10 +241,21 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
             try:
                 with urlopen(f"{base}/api/monitor-targets") as response:
                     listed = json.load(response)
-                self.assertEqual(listed["count"], 6)
+                self.assertEqual(listed["count"], 11)
                 self.assertEqual(
                     {target["standard_name"] for target in listed["targets"]},
-                    {"酸枣仁", "茯苓", "龙眼肉（桂圆）", "铁皮石斛", "化橘红"},
+                    {
+                        "酸枣仁",
+                        "茯苓",
+                        "龙眼肉（桂圆）",
+                        "铁皮石斛",
+                        "化橘红",
+                        "山楂",
+                        "沙棘",
+                        "罗汉果",
+                        "黑芝麻",
+                        "蜂蜜",
+                    },
                 )
                 self.assertIn(
                     "dev-food-medicine-suanzaoren",
@@ -241,13 +268,22 @@ class VerifiedFoodMedicineDatasetTest(unittest.TestCase):
                 with urlopen(f"{base}/api/monitor-targets?scope=reference") as response:
                     reference = json.load(response)
                 self.assertEqual(reference["count"], 106)
-                self.assertEqual(reference["coverage"]["operational_target_count"], 5)
-                self.assertEqual(reference["coverage"]["candidate_query_count"], 12)
+                self.assertEqual(reference["coverage"]["operational_target_count"], 10)
+                self.assertEqual(reference["coverage"]["candidate_query_count"], 6)
                 danggui = next(
                     target for target in reference["targets"]
                     if target["standard_name"] == "当归"
                 )
                 self.assertEqual(danggui["availability"], "paused")
+                ume = next(
+                    target for target in reference["targets"]
+                    if target["standard_name"] == "乌梅"
+                )
+                self.assertEqual(ume["availability"], "paused")
+                self.assertIn("中药材/药用商品", ume["availability_reason"])
+                self.assertNotIn(
+                    "乌梅", {target["standard_name"] for target in listed["targets"]}
+                )
                 with urlopen(
                     f"{base}/api/monitor-targets/food-medicine-2002-078"
                 ) as response:

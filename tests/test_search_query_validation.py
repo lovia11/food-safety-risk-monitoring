@@ -165,7 +165,7 @@ class SearchQueryValidationTest(unittest.TestCase):
         self.assertTrue(
             all(item["reviewNote"] is None for item in review_queue["results"])
         )
-        self.assertIn("All labels and notes are intentionally blank", review_markdown)
+        self.assertIn("人工标签和复核说明保持空白", review_markdown)
 
     def test_review_queue_uses_stable_product_id_dedup_and_original_rank(self):
         selected = [

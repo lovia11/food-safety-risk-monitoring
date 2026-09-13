@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.data_store import validate_monitor_config
+from src.monitor_query_validation import REVIEW_LABEL_ZH, DECISION_ZH
 from src.runtime import iso_now, new_run_id, read_json, setup_run_logger, write_json
 from src.taobao_live import BrowserSettings, LiveSearchCollector, launch_browser_session
 
@@ -136,19 +137,36 @@ def _markdown_cell(value: Any) -> str:
     return str(value or "—").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
 
-def _review_queue_markdown(queue: dict[str, Any]) -> str:
+def render_review_queue_markdown(queue: dict[str, Any]) -> str:
     lines = [
-        f"# Human Review Queue — {queue['queryText']}",
+        f"# 人工复核队列 — {queue['queryText']}",
         "",
-        f"- Batch: `{queue['batchId']}`",
-        f"- Target: `{queue['targetId']}`",
-        f"- Query: `{queue['queryId']}`",
-        "- Evaluation: first 10 unique assessable results in original search order",
-        "- All labels and notes are intentionally blank pending human review.",
+        f"- 批次：`{queue['batchId']}`",
+        f"- 监测对象：`{queue['targetId']}`",
+        f"- SearchQuery：`{queue['queryId']}`",
+        "- 评价规则：按原始搜索顺序取前 10 个唯一、可评估结果；信息不足与重复结果跳过。",
         "",
-        "| Rank | Product ID | Title | Shop | Price | Card metadata | Duplicate occurrences | Reviewed label | Review note | Raw artifact |",
-        "|---:|---|---|---|---:|---|---:|---|---|---|",
     ]
+    decision = queue.get("decision")
+    if decision:
+        metrics = queue.get("metrics") or {}
+        lines.extend(
+            [
+                f"- 复核时间：{queue.get('reviewedAt') or '—'}",
+                f"- 最终决策：{queue.get('decisionZh') or DECISION_ZH.get(decision, decision)}（机器值：`{decision}`）",
+                f"- 评价结果：食品相关 {metrics.get('relevantCount', 0)} / 可评估 {metrics.get('assessableCount', 0)}，相关率 {float(metrics.get('relevanceRate') or 0):.0%}",
+                f"- 决策说明：{queue.get('decisionNote') or '—'}",
+                "",
+            ]
+        )
+    else:
+        lines.extend(["- 状态：等待人工复核；人工标签和复核说明保持空白。", ""])
+    lines.extend(
+        [
+        "| 序号 | 商品ID | 商品标题 | 店铺 | 价格 | 卡片信息 | 重复出现 | 人工标签 | 机器标签 | 复核说明 | Raw artifact |",
+        "|---:|---|---|---|---:|---|---:|---|---|---|---|",
+        ]
+    )
     for card in queue.get("results") or []:
         metadata = card.get("cardMetadata") or {}
         metadata_text = "; ".join(
@@ -157,6 +175,8 @@ def _review_queue_markdown(queue: dict[str, Any]) -> str:
             if value not in {None, ""}
         )
         raw_ref = next(iter(card.get("rawArtifactRefs") or []), "")
+        machine_label = card.get("reviewedLabel") or ""
+        label_zh = card.get("reviewedLabelZh") or REVIEW_LABEL_ZH.get(machine_label, "")
         lines.append(
             "| "
             + " | ".join(
@@ -168,8 +188,9 @@ def _review_queue_markdown(queue: dict[str, Any]) -> str:
                     _markdown_cell(card.get("price")),
                     _markdown_cell(metadata_text),
                     str(len(card.get("duplicateOccurrences") or [])),
-                    "",
-                    "",
+                    _markdown_cell(label_zh),
+                    _markdown_cell(machine_label),
+                    _markdown_cell(card.get("reviewNote")),
                     _markdown_cell(raw_ref),
                 ]
             )
@@ -245,7 +266,7 @@ def _write_validation_state(run_root: Path, summary: dict[str, Any]) -> None:
         review_markdown_path = review_root / f"{record['query_id']}.md"
         review_markdown_path.parent.mkdir(parents=True, exist_ok=True)
         review_markdown_path.write_text(
-            _review_queue_markdown(review_queue),
+            render_review_queue_markdown(review_queue),
             encoding="utf-8",
         )
     query_entries = []

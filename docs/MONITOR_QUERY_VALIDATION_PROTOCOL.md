@@ -70,6 +70,9 @@ Runtime output is ignored by Git and lives at:
 output/query_validation/<batch_id>/
   manifest.json
   queries/<query_id>.json
+  review/<query_id>.json
+  review/<query_id>.md
+  review/finalization_summary.json
   pilot_queries/<query_id>/search/...
 ```
 
@@ -84,6 +87,8 @@ output/query_validation/<batch_id>/
 - raw source artifact references and any execution error.
 
 Before human review, metrics, decision, and `reviewedAt` remain explicit `null`; they are never inferred from title matching. Partial failure preserves completed Query artifacts. A resumed batch skips Query artifacts already marked execution-complete.
+
+The Query artifact and all raw Search artifacts are immutable collection facts. Human labels are written only to the corresponding `review/` artifact. Each reviewed item preserves `rank`, `productId`, `reviewedLabel`, `reviewedLabelZh`, `reviewNote`, `reviewedAt`, and `reviewedBy`. Stable machine enums remain English; Markdown and other human-readable presentation use Chinese labels while retaining the machine value for traceability. Metrics and decisions are calculated from the explicit human labels by the governed finalization tool, never copied into the ledger by hand.
 
 ## 6. Tracked validation ledger
 

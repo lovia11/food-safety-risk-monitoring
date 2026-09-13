@@ -125,7 +125,7 @@ Every governed dataset change tests:
 - UI/API reads the same runtime dataset;
 - per-layer coverage metrics use correct denominators.
 
-### 8.1 Monitor coverage gate — Current V2-4A
+### 8.1 Monitor coverage gate — Current V2-4 Wave 1
 
 - `scope=reference` returns exactly 106 formal Reference targets; default/`scope=operational` returns only targets satisfying the strict operational predicate.
 - Every enabled Query is `search_validated`; every enabled target has at least one enabled validated Query.
@@ -134,6 +134,9 @@ Every governed dataset change tests:
 - Availability DTOs, candidate/validated counts, validated chips, 当归 pause, full-name search, and disabled CTA have deterministic backend/frontend coverage.
 - Multi-Query Candidate hits deduplicate by stable Product ID and share one task-level analysis cap.
 - The tracked ledger covers every existing validated/rejected/paused governed Query; the V2-4B dry run resolves the bounded plan without browser or network access.
+- Wave 1 review metrics are calculated from preserved rank-ordered human labels, not inferred from titles; English enum values remain stable while human-readable artifacts use Chinese labels.
+- 山楂、沙棘、罗汉果、黑芝麻、蜂蜜 are operational through enabled `search_validated` standard-name Queries. 乌梅 remains visible as disabled `paused_scope_issue` and cannot pass the server execution guard.
+- The manifest hash and decision notes are retained in the ledger; collection Query/raw artifacts remain immutable when reviewed artifacts are finalized.
 
 ## 9. Pipeline and Review gate
 

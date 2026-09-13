@@ -78,7 +78,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-4 — Monitor coverage
 
-**Status:** V2-4A COMPLETE — governance, Reference visibility, execution guards, tooling contract, ledger, and first disabled candidate batch prepared. V2-4B REAL VALIDATION PENDING. V2-4 as a whole is not complete.
+**Status:** IN PROGRESS — V2-4A foundation complete; V2-4B Wave 1 collection and human-reviewed governance complete; Wave 2 pending its next human Gate. V2-4 as a whole is not complete.
 
 - **Goal:** Expand operational SearchQuery coverage safely while exposing all 106 Reference targets.
 - **Why:** Reference breadth and reliable discovery are different quality dimensions.
@@ -93,6 +93,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Real-world validation:** Run bounded batches; promote only queries meeting documented acceptance.
 - **Exit criteria:** Every enabled query is traceable and validated; coverage is reported separately from the 106-reference denominator.
 - **V2-4A result:** 106 formal targets are searchable in task creation; 5 are operational, 12 first-batch candidates remain disabled/unvalidated, and 当归 remains paused. The batch plan is [MONITOR_QUERY_VALIDATION_PLAN_V2_4.md](MONITOR_QUERY_VALIDATION_PLAN_V2_4.md).
+- **V2-4 Wave 1 result:** 5 standard-name Queries/Targets (山楂、沙棘、罗汉果、黑芝麻、蜂蜜) were promoted; 乌梅 was held as disabled `paused_scope_issue`. Operational Reference coverage is now 10/106; six Wave 2 standard-name candidates remain. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md).
 
 ## V2-5 — Claim taxonomy
 

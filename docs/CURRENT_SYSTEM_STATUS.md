@@ -87,10 +87,10 @@ Counts below are computed from the governed configuration at the verified commit
 |---|---:|
 | Official Reference MonitorTargets | 106 / 106 |
 | Reference targets with any governed Query | 18 |
-| Operational Reference targets | 5 / 106 |
-| Enabled / validated Reference queries | 8 / 8 |
-| Candidate, disabled Reference queries | 12 |
-| Paused Reference targets | 1 |
+| Operational Reference targets | 10 / 106 |
+| Enabled / validated Reference queries | 13 / 13 |
+| Candidate, disabled Reference queries | 6 |
+| Paused Reference targets | 2 |
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
 | Evidence-to-risk Bridge mappings | 3 |
@@ -101,7 +101,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Method applicability records | 37 |
 | Substance regulatory contexts | 1 |
 
-The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. The 12 V2-4B batch candidates remain disabled and unvalidated; 当归 remains paused for its recorded scope issue. The separate development seed is not merged into the verified Reference count.
+The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. V2-4 Wave 1 promoted the standard-name Queries for 山楂、沙棘、罗汉果、黑芝麻、蜂蜜. 乌梅 remains disabled `paused_scope_issue` because human review confirmed stable medicinal-material/medicinal-use scope mixing; 当归 remains paused for its earlier recorded scope issue. Six Wave 2 candidates remain disabled and unvalidated. The separate development seed is not merged into the verified Reference count.
 
 ## Current validation support
 
@@ -113,8 +113,9 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-3 source support is documented in [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md). Ordinary tests use a governed recorded official response; live official lookup is best-effort and never a CI dependency.
 - The five-product Historical Validation Set contains no valid registration/filing identifier and no positive strong identity candidate. Product `674221193698` has an explicit negative `是否保健食品…否` parameter and remains `no_indicator`; the other four also remain `no_indicator`. No historical artifact was edited or re-OCRed.
 - V2-3 validation: Python 441 discovered / 440 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 22/22; frontend typecheck and production build passed. Identifier, provider, matching, degradation, schema 9→10 and artifact rebuild contracts are covered. Product Detail plus page/official evidence dialogs were inspected locally at 1440px and 1080px without page-level horizontal overflow or new browser console errors.
-- V2-4A establishes full Reference visibility, three-state availability, strict Query lifecycle/execution guards, a tracked legacy-validation ledger, a search-only batch artifact contract, and a 12-Query disabled candidate plan. **V2-4B real validation is pending**; no new query was promoted by V2-4A.
+- V2-4A established full Reference visibility, three-state availability, strict Query lifecycle/execution guards, a tracked validation ledger, and a search-only batch artifact contract. V2-4 Wave 1 then completed bounded collection and human review for six standard-name Queries: five were promoted and 乌梅 was held. The immutable result record is [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md).
 - V2-4A validation: Python 452 discovered / 451 passed / 1 skipped; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. The new task picker was inspected locally at 1440px and 1080px with all 106 options, no horizontal overflow, correct operational/pending/paused behavior, and no new browser console warnings/errors.
+- V2-4B2 validation: Python 459 discovered / 458 passed / 1 skipped; targeted Monitor review/governance tests 45/45; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Offline local UI acceptance confirmed the five promoted Targets are searchable and runnable, while 乌梅 remains visible as `暂缓` with its action disabled and the scope-mixing reason shown.
 
 ## Known limitations and future changes
 
@@ -123,7 +124,7 @@ The following are **not implemented** at this baseline:
 - **FUTURE CHANGE:** final ClaimTaxonomy and claim-consistency assessment.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- **V2-4B PENDING:** bounded real validation and reviewed promotion for selected candidate SearchQueries.
+- **V2-4 IN PROGRESS:** Wave 2 bounded collection and human-reviewed governance for 山药、百合、赤小豆、枸杞子、莲子、菊花 require the next explicit human Gate.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 
