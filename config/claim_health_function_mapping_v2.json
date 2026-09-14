@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "dataset_id": "claim-health-function-mapping-v2",
+  "dataset_version": "claim-health-function-mapping-v2.0",
+  "dataset_status": "design_baseline",
+  "claim_taxonomy_version": "claim-taxonomy-v2.0",
+  "health_function_dataset_version": "health-functions-v2.0",
+  "description": "V2-6A 项目治理的 ClaimSignal 主题与官方 HealthFunction 主题关系。topic_related 仅建立可比较主题，不表示官方等价、批准、合规、合法、风险或检验建议。",
+  "allowed_relations": ["topic_related"],
+  "mappings": [
+    {
+      "mapping_id": "chfm-sleep-to-non-nutrient-sleep-v2",
+      "claim_taxonomy_version": "claim-taxonomy-v2.0",
+      "claim_type": "sleep_related",
+      "health_function_id": "hf-non-nutrient-cn-2023-06",
+      "relation": "topic_related",
+      "status": "verified_reference",
+      "source_basis": "project_governed_topic_mapping",
+      "source_references": [
+        {"name":"Claim Taxonomy V2","reference":"config/claim_taxonomy_v2.json","version":"claim-taxonomy-v2.0"},
+        {"name":"Health Function Framework V2","reference":"config/health_functions_v2.json","version":"health-functions-v2.0"}
+      ],
+      "note": "睡眠相关页面宣传主题可与官方有助于改善睡眠功能主题进行非裁决式比较；不判断具体页面措辞是否被允许。",
+      "reviewed_by": "Project V2-6A human gate",
+      "reviewed_at": "2026-09-15"
+    },
+    {
+      "mapping_id": "chfm-weight-to-non-nutrient-fat-control-v2",
+      "claim_taxonomy_version": "claim-taxonomy-v2.0",
+      "claim_type": "weight_management",
+      "health_function_id": "hf-non-nutrient-cn-2023-09",
+      "relation": "topic_related",
+      "status": "verified_reference",
+      "source_basis": "project_governed_topic_mapping",
+      "source_references": [
+        {"name":"Claim Taxonomy V2","reference":"config/claim_taxonomy_v2.json","version":"claim-taxonomy-v2.0"},
+        {"name":"Health Function Framework V2","reference":"config/health_functions_v2.json","version":"health-functions-v2.0"}
+      ],
+      "note": "体重管理页面宣传主题可与官方有助于控制体内脂肪功能主题进行非裁决式比较；官方历史名称只用于 Registry 归一化。",
+      "reviewed_by": "Project V2-6A human gate",
+      "reviewed_at": "2026-09-15"
+    },
+    {
+      "mapping_id": "chfm-blood-lipid-to-non-nutrient-blood-lipid-v2",
+      "claim_taxonomy_version": "claim-taxonomy-v2.0",
+      "claim_type": "blood_lipid_related",
+      "health_function_id": "hf-non-nutrient-cn-2023-19",
+      "relation": "topic_related",
+      "status": "verified_reference",
+      "source_basis": "project_governed_topic_mapping",
+      "source_references": [
+        {"name":"Claim Taxonomy V2","reference":"config/claim_taxonomy_v2.json","version":"claim-taxonomy-v2.0"},
+        {"name":"Health Function Framework V2","reference":"config/health_functions_v2.json","version":"health-functions-v2.0"}
+      ],
+      "note": "血脂相关页面宣传主题可与官方血脂健康水平功能主题进行非裁决式比较；不输出风险或检验映射。",
+      "reviewed_by": "Project V2-6A human gate",
+      "reviewed_at": "2026-09-15"
+    },
+    {
+      "mapping_id": "chfm-blood-pressure-to-non-nutrient-blood-pressure-v2",
+      "claim_taxonomy_version": "claim-taxonomy-v2.0",
+      "claim_type": "blood_pressure_related",
+      "health_function_id": "hf-non-nutrient-cn-2023-21",
+      "relation": "topic_related",
+      "status": "verified_reference",
+      "source_basis": "project_governed_topic_mapping",
+      "source_references": [
+        {"name":"Claim Taxonomy V2","reference":"config/claim_taxonomy_v2.json","version":"claim-taxonomy-v2.0"},
+        {"name":"Health Function Framework V2","reference":"config/health_functions_v2.json","version":"health-functions-v2.0"}
+      ],
+      "note": "血压相关页面宣传主题可与官方血压健康水平功能主题进行非裁决式比较；疾病/治疗措辞关注必须在 Mention 层另行治理。",
+      "reviewed_by": "Project V2-6A human gate",
+      "reviewed_at": "2026-09-15"
+    }
+  ],
+  "mapping_gaps": [
+    {
+      "gap_id": "chfm-gap-male-function-related-v2",
+      "claim_type": "male_function_related",
+      "status": "no_governed_health_function_mapping",
+      "reason": "当前受治理的官方 HealthFunction framework 未建立可比较的男性功能主题映射；该 gap 不是超范围、违规或违法结论。"
+    }
+  ],
+  "metadata": {
+    "authority": "project_governed_topic_mapping",
+    "runtime_status": "not_implemented_v2_6a_design_only",
+    "official_equivalence": false,
+    "creates_risk_signal": false,
+    "creates_inspection_recommendation": false,
+    "claim_expression_attention_dataset_status": "pending_manual_governance"
+  }
+}

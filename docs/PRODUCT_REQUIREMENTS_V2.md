@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-6A
 > Owner: Project
 
 ## 1. Product position
@@ -46,17 +46,9 @@ Page product
 → Claim Consistency Assessment
 ```
 
-Required assessment states are:
+The V2-6A design baseline distinguishes top-level comparison availability from per-Claim topic relations. Top-level states are `identity_not_verified`, `claim_not_generated`, `claim_analysis_error`, `framework_unresolved`, `official_function_unresolved`, `no_page_claims`, and `assessed`. An `assessed` result contains per-Claim `function_topic_recorded`, `function_topic_not_recorded`, `no_governed_function_mapping`, or `mapping_unresolved` relations; none is a legal verdict.
 
-- `consistent`
-- `possible_out_of_scope_claim`
-- `disease_treatment_expression`
-- `identity_unverified`
-- `official_record_unavailable`
-- `insufficient_evidence`
-- `manual_review_required`
-
-The system must not emit automatic `合法` or `违法` results. A logo or OCR identifier is an identity clue, not official verification.
+Only `HealthFoodIdentity.state == verified_match` is eligible for formal comparison. The system may state “该页面宣传主题未在当前核验的官方功能记录中找到对应项” and suggest human review, but it must not emit automatic `合法`、`违法`、`合规`、`不合规` or pass/fail results. A logo or OCR identifier is an identity clue, not official verification.
 
 ### Path C — Illegal-addition clue and sampling assistance
 
@@ -123,6 +115,8 @@ V2-5A further separates a page Claim into an Evidence-backed `ClaimMention` occu
 V2-5B1 implements this Claim observation contract as a parallel, degradable runtime. `claim_analysis.json` is authoritative and schema 11/API projections are rebuildable; complete zero-Claim, not-generated, and error states remain distinct. Claim runtime success or failure does not change Review eligibility, Recommendation, Review, or Sampling.
 
 V2-5B2 makes that contract the primary **页面宣传线索** presentation in Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling. It displays what wording was detected and suggests human review without confirming efficacy or making an automatic legality judgment. `complete + []`, `not_generated`, and `error` have different wording. Compact list/filter projections come from same-Snapshot `claim_signals`; they never derive a Claim from `detectedEffects`, Evidence keywords, or a SearchQuery. Legacy Effect/Risk/Recommendation fields and frozen Sampling exports remain compatibility contracts rather than V2 Claim authority.
+
+V2-6A governs the separate official HealthFunction framework, exact current/official-transition Registry normalization, four explicit `topic_related` Claim mappings, and the future non-adjudicative ClaimConsistencyAssessment contract. Official aliases normalize Registry strings only; they never turn the same page expression into approved wording. The design baseline is [HEALTH_FUNCTION_FRAMEWORK_V2.md](HEALTH_FUNCTION_FRAMEWORK_V2.md) and [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md); production runtime remains V2-6B work.
 
 ## 7. Product Facts
 

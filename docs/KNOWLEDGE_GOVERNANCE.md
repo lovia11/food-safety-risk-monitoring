@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-6A
 > Owner: Project
 
 This document is the hard constraint for creating, changing, loading, presenting, and measuring regulated knowledge.
@@ -14,13 +14,15 @@ Each layer has separate identity, provenance, lifecycle, and coverage:
 1. **Monitor Reference** — objects in an authoritative monitoring/reference catalog.
 2. **Operational Search** — validated SearchQueries used to discover marketplace Candidates.
 3. **Claim Taxonomy** — normalized page-marketing topics and provenance-bearing extraction expressions; it does not contain official functions, RiskSignals, or inspection mappings.
-4. **Claim-to-Official-Function Mapping** — future explicit mapping between page ClaimSignal and an official HealthFunction under a named framework/version.
-5. **Evidence-to-Risk Bridge** — verified link from observed Evidence/ClaimSignal to a RiskCategory.
-6. **Risk-to-Substance** — explicit mapping from RiskCategory to a Substance or authoritative SubstanceGroup.
-7. **Substance-to-Method** — declared analyte coverage in an InspectionMethod.
-8. **Method Applicability** — contextual suitability for product category/form and regulatory use.
-9. **Regulatory Documents** — source documents with jurisdiction and temporal scope.
-10. **Health Food Registry** — authoritative registration/filing records and official functions.
+4. **HealthFunction Framework** — official functions and transition aliases under a named jurisdiction/framework/version.
+5. **Claim-to-Official-Function Mapping** — explicit project-governed `topic_related` mapping between page ClaimSignal and HealthFunction; never official equivalence.
+6. **ClaimConsistencyAssessment** — future Snapshot-scoped derived comparison under recorded identity, Registry, Claim, framework, and mapping versions.
+7. **Evidence-to-Risk Bridge** — verified link from observed Evidence/ClaimSignal to a RiskCategory.
+8. **Risk-to-Substance** — explicit mapping from RiskCategory to a Substance or authoritative SubstanceGroup.
+9. **Substance-to-Method** — declared analyte coverage in an InspectionMethod.
+10. **Method Applicability** — contextual suitability for product category/form and regulatory use.
+11. **Regulatory Documents** — source documents with jurisdiction and temporal scope.
+12. **Health Food Registry** — authoritative registration/filing records and verbatim official functions.
 
 Reference membership never implies operational-query readiness. Method coverage never implies a Risk mapping.
 
@@ -96,8 +98,11 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 - Every expression records stable identity, exact text, Claim type, match mode, source, status, and legacy trace where applicable. The migrated legacy entries use `source=legacy_system`, never `official_source`.
 - Formal ClaimMention/ClaimSignal sources are current-product `seller_managed` Evidence only. UGC remains auxiliary; `excluded_other_product` is forbidden; a search keyword is not Evidence.
 - Synonyms and marketing paraphrases require reviewed mapping records. V2-5 implements literal exact-expression occurrence matching only and no semantic-similarity equivalence.
-- Official-function mappings require the applicable official framework/version.
-- A claim-consistency assessment exposes matches, unmatched claims, evidence, official source, and gaps; it is not pass/fail adjudication.
+- `config/health_functions_v2.json` version `health-functions-v2.0` is the V2-6A official framework design authority. Its non-nutrient catalog is complete 24/24; the nutrient-supplement framework is separate. Official transition aliases are exact Registry-normalization inputs, not marketing synonyms.
+- `config/claim_health_function_mapping_v2.json` version `claim-health-function-mapping-v2.0` is an independent project-governed topic-mapping design authority. Every mapping records both endpoint versions, provenance, lifecycle, and relation `topic_related`; `male_function_related` remains an explicit no-mapping gap.
+- Claim Taxonomy, HealthFunction Framework, ClaimHealthFunctionMapping, and ClaimConsistencyAssessment have independent identities, versions, provenance, and lifecycle. Updating one never silently updates another or a historical assessment.
+- Future normalization preserves raw Registry functions plus resolved and unresolved sets. It accepts exact current/official-transition names only; fuzzy, embedding, LLM, edit-distance, substring, and ungoverned synonym resolution are prohibited.
+- A claim-consistency assessment exposes recorded/not-recorded topic relations, evidence, official source, unresolved values, and gaps; it is not pass/fail adjudication and cannot emit RiskSignal or Recommendation.
 - The legacy exact Effect-to-Risk bridge remains a separate compatibility runtime dataset. It must not be copied into the Claim taxonomy; replacement requires a later explicit Claim/Risk governance gate.
 
 ### 4.3 Evidence-to-Risk and Risk-to-Substance

@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-6A
 > Owner: Project
 
 This document deliberately separates current implementation from target V2 design. Items under Target Architecture are `FUTURE CHANGE` until implemented and accepted.
@@ -108,7 +108,7 @@ Search-only validation artifacts live under `output/query_validation/<batch_id>/
 
 ## 3. Target V2 architecture
 
-The ProductFact, HealthFood Identity, and Claim Analyzer branches below are current; the other branches and read models remain target design until their own gates are accepted:
+The ProductFact, HealthFood Identity, and Claim Analyzer branches below are current. HealthFunction normalization, the Claim↔HealthFunction mapping, and Claim Consistency have an accepted V2-6A design baseline but remain future runtime; the other branches and read models remain target design until their own gates are accepted:
 
 ```text
 Current artifact pipeline
@@ -151,7 +151,31 @@ ClaimMention preserves the raw observed text, matching expression, Evidence iden
 
 V2-5B1 implements runtime extraction, artifact authority, schema 11 projection, and additive Snapshot API fields. V2-5B2 adds batched same-Snapshot Claim summaries and an exact `claim_type` Product filter from the SQLite projection, then uses those fields as the primary 页面宣传线索 UI. Detail reads the full Snapshot Claim artifact projection and links each ClaimMention back to its existing Evidence item. No list row reads `claim_analysis.json`.
 
-The consistency assessor, Claim-to-HealthFunction mapping, and Claim-to-Risk mapping remain future. Legacy Effect/Risk/Recommendation processing remains a separate compatibility path and is not presented as the cause of a V2 Claim. A marketing paraphrase never becomes an Official Health Function without an explicit governed mapping, and a ClaimSignal never directly selects an inspection substance or method.
+V2-6A governs the HealthFunction framework and Claim-to-HealthFunction `topic_related` mapping as design datasets; the consistency assessor runtime and every Claim-to-Risk mapping remain future. Legacy Effect/Risk/Recommendation processing remains a separate compatibility path and is not presented as the cause of a V2 Claim. A marketing paraphrase never becomes an Official HealthFunction through the Registry alias resolver, and a ClaimSignal never directly selects an inspection substance or method.
+
+### 3.3.1 HealthFunction normalization and Claim consistency — V2-6A DESIGN BASELINE
+
+```text
+Verified HealthFoodIdentity
+        ↓
+Official Registry Functions (raw, preserved)
+        ↓
+Official Function Normalization
+        ↓
+HealthFunction IDs
+                    ↘
+ClaimSignals → governed topic mapping
+                    ↘
+             ClaimConsistencyAssessment
+
+ClaimMentions → future expression-level attention (independent side dimension)
+```
+
+Only `verified_match` enters formal comparison. Registry normalization accepts exact current official names and exact source-backed transition aliases; unresolved strings and unknown frameworks remain explicit. `ClaimHealthFunctionMapping` uses only `topic_related` and never applies official transition aliases to page Claims.
+
+Future `claim_consistency.json` is Snapshot-scoped and records the Claim taxonomy, HealthFunction dataset, topic-mapping dataset, Registry record/hash/retrieval time, raw/resolved/unresolved functions, Claim/Mention identities, per-Claim relations, attention items, and gaps. SQLite is only a future rebuildable projection after a separate schema gate.
+
+ClaimConsistencyAssessment does not output RiskSignal, InspectionRecommendation, Substance, Method, legality, compliance, pass/fail, or probability. V2-6A creates no runtime artifact, table, API, or UI.
 
 ### 3.4 Knowledge Resolver
 

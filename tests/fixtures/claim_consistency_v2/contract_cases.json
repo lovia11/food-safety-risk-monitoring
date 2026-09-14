@@ -1,0 +1,121 @@
+{
+  "fixture_version": "claim-consistency-contract-cases-v2.0",
+  "runtime_status": "design_only_not_connected",
+  "cases": [
+    {
+      "case_id": "identity-unverified-with-claims",
+      "identity_state": "candidate_identifier",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": [],
+      "expected_state": "identity_not_verified",
+      "expected_relations": []
+    },
+    {
+      "case_id": "verified-claim-not-generated",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "not_generated",
+      "claim_types": [],
+      "raw_official_functions": ["有助于改善睡眠"],
+      "expected_state": "claim_not_generated",
+      "expected_relations": []
+    },
+    {
+      "case_id": "verified-claim-analysis-error",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "error",
+      "claim_types": [],
+      "raw_official_functions": ["有助于改善睡眠"],
+      "expected_state": "claim_analysis_error",
+      "expected_relations": []
+    },
+    {
+      "case_id": "verified-zero-page-claims",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": [],
+      "raw_official_functions": ["有助于改善睡眠"],
+      "expected_state": "no_page_claims",
+      "expected_relations": []
+    },
+    {
+      "case_id": "verified-sleep-topic-recorded",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": ["有助于改善睡眠"],
+      "expected_state": "assessed",
+      "expected_relations": ["function_topic_recorded"]
+    },
+    {
+      "case_id": "verified-sleep-topic-not-recorded",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": ["有助于增强免疫力"],
+      "expected_state": "assessed",
+      "expected_relations": ["function_topic_not_recorded"]
+    },
+    {
+      "case_id": "verified-male-function-mapping-gap",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["male_function_related"],
+      "raw_official_functions": ["有助于增强免疫力"],
+      "expected_state": "assessed",
+      "expected_relations": ["no_governed_function_mapping"]
+    },
+    {
+      "case_id": "verified-legacy-sleep-function-name",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": ["改善睡眠"],
+      "expected_state": "assessed",
+      "expected_relations": ["function_topic_recorded"],
+      "expected_resolution_source": "official_transition_alias"
+    },
+    {
+      "case_id": "verified-unresolved-official-function",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": ["本品经动物实验评价，具有对化学性肝损伤有辅助保护作用的保健功能"],
+      "expected_state": "official_function_unresolved",
+      "expected_relations": []
+    },
+    {
+      "case_id": "verified-multiple-claims-and-functions",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related", "blood_pressure_related", "male_function_related"],
+      "raw_official_functions": ["改善睡眠", "有助于抗氧化"],
+      "expected_state": "assessed",
+      "expected_relations": [
+        "function_topic_recorded",
+        "function_topic_not_recorded",
+        "no_governed_function_mapping"
+      ]
+    },
+    {
+      "case_id": "verified-nutrient-framework-does-not-borrow-non-nutrient-mapping",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "registry_framework_id": "hf-framework-nutrient-supplement-cn-2023",
+      "raw_official_functions": ["补充维生素、矿物质等营养物质"],
+      "expected_state": "assessed",
+      "expected_relations": ["no_governed_function_mapping"]
+    },
+    {
+      "case_id": "verified-framework-unresolved",
+      "identity_state": "verified_match",
+      "claim_analysis_status": "complete",
+      "claim_types": ["sleep_related"],
+      "raw_official_functions": ["有助于改善睡眠"],
+      "registry_framework_id": null,
+      "expected_state": "framework_unresolved",
+      "expected_relations": []
+    }
+  ]
+}

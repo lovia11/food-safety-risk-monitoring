@@ -2,10 +2,10 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-6A
 > Owner: Project
 
-This document governs current and future schema/API domain work. ProductFact, HealthFoodIdentity, ClaimMention, and ClaimSignal are current in schema 11. Entities explicitly labeled “Future” remain proposals rather than migration authorization.
+This document governs current and future schema/API domain work. ProductFact, HealthFoodIdentity, ClaimMention, and ClaimSignal are current in schema 11. HealthFunction, HealthFunctionAlias, ClaimHealthFunctionMapping, and ClaimConsistencyAssessment have a V2-6A governed design baseline but no production runtime or storage. Entities explicitly labeled “Future runtime” remain proposals rather than migration authorization.
 
 ## 1. Modeling rules
 
@@ -32,8 +32,10 @@ This document governs current and future schema/API domain work. ProductFact, He
 | ClaimTaxonomyTerm | Governed page-marketing topic identified by stable `claim_type`. | Knowledge-dataset scoped; versioned lifecycle. | V2 Claim terms are separate from official HealthFunction, Risk and disease/treatment vocabularies; any cross-layer relation requires an explicit governed mapping. | **Current V2-5 runtime/filter/presentation authority.** `config/claim_taxonomy_v2.json`. |
 | HealthFoodIdentity | Resolution for whether a Snapshot matches an official health-food product. | Snapshot-scoped assessment; re-evaluable under recorded sources. | Uses page identity clues and registry records; never logo/number-only. | **Current V2-3.** `health_food_identity.json` authority + SQLite read projection. |
 | HealthFoodRegistryRecord | Official registration/filing record, identified by authoritative registry identifier. | Identifier/retrieval-time scoped; cached with freshness metadata. | Provides official product identity and verbatim official functions with source provenance. | **Current V2-3.** Raw official artifact/cache + normalized SQLite projection. |
-| HealthFunction | Official normalized function under a defined framework/version. | Knowledge-dataset and jurisdiction scope. | Linked to registry records and only to ClaimSignals through explicit mappings. | **Future.** Governed dataset. |
-| ClaimConsistencyAssessment | Evidence-bearing comparison result for one Snapshot. | Snapshot + identity/knowledge version scope; derived, reproducible. | Compares verified identity/functions with page claims and retains matches, mismatches, disease expressions and gaps. | **Future.** Derived artifact + read index. |
+| HealthFunction | Official current function identified by stable `function_id` under a stable `framework_id`. | Knowledge-dataset, jurisdiction and framework-version scope. | Preserves verbatim official name/source; never contains Claim, Risk, substance or method meaning. | **V2-6A design baseline; future runtime.** `config/health_functions_v2.json`; no schema table. |
+| HealthFunctionAlias | Exact officially documented historical/transition name for one HealthFunction. | Knowledge-dataset and official-source scope. | Used only to normalize Registry strings while preserving raw text; never a marketing synonym. | **V2-6A design baseline; future runtime.** Governed in the HealthFunction dataset. |
+| ClaimHealthFunctionMapping | Explicit project-governed topic relation between one Claim type and one HealthFunction. | Mapping-dataset/version scope. | Relation is `topic_related`, never official equivalence, approval, Risk or inspection knowledge. | **V2-6A design baseline; future runtime.** `config/claim_health_function_mapping_v2.json`; no schema table. |
+| ClaimConsistencyAssessment | Non-adjudicative comparison result for one Snapshot. | Snapshot + verified identity/Registry record + Claim/knowledge-version scope; derived and reproducible. | Retains raw/resolved/unresolved official functions, Claim/Mention IDs, per-Claim topic relations, attention items and gaps. | **V2-6A design baseline; future runtime.** Proposed `claim_consistency.json` + future read index. |
 | RiskSignal | Supported risk direction derived from Evidence through a verified bridge. | Snapshot-scoped; derived and versioned. | Links ClaimSignal/Evidence to RiskCategory; does not assert substance presence. | **Future explicit entity;** current bridge result is embedded in analysis/recommendation projections. |
 | RiskCategory | Governed risk direction, identified by stable category ID. | Knowledge-dataset scope; versioned lifecycle. | Links through verified mappings to Substance or SubstanceGroup. | **Current knowledge concept.** Governed config + SQLite knowledge index. |
 | Substance | Specific analyte/compound, identified by governed `substance_id`. | Knowledge-dataset scope; versioned. | Linked to groups, methods and regulatory context. | **Current.** Governed inspection config + SQLite. |
@@ -118,7 +120,7 @@ A boolean `is_health_food` cannot represent unverified clues, mismatched registr
 
 `health_food_identity.json` records `clues[]`, `identifierCandidates[]`, provider lookup, product-match assessment, gaps and diagnostics. Each page candidate keeps source type/path/text, content origin and extraction method. The raw official response remains an artifact with source, retrieval time and SHA-256; the identity tables introduced in schema 10 and retained by schema 11 store only normalized record fields, JSON arrays and artifact references.
 
-Official health functions are preserved verbatim as `officialHealthFunctions[]`. They are not a current HealthFunction taxonomy and are not compared with page claims until a separately approved V2-6 consistency/mapping gate. Identity enrichment has no Review/Sampling side effect and is not part of `reviewEligible`.
+Official health functions are preserved verbatim as `officialHealthFunctions[]`. V2-6A now defines a separate governed HealthFunction/official-transition dataset and a project-governed topic-mapping contract, but no production code normalizes or compares these strings. Identity enrichment has no Review/Sampling side effect and is not part of `reviewEligible`.
 
 ## 6. Claim domain contract — CURRENT V2-5 runtime and primary presentation
 
@@ -154,6 +156,14 @@ ClaimSignal ≠ HealthFunction ≠ RiskSignal
 Mappings between these entities are first-class governed knowledge with provenance and lifecycle. Lexical similarity is not a mapping.
 
 The initial five Claim types are not a five-class official health-function model. Claim status describes extraction/governance only and cannot express legality or compliance.
+
+### 6.2 HealthFunction and Claim consistency — V2-6A DESIGN BASELINE
+
+`health-functions-v2.0` defines two independent framework identities: the complete 24-function 2023 non-nutrient catalog and the separate 2023 nutrient-supplement catalog root. Stable IDs are decoupled from official display names. Forty exact, source-backed transition aliases resolve historical Registry strings to current non-nutrient function identities. Exact current name, exact official transition name, and a future explicit governed mapping are the only normalization sources; unresolved strings remain explicit.
+
+`claim-health-function-mapping-v2.0` establishes four `topic_related` project mappings for sleep, weight management, blood lipid, and blood pressure. `male_function_related` remains `no_governed_health_function_mapping`. Topic relation is not wording approval or official equivalence.
+
+Future `ClaimConsistencyAssessment` is eligible only for `HealthFoodIdentity.state == verified_match`, complete Claim analysis, and sufficient framework/function resolution. Its top-level states are `identity_not_verified`, `claim_not_generated`, `claim_analysis_error`, `framework_unresolved`, `official_function_unresolved`, `no_page_claims`, and `assessed`. Per-Claim relations are `function_topic_recorded`, `function_topic_not_recorded`, `no_governed_function_mapping`, and `mapping_unresolved`. See [HEALTH_FUNCTION_FRAMEWORK_V2.md](HEALTH_FUNCTION_FRAMEWORK_V2.md) and [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md).
 
 ## 7. Review and Sampling invariants
 

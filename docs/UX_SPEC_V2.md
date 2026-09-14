@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-5B2
+> Last verified phase: V2-6A
 > Owner: Project
 
 This specification governs the V2 interaction model. V2-1 through V2-5 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
@@ -167,6 +167,22 @@ Product Detail and Inspection Workspace include a calm, secondary `保健食品�
 The detail section distinguishes all backend states: no indicator, indicator only, identifier candidate, ambiguous OCR, lookup unavailable, record not found, record found/relation unverified, verified match, mismatch and conflict. It never uses `假蓝帽`, `假保健食品` or `违法产品`.
 
 `查看页面依据` opens an in-app source trace and reuses the existing OCR Lightbox/source viewer. `查看官方依据` opens a separate in-app official-record modal with identifier, official product name, registration/filing subject, dates, official health-function text and query time; opening the official source is secondary. Page evidence is never merged into Phase3 Evidence, and official evidence is never presented as page content.
+
+## 8.2 Health-function consistency — Future V2-6B contract
+
+No consistency UI exists in V2-6A. A future Product Detail/Inspection Workspace section may be titled **保健功能一致性** and follow this order:
+
+```text
+官方核验功能
+页面宣传主题
+对应关系 / 未找到对应项
+知识缺口
+需要关注的具体页面表达
+```
+
+The section appears only as a comparison aid. It must distinguish `identity_not_verified`, `claim_not_generated`, `claim_analysis_error`, `framework_unresolved`, `official_function_unresolved`, `no_page_claims`, and `assessed`. It must show Registry raw function wording alongside normalized HealthFunction identity and retain links to the existing page and official source viewers.
+
+Per-Claim presentation uses 页面宣传主题在官方功能记录中找到对应主题、未在当前核验的官方功能记录中找到对应项, or 当前无已核验的官方功能主题映射. It must never use 合法/违法、合规/不合规、通过/不通过, a risk grade, or probability. A recorded topic does not approve the concrete ClaimMention wording. Mention-level disease/treatment attention remains a separately governed future dimension.
 
 ## 9. Loading, empty and error behavior
 

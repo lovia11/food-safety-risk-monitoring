@@ -22,6 +22,7 @@
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
 - V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 projection, same-Snapshot list summaries/filter, and Evidence trace
+- V2-6A governed design authority for two official HealthFunction frameworks, exact current/transition Registry normalization, explicit Claim topic mappings, and a future non-adjudicative ClaimConsistencyAssessment contract; no production consistency runtime yet
 
 ## Current Coverage
 
@@ -30,6 +31,8 @@
 - Separate development seed: 1 target / 2 queries
 - Legacy/current Phase3 clues: 5 categories / 26 keywords
 - V2 Claim design baseline: 5 marketing-topic Claim types / 26 provenance-bearing exact expressions
+- V2-6A HealthFunction design baseline: 2 frameworks / 24 of 24 non-nutrient functions / 40 official transition aliases
+- Claim→HealthFunction design mappings: 4 `topic_related` / 1 explicit no-mapping Claim gap
 - 3 Evidence-to-risk Bridge mappings; 8 Risk-to-substance/group mappings
 - 5 Inspection methods, 117 substances, 132 method-substance links, 37 applicability records
 
@@ -43,16 +46,20 @@ V2-5B1 Claim runtime core validation passed offline: Python full regression disc
 
 V2-5B2 Claim presentation migration and the V2-5 Exit Gate passed offline: Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling now use same-Snapshot V2 Claim projections with four explicit states and Evidence trace. Legacy Effect/Risk/Recommendation APIs remain compatible, while frozen Sampling output is unchanged.
 
+V2-6A HealthFunction Framework & Claim Consistency Contract is complete as a design/governance baseline. Official first-party sources support the two independent 2023 frameworks, complete 24-function non-nutrient catalog, and 40 exact transition aliases. Four project-governed `topic_related` mappings and the `male_function_related` gap are explicit. Registry aliases are asymmetric and cannot approve page Claim wording. Governance tests passed 17/17; Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Runtime, schema 11, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
+
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, claim-consistency assessment, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX is implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, Claim consistency runtime/UI, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX is implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
 V2-5 — COMPLETE. Governed taxonomy, ClaimMention/ClaimSignal runtime, artifact authority, schema 11 rebuildable projection, primary 页面宣传线索 UX, exact same-Snapshot filter, and legacy separation are implemented.
 
+V2-6A — DESIGN BASELINE / COMPLETE. HealthFunction Framework & Claim Consistency Contract is governed; production assessment is not implemented.
+
 ## Next Gate
 
-V2-6 Health-food Claim Consistency is NEXT and requires a separate human Gate. It is not implemented by V2-5.
+V2-6B Claim Consistency Runtime is NEXT and requires a separate human Gate. V2-6A does not authorize runtime, schema, API, or frontend implementation.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

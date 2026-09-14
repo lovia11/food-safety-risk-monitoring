@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "dataset_id": "health-functions-v2",
+  "dataset_version": "health-functions-v2.0",
+  "dataset_status": "design_baseline",
+  "jurisdiction": "CN",
+  "collected_at": "2026-09-15",
+  "verified_at": "2026-09-15",
+  "description": "V2-6A 官方保健功能框架与当前/历史官方名称治理基线。它只用于官方 Registry 字符串的精确归一化设计，不表示页面宣传获得批准、合规或合法。",
+  "frameworks": [
+    {
+      "framework_id": "hf-framework-non-nutrient-cn-2023",
+      "framework_type": "non_nutrient",
+      "official_name": "允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）",
+      "framework_version": "2023",
+      "jurisdiction": "CN",
+      "status": "verified_reference",
+      "source_ids": [
+        "samr-non-nutrient-catalog-2023",
+        "samr-non-nutrient-transition-2023"
+      ],
+      "source_date": "2023-08-15",
+      "effective_from": "2023-08-31",
+      "coverage_status": "current_catalog_and_official_transition_complete"
+    },
+    {
+      "framework_id": "hf-framework-nutrient-supplement-cn-2023",
+      "framework_type": "nutrient_supplement",
+      "official_name": "允许保健食品声称的保健功能目录 营养素补充剂（2023年版）",
+      "framework_version": "2023",
+      "jurisdiction": "CN",
+      "status": "verified_reference",
+      "source_ids": [
+        "samr-nutrient-supplement-catalog-2023"
+      ],
+      "source_date": "2023-06-02",
+      "effective_from": "2023-10-01",
+      "coverage_status": "framework_and_catalog_root_only"
+    }
+  ],
+  "functions": [
+    {"function_id":"hf-non-nutrient-cn-2023-01","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于增强免疫力","jurisdiction":"CN","framework_version":"2023","ordinal":1,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-02","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于抗氧化","jurisdiction":"CN","framework_version":"2023","ordinal":2,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-03","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"辅助改善记忆","jurisdiction":"CN","framework_version":"2023","ordinal":3,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-04","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"缓解视觉疲劳","jurisdiction":"CN","framework_version":"2023","ordinal":4,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-05","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"清咽润喉","jurisdiction":"CN","framework_version":"2023","ordinal":5,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-06","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于改善睡眠","jurisdiction":"CN","framework_version":"2023","ordinal":6,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-07","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"缓解体力疲劳","jurisdiction":"CN","framework_version":"2023","ordinal":7,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-08","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"耐缺氧","jurisdiction":"CN","framework_version":"2023","ordinal":8,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-09","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于控制体内脂肪","jurisdiction":"CN","framework_version":"2023","ordinal":9,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-10","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于改善骨密度","jurisdiction":"CN","framework_version":"2023","ordinal":10,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-11","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"改善缺铁性贫血","jurisdiction":"CN","framework_version":"2023","ordinal":11,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-12","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于改善痤疮","jurisdiction":"CN","framework_version":"2023","ordinal":12,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-13","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于改善黄褐斑","jurisdiction":"CN","framework_version":"2023","ordinal":13,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-14","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于改善皮肤水份状况","jurisdiction":"CN","framework_version":"2023","ordinal":14,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-15","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于调节肠道菌群","jurisdiction":"CN","framework_version":"2023","ordinal":15,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-16","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于消化","jurisdiction":"CN","framework_version":"2023","ordinal":16,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-17","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于润肠通便","jurisdiction":"CN","framework_version":"2023","ordinal":17,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-18","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"辅助保护胃粘膜","jurisdiction":"CN","framework_version":"2023","ordinal":18,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-19","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于维持血脂（胆固醇/甘油三酯）健康水平","jurisdiction":"CN","framework_version":"2023","ordinal":19,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-20","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于维持血糖健康水平","jurisdiction":"CN","framework_version":"2023","ordinal":20,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-21","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于维持血压健康水平","jurisdiction":"CN","framework_version":"2023","ordinal":21,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-22","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"对化学性肝损伤有辅助保护作用","jurisdiction":"CN","framework_version":"2023","ordinal":22,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-23","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"对电离辐射危害有辅助保护作用","jurisdiction":"CN","framework_version":"2023","ordinal":23,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-non-nutrient-cn-2023-24","framework_id":"hf-framework-non-nutrient-cn-2023","official_name":"有助于排铅","jurisdiction":"CN","framework_version":"2023","ordinal":24,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf","source_date":"2023-08-15"},
+    {"function_id":"hf-nutrient-supplement-cn-2023-01","framework_id":"hf-framework-nutrient-supplement-cn-2023","official_name":"补充维生素、矿物质等营养物质","jurisdiction":"CN","framework_version":"2023","ordinal":1,"status":"verified_reference","source_name":"《允许保健食品声称的保健功能目录 营养素补充剂（2023年版）》","source_reference":"https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20236/e5bca4166cc8480580bb9a3c97fecd79.pdf","source_date":"2023-06-02"}
+  ],
+  "aliases": [
+    {"alias_id":"hfa-non-nutrient-cn-2023-01-01","function_id":"hf-non-nutrient-cn-2023-01","alias_text":"免疫调节","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-01-02","function_id":"hf-non-nutrient-cn-2023-01","alias_text":"增强免疫力","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-02-01","function_id":"hf-non-nutrient-cn-2023-02","alias_text":"延缓衰老","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-02-02","function_id":"hf-non-nutrient-cn-2023-02","alias_text":"抗氧化","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-03-01","function_id":"hf-non-nutrient-cn-2023-03","alias_text":"改善记忆","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-04-01","function_id":"hf-non-nutrient-cn-2023-04","alias_text":"改善视力","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-04-02","function_id":"hf-non-nutrient-cn-2023-04","alias_text":"缓解视疲劳","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-05-01","function_id":"hf-non-nutrient-cn-2023-05","alias_text":"清咽","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-06-01","function_id":"hf-non-nutrient-cn-2023-06","alias_text":"改善睡眠","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-07-01","function_id":"hf-non-nutrient-cn-2023-07","alias_text":"抗疲劳","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-08-01","function_id":"hf-non-nutrient-cn-2023-08","alias_text":"提高缺氧耐受力","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-09-01","function_id":"hf-non-nutrient-cn-2023-09","alias_text":"减肥","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-10-01","function_id":"hf-non-nutrient-cn-2023-10","alias_text":"改善骨质疏松","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-10-02","function_id":"hf-non-nutrient-cn-2023-10","alias_text":"增加骨密度","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-11-01","function_id":"hf-non-nutrient-cn-2023-11","alias_text":"改善营养性贫血","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-12-01","function_id":"hf-non-nutrient-cn-2023-12","alias_text":"美容（祛痤疮）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-12-02","function_id":"hf-non-nutrient-cn-2023-12","alias_text":"祛痤疮","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-13-01","function_id":"hf-non-nutrient-cn-2023-13","alias_text":"美容（祛黄褐斑）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-13-02","function_id":"hf-non-nutrient-cn-2023-13","alias_text":"祛黄褐斑","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-14-01","function_id":"hf-non-nutrient-cn-2023-14","alias_text":"美容（改善皮肤水分/油分)","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-14-02","function_id":"hf-non-nutrient-cn-2023-14","alias_text":"改善皮肤水分","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-15-01","function_id":"hf-non-nutrient-cn-2023-15","alias_text":"改善胃肠功能（调节肠道菌群）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-15-02","function_id":"hf-non-nutrient-cn-2023-15","alias_text":"调节肠道菌群","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-16-01","function_id":"hf-non-nutrient-cn-2023-16","alias_text":"改善胃肠功能（促进消化）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-16-02","function_id":"hf-non-nutrient-cn-2023-16","alias_text":"促进消化","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-17-01","function_id":"hf-non-nutrient-cn-2023-17","alias_text":"改善胃肠功能（润肠通便）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-17-02","function_id":"hf-non-nutrient-cn-2023-17","alias_text":"通便","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-18-01","function_id":"hf-non-nutrient-cn-2023-18","alias_text":"改善胃肠功能（对胃黏膜损伤有辅助保护作用）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-18-02","function_id":"hf-non-nutrient-cn-2023-18","alias_text":"对胃粘膜损伤有辅助保护功能","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-19-01","function_id":"hf-non-nutrient-cn-2023-19","alias_text":"调节血脂（降低总胆固醇、降低甘油三酯）","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-19-02","function_id":"hf-non-nutrient-cn-2023-19","alias_text":"辅助降血脂","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-20-01","function_id":"hf-non-nutrient-cn-2023-20","alias_text":"调节血糖","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-20-02","function_id":"hf-non-nutrient-cn-2023-20","alias_text":"辅助降血糖","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-21-01","function_id":"hf-non-nutrient-cn-2023-21","alias_text":"调节血压","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-21-02","function_id":"hf-non-nutrient-cn-2023-21","alias_text":"辅助降血压","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-22-01","function_id":"hf-non-nutrient-cn-2023-22","alias_text":"对化学性肝损伤有保护作用","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-22-02","function_id":"hf-non-nutrient-cn-2023-22","alias_text":"对化学性肝损伤有辅助保护功能","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-23-01","function_id":"hf-non-nutrient-cn-2023-23","alias_text":"抗辐射","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-23-02","function_id":"hf-non-nutrient-cn-2023-23","alias_text":"对辐射危害有辅助保护作用","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"},
+    {"alias_id":"hfa-non-nutrient-cn-2023-24-01","function_id":"hf-non-nutrient-cn-2023-24","alias_text":"促进排铅","alias_type":"official_transition_name","source_name":"《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读","source_reference":"https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html","source_date":"2023-08-15","status":"verified_reference"}
+  ],
+  "sources": [
+    {
+      "source_id": "samr-non-nutrient-catalog-2023",
+      "source_name": "市场监管总局 国家卫生健康委 国家中医药局关于发布《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件的公告",
+      "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_491d5c9de75e425c8cd0203027af1d93.html",
+      "document_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20239/18ab87cb32744e16bb2cbd6953ae272d.pdf",
+      "source_date": "2023-08-15",
+      "published_at": "2023-08-31",
+      "status": "verified_reference",
+      "jurisdiction": "CN"
+    },
+    {
+      "source_id": "samr-non-nutrient-transition-2023",
+      "source_name": "《允许保健食品声称的保健功能目录 非营养素补充剂（2023年版）》及配套文件解读",
+      "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_bfffccd97e6e4dfaa9d353318487e670.html",
+      "source_date": "2023-08-15",
+      "published_at": "2023-08-31",
+      "status": "verified_reference",
+      "jurisdiction": "CN"
+    },
+    {
+      "source_id": "samr-nutrient-supplement-catalog-2023",
+      "source_name": "市场监管总局 国家卫生健康委 国家中医药局关于发布《允许保健食品声称的保健功能目录 营养素补充剂（2023年版）》等目录的公告",
+      "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/tssps/art/2023/art_dedd4b97c0cd4d6298203a559c56d3e9.html",
+      "document_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20236/e5bca4166cc8480580bb9a3c97fecd79.pdf",
+      "source_date": "2023-06-02",
+      "published_at": "2023-06-14",
+      "effective_from": "2023-10-01",
+      "status": "verified_reference",
+      "jurisdiction": "CN"
+    }
+  ],
+  "metadata": {
+    "authority": "governed_health_function_framework",
+    "normalization_policy": {
+      "allowed_resolution_sources": [
+        "current_official_name",
+        "official_transition_alias",
+        "explicit_governed_mapping"
+      ],
+      "forbidden_resolution_methods": [
+        "substring_match",
+        "fuzzy_string_similarity",
+        "embedding",
+        "llm",
+        "automatic_edit_distance",
+        "ungoverned_semantic_synonym"
+      ],
+      "raw_registry_function_must_be_preserved": true
+    },
+    "coverage": {
+      "non_nutrient_current_functions": "24/24",
+      "non_nutrient_transition_rows": "24/24",
+      "official_transition_aliases": 40,
+      "nutrient_supplement_framework": "separate_framework_with_catalog_root",
+      "nutrient_registry_string_normalization": "not_yet_governed"
+    },
+    "known_gaps": [
+      "nutrient_supplement_registry_string_resolution_not_governed",
+      "claim_expression_attention_dataset_pending_manual_governance"
+    ]
+  }
+}

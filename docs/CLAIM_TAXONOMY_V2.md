@@ -228,9 +228,9 @@ Every actual legacy keyword is covered exactly once. `migration confidence=exact
 
 ## 11. HealthFunction, RiskSignal, and inspection separation
 
-The 2023 official health-function framework is not the legacy five-Effect vocabulary and is not modeled by this taxonomy. Official registry strings remain verbatim current facts. A future HealthFunction dataset must carry its own framework/version and explicit mappings; lexical similarity is insufficient.
+The 2023 official health-function framework is not the legacy five-Effect vocabulary and is not modeled by this taxonomy. Official Registry strings remain verbatim current facts. V2-6A governs the separate `health-functions-v2.0` framework and `claim-health-function-mapping-v2.0` topic-mapping design baselines; lexical similarity remains insufficient and production comparison is still future V2-6B work.
 
-Likewise, a ClaimSignal does not automatically create regulatory attention. Future RiskSignal logic requires a separate mapping record with provenance and lifecycle. Inspection knowledge consumes a supported RiskSignal plus context; the Claim taxonomy must never contain a substance or method shortcut.
+Likewise, a ClaimSignal does not automatically create regulatory attention. The V2-6A ClaimExpressionAttention contract remains pending manual expression-level governance. Future RiskSignal logic requires a separate mapping record with provenance and lifecycle. Inspection knowledge consumes a supported RiskSignal plus context; the Claim taxonomy must never contain a substance or method shortcut.
 
 ```text
 ClaimSignal
@@ -240,7 +240,7 @@ ClaimSignal
   → InspectionRecommendation
 ```
 
-V2-5 implements only the ClaimSignal node and explicitly leaves the later mappings future.
+V2-5 implements only the ClaimSignal node. V2-6A now governs a separate `topic_related` Claim↔HealthFunction mapping dataset as design authority, but HealthFunction normalization, assessment runtime, regulatory attention, Claim→Risk, and inspection effects remain future and separate.
 
 ## 12. Authority, storage, and current schema/API contract
 

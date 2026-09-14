@@ -3,6 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
+> Last verified phase: V2-6A
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -152,19 +153,37 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-6 — Health-food claim consistency
 
-**Status:** NEXT — requires a separate human Gate; no V2-6 mapping or assessment is implemented by V2-5.
+**Status:** IN PROGRESS — V2-6A design baseline complete; V2-6B runtime is NEXT.
 
-- **Goal:** Compare verified identity/functions with page ClaimSignals using evidence-bearing assessments.
-- **Why:** Analysts need transparent mismatch clues without automatic legal verdicts.
-- **Dependencies:** V2-3 verified identity, accepted V2-5 Claim runtime, and an explicit V2-6 function-mapping contract.
-- **In Scope:** The comparison of verified official identity + official health functions + page claims; required states and detailed explanation.
-- **Out of Scope:** `pass/fail`, `合法/违法`, efficacy truth, or enforcement conclusions.
-- **Domain impact:** Adds ClaimConsistencyAssessment with compared claims, official functions, matched mapping, unmatched claims, disease/treatment expressions, Evidence, official source, and gaps.
-- **Schema impact:** Additive derived artifact/index after contract review.
-- **Data requirements:** Official records and page fixtures spanning consistent, out-of-scope, treatment, unavailable, insufficient and manual-review cases.
-- **UX impact:** A traceable assessment section with evidence/source links and explicit gaps.
-- **Testing:** State matrix, version changes, mismatch, unavailable source, ambiguous mapping and non-adjudication language.
-- **Real-world validation:** Expert review of a bounded identified-health-food set.
+### V2-6A — HealthFunction Framework & Claim Consistency Contract
+
+**Status:** DESIGN BASELINE / COMPLETE — official framework, transition normalization, topic mapping, assessment contract, ADR, and deterministic governance tests accepted.
+
+- **Goal:** Govern official HealthFunction identity and freeze a reproducible, non-adjudicative Claim consistency contract.
+- **Dependencies:** V2-3 verified identity, V2-5 Claim runtime/presentation, and official 2023 SAMR/NHC/NATCM catalogs and transition table.
+- **In Scope:** Complete 24/24 non-nutrient functions; separate nutrient-supplement framework; stable IDs; exact current/official-transition normalization; four `topic_related` mappings; explicit male-function gap; future assessment/attention contracts.
+- **Out of Scope:** Production normalization/assessment, schema/API/UI, fuzzy mapping, Claim→Risk, Recommendation changes, legality/compliance or probability output.
+- **Domain impact:** Establishes design baselines for HealthFunction, HealthFunctionAlias, ClaimHealthFunctionMapping, ClaimConsistencyAssessment, and ClaimExpressionAttention.
+- **Schema/API impact:** None. Schema 11 and production API remain unchanged.
+- **Data requirements:** First-party official sources, full transition table, exact raw-string preservation, and offline A–L contract fixtures.
+- **UX impact:** Future wording only; no frontend behavior changed.
+- **Testing:** Dataset provenance/completeness, referential integrity, exact normalization, fuzzy rejection, mapping separation, asymmetric alias behavior, non-adjudicative state/relation matrix, and full offline regression.
+- **Exit result:** `health-functions-v2.0` and `claim-health-function-mapping-v2.0` are governed design authorities; production runtime remains absent.
+
+### V2-6B — Claim Consistency Runtime
+
+**Status:** NEXT — requires a separate human Gate.
+
+- **Goal:** Implement Snapshot-scoped normalization and ClaimConsistencyAssessment using the V2-6A contract.
+- **Why:** Analysts need transparent official-function comparison clues without automatic legal verdicts.
+- **Dependencies:** Accepted V2-6A datasets/contracts and an explicit artifact/schema/API implementation review.
+- **In Scope:** `claim_consistency.json`, versioned comparison runtime, additive rebuildable projection/API, and traceable UI states if separately approved.
+- **Out of Scope:** `pass/fail`, `合法/违法`, efficacy truth, RiskSignal, Claim→Risk, inspection triggers, or enforcement conclusions.
+- **Domain impact:** Implements the accepted derived assessment without changing Claim, HealthFoodIdentity, Review, Sampling, or Recommendation meaning.
+- **Schema impact:** Future additive migration only after approval; V2-6A authorizes none.
+- **Data requirements:** Verified official records and page fixtures spanning every accepted state/relation and unresolved gap.
+- **Testing:** State matrix, versions, raw/resolved preservation, unavailable/unresolved sources, Snapshot isolation, and non-adjudication language.
+- **Real-world validation:** Future expert review of a bounded identified-health-food set.
 - **Exit criteria:** Assessments are reproducible, explanatory, non-binary, and never exceed source evidence.
 
 ## V2-7 — Inspection knowledge coverage

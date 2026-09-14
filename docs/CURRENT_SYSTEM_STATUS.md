@@ -4,9 +4,10 @@
 > Applies to: V2
 > V2-3 starting baseline: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
 > V2-5A design starting baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
+> V2-6A design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain, runtime, and primary presentation. Cross-domain Claim consistency and mapping remain future V2-6 work.
+This document describes implemented behavior through the completed V2-5 Claim domain, runtime, and primary presentation, plus the completed V2-6A HealthFunction/Claim consistency design baseline. Claim consistency production runtime remains future V2-6B work.
 
 ## Baseline
 
@@ -100,6 +101,10 @@ Counts below are computed from the governed configuration at the verified commit
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
 | V2 Claim runtime types/expressions | 5 / 26 |
+| Official HealthFunction frameworks | 2 |
+| 2023 non-nutrient HealthFunctions | 24 / 24 |
+| Official transition aliases | 40 |
+| Claim→HealthFunction topic mappings / explicit Claim gaps | 4 / 1 |
 | Evidence-to-risk Bridge mappings | 3 |
 | Risk-to-substance/group mappings | 8 |
 | Inspection methods | 5 |
@@ -129,16 +134,18 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-5A Claim Taxonomy & Domain Contract is **DESIGN BASELINE / COMPLETE**. The machine-readable `claim-taxonomy-v2.0` covers every one of the 26 current legacy expressions exactly once across five marketing topics, with no taxonomy gap and no HealthFunction/Risk/inspection mapping. Claim taxonomy tests passed 14/14; Monitor regression passed 74/74; Python full regression discovered 476 / passed 475 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline and schema remains 10.
 - V2-5B1 ClaimMention / ClaimSignal runtime core is **COMPLETE**. Deterministic seller-managed extraction, UGC/excluded-source blocking, zero/not-generated/error artifact semantics, schema 10→11 preservation and rebuild, additive Snapshot API projection, and legacy Effect/Risk/Recommendation/Review/Sampling compatibility are covered. Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline with no Detail, OCR or external network execution.
 - V2-5B2 Claim UX and legacy presentation migration is **COMPLETE**. Primary active-Snapshot surfaces use V2 Claim projections; Product list filtering is exact and same-Snapshot; ClaimMention source drill-down reuses Evidence; current Sampling and frozen legacy history stay distinct. Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No taxonomy, schema, Risk/Recommendation, Review/Sampling business state, frozen export, Detail/OCR, or external network behavior changed.
+- V2-6A HealthFunction Framework & Claim Consistency Contract is **DESIGN BASELINE / COMPLETE**. `health-functions-v2.0` records two separate official frameworks, the complete 24/24 non-nutrient catalog, and 40 source-backed transition aliases. `claim-health-function-mapping-v2.0` records four `topic_related` mappings and the explicit `male_function_related` gap. Exact Registry normalization and a non-adjudicative A–L assessment contract are covered by 17/17 deterministic governance tests. Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No production runtime, schema, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, or frozen-history behavior changed.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-6 Health-food Claim Consistency, subject to a separate human Gate.
-- **FUTURE CHANGE:** claim-consistency assessment and any explicit Claim-to-HealthFunction or Claim-to-Risk mapping. No such mapping exists at the V2-5 baseline.
+- **NEXT:** V2-6B Claim Consistency Runtime, subject to a separate human Gate.
+- **FUTURE CHANGE:** production official-function normalization, `claim_consistency.json`, read projection/API/UI, and any Claim-to-Risk mapping. V2-6A topic mappings are design authority only and are not loaded by production runtime.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
 - Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.
+- The existing recorded HealthFood Registry positive uses a descriptive official-function sentence that is not an exact current name or transition alias; future normalization must preserve it as unresolved unless a separate source-backed mapping is governed.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 
@@ -147,4 +154,6 @@ The five existing Effect categories are an operational Phase3 clue vocabulary, n
 - Product boundaries: [PRODUCT_REQUIREMENTS_V2.md](PRODUCT_REQUIREMENTS_V2.md)
 - Current/target architecture: [SYSTEM_V2_ARCHITECTURE.md](SYSTEM_V2_ARCHITECTURE.md)
 - Domain model: [DOMAIN_MODEL_V2.md](DOMAIN_MODEL_V2.md)
+- HealthFunction framework: [HEALTH_FUNCTION_FRAMEWORK_V2.md](HEALTH_FUNCTION_FRAMEWORK_V2.md)
+- Claim consistency contract: [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md)
 - Roadmap: [IMPLEMENTATION_ROADMAP_V2.md](IMPLEMENTATION_ROADMAP_V2.md)

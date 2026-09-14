@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-5B2
+> Last verified phase: V2-6A
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -143,19 +143,31 @@ Acceptance requires:
 
 V2-5B2 exit validation discovered 500 Python tests / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. The Claim-focused suite passed 35/35, legacy Effect/Risk bridge passed 28/28, Recommendation passed 29/29, Review passed 7/7, Sampling passed 23/23, and Monitor passed 32/32. No live collection, external network, taxonomy expansion, schema change, or frozen-history rewrite occurred.
 
-### 7.4 Future V2-6 gate
+### 7.4 V2-6A HealthFunction and consistency design — Current
 
-At minimum test:
+Acceptance requires:
 
-- exact seller-managed expression and complete ClaimMention provenance;
-- multiple mentions normalized to one ClaimSignal without losing source identities;
-- marketing paraphrase with and without a separately verified mapping;
-- disease/treatment wording and ambiguous expression remain separate/gapped;
-- UGC-only expression cannot form a formal ClaimSignal;
-- seller-managed and UGC occurrences remain distinct;
-- unmatched claim/Knowledge Gap;
-- ClaimSignal, HealthFunction and RiskSignal stored and presented independently;
-- consistency assessment exposes compared claims, functions, matched/unmatched items, evidence, source and gaps rather than pass/fail.
+- first-party official source metadata for both 2023 frameworks and the official transition table;
+- all 24 current non-nutrient functions with stable IDs, verbatim official names, unique framework ordinals, and complete provenance;
+- the nutrient-supplement framework remains a distinct identity and is never flattened into the 24 non-nutrient functions;
+- every official transition alias references an existing function and source; current-name/alias ambiguity is forbidden;
+- Registry normalization accepts exact current names and exact official transition names, while unknown, typo, punctuation variant, substring, fuzzy, semantic, embedding, and LLM guesses remain unresolved;
+- raw Registry function strings remain preserved beside resolved/unresolved identities;
+- Claim↔HealthFunction mappings are explicit, versioned `topic_related` project governance, never official equivalence;
+- the four approved topic mappings resolve valid Claim and HealthFunction IDs; `male_function_related` remains an explicit no-mapping gap;
+- official aliases normalize Registry strings only and cannot approve or directly normalize an identical page Claim expression;
+- assessment eligibility requires `HealthFoodIdentity.state == verified_match`, complete Claim analysis, and sufficient framework/function resolution;
+- top-level and per-Claim state contracts are non-adjudicative and preserve unavailable, zero, unresolved, not-recorded, and no-mapping states;
+- ClaimExpressionAttention is Mention/expression-scoped and remains `dataset_pending_manual_governance`; no topic-level substring classification is fabricated;
+- ClaimSignal, HealthFunction, ClaimHealthFunctionMapping, ClaimConsistencyAssessment, RiskSignal, and InspectionRecommendation remain separate;
+- production runtime, schema 11, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, and frozen history remain unchanged;
+- governance tests, Claim taxonomy, HealthFoodIdentity, Claim runtime, Monitor, full Python, frontend workflow, typecheck, and build pass offline.
+
+V2-6A exit validation passed: HealthFunction/mapping/normalization governance passed 17/17; Claim-focused regression passed 35/35; HealthFoodIdentity/Registry passed 22/22; Monitor/Query regression passed 46/46; Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Validation was offline and schema remained 11.
+
+### 7.5 Future V2-6B runtime gate
+
+At minimum test the accepted V2-6A A–L state/relation matrix, Snapshot isolation, version changes, artifact authority/rebuild, exact raw/resolved preservation, unresolved and unavailable sources, API/presentation wording, and independence from Review, Sampling, Risk, and Recommendation. Runtime output must expose compared Claims/functions, Evidence/source trace and gaps rather than pass/fail.
 
 ## 8. Knowledge gate
 

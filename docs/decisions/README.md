@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-6A
 > Owner: Project
 
 ADRs freeze cross-phase decisions that should not be changed incidentally. A newer ADR may supersede an older one only by naming it explicitly and explaining migration consequences.
@@ -15,6 +15,7 @@ ADRs freeze cross-phase decisions that should not be changed incidentally. A new
 | [ADR-004](ADR-004-claim-health-function-risk-separation.md) | Accepted | ClaimSignal, HealthFunction, and RiskSignal separation |
 | [ADR-005](ADR-005-product-fact-provenance-model.md) | Accepted | Snapshot-scoped ProductFact provenance model |
 | [ADR-006](ADR-006-health-food-identity-verification.md) | Accepted | Multi-state official health-food identity verification |
+| [ADR-007](ADR-007-health-function-normalization-and-claim-consistency.md) | Accepted | Separate HealthFunction identity, official transition normalization, and non-adjudicative Claim consistency |
 
 ## ADR format
 
