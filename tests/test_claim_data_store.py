@@ -94,7 +94,7 @@ class ClaimDataStoreTest(unittest.TestCase):
                 row[1]
                 for row in connection.execute("PRAGMA table_info(product_snapshots)")
             }
-        self.assertEqual(version, 11)
+        self.assertEqual(version, 12)
         self.assertTrue(
             {"claim_analysis_status", "claim_analysis_path"} <= snapshot_columns
         )

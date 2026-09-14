@@ -154,7 +154,7 @@ The current repository contains five Effect labels and 26 unique exact keywords 
 | Phase3 config | `effect_categories: effect label → keywords[]` | Substring matching of exact configured expression text across title, DOM, and OCR text units. | Legacy extraction input. |
 | Phase3 artifact | `analysis.json`: `detected_effects`, `matched_keywords`, `evidence_details[].effect` | Stores Effect summaries and source-specific matches. | Compatibility artifact; unchanged. |
 | Batch/run artifact | `batch_state.json`, reports and web snapshot risk projection | Repeats `detected_effects`, match and review fields. | Compatibility projection; unchanged. |
-| SQLite schema 11 | Legacy Effect fields plus `claim_mentions`, `claim_signals`, `claim_signal_mentions` and per-Snapshot Claim artifact status/path | Rebuildable query projections. | Claim tables are additive; legacy fields and human state remain. |
+| SQLite schema 12 (Claim tables introduced in 11) | Legacy Effect fields plus `claim_mentions`, `claim_signals`, `claim_signal_mentions` and per-Snapshot Claim artifact status/path | Rebuildable query projections. | Claim tables are additive; legacy fields and human state remain. |
 | API | `detectedEffects`, `effect`, `matchedKeywords`; `/api/products?effect=`; filter `effects[]` | Product/filter/workspace DTO compatibility contract. | Deprecated-future compatibility shape; unchanged. |
 | Frontend | Former 页面功效线索 table/filter, badges, detail/review/sampling presentations | Primary active-Snapshot surfaces now use V2 Claim summaries/details; legacy Effect badges and matched-keyword presentation are hidden. | Migrated in V2-5B2; no Effect-to-Claim fallback. |
 | Sampling export | `detectedEffects`, `pageEffectClues`, 页面功效线索 | Freezes legacy wording in historical lists. | Frozen history must not be rewritten. |
@@ -252,9 +252,9 @@ Authority is divided as follows:
 | Evidence | Current Evidence artifact/index and exact source trace | Source-preserving observation; not a normalized Claim. |
 | Claim taxonomy | `config/claim_taxonomy_v2.json` | Governed Claim type/expression meaning and version. |
 | ClaimMention/ClaimSignal | Current `claim_analysis.json` under the product Snapshot artifact directory | Rebuildable derived Claim domain authority using a recorded taxonomy version. |
-| Claim query projection | SQLite schema 11 Claim tables | Rebuildable index only; never sole authority for source wording. |
+| Claim query projection | SQLite schema 12, retaining the schema 11 Claim tables | Rebuildable index only; never sole authority for source wording. |
 
-Schema 11 adds `claim_mentions`, `claim_signals`, and `claim_signal_mentions`, with Evidence and Snapshot references plus taxonomy version. Import transactionally replaces one Snapshot's Claim projection from the artifact and preserves prior schema 10 data and human Review/Sampling state.
+Schema 11 added `claim_mentions`, `claim_signals`, and `claim_signal_mentions`, with Evidence and Snapshot references plus taxonomy version; current schema 12 retains them unchanged. Import transactionally replaces one Snapshot's Claim projection from the artifact and preserves prior schema 10 data and human Review/Sampling state.
 
 Snapshot/detail workspace DTOs now add:
 

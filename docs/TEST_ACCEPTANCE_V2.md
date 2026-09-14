@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6A
+> Last verified phase: V2-6B1
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -17,7 +17,7 @@ Every implementation report states the starting commit, changed files, schema/AP
 - Links resolve and canonical documents link to the right authority.
 - Terminology matches the registry in Product Requirements.
 - Current implementation and Future changes are distinguishable.
-- Active docs identify schema 11 as the sole current schema; prior-version details remain only in archived or explicit migration history.
+- Active docs identify schema 12 as the sole current schema; prior-version details remain only in archived or explicit migration history.
 - Retired IA and `web/` do not appear as current.
 - Archived material is marked non-normative and is never cited as a higher authority.
 - A cold-start reader can answer the 16 canonical baseline questions without chat context.
@@ -165,9 +165,28 @@ Acceptance requires:
 
 V2-6A exit validation passed: HealthFunction/mapping/normalization governance passed 17/17; Claim-focused regression passed 35/35; HealthFoodIdentity/Registry passed 22/22; Monitor/Query regression passed 46/46; Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Validation was offline and schema remained 11.
 
-### 7.5 Future V2-6B runtime gate
+### 7.5 V2-6B1 Claim Consistency runtime core — Current
 
-At minimum test the accepted V2-6A A–L state/relation matrix, Snapshot isolation, version changes, artifact authority/rebuild, exact raw/resolved preservation, unresolved and unavailable sources, API/presentation wording, and independence from Review, Sampling, Risk, and Recommendation. Runtime output must expose compared Claims/functions, Evidence/source trace and gaps rather than pass/fail.
+Acceptance requires:
+
+- strict, provenance-bearing HealthFunction and Claim↔HealthFunction config loaders with unique IDs and valid references;
+- exact current-name and exact official-transition Registry resolution only; whitespace/punctuation variants, substring, descriptive wrappers, fuzzy, semantic, embedding and LLM guesses remain unresolved;
+- explicit or exact-function-derived framework resolution that never uses Claim/legacy Effect, with nutrient and non-nutrient frameworks kept separate;
+- the accepted V2-6A A–L state/relation matrix and frozen precedence;
+- partial unresolved official strings preserve exact positive evidence, while an uncertain negative becomes `mapping_unresolved`, never `function_topic_not_recorded`;
+- `mentionAttentions=[]` and the pending-manual-governance gap remain explicit;
+- `claim_consistency.json` is the authority; failures write a degradable error sidecar and do not change processing, Review eligibility/status, Sampling, Risk or Recommendation;
+- schema 11→12 is additive and preserves all prior domain/human state; artifact re-import is idempotent and invalid artifacts clear stale projections transactionally;
+- Snapshot Detail/workspace expose `claimConsistencyStatus`, `claimConsistency`, and `paths.claimConsistency`; missing, complete and error remain distinct;
+- frontend adds types only and has no visible consistency UI;
+- no Taobao, Detail, OCR or live Registry provider is used during validation;
+- full Python, frontend workflow, typecheck and build regressions pass offline.
+
+V2-6B1 exit validation passed: targeted HealthFunction/Claim consistency/Identity/Claim/pipeline/legacy Risk/Recommendation/Review/Sampling/Monitor regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Validation used zero Taobao, Detail, OCR, live Registry or other network access.
+
+### 7.6 Future V2-6B2 UX and exit gate
+
+Test state-specific non-adjudicative wording, page/official evidence trace reuse, Knowledge Gaps, keyboard/accessibility behavior, no Risk/Recommendation causality, and the complete V2-6 exit criteria. B2 must consume the B1 API rather than reconstruct consistency in React.
 
 ## 8. Knowledge gate
 

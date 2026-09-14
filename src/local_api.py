@@ -583,6 +583,10 @@ def create_handler(
                 )
                 claim_mentions = snapshot.pop("claimMentions", [])
                 claim_signals = snapshot.pop("claimSignals", [])
+                claim_consistency_status = snapshot.pop(
+                    "claimConsistencyStatus", "not_generated"
+                )
+                claim_consistency = snapshot.pop("claimConsistency", None)
                 product_facts = snapshot.pop("productFacts", [])
                 declared_origin = snapshot.pop(
                     "declaredOrigin",
@@ -599,6 +603,8 @@ def create_handler(
                         "claimAnalysisStatus": claim_analysis_status,
                         "claimMentions": claim_mentions,
                         "claimSignals": claim_signals,
+                        "claimConsistencyStatus": claim_consistency_status,
+                        "claimConsistency": claim_consistency,
                         "productFacts": product_facts,
                         "declaredOrigin": declared_origin,
                         "healthFoodIdentity": health_food_identity,

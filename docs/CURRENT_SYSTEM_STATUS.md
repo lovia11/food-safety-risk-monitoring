@@ -7,13 +7,13 @@
 > V2-6A design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain, runtime, and primary presentation, plus the completed V2-6A HealthFunction/Claim consistency design baseline. Claim consistency production runtime remains future V2-6B work.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6A HealthFunction/Claim consistency design baseline, and the completed V2-6B1 Claim Consistency runtime core. Consistency UI remains future V2-6B2 work.
 
 ## Baseline
 
 - Branch: `ux-redesign-v1`
 - V2-3 starting HEAD: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
-- SQLite schema: 11
+- SQLite schema: 12
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
 - Current primary navigation: 商品总览、排查档案、抽检清单
@@ -53,8 +53,9 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Review and Sampling repositories do not mutate each other. Application-level decision transactions coordinate compound business actions.
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
-- V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; schema 11 provides rebuildable `claim_mentions`, `claim_signals`, and `claim_signal_mentions` projections. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
+- V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; the Claim tables introduced in schema 11 remain rebuildable projections in current schema 12. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
 - `claim-taxonomy-v2.0` remains the sole governed runtime taxonomy with 5 Claim types and 26 exact expressions. ClaimSignal is not an Official Health Function, RiskSignal, legality conclusion, substance, method, or Recommendation trigger. UGC and `excluded_other_product` Evidence cannot create formal Claims; SearchQuery/task keywords are not Claim input.
+- V2-6B1 implements the Snapshot-scoped, degradable `claim_consistency.json` authority. It compares only a verified HealthFoodIdentity's persisted Registry functions with formal V2 ClaimSignals through exact governed HealthFunction resolution and the four `topic_related` mappings. Schema 12 provides rebuildable assessment/function/per-Claim projections; Snapshot Detail/workspace expose additive status and assessment DTOs. The runtime does not perform a live Registry lookup and does not change Risk, Recommendation, Review eligibility/status, or Sampling.
 
 ## Current product-reading UX
 
@@ -135,13 +136,14 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-5B1 ClaimMention / ClaimSignal runtime core is **COMPLETE**. Deterministic seller-managed extraction, UGC/excluded-source blocking, zero/not-generated/error artifact semantics, schema 10→11 preservation and rebuild, additive Snapshot API projection, and legacy Effect/Risk/Recommendation/Review/Sampling compatibility are covered. Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline with no Detail, OCR or external network execution.
 - V2-5B2 Claim UX and legacy presentation migration is **COMPLETE**. Primary active-Snapshot surfaces use V2 Claim projections; Product list filtering is exact and same-Snapshot; ClaimMention source drill-down reuses Evidence; current Sampling and frozen legacy history stay distinct. Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No taxonomy, schema, Risk/Recommendation, Review/Sampling business state, frozen export, Detail/OCR, or external network behavior changed.
 - V2-6A HealthFunction Framework & Claim Consistency Contract is **DESIGN BASELINE / COMPLETE**. `health-functions-v2.0` records two separate official frameworks, the complete 24/24 non-nutrient catalog, and 40 source-backed transition aliases. `claim-health-function-mapping-v2.0` records four `topic_related` mappings and the explicit `male_function_related` gap. Exact Registry normalization and a non-adjudicative A–L assessment contract are covered by 17/17 deterministic governance tests. Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No production runtime, schema, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, or frozen-history behavior changed.
+- V2-6B1 Claim Consistency Runtime Core is **COMPLETE**. The independent runtime validates both governed datasets, resolves Registry strings only by exact current names or exact official transition aliases, preserves unresolved raw strings, enforces the frozen state precedence and conservative partial-resolution relations, and writes a degradable Snapshot sidecar. Schema 11→12 migration, transactional artifact rebuild, invalid-artifact clearing, additive Snapshot API/TypeScript contracts, A–L cases, API states and cross-domain independence are covered offline. Targeted cross-domain regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No visible consistency UI, Attention classification, Claim→Risk/Recommendation bridge, live provider request, Detail or OCR execution was added.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-6B Claim Consistency Runtime, subject to a separate human Gate.
-- **FUTURE CHANGE:** production official-function normalization, `claim_consistency.json`, read projection/API/UI, and any Claim-to-Risk mapping. V2-6A topic mappings are design authority only and are not loaded by production runtime.
+- **NEXT:** V2-6B2 Consistency UX and V2-6 Exit Gate, subject to a separate human Gate.
+- **FUTURE CHANGE:** visible consistency presentation and the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
 - Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.

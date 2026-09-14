@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6A
+> Last verified phase: V2-6B1
 > Owner: Project
 
 This specification governs the V2 interaction model. V2-1 through V2-5 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
@@ -168,9 +168,9 @@ The detail section distinguishes all backend states: no indicator, indicator onl
 
 `查看页面依据` opens an in-app source trace and reuses the existing OCR Lightbox/source viewer. `查看官方依据` opens a separate in-app official-record modal with identifier, official product name, registration/filing subject, dates, official health-function text and query time; opening the official source is secondary. Page evidence is never merged into Phase3 Evidence, and official evidence is never presented as page content.
 
-## 8.2 Health-function consistency — Future V2-6B contract
+## 8.2 Health-function consistency — Future V2-6B2 presentation contract
 
-No consistency UI exists in V2-6A. A future Product Detail/Inspection Workspace section may be titled **保健功能一致性** and follow this order:
+V2-6B1 provides typed backend data but no visible consistency UI. A future V2-6B2 Product Detail/Inspection Workspace section may be titled **保健功能一致性** and follow this order:
 
 ```text
 官方核验功能

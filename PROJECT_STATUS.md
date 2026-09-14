@@ -4,7 +4,7 @@
 
 - Branch: `ux-redesign-v1`
 - V2-4 Wave 1 starting commit: `698b8ad482367ffbd20ba696799c47ebd372d2c3`
-- SQLite schema: 11
+- SQLite schema: 12
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
 
@@ -21,8 +21,8 @@
 - Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
-- V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 projection, same-Snapshot list summaries/filter, and Evidence trace
-- V2-6A governed design authority for two official HealthFunction frameworks, exact current/transition Registry normalization, explicit Claim topic mappings, and a future non-adjudicative ClaimConsistencyAssessment contract; no production consistency runtime yet
+- V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 Claim projection retained by schema 12, same-Snapshot list summaries/filter, and Evidence trace
+- V2-6B1 ClaimConsistency runtime with exact governed Registry normalization, non-adjudicative topic comparison, `claim_consistency.json` authority, schema 12 rebuildable projection, and additive Snapshot API/TypeScript contracts; visible UI remains future
 
 ## Current Coverage
 
@@ -48,18 +48,22 @@ V2-5B2 Claim presentation migration and the V2-5 Exit Gate passed offline: Pytho
 
 V2-6A HealthFunction Framework & Claim Consistency Contract is complete as a design/governance baseline. Official first-party sources support the two independent 2023 frameworks, complete 24-function non-nutrient catalog, and 40 exact transition aliases. Four project-governed `topic_related` mappings and the `male_function_related` gap are explicit. Registry aliases are asymmetric and cannot approve page Claim wording. Governance tests passed 17/17; Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Runtime, schema 11, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
 
+V2-6B1 Claim Consistency Runtime Core is complete. The pipeline consumes only persisted identity/Registry and formal Claim artifacts plus the two governed config authorities; it performs no live consistency lookup. Exact resolver, framework isolation, A–L states, conservative partial-unresolved semantics, degradable sidecar failure, schema 11→12 preservation/rebuild, additive Snapshot DTOs, and unchanged Risk/Recommendation/Review/Sampling behavior are covered offline. Targeted cross-domain regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. The frontend contains additive types only and has no visible consistency UI.
+
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, Claim consistency runtime/UI, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX is implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, Claim consistency UI, ClaimExpressionAttention governance, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX and the Claim consistency runtime are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-5 — COMPLETE. Governed taxonomy, ClaimMention/ClaimSignal runtime, artifact authority, schema 11 rebuildable projection, primary 页面宣传线索 UX, exact same-Snapshot filter, and legacy separation are implemented.
+V2-5 — COMPLETE. Governed taxonomy, ClaimMention/ClaimSignal runtime, artifact authority, rebuildable Claim projection (introduced in schema 11 and retained in schema 12), primary 页面宣传线索 UX, exact same-Snapshot filter, and legacy separation are implemented.
 
-V2-6A — DESIGN BASELINE / COMPLETE. HealthFunction Framework & Claim Consistency Contract is governed; production assessment is not implemented.
+V2-6A — DESIGN BASELINE / COMPLETE. HealthFunction Framework & Claim Consistency Contract is governed; its accepted meaning is unchanged by the B1 implementation.
+
+V2-6B1 — COMPLETE. Claim Consistency runtime/artifact, schema 12 projection, and additive Snapshot API/TypeScript contracts are implemented; visible UI is not.
 
 ## Next Gate
 
-V2-6B Claim Consistency Runtime is NEXT and requires a separate human Gate. V2-6A does not authorize runtime, schema, API, or frontend implementation.
+V2-6B2 Consistency UX and V2-6 Exit Gate is NEXT and requires a separate human Gate. It must consume the B1 contract and must not add ClaimExpressionAttention classification, Claim→Risk, Recommendation, Review, or Sampling side effects.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

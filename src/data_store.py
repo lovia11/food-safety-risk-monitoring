@@ -23,6 +23,15 @@ from src.claim_analysis import (
     load_claim_analysis,
     load_claim_taxonomy,
 )
+from src.claim_consistency import (
+    CLAIM_CONSISTENCY_ERROR_FILE,
+    CLAIM_CONSISTENCY_FILE,
+    ClaimConsistencyConfigError,
+    ClaimConsistencyValidationError,
+    load_claim_consistency,
+    load_claim_health_function_mapping,
+    load_health_function_dataset,
+)
 from src.health_food_identity import (
     HEALTH_FOOD_IDENTITY_FILE,
     load_health_food_identity,
@@ -67,7 +76,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -553,6 +562,9 @@ class DataStore:
                     claim_analysis_status TEXT NOT NULL DEFAULT 'not_generated'
                         CHECK(claim_analysis_status IN ('not_generated', 'complete', 'error')),
                     claim_analysis_path TEXT,
+                    claim_consistency_status TEXT NOT NULL DEFAULT 'not_generated'
+                        CHECK(claim_consistency_status IN ('not_generated', 'complete', 'error')),
+                    claim_consistency_path TEXT,
                     original_image_count INTEGER NOT NULL DEFAULT 0,
                     ocr_image_count INTEGER NOT NULL DEFAULT 0,
                     updated_at TEXT NOT NULL,
@@ -618,6 +630,75 @@ class DataStore:
                     ordinal INTEGER NOT NULL CHECK(ordinal > 0),
                     PRIMARY KEY(claim_signal_id, claim_mention_id),
                     UNIQUE(claim_signal_id, ordinal)
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_consistency_assessments (
+                    snapshot_id TEXT PRIMARY KEY
+                        REFERENCES product_snapshots(snapshot_id) ON DELETE CASCADE,
+                    state TEXT NOT NULL CHECK(state IN (
+                        'identity_not_verified', 'claim_not_generated',
+                        'claim_analysis_error', 'framework_unresolved',
+                        'official_function_unresolved', 'no_page_claims', 'assessed'
+                    )),
+                    assessment_version TEXT NOT NULL,
+                    claim_taxonomy_version TEXT NOT NULL,
+                    health_function_dataset_version TEXT NOT NULL,
+                    mapping_dataset_version TEXT NOT NULL,
+                    registry_identifier TEXT,
+                    registry_reference_or_hash TEXT,
+                    registry_retrieved_at TEXT,
+                    registry_source_name TEXT,
+                    registry_source_reference TEXT,
+                    registry_raw_artifact_path TEXT,
+                    registry_framework_id TEXT,
+                    registry_framework_resolution_source TEXT,
+                    claim_signal_ids_json TEXT NOT NULL DEFAULT '[]',
+                    claim_mention_ids_json TEXT NOT NULL DEFAULT '[]',
+                    mention_attentions_json TEXT NOT NULL DEFAULT '[]',
+                    summary_json TEXT NOT NULL DEFAULT '{}',
+                    gaps_json TEXT NOT NULL DEFAULT '[]',
+                    artifact_path TEXT NOT NULL,
+                    generated_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_consistency_official_functions (
+                    snapshot_id TEXT NOT NULL
+                        REFERENCES claim_consistency_assessments(snapshot_id)
+                        ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    raw_text TEXT NOT NULL,
+                    resolution_status TEXT NOT NULL
+                        CHECK(resolution_status IN ('resolved', 'unresolved')),
+                    resolution_source TEXT,
+                    framework_id TEXT,
+                    health_function_id TEXT,
+                    health_function_official_name TEXT,
+                    PRIMARY KEY(snapshot_id, ordinal)
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_consistency_claims (
+                    snapshot_id TEXT NOT NULL
+                        REFERENCES claim_consistency_assessments(snapshot_id)
+                        ON DELETE CASCADE,
+                    claim_signal_id TEXT NOT NULL
+                        REFERENCES claim_signals(claim_signal_id) ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    claim_type TEXT NOT NULL,
+                    claim_mention_ids_json TEXT NOT NULL DEFAULT '[]',
+                    evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+                    relation TEXT NOT NULL CHECK(relation IN (
+                        'function_topic_recorded', 'function_topic_not_recorded',
+                        'no_governed_function_mapping', 'mapping_unresolved'
+                    )),
+                    mapping_id TEXT,
+                    health_function_id TEXT,
+                    health_function_official_name TEXT,
+                    framework_id TEXT,
+                    supporting_resolved_functions_json TEXT NOT NULL DEFAULT '[]',
+                    gaps_json TEXT NOT NULL DEFAULT '[]',
+                    PRIMARY KEY(snapshot_id, claim_signal_id),
+                    UNIQUE(snapshot_id, ordinal)
                 );
 
                 CREATE TABLE IF NOT EXISTS product_facts (
@@ -705,6 +786,14 @@ class DataStore:
                     ON claim_signals(snapshot_id, ordinal);
                 CREATE INDEX IF NOT EXISTS idx_claim_signals_type
                     ON claim_signals(claim_type, taxonomy_version);
+                CREATE INDEX IF NOT EXISTS idx_claim_consistency_assessments_state
+                    ON claim_consistency_assessments(state, snapshot_id);
+                CREATE INDEX IF NOT EXISTS idx_claim_consistency_official_function
+                    ON claim_consistency_official_functions(
+                        health_function_id, snapshot_id
+                    );
+                CREATE INDEX IF NOT EXISTS idx_claim_consistency_claim_relation
+                    ON claim_consistency_claims(relation, snapshot_id);
                 CREATE INDEX IF NOT EXISTS idx_product_facts_snapshot
                     ON product_facts(snapshot_id, fact_type, fact_id);
                 CREATE INDEX IF NOT EXISTS idx_product_facts_type_value
@@ -1024,6 +1113,18 @@ class DataStore:
                 connection,
                 "product_snapshots",
                 "claim_analysis_path",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "product_snapshots",
+                "claim_consistency_status",
+                "TEXT NOT NULL DEFAULT 'not_generated'",
+            )
+            self._ensure_column(
+                connection,
+                "product_snapshots",
+                "claim_consistency_path",
                 "TEXT",
             )
             self._ensure_column(
@@ -1982,12 +2083,26 @@ class DataStore:
             claim_taxonomy = load_claim_taxonomy()
         except ValueError:
             claim_taxonomy = None
+        health_function_dataset: dict[str, Any] | None
+        claim_function_mapping: dict[str, Any] | None
+        try:
+            health_function_dataset = load_health_function_dataset()
+            claim_function_mapping = load_claim_health_function_mapping(
+                health_functions=health_function_dataset,
+                claim_taxonomy=claim_taxonomy or load_claim_taxonomy(),
+            )
+        except (ClaimConsistencyConfigError, ValueError):
+            health_function_dataset = None
+            claim_function_mapping = None
         imported_evidence = 0
         imported_claim_mentions = 0
         imported_claim_signals = 0
         imported_product_facts = 0
         imported_health_food_identities = 0
         imported_health_food_registry_records: set[str] = set()
+        imported_claim_consistency_assessments = 0
+        imported_claim_consistency_official_functions = 0
+        imported_claim_consistency_claims = 0
         with self._connect() as connection:
             existing_task = connection.execute(
                 "SELECT display_name FROM tasks WHERE task_id = ?", (task_id,)
@@ -2105,6 +2220,10 @@ class DataStore:
                     for ordinal, item in enumerate(evidence_items, start=1)
                 }
                 product_root = run_root / "products" / product_id
+                identity_payload = load_health_food_identity(
+                    product_root / HEALTH_FOOD_IDENTITY_FILE,
+                    expected_snapshot_id=snapshot_id,
+                )
                 claim_artifact_path = product_root / CLAIM_ANALYSIS_FILE
                 claim_analysis: dict[str, Any] | None = None
                 claim_analysis_status = "not_generated"
@@ -2131,6 +2250,68 @@ class DataStore:
                         )
                     elif (product_root / CLAIM_ANALYSIS_ERROR_FILE).is_file():
                         claim_analysis_status = "error"
+                consistency_artifact_path = product_root / CLAIM_CONSISTENCY_FILE
+                claim_consistency: dict[str, Any] | None = None
+                claim_consistency_status = "not_generated"
+                claim_consistency_relative_path: str | None = None
+                try:
+                    if consistency_artifact_path.is_file() and (
+                        health_function_dataset is None
+                        or claim_function_mapping is None
+                        or claim_taxonomy is None
+                        or identity_payload is None
+                    ):
+                        raise ClaimConsistencyValidationError(
+                            "Governed Claim consistency configuration is unavailable"
+                        )
+                    claim_consistency = load_claim_consistency(
+                        consistency_artifact_path,
+                        expected_snapshot_id=snapshot_id,
+                        health_functions=health_function_dataset,
+                        mapping_dataset=claim_function_mapping,
+                        claim_taxonomy=claim_taxonomy,
+                        expected_claim_signal_ids=(
+                            [
+                                str(item["claimSignalId"])
+                                for item in claim_analysis["claimSignals"]
+                            ]
+                            if claim_analysis is not None
+                            else []
+                        ),
+                        expected_claim_mention_ids=(
+                            [
+                                str(item["claimMentionId"])
+                                for item in claim_analysis["claimMentions"]
+                            ]
+                            if claim_analysis is not None
+                            else []
+                        ),
+                        expected_claim_signals=(
+                            claim_analysis["claimSignals"]
+                            if claim_analysis is not None
+                            else []
+                        ),
+                        expected_identity_state=(
+                            str(
+                                identity_payload["identityAssessment"].get(
+                                    "state"
+                                )
+                            )
+                            if identity_payload is not None
+                            else None
+                        ),
+                        expected_claim_analysis_status=claim_analysis_status,
+                    )
+                except (ClaimConsistencyValidationError, ClaimConsistencyConfigError):
+                    claim_consistency_status = "error"
+                else:
+                    if claim_consistency is not None:
+                        claim_consistency_status = "complete"
+                        claim_consistency_relative_path = (
+                            f"products/{product_id}/{CLAIM_CONSISTENCY_FILE}"
+                        )
+                    elif (product_root / CLAIM_CONSISTENCY_ERROR_FILE).is_file():
+                        claim_consistency_status = "error"
                 review_required = risk.get("reviewRequired")
                 if review_required is not None:
                     review_required = 1 if review_required else 0
@@ -2142,8 +2323,9 @@ class DataStore:
                         detected_effects_json, review_required, analysis_summary,
                         product_path, meta_path, analysis_path,
                         claim_analysis_status, claim_analysis_path,
+                        claim_consistency_status, claim_consistency_path,
                         original_image_count, ocr_image_count, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(snapshot_id) DO UPDATE SET
                         rank=excluded.rank,
                         product_name=excluded.product_name,
@@ -2160,6 +2342,8 @@ class DataStore:
                         analysis_path=excluded.analysis_path,
                         claim_analysis_status=excluded.claim_analysis_status,
                         claim_analysis_path=excluded.claim_analysis_path,
+                        claim_consistency_status=excluded.claim_consistency_status,
+                        claim_consistency_path=excluded.claim_consistency_path,
                         original_image_count=excluded.original_image_count,
                         ocr_image_count=excluded.ocr_image_count,
                         updated_at=excluded.updated_at
@@ -2183,6 +2367,8 @@ class DataStore:
                         assets.get("analysisPath"),
                         claim_analysis_status,
                         claim_analysis_relative_path,
+                        claim_consistency_status,
+                        claim_consistency_relative_path,
                         int((product.get("counts") or {}).get("originalImages") or 0),
                         int((product.get("counts") or {}).get("ocrImages") or 0),
                         generated_at,
@@ -2337,10 +2523,6 @@ class DataStore:
                     "DELETE FROM health_food_identities WHERE snapshot_id = ?",
                     (snapshot_id,),
                 )
-                identity_payload = load_health_food_identity(
-                    run_root / "products" / product_id / HEALTH_FOOD_IDENTITY_FILE,
-                    expected_snapshot_id=snapshot_id,
-                )
                 if identity_payload is not None:
                     identity = present_health_food_identity(identity_payload)
                     record = identity.get("registryRecord")
@@ -2430,6 +2612,135 @@ class DataStore:
                         ),
                     )
                     imported_health_food_identities += 1
+                connection.execute(
+                    "DELETE FROM claim_consistency_assessments WHERE snapshot_id = ?",
+                    (snapshot_id,),
+                )
+                if claim_consistency is not None:
+                    artifact_path = (
+                        f"products/{product_id}/{CLAIM_CONSISTENCY_FILE}"
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO claim_consistency_assessments (
+                            snapshot_id, state, assessment_version,
+                            claim_taxonomy_version,
+                            health_function_dataset_version,
+                            mapping_dataset_version, registry_identifier,
+                            registry_reference_or_hash, registry_retrieved_at,
+                            registry_source_name, registry_source_reference,
+                            registry_raw_artifact_path, registry_framework_id,
+                            registry_framework_resolution_source,
+                            claim_signal_ids_json, claim_mention_ids_json,
+                            mention_attentions_json, summary_json, gaps_json,
+                            artifact_path, generated_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            snapshot_id,
+                            claim_consistency["state"],
+                            claim_consistency["assessmentVersion"],
+                            claim_consistency["claimTaxonomyVersion"],
+                            claim_consistency["healthFunctionDatasetVersion"],
+                            claim_consistency["claimHealthFunctionMappingVersion"],
+                            claim_consistency.get("healthFoodRegistryIdentifier"),
+                            claim_consistency.get(
+                                "healthFoodRegistryRecordReferenceOrHash"
+                            ),
+                            claim_consistency.get("healthFoodRegistryRetrievedAt"),
+                            claim_consistency.get("healthFoodRegistrySourceName"),
+                            claim_consistency.get("healthFoodRegistrySourceReference"),
+                            claim_consistency.get("healthFoodRegistryRawArtifactPath"),
+                            claim_consistency.get("registryFrameworkId"),
+                            claim_consistency.get(
+                                "registryFrameworkResolutionSource"
+                            ),
+                            _json_text(
+                                claim_consistency.get("claimSignalIds"), []
+                            ),
+                            _json_text(
+                                claim_consistency.get("claimMentionIds"), []
+                            ),
+                            _json_text(
+                                claim_consistency.get("mentionAttentions"), []
+                            ),
+                            _json_text(claim_consistency.get("summary"), {}),
+                            _json_text(claim_consistency.get("gaps"), []),
+                            artifact_path,
+                            claim_consistency["generatedAt"],
+                            generated_at,
+                        ),
+                    )
+                    resolution_queues: dict[str, list[dict[str, Any]]] = {}
+                    for resolution in (
+                        claim_consistency["resolvedHealthFunctions"]
+                        + claim_consistency["unresolvedOfficialFunctions"]
+                    ):
+                        resolution_queues.setdefault(
+                            str(resolution["rawOfficialFunction"]), []
+                        ).append(resolution)
+                    for ordinal, raw_text in enumerate(
+                        claim_consistency["rawOfficialFunctions"], start=1
+                    ):
+                        resolution = resolution_queues[str(raw_text)].pop(0)
+                        connection.execute(
+                            """
+                            INSERT INTO claim_consistency_official_functions (
+                                snapshot_id, ordinal, raw_text, resolution_status,
+                                resolution_source, framework_id, health_function_id,
+                                health_function_official_name
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                snapshot_id,
+                                ordinal,
+                                str(raw_text),
+                                resolution["resolutionStatus"],
+                                resolution.get("resolutionSource"),
+                                resolution.get("frameworkId"),
+                                resolution.get("healthFunctionId"),
+                                resolution.get("healthFunctionOfficialName"),
+                            ),
+                        )
+                    for ordinal, item in enumerate(
+                        claim_consistency["perClaimAssessments"], start=1
+                    ):
+                        connection.execute(
+                            """
+                            INSERT INTO claim_consistency_claims (
+                                snapshot_id, claim_signal_id, ordinal, claim_type,
+                                claim_mention_ids_json, evidence_ids_json, relation,
+                                mapping_id, health_function_id,
+                                health_function_official_name, framework_id,
+                                supporting_resolved_functions_json, gaps_json
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                snapshot_id,
+                                item["claimSignalId"],
+                                ordinal,
+                                item["claimType"],
+                                _json_text(item.get("claimMentionIds"), []),
+                                _json_text(item.get("evidenceIds"), []),
+                                item["relation"],
+                                item.get("mappingId"),
+                                item.get("healthFunctionId"),
+                                item.get("healthFunctionOfficialName"),
+                                item.get("frameworkId"),
+                                _json_text(
+                                    item.get("supportingResolvedOfficialFunctions"),
+                                    [],
+                                ),
+                                _json_text(item.get("gaps"), []),
+                            ),
+                        )
+                    imported_claim_consistency_assessments += 1
+                    imported_claim_consistency_official_functions += len(
+                        claim_consistency["rawOfficialFunctions"]
+                    )
+                    imported_claim_consistency_claims += len(
+                        claim_consistency["perClaimAssessments"]
+                    )
             discovery = _read_optional_json(
                 run_root / "search" / "discovery_summary.json", {}
             )
@@ -2487,6 +2798,9 @@ class DataStore:
             "product_facts": imported_product_facts,
             "health_food_identities": imported_health_food_identities,
             "health_food_registry_records": len(imported_health_food_registry_records),
+            "claim_consistency_assessments": imported_claim_consistency_assessments,
+            "claim_consistency_official_functions": imported_claim_consistency_official_functions,
+            "claim_consistency_claims": imported_claim_consistency_claims,
             "candidate_hits": len(
                 (discovery.get("candidate_hits") or []) if isinstance(discovery, dict) else []
             ),
@@ -2522,6 +2836,7 @@ class DataStore:
             "detectedEffects": _json_value(row["detected_effects_json"], []),
             "claimAnalysisStatus": row["claim_analysis_status"],
             "claimSignalSummaries": claim_signal_summaries or [],
+            "claimConsistencyStatus": row["claim_consistency_status"],
             "reviewRequired": (
                 None if row["review_required"] is None else bool(row["review_required"])
             ),
@@ -2533,6 +2848,7 @@ class DataStore:
                 "meta": row["meta_path"],
                 "analysis": row["analysis_path"],
                 "claimAnalysis": row["claim_analysis_path"],
+                "claimConsistency": row["claim_consistency_path"],
             },
             "counts": {
                 "originalImages": row["original_image_count"],
@@ -3130,6 +3446,24 @@ class DataStore:
             """,
             (snapshot_id,),
         ).fetchall()
+        consistency_row = connection.execute(
+            "SELECT * FROM claim_consistency_assessments WHERE snapshot_id = ?",
+            (snapshot_id,),
+        ).fetchone()
+        consistency_function_rows = connection.execute(
+            """
+            SELECT * FROM claim_consistency_official_functions
+            WHERE snapshot_id = ? ORDER BY ordinal
+            """,
+            (snapshot_id,),
+        ).fetchall()
+        consistency_claim_rows = connection.execute(
+            """
+            SELECT * FROM claim_consistency_claims
+            WHERE snapshot_id = ? ORDER BY ordinal
+            """,
+            (snapshot_id,),
+        ).fetchall()
         fact_rows = connection.execute(
             """
             SELECT * FROM product_facts
@@ -3154,6 +3488,7 @@ class DataStore:
             for item in evidence_rows
         ]
         result["claimAnalysisStatus"] = row["claim_analysis_status"]
+        result["claimConsistencyStatus"] = row["claim_consistency_status"]
         result["claimMentions"] = [
             {
                 "claimMentionId": item["claim_mention_id"],
@@ -3217,6 +3552,108 @@ class DataStore:
             }
             for item in claim_signal_rows
         ]
+        if row["claim_consistency_status"] == "complete" and consistency_row is not None:
+            resolutions = [
+                {
+                    "rawOfficialFunction": item["raw_text"],
+                    "resolutionStatus": item["resolution_status"],
+                    "resolutionSource": item["resolution_source"],
+                    "frameworkId": item["framework_id"],
+                    "healthFunctionId": item["health_function_id"],
+                    "healthFunctionOfficialName": item[
+                        "health_function_official_name"
+                    ],
+                }
+                for item in consistency_function_rows
+            ]
+            result["claimConsistency"] = {
+                "schemaVersion": 1,
+                "assessmentVersion": consistency_row["assessment_version"],
+                "snapshotId": snapshot_id,
+                "state": consistency_row["state"],
+                "claimTaxonomyVersion": consistency_row[
+                    "claim_taxonomy_version"
+                ],
+                "healthFunctionDatasetVersion": consistency_row[
+                    "health_function_dataset_version"
+                ],
+                "claimHealthFunctionMappingVersion": consistency_row[
+                    "mapping_dataset_version"
+                ],
+                "healthFoodRegistryIdentifier": consistency_row[
+                    "registry_identifier"
+                ],
+                "healthFoodRegistryRecordReferenceOrHash": consistency_row[
+                    "registry_reference_or_hash"
+                ],
+                "healthFoodRegistryRetrievedAt": consistency_row[
+                    "registry_retrieved_at"
+                ],
+                "healthFoodRegistrySourceName": consistency_row[
+                    "registry_source_name"
+                ],
+                "healthFoodRegistrySourceReference": consistency_row[
+                    "registry_source_reference"
+                ],
+                "healthFoodRegistryRawArtifactPath": consistency_row[
+                    "registry_raw_artifact_path"
+                ],
+                "registryFrameworkId": consistency_row["registry_framework_id"],
+                "registryFrameworkResolutionSource": consistency_row[
+                    "registry_framework_resolution_source"
+                ],
+                "rawOfficialFunctions": [
+                    item["rawOfficialFunction"] for item in resolutions
+                ],
+                "resolvedHealthFunctions": [
+                    item
+                    for item in resolutions
+                    if item["resolutionStatus"] == "resolved"
+                ],
+                "unresolvedOfficialFunctions": [
+                    item
+                    for item in resolutions
+                    if item["resolutionStatus"] == "unresolved"
+                ],
+                "claimSignalIds": _json_value(
+                    consistency_row["claim_signal_ids_json"], []
+                ),
+                "claimMentionIds": _json_value(
+                    consistency_row["claim_mention_ids_json"], []
+                ),
+                "perClaimAssessments": [
+                    {
+                        "claimSignalId": item["claim_signal_id"],
+                        "claimType": item["claim_type"],
+                        "claimMentionIds": _json_value(
+                            item["claim_mention_ids_json"], []
+                        ),
+                        "evidenceIds": _json_value(
+                            item["evidence_ids_json"], []
+                        ),
+                        "relation": item["relation"],
+                        "mappingId": item["mapping_id"],
+                        "healthFunctionId": item["health_function_id"],
+                        "healthFunctionOfficialName": item[
+                            "health_function_official_name"
+                        ],
+                        "frameworkId": item["framework_id"],
+                        "supportingResolvedOfficialFunctions": _json_value(
+                            item["supporting_resolved_functions_json"], []
+                        ),
+                        "gaps": _json_value(item["gaps_json"], []),
+                    }
+                    for item in consistency_claim_rows
+                ],
+                "mentionAttentions": _json_value(
+                    consistency_row["mention_attentions_json"], []
+                ),
+                "summary": _json_value(consistency_row["summary_json"], {}),
+                "gaps": _json_value(consistency_row["gaps_json"], []),
+                "generatedAt": consistency_row["generated_at"],
+            }
+        else:
+            result["claimConsistency"] = None
         result["productFacts"] = [
             {
                 "factId": item["fact_id"],
@@ -3407,6 +3844,9 @@ class DataStore:
                     "claim_mentions",
                     "claim_signals",
                     "claim_signal_mentions",
+                    "claim_consistency_assessments",
+                    "claim_consistency_official_functions",
+                    "claim_consistency_claims",
                     "product_facts",
                     "health_food_identities",
                     "health_food_registry_records",

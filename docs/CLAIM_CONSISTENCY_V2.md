@@ -1,19 +1,19 @@
 # Claim Consistency V2
 
 > Status: CANONICAL DESIGN BASELINE
-> Applies to: V2-6A
+> Applies to: V2-6
 > Design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
 
 ## 1. Purpose
 
-`ClaimConsistencyAssessment` is a future Snapshot-scoped, evidence-bearing comparison between the page's V2 Claim records and the verified product's official HealthFunctions. It supplies transparent comparison clues for human review. It does not decide legality, compliance, approval, efficacy, risk probability, substance presence, or an inspection method.
+`ClaimConsistencyAssessment` is a Snapshot-scoped, evidence-bearing comparison between the page's V2 Claim records and the verified product's official HealthFunctions. It supplies transparent comparison clues for human review. It does not decide legality, compliance, approval, efficacy, risk probability, substance presence, or an inspection method.
 
-V2-6A freezes only the domain and governed knowledge contract. It creates no production assessment artifact, schema table, API, frontend section, Review side effect, RiskSignal, or InspectionRecommendation change.
+V2-6A froze the domain and governed knowledge contract. V2-6B1 implements the production assessment artifact, schema 12 rebuildable projection and additive Snapshot read contract. It creates no frontend section, Review side effect, RiskSignal, or InspectionRecommendation change.
 
 ## 2. Inputs and eligibility
 
-Future assessment input is:
+Assessment input is:
 
 ```text
 ProductSnapshot
@@ -30,9 +30,9 @@ Claim analysis must be `complete`; `not_generated` and `error` remain distinct u
 
 ## 3. Authority and scope
 
-The future derived authority is `claim_consistency.json` in the ProductSnapshot artifact directory. SQLite may later provide a rebuildable projection only after a separate schema gate. The assessment identity is Snapshot + HealthFoodIdentity/Registry record identity + Claim/HealthFunction/mapping versions. A later knowledge release can produce a new assessment without rewriting page Evidence, Claim artifacts, Registry source artifacts, Review, Sampling, or frozen exports.
+The derived authority is `claim_consistency.json` in the ProductSnapshot artifact directory. Schema 12 provides a rebuildable projection after the accepted V2-6B1 migration gate. The assessment identity is Snapshot + HealthFoodIdentity/Registry record identity + Claim/HealthFunction/mapping versions. A later knowledge release can produce a new assessment without rewriting page Evidence, Claim artifacts, Registry source artifacts, Review, Sampling, or frozen exports.
 
-Every future artifact records at least:
+Every artifact records at least:
 
 ```text
 schemaVersion
@@ -71,7 +71,7 @@ Raw official strings and normalized IDs are both required. A topic boolean is in
 | `no_page_claims` | Identity is verified and Claim analysis completed with zero governed Claims. This is not a positive consistency result because the Claim taxonomy is not full-language coverage. |
 | `assessed` | Identity is verified, Claim analysis is complete, and official function resolution is sufficient; per-Claim topic relations are available. |
 
-Required future wording includes:
+Required presentation wording includes:
 
 - `identity_not_verified`: 保健食品身份尚未核验，无法进行官方功能一致性比较。
 - `no_page_claims`: 当前已治理词表未发现可比较的页面宣传表达。
@@ -179,11 +179,11 @@ unresolvedOfficialFunctionCount
 
 They must not calculate a total risk score, probability, or binary verdict.
 
-## 11. Future API, storage, and UX draft
+## 11. Current runtime/API/storage and future UX
 
-V2-6B may add a Snapshot-scoped derived artifact and additive read projection only after schema/API review. It may expose raw/resolved official functions, per-Claim relations, attention items, official/page Evidence references, versions, and gaps. It must not mutate Review eligibility/status, Sampling Membership, RiskSignal, or Recommendation.
+V2-6B1 adds the Snapshot-scoped `claim_consistency.json` derived artifact, `not_generated | complete | error` operational status, schema 12 assessment/raw-function/per-Claim projections, and additive Snapshot Detail/workspace fields: `claimConsistencyStatus`, `claimConsistency`, and `paths.claimConsistency`. `claimConsistency` is returned only for a complete artifact. Missing artifacts remain `not_generated`; invalid artifacts or an error sidecar are `error`, with stale projection removed transactionally. The read model exposes raw/resolved official functions, per-Claim relations, official/page trace IDs and references, versions, and gaps. It does not mutate Review eligibility/status, Sampling Membership, RiskSignal, or Recommendation.
 
-A future UI section titled 保健功能一致性 may show 官方核验功能、页面宣传主题、对应关系、未找到对应项、知识缺口、需要关注的具体页面表达. It must preserve `identity_not_verified`, unavailable, unresolved, zero, and assessed states and link to the existing page and official Evidence viewers. No V2-6A UI is implemented.
+A future V2-6B2 UI section titled 保健功能一致性 may show 官方核验功能、页面宣传主题、对应关系、未找到对应项、知识缺口、需要关注的具体页面表达. It must preserve `identity_not_verified`, unavailable, unresolved, zero, and assessed states and link to the existing page and official Evidence viewers. No visible consistency UI is implemented in V2-6B1.
 
 ## 12. Non-adjudication and gaps
 
@@ -195,6 +195,6 @@ Current explicit gaps are:
 - `male_function_related` has no governed HealthFunction mapping;
 - ClaimExpressionAttention production entries await manual source governance;
 - existing Registry strings with descriptive wrappers may remain unresolved;
-- no production artifact, loader, schema, API, or UI exists until V2-6B.
+- ClaimExpressionAttention production entries and visible consistency UI remain unimplemented pending separate gates.
 
 ClaimConsistencyAssessment remains separate from Claim Taxonomy, HealthFunction Framework, RiskSignal, and InspectionRecommendation.

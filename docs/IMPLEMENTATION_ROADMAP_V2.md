@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-6A
+> Last verified phase: V2-6B1
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -153,7 +153,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-6 — Health-food claim consistency
 
-**Status:** IN PROGRESS — V2-6A design baseline complete; V2-6B runtime is NEXT.
+**Status:** IN PROGRESS — V2-6A design baseline and V2-6B1 runtime core complete; V2-6B2 UX/exit gate is NEXT.
 
 ### V2-6A — HealthFunction Framework & Claim Consistency Contract
 
@@ -168,23 +168,34 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Data requirements:** First-party official sources, full transition table, exact raw-string preservation, and offline A–L contract fixtures.
 - **UX impact:** Future wording only; no frontend behavior changed.
 - **Testing:** Dataset provenance/completeness, referential integrity, exact normalization, fuzzy rejection, mapping separation, asymmetric alias behavior, non-adjudicative state/relation matrix, and full offline regression.
-- **Exit result:** `health-functions-v2.0` and `claim-health-function-mapping-v2.0` are governed design authorities; production runtime remains absent.
+- **Exit result:** At the V2-6A exit, `health-functions-v2.0` and `claim-health-function-mapping-v2.0` became governed design authorities while production runtime remained absent; V2-6B1 subsequently implemented that accepted contract.
 
-### V2-6B — Claim Consistency Runtime
+### V2-6B1 — Claim Consistency Runtime Core
 
-**Status:** NEXT — requires a separate human Gate.
+**Status:** COMPLETE — runtime, sidecar authority, schema 12 projection, additive Snapshot API and TypeScript contracts implemented offline.
 
 - **Goal:** Implement Snapshot-scoped normalization and ClaimConsistencyAssessment using the V2-6A contract.
 - **Why:** Analysts need transparent official-function comparison clues without automatic legal verdicts.
 - **Dependencies:** Accepted V2-6A datasets/contracts and an explicit artifact/schema/API implementation review.
-- **In Scope:** `claim_consistency.json`, versioned comparison runtime, additive rebuildable projection/API, and traceable UI states if separately approved.
+- **In Scope:** `claim_consistency.json`, strict governed config loaders, exact Registry resolver, versioned comparison runtime, additive rebuildable projection/API, and TypeScript DTOs.
 - **Out of Scope:** `pass/fail`, `合法/违法`, efficacy truth, RiskSignal, Claim→Risk, inspection triggers, or enforcement conclusions.
 - **Domain impact:** Implements the accepted derived assessment without changing Claim, HealthFoodIdentity, Review, Sampling, or Recommendation meaning.
-- **Schema impact:** Future additive migration only after approval; V2-6A authorizes none.
+- **Schema impact:** Additive schema 11→12; all prior entities and human Review/Sampling state are preserved.
 - **Data requirements:** Verified official records and page fixtures spanning every accepted state/relation and unresolved gap.
 - **Testing:** State matrix, versions, raw/resolved preservation, unavailable/unresolved sources, Snapshot isolation, and non-adjudication language.
-- **Real-world validation:** Future expert review of a bounded identified-health-food set.
-- **Exit criteria:** Assessments are reproducible, explanatory, non-binary, and never exceed source evidence.
+- **Real-world validation:** Not part of B1; runtime validation uses governed recorded fixtures with zero network access.
+- **Exit result:** Assessments are reproducible, explanatory, non-binary, reconstructable from artifacts, and never exceed source evidence. Visible consistency UI remains absent.
+
+### V2-6B2 — Consistency UX and V2-6 Exit Gate
+
+**Status:** NEXT — requires a separate human Gate.
+
+- **Goal:** Present the implemented Snapshot assessment without turning topic relations into verdicts, then evaluate the complete V2-6 exit criteria.
+- **Dependencies:** Accepted V2-6B1 runtime/API contracts and explicit UX review.
+- **In Scope:** Product Detail/Inspection Workspace consistency presentation, official/page trace reuse, state wording, accessibility, and V2-6 exit validation.
+- **Out of Scope:** ClaimExpressionAttention automatic classification, Claim→Risk, Recommendation changes, legality/compliance, Review automation, Sampling changes, or V2-7.
+- **Schema/API impact:** None expected; consume the additive B1 contract.
+- **Exit criteria:** Every operational/domain state and Knowledge Gap remains explicit, page and official evidence remain separate, and full offline regression passes.
 
 ## V2-7 — Inspection knowledge coverage
 

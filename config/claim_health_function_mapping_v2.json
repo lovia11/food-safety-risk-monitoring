@@ -83,7 +83,7 @@
   ],
   "metadata": {
     "authority": "project_governed_topic_mapping",
-    "runtime_status": "not_implemented_v2_6a_design_only",
+    "runtime_status": "implemented_v2_6b1_runtime_input",
     "official_equivalence": false,
     "creates_risk_signal": false,
     "creates_inspection_recommendation": false,

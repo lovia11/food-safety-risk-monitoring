@@ -5,6 +5,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.claim_analysis import CLAIM_ANALYSIS_ERROR_FILE, CLAIM_ANALYSIS_FILE
+from src.claim_consistency import (
+    CLAIM_CONSISTENCY_ERROR_FILE,
+    CLAIM_CONSISTENCY_FILE,
+)
 from src.data_store import DataStore, ReviewEligibilityError
 from src.local_api import task_business_dto
 from src.main import PipelineOptions, ProductStatus, StandalonePipeline, initial_state
@@ -312,6 +316,9 @@ class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
             self.assertEqual(
                 pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS
             )
+            consistency = read_json(product_root / CLAIM_CONSISTENCY_FILE)
+            self.assertEqual(consistency["state"], "identity_not_verified")
+            self.assertEqual(consistency["claimSignalIds"], [artifact["claimSignals"][0]["claimSignalId"]])
 
             pipeline.web_stage = "completed"
             pipeline._write_outputs(pipeline.search_payload)
@@ -332,6 +339,103 @@ class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
             self.assertEqual(detail["review"]["status"], "pending")
             self.assertEqual(detail["claimAnalysisStatus"], "complete")
             self.assertEqual(detail["claimSignals"][0]["claimType"], "sleep_related")
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_claim_consistency_failure_is_degradable_and_does_not_change_other_domains(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="Consistency 降级",
+                    output_root=output_root,
+                    run_id="consistency-failure",
+                )
+            )
+            product_id = "A"
+            candidate = {
+                "product_id": product_id,
+                "product_name": "商品 A",
+                "product_url": "https://item.example/A",
+                "rank": 1,
+            }
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            product_root = pipeline.products_root / product_id
+            (product_root / "analysis.json").unlink()
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.search_payload = {
+                "keyword": "Consistency 降级",
+                "candidates": [candidate],
+            }
+
+            def write_analysis(target, *_args, **_kwargs):
+                write_json(
+                    target / "analysis.json",
+                    {
+                        "detected_effects": ["助眠"],
+                        "review_required": True,
+                        "risk_reason": "legacy output remains authoritative for legacy path",
+                        "evidence_details": [
+                            {
+                                "effect": "助眠",
+                                "text": "帮助睡眠",
+                                "matched_keywords": ["睡眠"],
+                                "source_type": "ocr",
+                                "source_label": "详情图 OCR",
+                                "content_origin": "seller_managed",
+                                "source_path": "ocr/original_002.txt",
+                                "line_number": 1,
+                            }
+                        ],
+                    },
+                )
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr"),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+                patch(
+                    "src.main.write_claim_consistency_from_artifacts",
+                    side_effect=RuntimeError("consistency sidecar unavailable"),
+                ),
+            ):
+                pipeline._process_products()
+
+            self.assertEqual(
+                pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS
+            )
+            self.assertTrue((product_root / CLAIM_ANALYSIS_FILE).is_file())
+            self.assertFalse((product_root / CLAIM_CONSISTENCY_FILE).exists())
+            error = read_json(product_root / CLAIM_CONSISTENCY_ERROR_FILE)
+            self.assertEqual(error["errorType"], "RuntimeError")
+            self.assertEqual(
+                read_json(product_root / "analysis.json")["detected_effects"],
+                ["助眠"],
+            )
+
+            pipeline.web_stage = "completed"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(
+                pipeline.run_root / "task_request.json",
+                {
+                    "task_id": pipeline.run_root.name,
+                    "keyword": "Consistency 降级",
+                    "candidate_limit": 1,
+                    "detail_limit": 1,
+                },
+            )
+            store = DataStore(root / "data" / "app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            detail = store.get_snapshot(store.list_products()[0]["snapshotId"])
+            self.assertTrue(detail["readiness"]["reviewEligible"])
+            self.assertEqual(detail["review"]["status"], "pending")
+            self.assertFalse(detail["sampling"]["inCurrentList"])
+            self.assertEqual(detail["claimConsistencyStatus"], "error")
+            self.assertIsNone(detail["claimConsistency"])
             for handler in list(pipeline.logger.handlers):
                 handler.close()
                 pipeline.logger.removeHandler(handler)

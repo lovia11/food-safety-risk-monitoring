@@ -169,6 +169,8 @@ export type SnapshotSummary = {
   detectedEffects: string[];
   claimAnalysisStatus: ClaimAnalysisStatus;
   claimSignalSummaries: ClaimSignalSummaryDTO[];
+  claimConsistencyStatus: ClaimConsistencyStatus;
+  claimConsistency?: ClaimConsistencyAssessment | null;
   reviewRequired: boolean | null;
   analysisSummary: string;
   healthFoodIdentityState: HealthFoodIdentityState;
@@ -178,6 +180,7 @@ export type SnapshotSummary = {
     meta: string | null;
     analysis: string | null;
     claimAnalysis: string | null;
+    claimConsistency: string | null;
   };
   counts: {
     originalImages: number;
@@ -251,6 +254,89 @@ export type Evidence = {
 };
 
 export type ClaimAnalysisStatus = "not_generated" | "complete" | "error";
+
+export type ClaimConsistencyStatus = "not_generated" | "complete" | "error";
+
+export type ClaimConsistencyState =
+  | "identity_not_verified"
+  | "claim_not_generated"
+  | "claim_analysis_error"
+  | "framework_unresolved"
+  | "official_function_unresolved"
+  | "no_page_claims"
+  | "assessed";
+
+export type OfficialFunctionResolution = {
+  rawOfficialFunction: string;
+  resolutionStatus: "resolved" | "unresolved";
+  resolutionSource:
+    | "current_official_name"
+    | "official_transition_alias"
+    | "explicit_governed_mapping"
+    | null;
+  frameworkId: string | null;
+  healthFunctionId: string | null;
+  healthFunctionOfficialName: string | null;
+};
+
+export type ClaimConsistencyRelation =
+  | "function_topic_recorded"
+  | "function_topic_not_recorded"
+  | "no_governed_function_mapping"
+  | "mapping_unresolved";
+
+export type PerClaimConsistencyAssessment = {
+  claimSignalId: string;
+  claimType: string;
+  claimMentionIds: string[];
+  evidenceIds: string[];
+  relation: ClaimConsistencyRelation;
+  mappingId: string | null;
+  healthFunctionId: string | null;
+  healthFunctionOfficialName: string | null;
+  frameworkId: string | null;
+  supportingResolvedOfficialFunctions: OfficialFunctionResolution[];
+  gaps: string[];
+};
+
+export type ClaimConsistencyAssessment = {
+  schemaVersion: number;
+  assessmentVersion: string;
+  snapshotId: string;
+  state: ClaimConsistencyState;
+  claimTaxonomyVersion: string;
+  healthFunctionDatasetVersion: string;
+  claimHealthFunctionMappingVersion: string;
+  healthFoodRegistryIdentifier: string | null;
+  healthFoodRegistryRecordReferenceOrHash: string | null;
+  healthFoodRegistryRetrievedAt: string | null;
+  healthFoodRegistrySourceName: string | null;
+  healthFoodRegistrySourceReference: string | null;
+  healthFoodRegistryRawArtifactPath: string | null;
+  registryFrameworkId: string | null;
+  registryFrameworkResolutionSource:
+    | "explicit_registry_framework"
+    | "resolved_official_functions"
+    | null;
+  rawOfficialFunctions: string[];
+  resolvedHealthFunctions: OfficialFunctionResolution[];
+  unresolvedOfficialFunctions: OfficialFunctionResolution[];
+  claimSignalIds: string[];
+  claimMentionIds: string[];
+  perClaimAssessments: PerClaimConsistencyAssessment[];
+  mentionAttentions: never[];
+  summary: {
+    claimSignalCount: number;
+    functionTopicRecordedCount: number;
+    functionTopicNotRecordedCount: number;
+    noMappingCount: number;
+    mappingUnresolvedCount: number;
+    unresolvedOfficialFunctionCount: number;
+    attentionMentionCount: number;
+  };
+  gaps: string[];
+  generatedAt: string;
+};
 
 export type ClaimMentionDTO = {
   claimMentionId: string;
@@ -485,6 +571,8 @@ export type SnapshotWorkspace = {
   claimAnalysisStatus: ClaimAnalysisStatus;
   claimMentions: ClaimMentionDTO[];
   claimSignals: ClaimSignalDTO[];
+  claimConsistencyStatus: ClaimConsistencyStatus;
+  claimConsistency: ClaimConsistencyAssessment | null;
   productFacts: ProductFact[];
   declaredOrigin: DeclaredOrigin;
   healthFoodIdentity: HealthFoodIdentity;

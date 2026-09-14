@@ -15,6 +15,11 @@ from src.claim_analysis import (
     record_claim_analysis_failure,
     write_claim_analysis,
 )
+from src.claim_consistency import (
+    CLAIM_CONSISTENCY_FILE,
+    record_claim_consistency_failure,
+    write_claim_consistency_from_artifacts,
+)
 from src.data_store import make_evidence_id, make_snapshot_id
 from src.discovery import DiscoveryCoordinator
 from src.inspection_runtime import (
@@ -288,6 +293,34 @@ class StandalonePipeline:
                 product_id,
             )
 
+    def _extract_claim_consistency(
+        self, product_id: str, product_root: Path
+    ) -> None:
+        """Build the degradable V2 Claim/official-function comparison sidecar."""
+
+        snapshot_id = make_snapshot_id(self.run_root.name, product_id)
+        try:
+            payload = write_claim_consistency_from_artifacts(
+                product_root, snapshot_id
+            )
+            self.logger.info(
+                "商品%s Claim consistency完成：%s / %s claims",
+                product_id,
+                payload["state"],
+                len(payload["perClaimAssessments"]),
+            )
+        except Exception as exc:
+            try:
+                record_claim_consistency_failure(product_root, snapshot_id, exc)
+            except Exception:
+                self.logger.exception(
+                    "商品%s Claim consistency失败诊断写入失败", product_id
+                )
+            self.logger.exception(
+                "商品%s Claim consistency失败；不影响风险分析、复核、建议或抽检状态",
+                product_id,
+            )
+
     def _records_and_batch_payload(
         self,
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -463,6 +496,8 @@ class StandalonePipeline:
                     self._extract_health_food_identity(product_id, product_root)
                 if not (product_root / CLAIM_ANALYSIS_FILE).is_file():
                     self._extract_claim_analysis(product_id, product_root)
+                if not (product_root / CLAIM_CONSISTENCY_FILE).is_file():
+                    self._extract_claim_consistency(product_id, product_root)
                 if self.inspection_runtime is None or recommendation_exists:
                     self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
                     continue
@@ -509,6 +544,7 @@ class StandalonePipeline:
                     write_run_outputs=False,
                 )
                 self._extract_claim_analysis(product_id, product_root)
+                self._extract_claim_consistency(product_id, product_root)
                 set_state(state, ProductStatus.SUCCESS)
                 generated = self._generate_inspection_recommendation(product_root)
                 self.web_message = (

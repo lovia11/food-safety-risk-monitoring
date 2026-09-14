@@ -1,15 +1,15 @@
 # HealthFunction Framework V2
 
 > Status: CANONICAL DESIGN BASELINE
-> Applies to: V2-6A
+> Applies to: V2-6
 > Design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
 
 ## 1. Purpose
 
-This document governs official HealthFunction identity and exact official-name normalization for future health-food Claim consistency work. A HealthFunction is an official function within a named jurisdiction, framework, and version. It is not a page Claim, marketing synonym, RiskSignal, legality result, substance, method, or InspectionRecommendation.
+This document governs official HealthFunction identity and exact official-name normalization for health-food Claim consistency. A HealthFunction is an official function within a named jurisdiction, framework, and version. It is not a page Claim, marketing synonym, RiskSignal, legality result, substance, method, or InspectionRecommendation.
 
-The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A is design and governed knowledge only: production Registry records, schema 11, APIs, pipeline, and frontend remain unchanged.
+The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A established this design/governance baseline without changing production behavior. V2-6B1 now consumes it through a strict production loader while preserving Registry records verbatim; schema 12 adds only a rebuildable consistency projection and the visible frontend remains unchanged.
 
 ## 2. Current-project inventory
 
@@ -163,20 +163,20 @@ No punctuation trimming, substring match, fuzzy similarity, embedding, LLM, edit
 
 ## 9. Versioning and lifecycle
 
-The HealthFunction dataset, Claim taxonomy, Claim↔HealthFunction mapping, and future assessment each have independent version and provenance. A published dataset correction creates a new version or explicit supersession. Future derived assessments record every version used and retain the original Registry strings and retrieval identity/time.
+The HealthFunction dataset, Claim taxonomy, Claim↔HealthFunction mapping, and derived assessment each have independent version and provenance. A published dataset correction creates a new version or explicit supersession. Derived assessments record every version used and retain the original Registry strings and retrieval identity/time.
 
-The current dataset status is `design_baseline`; no production loader consumes it in V2-6A. Schema remains 11.
+The governed dataset status remains `design_baseline`. The V2-6B1 production loader validates and consumes it for exact Registry resolution; schema 12 stores only rebuildable assessment projections and does not duplicate the governed function catalog as business data.
 
 ## 10. Non-goals
 
-V2-6A does not:
+V2-6A/B1 does not:
 
 - change HealthFoodIdentity or its `verified_match` gate;
 - rewrite `officialHealthFunctions[]` or Registry artifacts;
 - infer a framework from page Claims;
 - classify page wording as an official alias;
-- create Claim consistency runtime, schema, API, or UI;
+- change visible frontend behavior; V2-6B1 adds runtime, schema 12 and additive read contracts only;
 - create RiskSignal, substance, method, Recommendation, legality, compliance, or probability output;
 - expand the five Claim types or 26 expressions.
 
-See [Claim Consistency V2](CLAIM_CONSISTENCY_V2.md) for the separate future comparison contract.
+See [Claim Consistency V2](CLAIM_CONSISTENCY_V2.md) for the implemented runtime contract and future presentation boundary.
