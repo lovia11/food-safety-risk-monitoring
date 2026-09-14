@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-5B2
 > Owner: Project
 
 This specification governs the V2 interaction model. V2-1 through V2-5 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.

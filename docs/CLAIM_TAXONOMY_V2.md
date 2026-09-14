@@ -1,6 +1,6 @@
 # Claim Taxonomy V2
 
-> Status: CANONICAL DESIGN BASELINE
+> Status: CANONICAL
 > Applies to: V2-5
 > Design baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
 > Owner: Project
@@ -13,18 +13,24 @@ This document freezes the V2 Claim domain boundary and the migration baseline fo
 
 It records observed page wording and its governed marketing topic. It does not verify efficacy, identify an Official Health Function, determine compliance or illegality, create a RiskSignal, assert that a substance is present, or select an inspection method.
 
-The governed machine-readable baseline is [`config/claim_taxonomy_v2.json`](../config/claim_taxonomy_v2.json), version `claim-taxonomy-v2.0`. V2-5A froze its design contract; V2-5B1 now consumes the same file as the sole runtime Claim taxonomy without changing its five Claim types or 26 expressions.
+The governed machine-readable baseline is [`config/claim_taxonomy_v2.json`](../config/claim_taxonomy_v2.json), version `claim-taxonomy-v2.0`. V2-5A froze its design contract, V2-5B1 made the same file the sole runtime Claim taxonomy, and V2-5B2 uses its governed labels in the primary Claim presentation without changing its five Claim types or 26 expressions.
 
 ## 2. Non-goals
 
 V2-5 does not:
 
-- change collector, OCR, Phase3, Recommendation, Review, Sampling, or visible frontend behavior;
+- change Collector or OCR behavior;
+- change Phase3 legacy Effect extraction behavior;
+- change Recommendation business semantics;
+- change Review eligibility, status, or decision business semantics;
+- change Sampling Membership business semantics;
 - establish ClaimSignal-to-HealthFunction equivalence;
 - create Claim consistency, RiskSignal, legality, compliance or probability results;
 - add a Claim-to-Risk, Risk-to-Substance or inspection mapping;
 - expand the 26-expression legacy lexicon;
 - remove or reinterpret the legacy Effect compatibility fields.
+
+V2-5B2 **does** migrate the primary frontend presentation to V2 ClaimSignal/ClaimMention and the user-facing name 页面宣传线索. This presentation change does not convert legacy Effect data into Claims and does not change the business semantics listed above.
 
 ## 3. Terminology and invariants
 
@@ -120,7 +126,7 @@ OCR text cannot bypass Evidence. A detail-image occurrence must trace through th
 - `migration[]` Effect-to-Claim type migration records;
 - metadata, runtime status, source policy, and explicit taxonomy gaps.
 
-It contains no risk, HealthFunction, legality, substance, method, or inspection mapping. Current `match_mode` is only `exact`; V2-5B1 implements deterministic formatting-normalized literal substring matching and introduces no fuzzy, embedding, semantic-similarity, or LLM classification.
+It contains no risk, HealthFunction, legality, substance, method, or inspection mapping. Current `match_mode` is only `exact`; the V2-5 runtime implements deterministic formatting-normalized literal substring matching and introduces no fuzzy, embedding, semantic-similarity, or LLM classification.
 
 Every matching occurrence is retained. Overlapping governed expressions are not arbitrated by length: for `高血压`, both `血压` and `高血压` produce Mentions in taxonomy-expression order. Repeated occurrences of one expression in one Evidence record receive separate stable IDs through an internal occurrence ordinal; offsets are not exposed. Mention order is Evidence canonical order, taxonomy expression order, then occurrence order. Signal order is Claim-type order in the taxonomy.
 
@@ -169,13 +175,13 @@ SearchQuery/task `keyword` fields in Discovery and Task APIs were also audited. 
 
 There are exactly three current exact `(effect_label, matched_keyword)` bridge mappings in `config/effect_risk_bridge.json`:
 
-| Legacy Effect | Exact keyword | Current Risk category | Current behavior | Semantic problem | Future destination / action |
+| Legacy Effect | Exact keyword | Current Risk category | Current behavior | Semantic problem | V2 disposition / future action |
 |---|---|---|---|---|---|
-| 减脂 | 减肥 | `weight_loss` | Produces a legacy RiskSignal and enters current Risk→Substance→Method resolution. | Claim observation and risk interpretation are coupled in one Effect evidence record. | V2-5B first emits `ClaimSignal(weight_management)`; a later separately governed Claim/Risk bridge may emit RiskSignal. Keep current bridge only for compatibility until that gate. |
-| 男性相关 | 壮阳 | `male_function` | Same path through the male-function Risk reference. | Marketing topic is not itself an official function or risk conclusion. | V2 ClaimSignal first; later explicit RiskSignal bridge. |
-| 男性相关 | 补肾 | `male_function` | Same path through the male-function Risk reference. | Same coupling. | V2 ClaimSignal first; later explicit RiskSignal bridge. |
+| 减脂 | 减肥 | `weight_loss` | Produces a legacy RiskSignal and enters current Risk→Substance→Method resolution. | Claim observation and risk interpretation are coupled in one Effect evidence record. | The current V2 runtime separately emits `ClaimSignal(weight_management)`; a later governed Claim/Risk bridge may emit a distinct RiskSignal. Keep the legacy bridge only as compatibility until that gate. |
+| 男性相关 | 壮阳 | `male_function` | Same path through the male-function Risk reference. | Marketing topic is not itself an official function or risk conclusion. | The current V2 runtime separately emits a ClaimSignal; an explicit RiskSignal bridge remains future. |
+| 男性相关 | 补肾 | `male_function` | Same path through the male-function Risk reference. | Same coupling. | The current V2 runtime separately emits a ClaimSignal; an explicit RiskSignal bridge remains future. |
 
-The bridge references two current group-level Risk mapping records. The complete Risk Reference contains eight Risk-to-substance/group mappings, and the Recommendation builder resolves RiskSignal → knowledge trace → applicability → method assistance. Those D2–D6 contracts remain unchanged in V2-5A and are not embedded into the Claim taxonomy.
+The bridge references two current group-level Risk mapping records. The complete Risk Reference contains eight Risk-to-substance/group mappings, and the Recommendation builder resolves RiskSignal → knowledge trace → applicability → method assistance. Those D2–D6 contracts remain unchanged throughout V2-5 and are not embedded into the Claim taxonomy.
 
 ### 8.3 Confirmed migration issue
 
@@ -234,7 +240,7 @@ ClaimSignal
   → InspectionRecommendation
 ```
 
-V2-5A freezes only the first node and explicitly leaves the later mapping future.
+V2-5 implements only the ClaimSignal node and explicitly leaves the later mappings future.
 
 ## 12. Authority, storage, and current schema/API contract
 

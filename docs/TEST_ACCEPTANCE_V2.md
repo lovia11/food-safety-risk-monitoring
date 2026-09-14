@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last verified phase: V2-5B2
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
