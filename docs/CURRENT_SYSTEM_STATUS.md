@@ -3,9 +3,10 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-3 starting baseline: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
+> V2-5A design starting baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
 > Owner: Project
 
-This document describes implemented behavior through the V2-4 delivery. Future requirements belong in the other canonical V2 documents.
+This document describes implemented behavior through the V2-4 delivery and the accepted V2-5A Claim design baseline. Future runtime requirements belong in the other canonical V2 documents.
 
 ## Baseline
 
@@ -51,6 +52,7 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Review and Sampling repositories do not mutate each other. Application-level decision transactions coordinate compound business actions.
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
+- V2-5A defines Snapshot-scoped ClaimMention and ClaimSignal contracts plus `claim-taxonomy-v2.0`. The 5 Claim types/26 exact expressions are a governed marketing-topic design baseline, not an Official Health Function or Risk taxonomy. Production Phase3/API/SQLite/frontend behavior still uses the legacy Effect compatibility contract.
 
 ## Current product-reading UX
 
@@ -94,6 +96,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Paused Reference targets | 2 |
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
+| V2 Claim design-baseline types/expressions | 5 / 26 |
 | Evidence-to-risk Bridge mappings | 3 |
 | Risk-to-substance/group mappings | 8 |
 | Inspection methods | 5 |
@@ -120,15 +123,17 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-4B4 validation: Python 460 discovered / 459 passed / 1 skipped; targeted Monitor review/governance tests 46/46; Historical Validation builder 6/6; frontend workflow 24/24; frontend typecheck and production build passed. Offline local UI acceptance confirmed 山药、赤小豆、枸杞子、莲子 each expose only the promoted standard-name Query and are runnable; 乌梅 remains disabled as `暂缓`, while 百合、菊花 remain disabled in the `待验证` state. No live collection or external network access was used.
 - V2-4B6 validation: PART A targeted Monitor governance tests 47/47; final Monitor/Query regression 56/56; Python 461 discovered / 460 passed / 1 skipped; frontend workflow 24/24; frontend typecheck and production build passed. Batch `v2-4b-batch-02c` collected 15 unique `食用百合` Search Result cards with every human-review and decision field still empty. No Detail or downstream processing ran.
 - V2-4 exit validation: Batch `v2-4b-batch-02c` human review skipped ambiguous Rank 8 and used Rank 11, producing 10 assessable / 9 relevant / 1 raw-scope / 90% observed relevance and `promote`. The immutable result is [Batch 02C](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md). Targeted Monitor/query/task regression passed 74/74; Historical Validation builder passed 6/6; Python full regression discovered 462 / passed 461 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. All B7 validation was offline; no Detail or downstream processing ran.
+- V2-5A Claim Taxonomy & Domain Contract is **DESIGN BASELINE / COMPLETE**. The machine-readable `claim-taxonomy-v2.0` covers every one of the 26 current legacy expressions exactly once across five marketing topics, with no taxonomy gap and no HealthFunction/Risk/inspection mapping. Claim taxonomy tests passed 14/14; Monitor regression passed 74/74; Python full regression discovered 476 / passed 475 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline and schema remains 10.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **FUTURE CHANGE:** final ClaimTaxonomy and claim-consistency assessment.
+- **NEXT:** V2-5B production ClaimMention/ClaimSignal artifact, storage, API and UI implementation under a separate Gate.
+- **FUTURE CHANGE:** claim-consistency assessment and explicit Claim-to-HealthFunction/Claim-to-Risk mappings.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- **NEXT:** V2-5 Claim Taxonomy requires a separate implementation Gate; no ClaimSignal or taxonomy work has started.
+- Current production Claim extraction still uses `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. The known UGC compatibility behavior is documented in [CLAIM_TAXONOMY_V2.md](CLAIM_TAXONOMY_V2.md) for V2-5B migration; it was not changed in V2-5A.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 

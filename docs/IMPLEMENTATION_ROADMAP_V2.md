@@ -101,26 +101,44 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-5 — Claim taxonomy
 
-**Status:** NEXT — planned only; implementation requires a separate human Gate.
+### V2-5A — Claim Taxonomy & Domain Contract
 
-- **Goal:** Replace the overloaded Effect concept with governed claim domains.
-- **Why:** Page marketing, official functions, risk expressions, and disease/treatment wording have different semantics.
-- **Dependencies:** V2-2 ProductFact provenance and V2 knowledge governance.
-- **In Scope:** Models/datasets for Official Health Functions, Marketing Expressions, Risk Claims, and Disease/Treatment Expressions; explicit mappings and gaps.
-- **Out of Scope:** Generating a complete vocabulary in one pass or using semantic similarity as verified equivalence.
-- **Domain impact:** Adds ClaimSignal and ClaimTaxonomyTerm and explicit mapping relations.
-- **Schema impact:** Additive claim entities/read models after API/domain review; preserve legacy Phase3 output compatibility.
-- **Data requirements:** Authoritative function catalog plus curated page-expression fixtures with provenance and lifecycle.
-- **UX impact:** Show actual expression, normalized category, source origin, mapping status and Knowledge Gap.
-- **Testing:** Exact official claim, marketing paraphrase, treatment wording, ambiguity, UGC-only, and no-implicit-mapping cases.
-- **Real-world validation:** Dual-review a bounded corpus and document disagreements/unmapped top expressions.
-- **Exit criteria:** ClaimSignal, HealthFunction, and RiskSignal cannot be confused in data or UI; coverage is measurable by layer.
+**Status:** COMPLETE — design baseline and deterministic governance tests accepted; production Claim extraction is unchanged.
+
+- **Goal:** Replace the overloaded Effect concept at the design level with separate ClaimMention observations and ClaimSignal marketing topics.
+- **Why:** Page wording, official functions, risk interpretation, and inspection knowledge have different identities and authorities.
+- **Dependencies:** V2-2 provenance model, V2 knowledge governance, and completed V2-4 coverage.
+- **In Scope:** Complete 5-Effect/26-expression legacy inventory and migration; `claim-taxonomy-v2.0`; ClaimMention/ClaimSignal contracts; seller-managed source boundary; future schema/API/storage draft; ADR and deterministic governance tests.
+- **Out of Scope:** Runtime extraction, schema/API migration, HealthFunction consistency, RiskSignal generation, inspection bridge changes, semantic/fuzzy matching, or vocabulary expansion.
+- **Domain impact:** Freezes Snapshot-scoped ClaimMention and ClaimSignal contracts and keeps HealthFunction/RiskSignal/Recommendation separate.
+- **Schema impact:** Design only. Schema 10 remains current.
+- **Data requirements:** Existing `config/effect_keywords.json` and current bridge/code/tests as the audited legacy authority; no fabricated expressions.
+- **UX impact:** Freezes future 页面宣传线索 wording and Evidence drill-down; current frontend unchanged.
+- **Testing:** Machine-readable schema, unique/referential IDs, 100% legacy coverage, source policy, provenance, and absence of forbidden cross-domain mappings.
+- **Real-world validation:** None; offline design/governance phase.
+- **Exit result:** All 26 legacy expressions map exactly once into five marketing topics with no taxonomy gap; the three legacy Effect/Risk bridges remain separately documented compatibility paths.
+
+### V2-5B — ClaimMention / ClaimSignal runtime implementation
+
+**Status:** NEXT — implementation requires a separate human Gate.
+
+- **Goal:** Produce provenance-bearing ClaimMention and ClaimSignal artifacts and expose them through compatible read models/API/UI.
+- **Dependencies:** Accepted V2-5A contract and taxonomy.
+- **In Scope:** Seller-managed exact-expression extraction, signal aggregation, artifact authority, additive storage/API implementation, compatibility migration and Claim presentation.
+- **Out of Scope:** Claim-to-HealthFunction consistency, automated RiskSignal, legality/compliance judgment, or new inspection mapping.
+- **Domain impact:** Implements the accepted ClaimMention/ClaimSignal entities without changing their meaning.
+- **Schema impact:** Additive only after migration/API review; schema 10 and human state must be preserved.
+- **Data requirements:** Positive, zero-hit, multiple-mention, OCR trace, UGC-only, and excluded-other-product fixtures.
+- **UX impact:** Introduces 页面宣传线索 with original wording/source trace while preserving explicit compatibility states.
+- **Testing:** Exact extraction, provenance, aggregation, taxonomy version, source boundary, compatibility, migration/rebuild, and non-adjudication language.
+- **Real-world validation:** Separately approved bounded artifact corpus; no automatic vocabulary expansion.
+- **Exit criteria:** Runtime Claim records reproduce source Evidence, only eligible sources create formal signals, and legacy behavior is migrated without silent loss.
 
 ## V2-6 — Health-food claim consistency
 
 - **Goal:** Compare verified identity/functions with page ClaimSignals using evidence-bearing assessments.
 - **Why:** Analysts need transparent mismatch clues without automatic legal verdicts.
-- **Dependencies:** V2-3 verified identity and V2-5 claim taxonomy/mappings.
+- **Dependencies:** V2-3 verified identity, accepted V2-5 Claim runtime, and an explicit V2-6 function-mapping contract.
 - **In Scope:** The comparison of verified official identity + official health functions + page claims; required states and detailed explanation.
 - **Out of Scope:** `pass/fail`, `合法/违法`, efficacy truth, or enforcement conclusions.
 - **Domain impact:** Adds ClaimConsistencyAssessment with compared claims, official functions, matched mapping, unmatched claims, disease/treatment expressions, Evidence, official source, and gaps.

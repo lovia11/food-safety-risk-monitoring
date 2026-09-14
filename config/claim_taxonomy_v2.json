@@ -1,0 +1,374 @@
+{
+  "version": "claim-taxonomy-v2.0",
+  "status": "design_baseline",
+  "description": "V2 页面宣传主题分类与精确表达词表。它记录页面在宣传什么，不表示功效真实、官方保健功能、监管风险、违法性或检验建议。",
+  "claim_types": [
+    {
+      "id": "sleep_related",
+      "label_zh": "睡眠相关宣传",
+      "description": "页面出现与睡眠、入睡等主题相关的宣传表达；不验证商品是否具有相应效果。",
+      "status": "active"
+    },
+    {
+      "id": "blood_pressure_related",
+      "label_zh": "血压相关宣传",
+      "description": "页面出现与血压主题相关的宣传表达；不验证商品是否影响血压。",
+      "status": "active"
+    },
+    {
+      "id": "blood_lipid_related",
+      "label_zh": "血脂相关宣传",
+      "description": "页面出现与血脂主题相关的宣传表达；不验证商品是否影响血脂。",
+      "status": "active"
+    },
+    {
+      "id": "weight_management",
+      "label_zh": "体重管理相关宣传",
+      "description": "页面出现与减脂、减肥、瘦身或燃脂主题相关的宣传表达；不验证商品是否具有体重管理效果。",
+      "status": "active"
+    },
+    {
+      "id": "male_function_related",
+      "label_zh": "男性功能相关宣传",
+      "description": "页面出现与男性功能主题相关的宣传表达；不验证商品是否具有相应效果。",
+      "status": "active"
+    }
+  ],
+  "expressions": [
+    {
+      "expression_id": "legacy-sleep-related-zhumian",
+      "text": "助眠",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "助眠"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-rushui",
+      "text": "入睡",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "入睡"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-shuimian",
+      "text": "睡眠",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "睡眠"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-anshui",
+      "text": "安睡",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "安睡"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-haomian",
+      "text": "好眠",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "好眠"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-shenshui",
+      "text": "深睡",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "深睡"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-shimian",
+      "text": "失眠",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "失眠"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-zhanzhuanfance",
+      "text": "辗转反侧",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "辗转反侧"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-anshen",
+      "text": "安神",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "安神"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-sleep-related-cuimian",
+      "text": "催眠",
+      "claim_type": "sleep_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "助眠", "keyword": "催眠"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-pressure-related-jiangya",
+      "text": "降压",
+      "claim_type": "blood_pressure_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降压", "keyword": "降压"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-pressure-related-xueya",
+      "text": "血压",
+      "claim_type": "blood_pressure_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降压", "keyword": "血压"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-pressure-related-gaoxueya",
+      "text": "高血压",
+      "claim_type": "blood_pressure_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降压", "keyword": "高血压"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-lipid-related-jiangzhi",
+      "text": "降脂",
+      "claim_type": "blood_lipid_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降脂", "keyword": "降脂"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-lipid-related-xuezhi",
+      "text": "血脂",
+      "claim_type": "blood_lipid_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降脂", "keyword": "血脂"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-blood-lipid-related-danguchun",
+      "text": "胆固醇",
+      "claim_type": "blood_lipid_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "降脂", "keyword": "胆固醇"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-weight-management-jianzhi",
+      "text": "减脂",
+      "claim_type": "weight_management",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "减脂", "keyword": "减脂"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-weight-management-jianfei",
+      "text": "减肥",
+      "claim_type": "weight_management",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "减脂", "keyword": "减肥"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-weight-management-shoushen",
+      "text": "瘦身",
+      "claim_type": "weight_management",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "减脂", "keyword": "瘦身"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-weight-management-ranzhi",
+      "text": "燃脂",
+      "claim_type": "weight_management",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "减脂", "keyword": "燃脂"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-zhuangyang",
+      "text": "壮阳",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "壮阳"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-bushen",
+      "text": "补肾",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "补肾"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-yangwei",
+      "text": "阳痿",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "阳痿"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-zaoxie",
+      "text": "早泄",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "早泄"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-yijing",
+      "text": "遗精",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "遗精"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    },
+    {
+      "expression_id": "legacy-male-function-related-nanxinggongneng",
+      "text": "男性功能",
+      "claim_type": "male_function_related",
+      "match_mode": "exact",
+      "source": "legacy_system",
+      "status": "active",
+      "legacy_reference": {"config": "config/effect_keywords.json", "effect": "男性相关", "keyword": "男性功能"},
+      "migration_confidence": "exact_legacy_category",
+      "notes": "V2-5A 语义迁移；production runtime 尚未使用本词表。"
+    }
+  ],
+  "migration": [
+    {
+      "legacy_effect": "助眠",
+      "new_claim_type": "sleep_related",
+      "new_display_label": "睡眠相关宣传",
+      "migration_confidence": "exact_category_semantics",
+      "notes": "仅迁移为页面宣传主题；不建立官方保健功能、风险或检验映射。"
+    },
+    {
+      "legacy_effect": "降压",
+      "new_claim_type": "blood_pressure_related",
+      "new_display_label": "血压相关宣传",
+      "migration_confidence": "exact_category_semantics",
+      "notes": "仅迁移为页面宣传主题；不建立官方保健功能、风险或检验映射。"
+    },
+    {
+      "legacy_effect": "降脂",
+      "new_claim_type": "blood_lipid_related",
+      "new_display_label": "血脂相关宣传",
+      "migration_confidence": "exact_category_semantics",
+      "notes": "仅迁移为页面宣传主题；不建立官方保健功能、风险或检验映射。"
+    },
+    {
+      "legacy_effect": "减脂",
+      "new_claim_type": "weight_management",
+      "new_display_label": "体重管理相关宣传",
+      "migration_confidence": "exact_category_semantics",
+      "notes": "仅迁移为页面宣传主题；现有减肥 Bridge 是独立 legacy runtime 兼容路径。"
+    },
+    {
+      "legacy_effect": "男性相关",
+      "new_claim_type": "male_function_related",
+      "new_display_label": "男性功能相关宣传",
+      "migration_confidence": "exact_category_semantics",
+      "notes": "仅迁移为页面宣传主题；不得解释为官方保健功能分类。"
+    }
+  ],
+  "metadata": {
+    "created_at": "2026-09-14",
+    "legacy_source": "config/effect_keywords.json",
+    "authority": "governed_claim_taxonomy",
+    "runtime_status": "design_only_not_consumed",
+    "formal_claim_source_policy": {
+      "eligible_content_origins": ["seller_managed"],
+      "auxiliary_only_content_origins": ["user_generated"],
+      "forbidden_content_origins": ["excluded_other_product"]
+    },
+    "taxonomy_gaps": []
+  }
+}

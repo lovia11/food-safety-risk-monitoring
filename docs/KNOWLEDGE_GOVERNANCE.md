@@ -13,8 +13,8 @@ Each layer has separate identity, provenance, lifecycle, and coverage:
 
 1. **Monitor Reference** — objects in an authoritative monitoring/reference catalog.
 2. **Operational Search** — validated SearchQueries used to discover marketplace Candidates.
-3. **Claim Taxonomy** — normalized official, marketing, risk, and disease/treatment terms.
-4. **Claim-to-Official-Function Mapping** — explicit mapping between page expression and official health function.
+3. **Claim Taxonomy** — normalized page-marketing topics and provenance-bearing extraction expressions; it does not contain official functions, RiskSignals, or inspection mappings.
+4. **Claim-to-Official-Function Mapping** — future explicit mapping between page ClaimSignal and an official HealthFunction under a named framework/version.
 5. **Evidence-to-Risk Bridge** — verified link from observed Evidence/ClaimSignal to a RiskCategory.
 6. **Risk-to-Substance** — explicit mapping from RiskCategory to a Substance or authoritative SubstanceGroup.
 7. **Substance-to-Method** — declared analyte coverage in an InspectionMethod.
@@ -91,10 +91,14 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 
 ### 4.2 Claims and official functions
 
-- Page expressions, official functions, risk-related claims, and disease/treatment expressions remain distinct.
-- Synonyms and marketing paraphrases require reviewed mapping records.
+- Page ClaimMentions, normalized ClaimSignals, official functions, RiskSignals, and disease/treatment vocabularies remain distinct.
+- `config/claim_taxonomy_v2.json` version `claim-taxonomy-v2.0` is the V2-5A governed design baseline for page-marketing topics and the 26 audited legacy exact expressions. It contains no HealthFunction, Risk, substance, method, or inspection mapping and is not yet consumed by production runtime.
+- Every expression records stable identity, exact text, Claim type, match mode, source, status, and legacy trace where applicable. The migrated legacy entries use `source=legacy_system`, never `official_source`.
+- Formal ClaimMention/ClaimSignal sources are current-product `seller_managed` Evidence only. UGC remains auxiliary; `excluded_other_product` is forbidden; a search keyword is not Evidence.
+- Synonyms and marketing paraphrases require reviewed mapping records. V2-5A introduces exact matching only and no semantic-similarity equivalence.
 - Official-function mappings require the applicable official framework/version.
 - A claim-consistency assessment exposes matches, unmatched claims, evidence, official source, and gaps; it is not pass/fail adjudication.
+- The legacy exact Effect-to-Risk bridge remains a separate compatibility runtime dataset. It must not be copied into the Claim taxonomy; replacement requires a later explicit Claim/Risk governance gate.
 
 ### 4.3 Evidence-to-Risk and Risk-to-Substance
 

@@ -118,6 +118,8 @@ V2 separates four concepts:
 
 These concepts must not be compressed into one `Effect` field. The five categories in `config/effect_keywords.json` are the **Legacy/current Phase3 operational clue vocabulary**, not the final Claim Taxonomy.
 
+V2-5A further separates a page Claim into an Evidence-backed `ClaimMention` occurrence and a governed `ClaimSignal` marketing topic. A formal Claim can originate only from current-product seller-managed Evidence; UGC is auxiliary and other-product content is excluded. The system may say “检测到睡眠相关宣传表达” or “页面出现体重管理相关宣传”, but it must not say that the product has the effect, that the expression is an Official Health Function, or that it is legal/illegal. The initial V2 taxonomy and full legacy migration are governed by [CLAIM_TAXONOMY_V2.md](CLAIM_TAXONOMY_V2.md).
+
 ## 7. Product Facts
 
 **FUTURE CHANGE:** V2 will introduce provenance-bearing ProductFacts, initially including:
@@ -163,7 +165,8 @@ Where verified knowledge cannot bridge an observed clue, show a Knowledge Gap. D
 | UGC Evidence | User-generated evidence, presented as auxiliary context. |
 | Excluded Evidence | Evidence assigned to another product/context and barred from current primary evidence. |
 | ProductFact | Future provenance-bearing normalized fact derived from a Snapshot. |
-| ClaimSignal | Page expression classified as a claim clue; not an official function or risk conclusion. |
+| ClaimMention | One Snapshot-specific, Evidence-backed occurrence of wording observed in current-product seller-managed content. |
+| ClaimSignal | One or more ClaimMentions normalized to a governed page-marketing topic; not an official function, verified effect, risk, or legality conclusion. |
 | Official Health Function | Function verified from the applicable official health-food record/framework. |
 | HealthFoodIdentity | Multi-state identity resolution, not a boolean inferred from imagery. |
 | RiskSignal | Risk direction reached through explicit, governed knowledge. |

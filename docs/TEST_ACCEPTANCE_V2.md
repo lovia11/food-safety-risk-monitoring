@@ -97,16 +97,34 @@ At minimum test:
 
 Real validation compares a bounded set with official records and preserves the lookup source/time.
 
-## 7. Claim gate — Future V2-5/V2-6
+## 7. Claim gate
+
+### 7.1 V2-5A design baseline — Current
+
+Acceptance requires:
+
+- `config/claim_taxonomy_v2.json` is machine-readable and versioned;
+- Claim type and expression IDs are unique, and every expression references an existing Claim type;
+- the actual legacy keyword set is read from `config/effect_keywords.json` and has exactly 100% one-to-one migration coverage;
+- no legacy expression is silently lost, duplicated, or attributed to an unknown Claim type;
+- every active expression has provenance, and legacy expressions are not represented as official-source vocabulary;
+- seller-managed Evidence is the only formal Claim source; UGC is auxiliary and excluded-other-product content is forbidden;
+- ClaimMention preserves raw text/Evidence trace while ClaimSignal preserves every mention/Evidence ID;
+- ClaimSignal, HealthFunction, RiskSignal, and InspectionRecommendation have separate contracts;
+- no Claim type or expression contains Risk, HealthFunction, legality, substance, method, or inspection mapping;
+- deterministic schema/governance tests, full Python regression, Monitor regression, frontend workflow, typecheck, and build pass offline;
+- schema remains 10 and production Claim extraction behavior is unchanged.
+
+### 7.2 Future V2-5B/V2-6 runtime gates
 
 At minimum test:
 
-- exact official claim;
-- marketing paraphrase with and without a verified mapping;
-- disease/treatment wording;
-- ambiguous expression;
-- UGC-only expression;
-- seller-managed and UGC occurrences kept distinct;
+- exact seller-managed expression and complete ClaimMention provenance;
+- multiple mentions normalized to one ClaimSignal without losing source identities;
+- marketing paraphrase with and without a separately verified mapping;
+- disease/treatment wording and ambiguous expression remain separate/gapped;
+- UGC-only expression cannot form a formal ClaimSignal;
+- seller-managed and UGC occurrences remain distinct;
 - unmatched claim/Knowledge Gap;
 - ClaimSignal, HealthFunction and RiskSignal stored and presented independently;
 - consistency assessment exposes compared claims, functions, matched/unmatched items, evidence, source and gaps rather than pass/fail.

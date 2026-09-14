@@ -77,6 +77,8 @@ Recommendation is not a Review gate. A successful analysis with zero Evidence is
 | Frozen JSON/XLSX/evidence export | Immutable historical sampling-list fact at export time. |
 | Governed `config/*.json` | Versioned operational/reference knowledge loaded by current runtime. |
 
+V2-5A additionally establishes `config/claim_taxonomy_v2.json` as a governed **design baseline**. No current runtime component loads it. Future ClaimMention/ClaimSignal authority will be a product-Snapshot `claim_analysis.json` derived artifact, while future SQLite Claim tables will be rebuildable query projections. Raw OCR/DOM/title artifacts remain source facts and Evidence remains the source-preserving observation layer; neither is replaced by a Claim record.
+
 SQLite run-derived data can be re-imported, but the database also contains human business mutations. Rebuilding it without preserving Review and Sampling state may lose decisions. The term “index” therefore does not mean “always safe to delete.”
 
 ### 1.4 Current API responsibilities
@@ -132,7 +134,20 @@ Creates clues and registration/filing candidates only from current-product selle
 
 ### 3.3 Claim Analyzer and consistency assessor
 
-The Claim Analyzer classifies actual page language. It does not turn a marketing paraphrase into an Official Health Function without an explicit mapping. The consistency assessor compares verified identity, official functions, and page claims and emits evidence-bearing assessment details, never a legal verdict.
+The V2-5A Claim contract freezes this future pipeline:
+
+```text
+ProductSnapshot
+→ seller-managed Evidence
+→ ClaimMention exact-expression extraction
+→ ClaimSignal governed normalization
+→ [future] Claim consistency / RiskSignal
+→ [future] inspection bridge
+```
+
+ClaimMention preserves the raw observed text, matching expression, Evidence identity and source locator. ClaimSignal groups same-Snapshot mentions under a governed marketing `claim_type` while retaining every mention/Evidence identity. UGC is auxiliary only and excluded-other-product content is forbidden. The current exact expression baseline introduces no fuzzy, embedding, semantic-similarity or LLM match.
+
+V2-5A freezes only ClaimMention and ClaimSignal contracts. Runtime extraction, SQLite/API implementation, the consistency assessor, Claim-to-HealthFunction mapping and Claim-to-Risk mapping remain future. A marketing paraphrase never becomes an Official Health Function without an explicit governed mapping, and a ClaimSignal never directly selects an inspection substance or method.
 
 ### 3.4 Knowledge Resolver
 
@@ -156,6 +171,8 @@ ProductSnapshot
 ```
 
 Derived records record the applicable dataset/version. Re-running with new knowledge may create a new derived result; it must not rewrite historical source Evidence or a frozen export.
+
+The future Claim API adds `claimMentions[]` and `claimSignals[]`. Existing `detectedEffects`/`effect` fields remain legacy compatibility fields until an implementation/migration gate; V2-5A adds no endpoint or DTO field.
 
 ## 5. Reliability boundaries
 
