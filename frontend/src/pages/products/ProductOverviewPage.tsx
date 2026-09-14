@@ -89,7 +89,7 @@ export function ProductOverviewPage({ productId }: ProductOverviewPageProps) {
           query.targetId ||
           query.taskId ||
           query.reviewStatus ||
-          query.effect ||
+          query.claimType ||
           query.samplingStatus ||
           query.collectedFrom ||
           query.collectedTo,
@@ -157,14 +157,14 @@ export function ProductOverviewPage({ productId }: ProductOverviewPageProps) {
                 </select>
               </label>
               <label>
-                页面功效线索
+                页面宣传线索
                 <select
-                  value={query.effect}
-                  onChange={(event) => updateFilter("effect", event.target.value)}
+                  value={query.claimType}
+                  onChange={(event) => updateFilter("claimType", event.target.value)}
                   disabled={!options}
                 >
-                  <option value="">全部线索</option>
-                  {options?.effects.map((item) => (
+                  <option value="">全部宣传线索</option>
+                  {options?.claimTypes.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>

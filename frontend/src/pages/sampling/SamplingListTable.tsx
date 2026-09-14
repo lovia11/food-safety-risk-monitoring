@@ -1,6 +1,7 @@
 import { ExternalLink, Eye, Trash2 } from "lucide-react";
 
 import type { SamplingItem } from "../../api/contracts";
+import { claimPresentation, claimSignalLabels } from "../../domain/claims";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
 import {
   samplingMethodLabel,
@@ -38,7 +39,7 @@ export function SamplingListTable({
             <th scope="col">商品</th>
             <th scope="col">商品链接</th>
             <th scope="col">来源排查</th>
-            <th scope="col">页面功效线索</th>
+            <th scope="col">{readOnly ? "旧版冻结分析结果" : "页面宣传线索"}</th>
             <th scope="col">可能风险方向</th>
             <th scope="col">建议关注/检测成分</th>
             <th scope="col">建议参考方法/标准</th>
@@ -51,6 +52,14 @@ export function SamplingListTable({
           {items.map((item) => {
             const productUrl = safeHttpUrl(item.productUrl);
             const suggestedMethods = suggestedSamplingMethods(item);
+            const claims = claimPresentation(
+              item.claimAnalysisStatus || "not_generated",
+              item.claimSignals || [],
+            );
+            const claimLabels = claimSignalLabels(item.claimSignals || []);
+            const currentClaimText = claims.code === "with_claims"
+              ? `${claimLabels.labels.join("、")}${claimLabels.remaining ? ` +${claimLabels.remaining}` : ""}`
+              : claims.label;
             return (
               <tr
                 key={`${item.ordinal}-${item.productId}`}
@@ -90,9 +99,15 @@ export function SamplingListTable({
                   </small>
                 </td>
                 <td>
-                  <span className="clamped-cell">
-                    {textList(item.summary.pageEffectClues, "暂无页面功效线索")}
-                  </span>
+                  {!readOnly && claims.code === "error" ? (
+                    <StatusBadge tone="danger">{currentClaimText}</StatusBadge>
+                  ) : (
+                    <span className="clamped-cell" data-claim-state={readOnly ? "legacy" : claims.code}>
+                      {readOnly
+                        ? textList(item.summary.pageEffectClues, "未记录旧版分析结果")
+                        : currentClaimText}
+                    </span>
+                  )}
                 </td>
                 <td>
                   <span className="clamped-cell">

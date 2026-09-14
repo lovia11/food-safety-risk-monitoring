@@ -690,7 +690,7 @@ a {
 
 .product-identity > div > span:not(.status-badge),
 .product-table td > small,
-.effect-list small,
+.claim-summary-cell small,
 .sampling-cell small,
 .product-identity > div > small {
   display: block;
@@ -753,7 +753,7 @@ a {
   font-size: 12px;
 }
 
-.effect-list,
+.claim-summary-cell,
 .sampling-cell,
 .region-cell {
   display: grid;
@@ -1322,8 +1322,25 @@ a {
 }
 
 .evidence-snippet {
+  position: relative;
   padding-left: 10px;
   border-left: 2px solid #f2b84b;
+}
+
+.evidence-anchor {
+  position: absolute;
+  top: -8px;
+  left: -2px;
+  width: 2px;
+  height: 2px;
+}
+
+.evidence-anchor:focus-visible {
+  width: 100%;
+  height: calc(100% + 16px);
+  border-radius: 5px;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
 }
 
 .evidence-group-card[data-secondary="true"] .evidence-snippet {
@@ -1400,6 +1417,134 @@ a {
 .evidence-group-actions button:hover {
   border-color: #7dd3fc;
   background: #f0f9ff;
+}
+
+.claim-analysis-section {
+  background: #fbfdff;
+}
+
+.claim-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.claim-section-heading h3 {
+  margin-bottom: 0;
+}
+
+.claim-state-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid #dbe6ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #526174;
+  font-size: 12px;
+}
+
+.claim-state-message[data-state="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.claim-signal-list {
+  display: grid;
+  gap: 8px;
+}
+
+.claim-signal-card {
+  border: 1px solid #cfe8f7;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.claim-signal-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  color: #075985;
+  cursor: pointer;
+}
+
+.claim-signal-card > summary > span {
+  display: grid;
+  gap: 1px;
+}
+
+.claim-signal-card > summary strong {
+  font-size: 13px;
+}
+
+.claim-signal-card > summary small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.claim-mention-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.claim-mention {
+  padding: 10px;
+  border-left: 3px solid #38bdf8;
+  border-radius: 0 7px 7px 0;
+  background: #f7fbfe;
+}
+
+.claim-mention blockquote {
+  margin: 0;
+  color: #263548;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.claim-mention-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 7px;
+  color: #68778a;
+  font-size: 11px;
+}
+
+.claim-mention-meta button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 3px 7px;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  background: #fff;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.claim-source-unavailable {
+  color: #7b899b;
+  font-style: italic;
+}
+
+.claim-mention code {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #8795a7;
+  font-size: 10px;
 }
 
 .evidence-card {
@@ -2294,7 +2439,9 @@ a {
 .queue-card-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 7px; }
 .queue-card-heading > strong { min-width: 0; overflow: hidden; color: #263548; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .queue-card-heading .status-badge { flex: 0 0 auto; }
-.queue-effects { color: #9a5a13; font-size: 12px; }
+.queue-claims { color: #075985; font-size: 12px; }
+.queue-claims[data-state="zero"],
+.queue-claims[data-state="not_generated"] { color: #7b899b; }
 .queue-evidence { display: -webkit-box; overflow: hidden; color: #526174; font-size: 12px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .queue-evidence svg { float: left; margin: 2px 5px 0 0; }
 .queue-source-counts { display: flex; align-items: center; gap: 5px; color: #8795a7; font-size: 11px; }
@@ -2316,6 +2463,12 @@ a {
 .sampling-item-card h2 { margin: 0; color: #263548; font-size: 14px; }
 .sampling-item-card p { margin: 2px 0 0; color: #718095; font-size: 12px; }
 .sampling-item-card small { color: #8795a7; font-size: 11px; }
+.sampling-claim-summary-value { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sampling-claim-summary-value strong { color: #334155; font-size: 13px; }
+.clamped-cell[data-claim-state="with_claims"] { color: #075985; }
+.clamped-cell[data-claim-state="not_generated"],
+.clamped-cell[data-claim-state="zero"] { color: #7b899b; }
+.clamped-cell[data-claim-state="legacy"] { color: #7c5a28; }
 
 @media (max-width: 1240px) {
   .filter-grid {

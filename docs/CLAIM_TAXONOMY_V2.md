@@ -17,7 +17,7 @@ The governed machine-readable baseline is [`config/claim_taxonomy_v2.json`](../c
 
 ## 2. Non-goals
 
-V2-5B1 does not:
+V2-5 does not:
 
 - change collector, OCR, Phase3, Recommendation, Review, Sampling, or visible frontend behavior;
 - establish ClaimSignal-to-HealthFunction equivalence;
@@ -143,14 +143,14 @@ The current repository contains five Effect labels and 26 unique exact keywords 
 
 ### 8.1 Runtime and storage surfaces
 
-| Layer | Legacy source / field | Current behavior | V2-5A classification |
+| Layer | Legacy source / field | Current behavior | V2 disposition |
 |---|---|---|---|
 | Phase3 config | `effect_categories: effect label → keywords[]` | Substring matching of exact configured expression text across title, DOM, and OCR text units. | Legacy extraction input. |
 | Phase3 artifact | `analysis.json`: `detected_effects`, `matched_keywords`, `evidence_details[].effect` | Stores Effect summaries and source-specific matches. | Compatibility artifact; unchanged. |
 | Batch/run artifact | `batch_state.json`, reports and web snapshot risk projection | Repeats `detected_effects`, match and review fields. | Compatibility projection; unchanged. |
 | SQLite schema 11 | Legacy Effect fields plus `claim_mentions`, `claim_signals`, `claim_signal_mentions` and per-Snapshot Claim artifact status/path | Rebuildable query projections. | Claim tables are additive; legacy fields and human state remain. |
 | API | `detectedEffects`, `effect`, `matchedKeywords`; `/api/products?effect=`; filter `effects[]` | Product/filter/workspace DTO compatibility contract. | Deprecated-future compatibility shape; unchanged. |
-| Frontend | 页面功效线索 table/filter, badges, detail/review/sampling presentations | Displays Effect labels and Evidence keywords from current DTOs. | Runtime unchanged; future UI contract is in section 13. |
+| Frontend | Former 页面功效线索 table/filter, badges, detail/review/sampling presentations | Primary active-Snapshot surfaces now use V2 Claim summaries/details; legacy Effect badges and matched-keyword presentation are hidden. | Migrated in V2-5B2; no Effect-to-Claim fallback. |
 | Sampling export | `detectedEffects`, `pageEffectClues`, 页面功效线索 | Freezes legacy wording in historical lists. | Frozen history must not be rewritten. |
 | Tests | Phase3, bridge, datastore/API, task/queue, recommendation, export, workflow fixtures | Lock legacy field names and exact bridge behavior. | Preserved compatibility tests. |
 
@@ -236,7 +236,7 @@ ClaimSignal
 
 V2-5A freezes only the first node and explicitly leaves the later mapping future.
 
-## 12. Authority, storage, and future schema/API draft
+## 12. Authority, storage, and current schema/API contract
 
 Authority is divided as follows:
 
@@ -266,16 +266,22 @@ V2-5B1 is implemented as a degradable parallel sidecar in `src/claim_analysis.py
 
 The artifact contains `schemaVersion`, `status`, `taxonomyVersion`, `snapshotId`, `generatedAt`, formal `claimMentions[]`, aggregated `claimSignals[]`, `sourcePolicy`, and summary counts. SQLite is not authority and can rebuild the three Claim projection tables from the artifact without rerunning Detail, OCR, or Phase3.
 
+### 12.2 V2-5B2 implementation status
+
+V2-5B2 makes the Snapshot Claim projection visible as 页面宣传线索 in Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling. List and filter reads use batched SQLite `claim_signals` projections; detail reads the full Snapshot-scoped Mentions/Signals and resolves each Mention to its existing Evidence identity. The additive `claim_type` filter matches exact governed types only and never maps back to legacy Effect.
+
+Legacy `detectedEffects`, Evidence `effect`/`matchedKeywords`, `effect=`, and `effects[]` remain backend compatibility contracts for Phase3 and the legacy Risk/Recommendation bridge. Historical Sampling JSON/XLSX remains frozen and is presented only as 旧版冻结分析结果. No historical Evidence or export was rewritten.
+
 ## 13. UX language
 
-V2-5B2 Claim UI will use the section title **页面宣传线索**. A summary is phrased, for example:
+V2-5B2 Claim UI uses the section title **页面宣传线索**. A summary is phrased, for example:
 
 ```text
 睡眠相关宣传
 发现 3 处表达
 ```
 
-Expansion shows the exact original wording, source type, and Evidence location. The UI must not say “具有助眠功效” or “存在违法助眠宣传”. Risk/compliance language may appear only when a separately approved later stage has produced that distinct assessment.
+Expansion shows the exact original wording before the matched expression, a friendly source type, and the existing Evidence location. Complete-with-Claims is informational blue; complete-zero and not-generated are distinct neutral states; only analysis error is red. The UI must not say “具有助眠功效” or “存在违法助眠宣传”. Risk/compliance language may appear only when a separately approved later stage has produced that distinct assessment.
 
 ## 14. Versioning and change process
 
@@ -285,7 +291,7 @@ Expansion shows the exact original wording, source type, and Evidence location. 
 2. preserve expression provenance and lifecycle;
 3. retain or explicitly deprecate old IDs rather than silently changing their meaning;
 4. pass uniqueness, referential-integrity, legacy-coverage, source-boundary, and forbidden-mapping tests;
-5. record the taxonomy version in future derived Claim artifacts;
+5. record the taxonomy version in derived Claim artifacts;
 6. never rewrite historical Evidence or frozen exports.
 
 ## 15. Examples

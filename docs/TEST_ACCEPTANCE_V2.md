@@ -115,7 +115,7 @@ Acceptance requires:
 - deterministic schema/governance tests, full Python regression, Monitor regression, frontend workflow, typecheck, and build pass offline;
 - the V2-5A acceptance itself left schema 10 and production Claim extraction unchanged.
 
-### 7.2 V2-5B1 Claim runtime core — Current
+### 7.2 V2-5B1 Claim runtime core — Accepted history
 
 Acceptance requires:
 
@@ -129,7 +129,21 @@ Acceptance requires:
 - Claim success/zero/failure cannot change Analysis readiness, Review eligibility/state, Sampling, Risk bridge, or Recommendation;
 - pipeline, API, schema, compatibility, full Python, Monitor, frontend workflow, typecheck, and build regressions pass offline with zero live collection/OCR/network work.
 
-### 7.3 Future V2-5B2/V2-6 gates
+### 7.3 V2-5B2 Claim presentation — Current
+
+Acceptance requires:
+
+- Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling read same-Snapshot V2 Claim projections without converting `detectedEffects`, Evidence keywords, UGC, excluded-other-product content, or SearchQuery into Claims;
+- complete-with-Claims, complete-zero, not-generated, and error have distinct wording and visual semantics; red is reserved for actual Claim execution error;
+- ClaimSignal uses an informational display label and expression count; ClaimMention expansion shows `rawText` before the matched expression, a friendly source type, and the existing Evidence trace or an explicit unavailable fallback;
+- Product-list Claim summaries are batched from SQLite and never require per-row artifact I/O; exact `claim_type` filtering uses the representative Snapshot within the active filter scope and never falls back to legacy Effect;
+- Claim presentation does not modify Review status/eligibility, Sampling membership, Risk output, or Recommendation output, and creates no Claim-to-HealthFunction or Claim-to-Risk causal edge;
+- legacy `effect=`/`effects[]` contracts remain available, while active primary UI hides old Effect badges/keywords and frozen Sampling JSON/XLSX remains byte-semantics compatible and is not rewritten;
+- Claim/API, legacy bridge, Recommendation, Review/Sampling, Monitor, full Python, frontend workflow, typecheck, and build regressions pass offline.
+
+V2-5B2 exit validation discovered 500 Python tests / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. The Claim-focused suite passed 35/35, legacy Effect/Risk bridge passed 28/28, Recommendation passed 29/29, Review passed 7/7, Sampling passed 23/23, and Monitor passed 32/32. No live collection, external network, taxonomy expansion, schema change, or frozen-history rewrite occurred.
+
+### 7.4 Future V2-6 gate
 
 At minimum test:
 

@@ -2,6 +2,7 @@ import { CheckCircle2, FileText, ListChecks, MessageSquareText } from "lucide-re
 
 import type { SnapshotSummary } from "../../api/contracts";
 import { StatusBadge } from "../../components/StatusBadge";
+import { claimPresentation, claimSignalLabels } from "../../domain/claims";
 import { queueFilters, queueMatches, type QueueFilter } from "../../domain/reviewQueue";
 
 export type { QueueFilter } from "../../domain/reviewQueue";
@@ -57,6 +58,14 @@ export function ReviewQueue({
         {filtered.length ? filtered.map((item) => {
           const state = queuePresentation[item.sampling.decisionStatus];
           const evidence = item.representativeEvidence;
+          const claims = claimPresentation(
+            item.claimAnalysisStatus,
+            item.claimSignalSummaries,
+          );
+          const claimLabels = claimSignalLabels(item.claimSignalSummaries, 3);
+          const claimText = claims.code === "with_claims"
+            ? `${claimLabels.labels.join("、")}${claimLabels.remaining ? ` +${claimLabels.remaining}` : ""}`
+            : claims.label;
           return (
             <button
               type="button"
@@ -69,9 +78,13 @@ export function ReviewQueue({
                 <strong title={item.productName}>{item.productName || item.productId}</strong>
                 <StatusBadge tone={state.tone}>{state.label}</StatusBadge>
               </span>
-              <span className="queue-effects">
-                {item.detectedEffects.length ? item.detectedEffects.slice(0, 3).join("、") : "暂无页面功效线索"}
-              </span>
+              {claims.code === "error" ? (
+                <StatusBadge tone="danger">{claimText}</StatusBadge>
+              ) : (
+                <span className="queue-claims" data-state={claims.code}>
+                  {claimText}
+                </span>
+              )}
               <span className="queue-evidence">
                 <MessageSquareText size={14} />
                 {evidence?.text || "暂无可展示的代表性证据原文"}

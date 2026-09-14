@@ -21,7 +21,7 @@
 - Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
-- V2 Claim runtime core with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 projection, and additive Snapshot API fields
+- V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 projection, same-Snapshot list summaries/filter, and Evidence trace
 
 ## Current Coverage
 
@@ -41,16 +41,18 @@ V2-5A Claim Taxonomy & Domain Contract is complete. All 5 legacy Effect labels a
 
 V2-5B1 Claim runtime core validation passed offline: Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Claim derivation, artifact/rebuild, schema 10→11 preservation, additive Snapshot API, legacy bridge/Recommendation, Review/Sampling and Monitor compatibility are covered without Detail, OCR or external network execution.
 
+V2-5B2 Claim presentation migration and the V2-5 Exit Gate passed offline: Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling now use same-Snapshot V2 Claim projections with four explicit states and Evidence trace. Legacy Effect/Risk/Recommendation APIs remain compatible, while frozen Sampling output is unchanged.
+
 ## Known Limitations
 
-Visible Claim UX migration, additional ProductFact types, human fact editing, claim-consistency assessment, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2-5B1 now derives formal Claims from seller-managed Evidence in parallel, while Phase3 still emits the unchanged legacy Effect compatibility contract. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, claim-consistency assessment, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX is implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-5B1 — COMPLETE. ClaimMention/ClaimSignal runtime core, artifact authority, schema 11 projection, and additive Snapshot API contract are implemented; visible UX remains unchanged.
+V2-5 — COMPLETE. Governed taxonomy, ClaimMention/ClaimSignal runtime, artifact authority, schema 11 rebuildable projection, primary 页面宣传线索 UX, exact same-Snapshot filter, and legacy separation are implemented.
 
 ## Next Gate
 
-V2-5B2 Claim UX and legacy presentation migration is NEXT and requires a separate human Gate.
+V2-6 Health-food Claim Consistency is NEXT and requires a separate human Gate. It is not implemented by V2-5.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

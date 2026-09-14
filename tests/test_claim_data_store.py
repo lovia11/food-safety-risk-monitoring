@@ -4,7 +4,12 @@ import unittest
 from pathlib import Path
 
 from src.claim_analysis import write_claim_analysis
-from src.data_store import DataStore, make_evidence_id, make_snapshot_id
+from src.data_store import (
+    DataStore,
+    ProductFilterValidationError,
+    make_evidence_id,
+    make_snapshot_id,
+)
 from src.runtime import read_json, write_json
 from tests.test_data_store import (
     PROJECT_ROOT,
@@ -173,6 +178,101 @@ class ClaimDataStoreTest(unittest.TestCase):
         second = self.store.get_snapshot(make_snapshot_id("claim_snapshot_b", "same"))
         self.assertEqual(len(first["claimSignals"]), 1)
         self.assertEqual(second["claimSignals"], [])
+
+    def test_product_projection_exposes_v2_claim_summary_without_legacy_fallback(self):
+        claimed_run = create_run(
+            self.output_root,
+            "claim_list_complete",
+            product_id="claimed",
+            effect="助眠",
+            collected_at="2026-09-13T10:00:00+08:00",
+        )
+        legacy_only_run = create_run(
+            self.output_root,
+            "claim_list_legacy_only",
+            product_id="legacy-only",
+            effect="助眠",
+            collected_at="2026-09-14T10:00:00+08:00",
+        )
+        write_claim_artifact(claimed_run, "claimed")
+        self.store.import_run(claimed_run)
+        self.store.import_run(legacy_only_run)
+
+        products = {
+            item["productId"]: item for item in self.store.list_products()
+        }
+        claimed = products["claimed"]
+        legacy_only = products["legacy-only"]
+        self.assertEqual(claimed["claimAnalysisStatus"], "complete")
+        self.assertEqual(
+            claimed["claimSignalSummaries"],
+            [
+                {
+                    "claimSignalId": claimed["claimSignalSummaries"][0]["claimSignalId"],
+                    "claimType": "sleep_related",
+                    "displayLabel": "睡眠相关宣传",
+                    "mentionCount": 1,
+                    "taxonomyVersion": "claim-taxonomy-v2.0",
+                    "status": "normalized",
+                }
+            ],
+        )
+        self.assertEqual(legacy_only["detectedEffects"], ["助眠"])
+        self.assertEqual(legacy_only["claimAnalysisStatus"], "not_generated")
+        self.assertEqual(legacy_only["claimSignalSummaries"], [])
+
+    def test_claim_type_filter_is_exact_snapshot_scoped_and_ignores_legacy_effect(self):
+        older = create_run(
+            self.output_root,
+            "claim_filter_old",
+            product_id="same",
+            effect="助眠",
+            collected_at="2026-09-12T10:00:00+08:00",
+        )
+        newer = create_run(
+            self.output_root,
+            "claim_filter_new",
+            product_id="same",
+            effect="助眠",
+            collected_at="2026-09-13T10:00:00+08:00",
+        )
+        legacy_only = create_run(
+            self.output_root,
+            "claim_filter_legacy",
+            product_id="legacy",
+            effect="助眠",
+            collected_at="2026-09-14T10:00:00+08:00",
+        )
+        write_claim_artifact(older, "same")
+        self.store.import_run(older)
+        self.store.import_run(newer)
+        self.store.import_run(legacy_only)
+
+        default_same = next(
+            item for item in self.store.list_products() if item["productId"] == "same"
+        )
+        self.assertEqual(default_same["taskId"], "claim_filter_new")
+        self.assertEqual(default_same["claimAnalysisStatus"], "not_generated")
+
+        filtered = self.store.list_products(claim_type="sleep_related")
+        self.assertEqual([item["productId"] for item in filtered], ["same"])
+        self.assertEqual(filtered[0]["taskId"], "claim_filter_old")
+        self.assertEqual(filtered[0]["claimAnalysisStatus"], "complete")
+        self.assertEqual(filtered[0]["claimSignalSummaries"][0]["claimType"], "sleep_related")
+        self.assertEqual(self.store.count_products(claim_type="sleep_related"), 1)
+        with self.assertRaises(ProductFilterValidationError):
+            self.store.list_products(claim_type="not-a-governed-claim")
+
+    def test_filter_options_use_governed_claim_type_labels_and_keep_legacy_effects(self):
+        run_root = create_run(self.output_root, "claim_filter_options", effect="助眠")
+        self.store.import_run(run_root)
+        options = self.store.list_product_filter_options()
+        self.assertIn({"value": "助眠", "label": "助眠"}, options["effects"])
+        self.assertIn(
+            {"value": "sleep_related", "label": "睡眠相关宣传"},
+            options["claimTypes"],
+        )
+        self.assertEqual(len(options["claimTypes"]), 5)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This specification governs the V2 interaction model. V2-1 through V2-3 sections describe current behavior; later Future sections remain requirements rather than implementation claims.
+This specification governs the V2 interaction model. V2-1 through V2-5 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
 
 ## 1. Global UI principles
 
@@ -31,7 +31,7 @@ The sidebar expands for the product list, automatically collapses when a Product
 ```text
 商品
 地区信息
-页面功效线索
+页面宣传线索
 人工复核
 抽检清单
 最近采集
@@ -70,7 +70,7 @@ The workspace uses an independently scrollable product list and right detail pan
 The header pairs a product image with product identity and presents four ordered summaries:
 
 ```text
-页面线索
+页面宣传线索
 主要证据
 知识桥接
 人工状态
@@ -122,18 +122,31 @@ The UI must distinguish:
 
 The recommendation title is 抽检辅助建议. Do not expose internal D1–D6, Knowledge Trace, or mapping IDs as primary UI language. Method sections are 相关已核验方法, 需补充商品信息后判断, and collapsed 其他已知方法. Never invent a substance or method to avoid an empty state.
 
-### 7.1 Claim presentation — V2-5B2 future UX over the current B1 runtime
+### 7.1 Claim presentation — Current V2-5B2
 
-The future V2 Claim section is titled **页面宣传线索**, not 商品功效. A normalized summary uses wording such as:
+The V2 Claim section is titled **页面宣传线索**, not 商品功效. It appears after Evidence and before legacy Risk/Recommendation interpretation so that observation, interpretation, and human decision remain visibly separate. A normalized summary uses wording such as:
 
 ```text
 睡眠相关宣传
 发现 3 处表达
 ```
 
-Expansion shows each ClaimMention's original text, source type, and Evidence location. The section distinguishes seller-managed formal Claim sources from auxiliary UGC and never presents excluded-other-product content as a current-product Claim. It must not say “具有助眠功效”, “确认能够减肥”, or “存在违法助眠宣传”. ClaimSignal, Official Health Function, RiskSignal, and Recommendation remain visibly separate sections/states.
+Each ClaimSignal card uses its governed `displayLabel`, an informational blue treatment, and its number of supporting expressions. The native disclosure control is keyboard-operable. Expansion shows the ClaimMention `rawText` first, then the exact matched expression, a friendly source label such as 商品标题、商品详情文本 or 详情图片 OCR, and a control that locates the existing Evidence item. Missing Evidence resolution is displayed as 来源信息不可用; no locator is fabricated.
 
-V2-5B1 adds the typed `claimAnalysisStatus`, `claimMentions`, and `claimSignals` Snapshot contract but intentionally changes no visible frontend behavior. Existing 页面功效线索 and `detectedEffects` presentation remains an explicitly legacy compatibility surface until the V2-5B2 UX gate.
+The Claim state machine is:
+
+| Runtime state | Required primary wording | Visual role |
+|---|---|---|
+| `complete` with signals | `检测到 N 类页面宣传线索，共 M 处表达` | Informational blue; never a risk grade. |
+| `complete` with `[]` | `未发现已治理词表中的页面宣传表达` | Neutral; explicitly not “无风险/合规”. |
+| `not_generated` | `尚未生成页面宣传线索` | Neutral and different from complete-zero. |
+| `error` | `页面宣传线索分析失败` | Error red; the rest of Product Detail remains available. |
+
+Product Overview and Review Queue use only same-Snapshot `claimSignalSummaries`; the compact row shows at most two labels plus an overflow count. The primary filter is 页面宣传线索 and queries exact governed `claim_type`. It never maps back to legacy Effect. Current Sampling items use the Membership source Snapshot's V2 Claim projection.
+
+Formal Claim UI is seller-managed only. UGC stays visible in the Evidence section but never appears in 页面宣传线索; `excluded_other_product` and SearchQuery/task keywords are also forbidden Claim sources. The section must not say “具有助眠功效”, “确认能够减肥”, “存在违法助眠宣传”, or use Claim count as a risk score. ClaimSignal, Official Health Function, RiskSignal, and Recommendation remain visibly separate sections/states.
+
+Legacy `detectedEffects`, Evidence `effect`/`matchedKeywords`, and the `effect=` API remain compatibility data but are hidden from the current primary Claim presentation. Historical frozen Sampling exports are not rewritten: when their legacy `pageEffectClues` are displayed, the section is labeled 旧版冻结分析结果 and states that it is not V2 页面宣传线索.
 
 ## 8. Review and Sampling interaction
 
@@ -175,4 +188,4 @@ Paused rows show the governed short reason. The Quick Task flow is unchanged and
 
 ## 10. Responsive acceptance
 
-The primary acceptance widths are 1440px and 1080px. Both must cover list-only and split detail modes, expanded/collapsed sidebar, long title, missing image, zero Evidence, unmapped Evidence, recommendation error, historical Snapshot, loading, empty, and API-error states.
+The primary acceptance widths are 1440px and 1080px. Both must cover list-only and split detail modes, expanded/collapsed sidebar, long title, missing image, zero Evidence, unmapped Evidence, recommendation error, all four Claim states, historical Snapshot, loading, empty, and API-error states.

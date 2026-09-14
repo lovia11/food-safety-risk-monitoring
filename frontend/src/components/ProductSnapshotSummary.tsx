@@ -1,10 +1,8 @@
 import { ClipboardCheck, FileSearch, Link2, ScanSearch } from "lucide-react";
 
 import type { SnapshotWorkspace } from "../api/contracts";
-import {
-  productCluePresentation,
-  type AnalysisStatePresentation,
-} from "../domain/analysis";
+import type { AnalysisStatePresentation } from "../domain/analysis";
+import { claimPresentation, claimSignalLabels } from "../domain/claims";
 import type { EvidencePartitions } from "../domain/evidence";
 import { reviewPresentation } from "../domain/presentation";
 import { healthFoodIdentityPresentation } from "../domain/healthFoodIdentity";
@@ -29,6 +27,14 @@ export function ProductSnapshotSummary({
     ? reviewPresentation[workspace.review.status]
     : { label: "尚不可复核", tone: "neutral" as const };
   const healthFood = healthFoodIdentityPresentation[workspace.healthFoodIdentity.state];
+  const claims = claimPresentation(
+    workspace.claimAnalysisStatus,
+    workspace.claimSignals,
+  );
+  const claimLabels = claimSignalLabels(workspace.claimSignals);
+  const claimSummary = claims.code === "with_claims"
+    ? `${claimLabels.labels.join("、")}${claimLabels.remaining ? ` +${claimLabels.remaining}` : ""} · ${claims.mentionCount} 处表达`
+    : claims.label;
 
   return (
     <section className="snapshot-summary">
@@ -51,8 +57,8 @@ export function ProductSnapshotSummary({
       </div>
       <dl className="snapshot-summary-grid">
         <div>
-          <dt><ScanSearch size={15} />页面线索</dt>
-          <dd>{productCluePresentation(workspace.snapshot)}</dd>
+          <dt><ScanSearch size={15} />页面宣传线索</dt>
+          <dd>{claimSummary}</dd>
         </div>
         <div>
           <dt><FileSearch size={15} />主要证据</dt>

@@ -16,6 +16,7 @@ import {
   updateInspectionContext,
 } from "../../api/products";
 import { Drawer } from "../../components/Drawer";
+import { ClaimAnalysisSection } from "../../components/ClaimAnalysisSection";
 import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EmptyState } from "../../components/EmptyState";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
@@ -113,7 +114,6 @@ export function ProductDetailPanel({
   const analysis = useMemo(() => workspace ? analysisStatePresentation({
     readiness: workspace.snapshot.readiness,
     evidence: workspace.evidence,
-    detectedEffects: workspace.snapshot.detectedEffects,
     inspection: workspace.inspection,
   }) : null, [workspace]);
 
@@ -241,6 +241,12 @@ export function ProductDetailPanel({
                 evidence={workspace.evidence}
                 assets={workspace.assets}
                 runId={workspace.snapshot.taskId}
+              />
+              <ClaimAnalysisSection
+                status={workspace.claimAnalysisStatus}
+                signals={workspace.claimSignals}
+                mentions={workspace.claimMentions}
+                evidence={workspace.evidence}
               />
 
               {analysis && <RecommendationPanel inspection={workspace.inspection} analysis={analysis} />}

@@ -7,6 +7,7 @@ export const DEFAULT_PRODUCT_QUERY: ProductQuery = {
   taskId: "",
   reviewStatus: "",
   effect: "",
+  claimType: "",
   samplingStatus: "",
   collectedFrom: "",
   collectedTo: "",

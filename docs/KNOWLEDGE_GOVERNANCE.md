@@ -92,10 +92,10 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 ### 4.2 Claims and official functions
 
 - Page ClaimMentions, normalized ClaimSignals, official functions, RiskSignals, and disease/treatment vocabularies remain distinct.
-- `config/claim_taxonomy_v2.json` version `claim-taxonomy-v2.0` is the governed design and runtime authority for page-marketing topics and the 26 audited legacy exact expressions. V2-5B1 consumes it only for deterministic ClaimMention/ClaimSignal derivation. It contains no HealthFunction, Risk, substance, method, or inspection mapping.
+- `config/claim_taxonomy_v2.json` version `claim-taxonomy-v2.0` is the governed design, runtime, filter-option, and presentation-label authority for page-marketing topics and the 26 audited legacy exact expressions. V2-5 consumes it for deterministic ClaimMention/ClaimSignal derivation and primary UI labels only. It contains no HealthFunction, Risk, substance, method, or inspection mapping.
 - Every expression records stable identity, exact text, Claim type, match mode, source, status, and legacy trace where applicable. The migrated legacy entries use `source=legacy_system`, never `official_source`.
 - Formal ClaimMention/ClaimSignal sources are current-product `seller_managed` Evidence only. UGC remains auxiliary; `excluded_other_product` is forbidden; a search keyword is not Evidence.
-- Synonyms and marketing paraphrases require reviewed mapping records. V2-5B1 implements literal exact-expression occurrence matching only and no semantic-similarity equivalence.
+- Synonyms and marketing paraphrases require reviewed mapping records. V2-5 implements literal exact-expression occurrence matching only and no semantic-similarity equivalence.
 - Official-function mappings require the applicable official framework/version.
 - A claim-consistency assessment exposes matches, unmatched claims, evidence, official source, and gaps; it is not pass/fail adjudication.
 - The legacy exact Effect-to-Risk bridge remains a separate compatibility runtime dataset. It must not be copied into the Claim taxonomy; replacement requires a later explicit Claim/Risk governance gate.

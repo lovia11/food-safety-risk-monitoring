@@ -2493,7 +2493,10 @@ class DataStore:
         }
 
     @staticmethod
-    def _snapshot_dict(row: sqlite3.Row) -> dict[str, Any]:
+    def _snapshot_dict(
+        row: sqlite3.Row,
+        claim_signal_summaries: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         readiness = evaluate_pipeline_readiness(
             status=row["status"],
             meta_path=row["meta_path"],
@@ -2517,6 +2520,8 @@ class DataStore:
             "collectedAt": row["collected_at"],
             "status": row["status"],
             "detectedEffects": _json_value(row["detected_effects_json"], []),
+            "claimAnalysisStatus": row["claim_analysis_status"],
+            "claimSignalSummaries": claim_signal_summaries or [],
             "reviewRequired": (
                 None if row["review_required"] is None else bool(row["review_required"])
             ),
@@ -2571,6 +2576,58 @@ class DataStore:
                 ),
             },
         }
+
+    @staticmethod
+    def _claim_signal_summaries(
+        connection: sqlite3.Connection,
+        snapshot_ids: Iterable[str],
+    ) -> dict[str, list[dict[str, Any]]]:
+        identities = list(dict.fromkeys(str(value) for value in snapshot_ids if value))
+        if not identities:
+            return {}
+        placeholders = ", ".join("?" for _ in identities)
+        rows = connection.execute(
+            f"""
+            SELECT cs.snapshot_id, cs.claim_signal_id, cs.claim_type,
+                   cs.display_label, cs.taxonomy_version, cs.status,
+                   COUNT(csm.claim_mention_id) AS mention_count
+            FROM claim_signals cs
+            LEFT JOIN claim_signal_mentions csm
+              ON csm.claim_signal_id = cs.claim_signal_id
+            WHERE cs.snapshot_id IN ({placeholders})
+            GROUP BY cs.claim_signal_id, cs.snapshot_id, cs.ordinal,
+                     cs.claim_type, cs.display_label, cs.taxonomy_version, cs.status
+            ORDER BY cs.snapshot_id, cs.ordinal
+            """,
+            identities,
+        ).fetchall()
+        summaries: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            summaries.setdefault(str(row["snapshot_id"]), []).append(
+                {
+                    "claimSignalId": row["claim_signal_id"],
+                    "claimType": row["claim_type"],
+                    "displayLabel": row["display_label"],
+                    "mentionCount": int(row["mention_count"] or 0),
+                    "taxonomyVersion": row["taxonomy_version"],
+                    "status": row["status"],
+                }
+            )
+        return summaries
+
+    @staticmethod
+    def _claim_type_options() -> list[dict[str, str]]:
+        try:
+            taxonomy = load_claim_taxonomy()
+        except ValueError as exc:
+            raise ProductFilterValidationError(
+                "页面宣传线索词表当前不可用"
+            ) from exc
+        return [
+            {"value": str(item["id"]), "label": str(item["label_zh"])}
+            for item in taxonomy["claim_types"]
+            if str(item.get("status") or "") == "active"
+        ]
 
     @staticmethod
     def _base_snapshot_columns() -> str:
@@ -2673,6 +2730,7 @@ class DataStore:
         query: str = "",
         review_status: str = "",
         effect: str = "",
+        claim_type: str = "",
         task_id: str = "",
         target_id: str = "",
         collected_from: str = "",
@@ -2696,6 +2754,17 @@ class DataStore:
         if effect:
             clauses.append("s.detected_effects_json LIKE ?")
             values.append(f'%"{effect}"%')
+        if claim_type:
+            valid_claim_types = {
+                item["value"] for item in self._claim_type_options()
+            }
+            if claim_type not in valid_claim_types:
+                raise ProductFilterValidationError("页面宣传线索类型不合法")
+            clauses.append(
+                "EXISTS (SELECT 1 FROM claim_signals cs "
+                "WHERE cs.snapshot_id = s.snapshot_id AND cs.claim_type = ?)"
+            )
+            values.append(claim_type)
         if task_id:
             clauses.append("s.task_id = ?")
             values.append(task_id)
@@ -2720,6 +2789,7 @@ class DataStore:
         query: str = "",
         review_status: str = "",
         effect: str = "",
+        claim_type: str = "",
         task_id: str = "",
         target_id: str = "",
         sampling_status: str = "",
@@ -2732,6 +2802,7 @@ class DataStore:
             query=query,
             review_status=review_status,
             effect=effect,
+            claim_type=claim_type,
             task_id=task_id,
             target_id=target_id,
             collected_from=collected_from,
@@ -2766,6 +2837,7 @@ class DataStore:
         query: str = "",
         review_status: str = "",
         effect: str = "",
+        claim_type: str = "",
         task_id: str = "",
         target_id: str = "",
         sampling_status: str = "",
@@ -2778,6 +2850,7 @@ class DataStore:
             query=query,
             review_status=review_status,
             effect=effect,
+            claim_type=claim_type,
             task_id=task_id,
             target_id=target_id,
             sampling_status=sampling_status,
@@ -2798,7 +2871,15 @@ class DataStore:
         values.extend([page_size, (page - 1) * page_size])
         with self._connect() as connection:
             rows = connection.execute(sql, values).fetchall()
-        return [self._snapshot_dict(row) for row in rows]
+            claim_summaries = self._claim_signal_summaries(
+                connection, (row["snapshot_id"] for row in rows)
+            )
+        return [
+            self._snapshot_dict(
+                row, claim_summaries.get(str(row["snapshot_id"]), [])
+            )
+            for row in rows
+        ]
 
     def count_products(
         self,
@@ -2806,6 +2887,7 @@ class DataStore:
         query: str = "",
         review_status: str = "",
         effect: str = "",
+        claim_type: str = "",
         task_id: str = "",
         target_id: str = "",
         sampling_status: str = "",
@@ -2816,6 +2898,7 @@ class DataStore:
             query=query,
             review_status=review_status,
             effect=effect,
+            claim_type=claim_type,
             task_id=task_id,
             target_id=target_id,
             sampling_status=sampling_status,
@@ -2859,6 +2942,7 @@ class DataStore:
                 if str(effect).strip()
             }
         )
+        claim_types = self._claim_type_options()
         return {
             "tasks": [
                 {
@@ -2878,6 +2962,7 @@ class DataStore:
                 for row in target_rows
             ],
             "effects": [{"value": item, "label": item} for item in effects],
+            "claimTypes": claim_types,
             "reviewStatuses": [
                 {"value": "pending", "label": "待复核"},
                 {"value": "recommend_follow_up", "label": "建议跟进"},
@@ -2996,7 +3081,15 @@ class DataStore:
         )
         with self._connect() as connection:
             rows = connection.execute(sql, (product_id,)).fetchall()
-        return [self._snapshot_dict(row) for row in rows]
+            claim_summaries = self._claim_signal_summaries(
+                connection, (row["snapshot_id"] for row in rows)
+            )
+        return [
+            self._snapshot_dict(
+                row, claim_summaries.get(str(row["snapshot_id"]), [])
+            )
+            for row in rows
+        ]
 
     def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
         with self._connect() as connection:
@@ -3108,6 +3201,19 @@ class DataStore:
                 "taxonomyVersion": item["taxonomy_version"],
                 "status": item["status"],
                 "createdAt": item["created_at"],
+            }
+            for item in claim_signal_rows
+        ]
+        result["claimSignalSummaries"] = [
+            {
+                "claimSignalId": item["claim_signal_id"],
+                "claimType": item["claim_type"],
+                "displayLabel": item["display_label"],
+                "mentionCount": len(
+                    relations_by_signal.get(str(item["claim_signal_id"]), [])
+                ),
+                "taxonomyVersion": item["taxonomy_version"],
+                "status": item["status"],
             }
             for item in claim_signal_rows
         ]

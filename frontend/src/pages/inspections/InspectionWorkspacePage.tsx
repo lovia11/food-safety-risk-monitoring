@@ -18,7 +18,7 @@ type ReviewChange = {
 };
 
 const workspaceQuery = (taskId: string) => ({
-  query: "", targetId: "", taskId, reviewStatus: "", effect: "", samplingStatus: "",
+  query: "", targetId: "", taskId, reviewStatus: "", effect: "", claimType: "", samplingStatus: "",
   collectedFrom: "", collectedTo: "", page: 1, pageSize: 100,
 });
 

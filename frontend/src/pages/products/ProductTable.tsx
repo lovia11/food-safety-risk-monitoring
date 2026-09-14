@@ -3,7 +3,7 @@ import { ArrowRight, History } from "lucide-react";
 import type { SnapshotSummary } from "../../api/contracts";
 import { ProductThumbnail } from "../../components/ProductThumbnail";
 import { StatusBadge } from "../../components/StatusBadge";
-import { productCluePresentation } from "../../domain/analysis";
+import { claimPresentation, claimSignalLabels } from "../../domain/claims";
 import {
   formatDateTime,
   isProductRowActivationKey,
@@ -56,7 +56,7 @@ export function ProductTable({
           <tr>
             <th>商品</th>
             <th>地区信息</th>
-            <th>页面功效线索</th>
+            <th>页面宣传线索</th>
             <th>人工复核</th>
             <th>抽检清单</th>
             <th>最近采集</th>
@@ -70,6 +70,11 @@ export function ProductTable({
               ? { label: "尚不可复核", tone: "neutral" as const }
               : reviewPresentation[product.review.status];
             const analysis = productAnalysisPresentation(product.status);
+            const claims = claimPresentation(
+              product.claimAnalysisStatus,
+              product.claimSignalSummaries,
+            );
+            const claimLabels = claimSignalLabels(product.claimSignalSummaries);
             const selected = selectedProductId === product.productId;
             return (
               <tr
@@ -110,16 +115,20 @@ export function ProductTable({
                   </div>
                 </td>
                 <td>
-                  <div className="effect-list">
-                    {product.detectedEffects.length ? (
-                      product.detectedEffects.slice(0, 2).map((effect) => (
-                        <StatusBadge key={effect} tone="warning">{effect}</StatusBadge>
+                  <div className="claim-summary-cell">
+                    {claims.code === "with_claims" ? (
+                      claimLabels.labels.map((label) => (
+                        <StatusBadge key={label} tone="info">{label}</StatusBadge>
                       ))
+                    ) : claims.code === "error" ? (
+                      <StatusBadge tone="danger">{claims.label}</StatusBadge>
                     ) : (
-                      <span className="muted-cell">{productCluePresentation(product)}</span>
+                      <span className="muted-cell" data-state={claims.code}>
+                        {claims.label}
+                      </span>
                     )}
-                    {product.detectedEffects.length > 2 && (
-                      <small>另有 {product.detectedEffects.length - 2} 项</small>
+                    {claimLabels.remaining > 0 && (
+                      <small>另有 {claimLabels.remaining} 类</small>
                     )}
                   </div>
                 </td>

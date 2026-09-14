@@ -8,6 +8,7 @@ export function productQueryString(query: ProductQuery) {
     task_id: query.taskId,
     review_status: query.reviewStatus,
     effect: query.effect,
+    claim_type: query.claimType,
     sampling_status: query.samplingStatus,
     collected_from: query.collectedFrom,
     collected_to: query.collectedTo,

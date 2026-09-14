@@ -509,6 +509,7 @@ class SamplingExportService:
         *,
         ordinal: int,
         temporary_assets_root: Path | None = None,
+        include_claims: bool = False,
     ) -> dict[str, Any]:
         evidence = deepcopy(snapshot.get("evidence") or [])
         inspection = deepcopy(artifacts.get("inspection") or {})
@@ -525,7 +526,7 @@ class SamplingExportService:
             if temporary_assets_root is not None
             else []
         )
-        return {
+        item = {
             "ordinal": ordinal,
             "productId": membership["productId"],
             "sourceSnapshotId": membership["sourceSnapshotId"],
@@ -555,6 +556,12 @@ class SamplingExportService:
             "disclaimer": inspection.get("disclaimer") or SAMPLING_DISCLAIMER,
             "frozenAssets": frozen_assets,
         }
+        if include_claims:
+            item["claimAnalysisStatus"] = snapshot.get(
+                "claimAnalysisStatus", "not_generated"
+            )
+            item["claimSignals"] = deepcopy(snapshot.get("claimSignals") or [])
+        return item
 
     def list_current(self) -> dict[str, Any]:
         memberships = self.sampling_store.list_current()
@@ -566,7 +573,11 @@ class SamplingExportService:
             )
             items.append(
                 self._item_from_snapshot(
-                    membership, snapshot, artifacts, ordinal=ordinal
+                    membership,
+                    snapshot,
+                    artifacts,
+                    ordinal=ordinal,
+                    include_claims=True,
                 )
             )
         return {"items": items, "count": len(items)}

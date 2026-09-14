@@ -67,6 +67,8 @@ export type SamplingItem = SamplingMembership & {
   shopName: string;
   collectedAt: string | null;
   detectedEffects: string[];
+  claimAnalysisStatus?: ClaimAnalysisStatus;
+  claimSignals?: ClaimSignalDTO[];
   historicalCountBeforeExport: number;
   summary: {
     pageEffectClues: string[];
@@ -165,6 +167,8 @@ export type SnapshotSummary = {
   collectedAt: string | null;
   status: string;
   detectedEffects: string[];
+  claimAnalysisStatus: ClaimAnalysisStatus;
+  claimSignalSummaries: ClaimSignalSummaryDTO[];
   reviewRequired: boolean | null;
   analysisSummary: string;
   healthFoodIdentityState: HealthFoodIdentityState;
@@ -215,6 +219,7 @@ export type ProductFilterOptions = {
   tasks: TaskFilterOption[];
   targets: FilterOption[];
   effects: FilterOption[];
+  claimTypes: FilterOption[];
   reviewStatuses: FilterOption[];
   samplingStatuses: FilterOption[];
 };
@@ -225,6 +230,7 @@ export type ProductQuery = {
   taskId: string;
   reviewStatus: string;
   effect: string;
+  claimType: string;
   samplingStatus: string;
   collectedFrom: string;
   collectedTo: string;
@@ -276,6 +282,15 @@ export type ClaimSignalDTO = {
   taxonomyVersion: string;
   status: "normalized";
   createdAt: string;
+};
+
+export type ClaimSignalSummaryDTO = {
+  claimSignalId: string;
+  claimType: string;
+  displayLabel: string;
+  mentionCount: number;
+  taxonomyVersion: string;
+  status: "normalized";
 };
 
 export type ProductFact = {

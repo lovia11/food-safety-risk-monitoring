@@ -1,8 +1,9 @@
-import { ExternalLink, FileCheck2, FlaskConical, Info, Quote, ShieldCheck } from "lucide-react";
+import { ExternalLink, FileCheck2, FlaskConical, Info, MessageSquareQuote, Quote, ShieldCheck } from "lucide-react";
 
 import type { SamplingItem, SamplingMethodSummary } from "../../api/contracts";
 import { Drawer } from "../../components/Drawer";
 import { StatusBadge } from "../../components/StatusBadge";
+import { claimPresentation } from "../../domain/claims";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
 import { KNOWLEDGE_GAP_MESSAGE } from "../../domain/recommendation";
 import {
@@ -38,6 +39,15 @@ export function SamplingListDrawer({
 }: SamplingListDrawerProps) {
   const productUrl = safeHttpUrl(item.productUrl);
   const methods = samplingMethodGroups(item);
+  const claims = claimPresentation(
+    item.claimAnalysisStatus || "not_generated",
+    item.claimSignals || [],
+  );
+  const currentClaimText = claims.code === "with_claims"
+    ? (item.claimSignals || [])
+        .map((signal) => `${signal.displayLabel} · ${signal.mentionIds.length} 处表达`)
+        .join("；")
+    : claims.label;
 
   return (
     <Drawer
@@ -73,10 +83,26 @@ export function SamplingListDrawer({
         </div>
       </section>
 
+      <section className="detail-section sampling-claim-summary">
+        <h3><MessageSquareQuote size={16} />{historical ? "旧版冻结分析结果" : "页面宣传线索"}</h3>
+        <div className="sampling-claim-summary-value">
+          <strong>
+            {historical
+              ? item.summary.pageEffectClues.join("、") || "未记录旧版分析结果"
+              : currentClaimText}
+          </strong>
+          {!historical && <StatusBadge tone={claims.tone}>{claims.summary}</StatusBadge>}
+        </div>
+        <p className="section-description">
+          {historical
+            ? "该字段来自导出时冻结的旧版 Effect 分析，不属于 V2 页面宣传线索。"
+            : claims.description}
+        </p>
+      </section>
+
       <section className="detail-section">
         <h3><FlaskConical size={16} />抽检辅助建议</h3>
         <div className="sampling-summary-grid">
-          <div><span>页面功效线索</span><strong>{item.summary.pageEffectClues.join("、") || "暂无页面功效线索"}</strong></div>
           <div><span>可能风险方向</span><strong>{item.summary.riskDirections.join("、") || "暂无已核验映射"}</strong></div>
           <div><span>建议关注/检测成分</span><strong>{item.summary.substances.join("、") || "暂无已核验成分建议"}</strong></div>
         </div>

@@ -3,8 +3,14 @@ import test from "node:test";
 
 import {
   analysisStatePresentation,
-  productCluePresentation,
 } from "../src/domain/analysis.ts";
+import {
+  claimMentionEvidence,
+  claimPresentation,
+  claimSignalLabels,
+  claimSignalViewModels,
+  claimSourceLabel,
+} from "../src/domain/claims.ts";
 import {
   groupEvidence,
   partitionEvidenceGroups,
@@ -57,6 +63,7 @@ test("product query serializes every current server-side filter and pagination f
     taskId: "task-1",
     reviewStatus: "recommend_follow_up",
     effect: "助眠",
+    claimType: "sleep_related",
     samplingStatus: "historical_only",
     collectedFrom: "2026-09-01",
     collectedTo: "2026-09-12",
@@ -70,6 +77,7 @@ test("product query serializes every current server-side filter and pagination f
     task_id: "task-1",
     review_status: "recommend_follow_up",
     effect: "助眠",
+    claim_type: "sleep_related",
     sampling_status: "historical_only",
     collected_from: "2026-09-01",
     collected_to: "2026-09-12",
@@ -328,49 +336,33 @@ test("analysis presentation distinguishes not analyzed, zero evidence, and unava
   const notAnalyzed = analysisStatePresentation({
     readiness: { ...eligibleReadiness, analysisReady: false, reviewEligible: false },
     evidence: [],
-    detectedEffects: [],
     inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
   });
   const zeroEvidence = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [],
-    detectedEffects: [],
     inspection: inspection(),
   });
   const unavailable = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [evidence("e1")],
-    detectedEffects: ["助眠"],
     inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
   });
 
   assert.equal(notAnalyzed.code, "NOT_ANALYZED");
   assert.equal(zeroEvidence.code, "ANALYZED_ZERO_EVIDENCE");
   assert.equal(unavailable.code, "RECOMMENDATION_UNAVAILABLE");
-  assert.equal(
-    productCluePresentation({
-      readiness: { ...eligibleReadiness, analysisReady: false },
-      detectedEffects: [],
-    }),
-    "尚未完成线索分析",
-  );
-  assert.equal(
-    productCluePresentation({ readiness: eligibleReadiness, detectedEffects: [] }),
-    "已分析，未发现当前规则线索",
-  );
 });
 
 test("analysis presentation distinguishes unmapped evidence and recommendation errors", () => {
   const unmapped = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [evidence("e1")],
-    detectedEffects: ["助眠"],
     inspection: inspection(),
   });
   const errored = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [evidence("e1")],
-    detectedEffects: ["助眠"],
     inspection: inspection({ recommendationStatus: "error", error: { message: "boom" } }),
   });
 
@@ -402,13 +394,11 @@ test("analysis presentation distinguishes mapped risk without and with verified 
   const withoutMethod = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [evidence("e1")],
-    detectedEffects: ["助眠"],
     inspection: inspection({ riskFindings: [finding] }),
   });
   const withMethod = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [evidence("e1")],
-    detectedEffects: ["助眠"],
     inspection: inspection({
       riskFindings: [{
         ...finding,
@@ -422,6 +412,146 @@ test("analysis presentation distinguishes mapped risk without and with verified 
 
   assert.equal(withoutMethod.code, "RISK_MAPPED_NO_METHOD");
   assert.equal(withMethod.code, "RECOMMENDATION_AVAILABLE");
+});
+
+function claimMention(id, overrides = {}) {
+  return {
+    claimMentionId: id,
+    snapshotId: "snapshot-1",
+    claimType: "sleep_related",
+    expressionId: "sleep-1",
+    rawText: "帮助安睡，轻松入眠",
+    normalizedText: "帮助安睡轻松入眠",
+    matchedExpression: "安睡",
+    evidenceId: "e1",
+    sourceScope: "seller_managed",
+    sourceAssetType: "ocr",
+    sourceLocator: { sourcePath: "ocr/original_001.txt", lineNumber: 3 },
+    extractionMethod: "exact_literal_occurrence",
+    taxonomyVersion: "2.0.0",
+    createdAt: "2026-09-14T10:00:00+08:00",
+    ...overrides,
+  };
+}
+
+function claimSignal(type, label, mentionIds = ["m1"]) {
+  return {
+    claimSignalId: `signal-${type}`,
+    snapshotId: "snapshot-1",
+    claimType: type,
+    displayLabel: label,
+    mentionIds,
+    evidenceIds: ["e1"],
+    taxonomyVersion: "2.0.0",
+    status: "normalized",
+    createdAt: "2026-09-14T10:00:00+08:00",
+  };
+}
+
+test("claim presentation keeps claims, governed zero, not-generated, and error distinct", () => {
+  const one = claimPresentation("complete", [claimSignal("sleep_related", "睡眠相关宣传")]);
+  const multiple = claimPresentation("complete", [
+    claimSignal("sleep_related", "睡眠相关宣传", ["m1", "m2"]),
+    claimSignal("weight_management", "体重管理相关宣传"),
+  ]);
+  const zero = claimPresentation("complete", []);
+  const missing = claimPresentation("not_generated", []);
+  const error = claimPresentation("error", []);
+
+  assert.equal(one.summary, "检测到 1 类页面宣传线索，共 1 处表达");
+  assert.equal(multiple.summary, "检测到 2 类页面宣传线索，共 3 处表达");
+  assert.equal(zero.label, "未发现已治理词表中的页面宣传表达");
+  assert.match(zero.description, /不表示无风险、无问题或宣传合规/);
+  assert.equal(missing.label, "尚未生成页面宣传线索");
+  assert.notEqual(zero.label, missing.label);
+  assert.equal(error.label, "页面宣传线索分析失败");
+  assert.equal(error.tone, "danger");
+  assert.equal(one.tone, "info");
+  assert.equal(Object.hasOwn(one, "riskLevel"), false);
+});
+
+test("legacy effects and UGC text cannot fabricate a V2 claim presentation", () => {
+  const legacySnapshot = {
+    claimAnalysisStatus: "not_generated",
+    claimSignals: [],
+    detectedEffects: ["助眠"],
+  };
+  const ugcOnlySnapshot = {
+    claimAnalysisStatus: "complete",
+    claimSignals: [],
+    detectedEffects: ["助眠"],
+    evidence: [evidence("ugc", {
+      text: "安睡",
+      contentOrigin: "user_generated",
+      sourceType: "dom_user_review",
+    })],
+  };
+
+  assert.equal(
+    claimPresentation(legacySnapshot.claimAnalysisStatus, legacySnapshot.claimSignals).code,
+    "not_generated",
+  );
+  assert.equal(
+    claimPresentation(ugcOnlySnapshot.claimAnalysisStatus, ugcOnlySnapshot.claimSignals).code,
+    "zero",
+  );
+});
+
+test("claim view models preserve raw context, multiple mentions, and evidence trace fallback", () => {
+  const linked = claimMention("m1");
+  const unavailable = claimMention("m2", {
+    rawText: "页面另一处安睡表达",
+    evidenceId: "missing-evidence",
+  });
+  const signal = claimSignal("sleep_related", "睡眠相关宣传", ["m1", "m2"]);
+  const view = claimSignalViewModels([signal], [linked, unavailable])[0];
+
+  assert.equal(view.mentionCount, 2);
+  assert.equal(view.mentions[0].rawText, "帮助安睡，轻松入眠");
+  assert.equal(view.mentions[0].matchedExpression, "安睡");
+  assert.equal(claimSourceLabel("ocr", evidence("e1")), "详情图片 OCR");
+  assert.equal(claimMentionEvidence(linked, [evidence("e1")]).evidenceId, "e1");
+  assert.equal(claimMentionEvidence(unavailable, [evidence("e1")]), null);
+  assert.deepEqual(claimSignalLabels([
+    signal,
+    claimSignal("weight_management", "体重管理相关宣传"),
+    claimSignal("blood_pressure_related", "血压相关宣传"),
+  ]), { labels: ["睡眠相关宣传", "体重管理相关宣传"], remaining: 1 });
+});
+
+test("primary claim surfaces consume V2 fields and keep frozen sampling explicit", () => {
+  const files = {
+    detail: readFileSync(new URL("../src/components/ClaimAnalysisSection.tsx", import.meta.url), "utf8"),
+    list: readFileSync(new URL("../src/pages/products/ProductTable.tsx", import.meta.url), "utf8"),
+    review: readFileSync(new URL("../src/pages/inspections/ReviewQueue.tsx", import.meta.url), "utf8"),
+    sampling: readFileSync(new URL("../src/pages/sampling/SamplingListTable.tsx", import.meta.url), "utf8"),
+    samplingDrawer: readFileSync(new URL("../src/pages/sampling/SamplingListDrawer.tsx", import.meta.url), "utf8"),
+    evidence: readFileSync(new URL("../src/components/EvidenceGroupCard.tsx", import.meta.url), "utf8"),
+    productDetail: readFileSync(new URL("../src/pages/products/ProductDetailPanel.tsx", import.meta.url), "utf8"),
+    claimDomain: readFileSync(new URL("../src/domain/claims.ts", import.meta.url), "utf8"),
+  };
+
+  assert.match(files.detail, /mention\.rawText/);
+  assert.match(files.detail, /mention\.matchedExpression/);
+  assert.match(files.detail, /来源信息不可用/);
+  assert.match(files.detail, /<details/);
+  assert.match(files.list, /claimSignalSummaries/);
+  assert.doesNotMatch(files.list, /detectedEffects/);
+  assert.match(files.review, /claimSignalSummaries/);
+  assert.doesNotMatch(files.review, /detectedEffects/);
+  assert.match(files.sampling, /旧版冻结分析结果/);
+  assert.match(files.sampling, /claimSignals/);
+  assert.match(files.samplingDrawer, /不属于 V2 页面宣传线索/);
+  assert.doesNotMatch(files.evidence, /snippet\.effects|snippet\.matchedKeywords/);
+  assert.doesNotMatch(files.claimDomain, /riskLevel|severity|probability|HealthFunction|RiskSignal/);
+  assert.ok(
+    files.productDetail.indexOf("<EvidenceReviewSection")
+      < files.productDetail.indexOf("<ClaimAnalysisSection"),
+  );
+  assert.ok(
+    files.productDetail.indexOf("<ClaimAnalysisSection")
+      < files.productDetail.indexOf("<RecommendationPanel"),
+  );
 });
 
 test("evidence records group by source asset and merge duplicate snippets without losing identities", () => {

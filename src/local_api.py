@@ -448,6 +448,9 @@ def create_handler(
                             (query.get("review_status") or [""])[0]
                         ).strip(),
                         "effect": str((query.get("effect") or [""])[0]).strip(),
+                        "claim_type": str(
+                            (query.get("claim_type") or [""])[0]
+                        ).strip(),
                         "task_id": str((query.get("task_id") or [""])[0]).strip(),
                         "target_id": str(
                             (query.get("target_id") or [""])[0]

@@ -8,7 +8,8 @@ from unittest.mock import Mock
 
 from openpyxl import load_workbook
 
-from src.data_store import DataStore
+from src.claim_analysis import write_claim_analysis
+from src.data_store import DataStore, make_evidence_id
 from src.review_decision import ReviewDecisionService
 from src.runtime import file_sha256, read_json, write_json
 from src.sampling_export import (
@@ -226,6 +227,41 @@ class SamplingExportServiceTest(unittest.TestCase):
                 (metadata["listId"],),
             ).fetchone()
         self.assertEqual(index_row, ("123", self.snapshot_id, "run-a"))
+
+    def test_current_sampling_projects_v2_claims_without_rewriting_frozen_export(self):
+        product_root = self.run_root / "products" / "123"
+        analysis = read_json(product_root / "analysis.json")
+        evidence = [
+            {
+                **item,
+                "evidenceId": make_evidence_id(self.snapshot_id, ordinal),
+                "snapshotId": self.snapshot_id,
+            }
+            for ordinal, item in enumerate(
+                analysis.get("evidence_details") or [], start=1
+            )
+        ]
+        write_claim_analysis(
+            product_root,
+            self.snapshot_id,
+            evidence,
+            generated_at="2026-09-14T10:00:00+08:00",
+        )
+        self.data_store.import_run(self.run_root)
+        self.add_current()
+
+        current_item = self.service.list_current()["items"][0]
+        self.assertEqual(current_item["claimAnalysisStatus"], "complete")
+        self.assertEqual(
+            [item["claimType"] for item in current_item["claimSignals"]],
+            ["sleep_related"],
+        )
+
+        metadata = self.service.export_current(confirmed=True)
+        frozen_item = self.service.get_history(metadata["listId"])["items"][0]
+        self.assertNotIn("claimAnalysisStatus", frozen_item)
+        self.assertNotIn("claimSignals", frozen_item)
+        self.assertEqual(frozen_item["summary"]["pageEffectClues"], ["助眠"])
 
     def test_export_failure_preserves_membership_and_has_no_success_history(self):
         self.add_current()

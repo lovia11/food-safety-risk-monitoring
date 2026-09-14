@@ -101,6 +101,8 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-5 — Claim taxonomy
 
+**Status:** COMPLETE — governed Claim domain, runtime, primary presentation, and legacy separation accepted; legacy Effect/Risk/Recommendation remains a compatibility layer.
+
 ### V2-5A — Claim Taxonomy & Domain Contract
 
 **Status:** COMPLETE — design baseline and deterministic governance tests accepted; production Claim extraction is unchanged.
@@ -136,15 +138,21 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-5B2 — Claim UX and legacy presentation migration
 
-**Status:** NEXT — requires a separate human Gate.
+**Status:** COMPLETE — primary Claim presentation, exact Claim filter, legacy separation, and V2-5 exit regression accepted offline.
 
 - **Goal:** Present the implemented ClaimSignal/ClaimMention contract as 页面宣传线索 and downgrade legacy Effect wording without deleting compatibility data.
 - **Dependencies:** Accepted V2-5B1 runtime core and additive Snapshot API.
 - **In Scope:** Claim workspace presentation, Mention source trace, explicit not-generated/error/zero states, and any approved Claim filters.
 - **Out of Scope:** Claim-to-HealthFunction consistency, automated RiskSignal, legality/compliance judgment, new inspection mapping, or legacy artifact deletion.
-- **Schema impact:** None expected; any change requires separate review.
+- **Schema impact:** None. Schema 11 remains current.
+- **API impact:** Product/Snapshot list rows add batched same-Snapshot `claimSignalSummaries`; filter options add governed `claimTypes`; `/api/products?claim_type=` is additive. Legacy `effect=` and `effects[]` remain compatibility contracts.
+- **UX impact:** Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling use V2 Claim. Four Claim states remain distinct; Mention expansion traces to existing Evidence. Historical frozen Sampling displays its unchanged legacy field as 旧版冻结分析结果.
+- **Testing:** Claim/UI state matrix, UGC and legacy separation, same-Snapshot list/filter semantics, trace fallback, current/frozen Sampling separation, legacy Risk/Recommendation compatibility, and full offline regression.
+- **Exit result:** V2-5 Claim domain, runtime, and primary presentation are complete. This does not remove the legacy Effect/Risk/Recommendation compatibility pipeline.
 
 ## V2-6 — Health-food claim consistency
+
+**Status:** NEXT — requires a separate human Gate; no V2-6 mapping or assessment is implemented by V2-5.
 
 - **Goal:** Compare verified identity/functions with page ClaimSignals using evidence-bearing assessments.
 - **Why:** Analysts need transparent mismatch clues without automatic legal verdicts.

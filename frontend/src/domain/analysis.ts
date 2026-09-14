@@ -2,7 +2,6 @@ import type {
   Evidence,
   InspectionView,
   PipelineReadiness,
-  SnapshotSummary,
 } from "../api/contracts";
 import type { StatusTone } from "./presentation";
 
@@ -26,14 +25,8 @@ export type AnalysisStatePresentation = {
 type AnalysisStateInput = {
   readiness: PipelineReadiness;
   evidence: Evidence[];
-  detectedEffects: string[];
   inspection: InspectionView;
 };
-
-function quotedEffects(effects: string[]) {
-  const unique = [...new Set(effects.filter(Boolean))];
-  return unique.length ? unique.map((effect) => `“${effect}”`).join("、") : "相关";
-}
 function hasKnownMethod(inspection: InspectionView) {
   return inspection.riskFindings.some((finding) =>
     finding.substance_follow_ups.some(
@@ -71,7 +64,7 @@ export function analysisStatePresentation(
       code: "ANALYZED_ZERO_EVIDENCE",
       label: "已分析 · 未发现线索",
       summary: "当前规则未发现线索",
-      message: "已完成分析，暂未发现当前规则覆盖范围内的明确页面功效线索。",
+      message: "已完成分析，但当前规则未形成结构化页面 Evidence。",
       tone: "success",
     };
   }
@@ -94,12 +87,11 @@ export function analysisStatePresentation(
     };
   }
   if (input.inspection.available) {
-    const effects = quotedEffects(input.detectedEffects);
     return {
       code: "EVIDENCE_UNMAPPED",
       label: "发现线索 · 知识未映射",
       summary: "已发现线索，暂无映射",
-      message: `已发现${effects}相关页面表达，但当前已核验知识库尚未建立该线索到抽检风险方向的映射。`,
+      message: "已保留页面 Evidence，但当前已核验知识库尚未建立其到抽检风险方向的可靠映射。",
       tone: "info",
     };
   }
@@ -110,16 +102,4 @@ export function analysisStatePresentation(
     message: "该次快照已完成分析并保留页面证据，但暂无可读取的抽检辅助建议；人工复核仍然可用。",
     tone: "neutral",
   };
-}
-
-export function productCluePresentation(
-  snapshot: Pick<SnapshotSummary, "readiness" | "detectedEffects">,
-) {
-  if (!snapshot.readiness.analysisReady) {
-    return "尚未完成线索分析";
-  }
-  if (snapshot.detectedEffects.length === 0) {
-    return "已分析，未发现当前规则线索";
-  }
-  return snapshot.detectedEffects.join("、");
 }

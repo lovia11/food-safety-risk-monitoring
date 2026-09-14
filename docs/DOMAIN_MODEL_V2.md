@@ -5,7 +5,7 @@
 > Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
 > Owner: Project
 
-This is the domain-design prerequisite for future schema and API work. ProductFact, HealthFoodIdentity, ClaimMention, and ClaimSignal are current in schema 11. Entities explicitly labeled “Future” remain proposals rather than migration authorization.
+This document governs current and future schema/API domain work. ProductFact, HealthFoodIdentity, ClaimMention, and ClaimSignal are current in schema 11. Entities explicitly labeled “Future” remain proposals rather than migration authorization.
 
 ## 1. Modeling rules
 
@@ -27,9 +27,9 @@ This is the domain-design prerequisite for future schema and API work. ProductFa
 | ProductSnapshot | One concrete observation, identified by `snapshot_id`. | Product + Task + observed-time scoped; source facts immutable after capture. | Owns Evidence, analysis, ProductFacts, ClaimMentions/ClaimSignals, Review, and recommendation. | **Current** core; future relations extend it. SQLite index + run artifacts. |
 | Evidence | Source-preserving observation, identified by `evidence_id`. | Snapshot-scoped; immutable historical observation. | Points to exact artifact/source text, origin class and analysis hit. | **Current.** SQLite index with underlying run artifact authority. |
 | ProductFact | Normalized page fact with raw source and verification state. | Snapshot-scoped; derived projection is rebuildable, source immutable. | Derived from exact DOM/OCR artifact; future context and identity logic may consume it only through separately approved contracts. | **Current V2-2.** `product_facts.json` authority + generic SQLite table/read model; only `declared_origin` exists. |
-| ClaimMention | One observed page expression occurrence, identified by `claim_mention_id`. | Snapshot- and Evidence-scoped; derived and versioned without replacing source text. | Retains raw/normalized text, exact matched expression, seller-managed source scope, asset type/locator, extraction method and taxonomy version. | **Current V2-5B1.** `claim_analysis.json` authority plus schema 11 rebuildable projection. |
-| ClaimSignal | One governed marketing topic aggregated from one or more ClaimMentions, identified by `claim_signal_id`. | Snapshot-scoped; derived and versioned. | References complete same-Snapshot mention/Evidence sets and a governed `claim_type`; it is neither an Effect fact, HealthFunction nor RiskSignal. | **Current V2-5B1.** Current Effect hits remain a separate legacy operational path. |
-| ClaimTaxonomyTerm | Governed page-marketing topic identified by stable `claim_type`. | Knowledge-dataset scoped; versioned lifecycle. | V2 Claim terms are separate from official HealthFunction, Risk and disease/treatment vocabularies; any cross-layer relation requires an explicit governed mapping. | **Current V2-5B1 runtime authority.** `config/claim_taxonomy_v2.json`. |
+| ClaimMention | One observed page expression occurrence, identified by `claim_mention_id`. | Snapshot- and Evidence-scoped; derived and versioned without replacing source text. | Retains raw/normalized text, exact matched expression, seller-managed source scope, asset type/locator, extraction method and taxonomy version. | **Current V2-5.** `claim_analysis.json` authority plus schema 11 rebuildable projection and Evidence-linked presentation. |
+| ClaimSignal | One governed marketing topic aggregated from one or more ClaimMentions, identified by `claim_signal_id`. | Snapshot-scoped; derived and versioned. | References complete same-Snapshot mention/Evidence sets and a governed `claim_type`; it is neither an Effect fact, HealthFunction nor RiskSignal. | **Current V2-5.** Current Effect hits remain a separate legacy operational path. |
+| ClaimTaxonomyTerm | Governed page-marketing topic identified by stable `claim_type`. | Knowledge-dataset scoped; versioned lifecycle. | V2 Claim terms are separate from official HealthFunction, Risk and disease/treatment vocabularies; any cross-layer relation requires an explicit governed mapping. | **Current V2-5 runtime/filter/presentation authority.** `config/claim_taxonomy_v2.json`. |
 | HealthFoodIdentity | Resolution for whether a Snapshot matches an official health-food product. | Snapshot-scoped assessment; re-evaluable under recorded sources. | Uses page identity clues and registry records; never logo/number-only. | **Current V2-3.** `health_food_identity.json` authority + SQLite read projection. |
 | HealthFoodRegistryRecord | Official registration/filing record, identified by authoritative registry identifier. | Identifier/retrieval-time scoped; cached with freshness metadata. | Provides official product identity and verbatim official functions with source provenance. | **Current V2-3.** Raw official artifact/cache + normalized SQLite projection. |
 | HealthFunction | Official normalized function under a defined framework/version. | Knowledge-dataset and jurisdiction scope. | Linked to registry records and only to ClaimSignals through explicit mappings. | **Future.** Governed dataset. |
@@ -120,7 +120,7 @@ A boolean `is_health_food` cannot represent unverified clues, mismatched registr
 
 Official health functions are preserved verbatim as `officialHealthFunctions[]`. They are not a current HealthFunction taxonomy and are not compared with page claims until a separately approved V2-6 consistency/mapping gate. Identity enrichment has no Review/Sampling side effect and is not part of `reviewEligible`.
 
-## 6. Claim domain contract — CURRENT V2-5B1 runtime
+## 6. Claim domain contract — CURRENT V2-5 runtime and primary presentation
 
 ```text
 ProductSnapshot
@@ -138,6 +138,8 @@ Formal Claim input is seller-managed Evidence only. UGC remains auxiliary and `e
 `claim_analysis.json` is the Snapshot-derived authority. Mention identity is a deterministic hash of Snapshot ID, Evidence ID, governed expression ID, and same-expression occurrence ordinal. Signal identity is a deterministic hash of Snapshot ID, Claim type, and taxonomy version. Every literal occurrence is retained, including overlaps between governed expressions; output order is Evidence order → taxonomy expression order → occurrence order, followed by taxonomy Claim-type order for signals.
 
 Schema 11 projects Claims into `claim_mentions`, `claim_signals`, and `claim_signal_mentions`. Re-import transactionally replaces one Snapshot's derived projection without modifying Review, Sampling, ProductFact, HealthFoodIdentity, Evidence authority, or legacy Phase3 fields. A complete artifact with empty arrays is a successful zero-Claim result. Missing artifact is `not_generated`; invalid or failed sidecar is `error`. Claim availability is not a Review eligibility gate.
+
+V2-5B2 projects compact ClaimSignal summaries from those SQLite rows for Product lists, Review Queue, and current Sampling without reading per-row artifacts. Every summary remains tied to the representative/source Snapshot; Claim history is not aggregated across a Product. Primary UI never synthesizes ClaimSignal from the separate legacy Effect fields.
 
 ### 6.1 Cross-domain separation
 

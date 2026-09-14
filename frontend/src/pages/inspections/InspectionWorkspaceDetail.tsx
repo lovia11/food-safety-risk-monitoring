@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SnapshotWorkspace } from "../../api/contracts";
 import { getSnapshotWorkspace, updateInspectionContext } from "../../api/products";
 import { EmptyState } from "../../components/EmptyState";
+import { ClaimAnalysisSection } from "../../components/ClaimAnalysisSection";
 import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
 import { LoadingState } from "../../components/LoadingState";
@@ -55,7 +56,6 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
   const analysis = useMemo(() => workspace ? analysisStatePresentation({
     readiness: workspace.snapshot.readiness,
     evidence: workspace.evidence,
-    detectedEffects: workspace.snapshot.detectedEffects,
     inspection: workspace.inspection,
   }) : null, [workspace]);
 
@@ -126,6 +126,12 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
         evidence={workspace.evidence}
         assets={workspace.assets}
         runId={workspace.snapshot.taskId}
+      />
+      <ClaimAnalysisSection
+        status={workspace.claimAnalysisStatus}
+        signals={workspace.claimSignals}
+        mentions={workspace.claimMentions}
+        evidence={workspace.evidence}
       />
       <RecommendationPanel inspection={workspace.inspection} analysis={analysis} />
       {needsProductContext(workspace.inspection) && <ProductContextForm context={workspace.inspection.context} saving={savingContext} onSave={saveContext} />}

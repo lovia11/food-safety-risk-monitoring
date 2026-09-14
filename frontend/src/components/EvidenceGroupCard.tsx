@@ -5,6 +5,7 @@ import {
   evidenceGroupAssets,
   type EvidenceSourceGroup,
 } from "../domain/evidence";
+import { evidenceAnchorId } from "../domain/claims";
 import { runFileUrl } from "../domain/product";
 import { ProductThumbnail } from "./ProductThumbnail";
 
@@ -22,15 +23,17 @@ function EvidenceSnippetView({
 }: {
   snippet: EvidenceSourceGroup["snippets"][number];
 }) {
-  const tags = [...new Set([...snippet.effects, ...snippet.matchedKeywords])];
   return (
     <li className="evidence-snippet">
+      {snippet.evidenceIds.map((evidenceId) => (
+        <span
+          className="evidence-anchor"
+          id={evidenceAnchorId(evidenceId)}
+          key={evidenceId}
+          tabIndex={-1}
+        />
+      ))}
       <blockquote>“{snippet.text}”</blockquote>
-      {tags.length > 0 && (
-        <div className="evidence-snippet-tags" aria-label="命中的线索与关键词">
-          {tags.map((tag) => <span key={tag}>{tag}</span>)}
-        </div>
-      )}
     </li>
   );
 }

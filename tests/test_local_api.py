@@ -666,6 +666,14 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertIsNone(products[0]["targetId"])
                 self.assertIsNone(products[0]["targetName"])
                 self.assertEqual(products[0]["snapshotCount"], 1)
+                self.assertEqual(products[0]["claimAnalysisStatus"], "complete")
+                self.assertEqual(
+                    [
+                        (item["claimType"], item["mentionCount"])
+                        for item in products[0]["claimSignalSummaries"]
+                    ],
+                    [("sleep_related", 1), ("weight_management", 1)],
+                )
                 self.assertEqual(
                     products[0]["thumbnailUrl"],
                     f"/api/snapshots/{products[0]['snapshotId']}/thumbnail",
@@ -688,6 +696,10 @@ class LocalApiHelpersTest(unittest.TestCase):
                 self.assertIn(
                     {"value": "助眠", "label": "助眠"},
                     filter_options["effects"],
+                )
+                self.assertIn(
+                    {"value": "sleep_related", "label": "睡眠相关宣传"},
+                    filter_options["claimTypes"],
                 )
                 self.assertTrue(
                     any(
@@ -743,6 +755,16 @@ class LocalApiHelpersTest(unittest.TestCase):
                     mismatched = json.load(response)
                 self.assertEqual(mismatched["products"], [])
                 self.assertEqual(mismatched["total"], 0)
+                with urlopen(
+                    f"{base}/api/products?claim_type=sleep_related"
+                ) as response:
+                    claim_filtered = json.load(response)
+                self.assertEqual(claim_filtered["total"], 1)
+                self.assertEqual(claim_filtered["products"][0]["productId"], "123")
+                self.assertEqual(
+                    claim_filtered["products"][0]["claimSignalSummaries"][0]["claimType"],
+                    "sleep_related",
+                )
                 for parameters in (
                     "page=0",
                     "page=invalid",
@@ -750,6 +772,7 @@ class LocalApiHelpersTest(unittest.TestCase):
                     "page_size=101",
                     "review_status=invalid",
                     "sampling_status=historical",
+                    "claim_type=not-a-governed-claim",
                     "collected_from=09-03-2026",
                     "collected_from=2026-09-04&collected_to=2026-09-03",
                 ):

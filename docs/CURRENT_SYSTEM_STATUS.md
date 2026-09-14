@@ -6,7 +6,7 @@
 > V2-5A design starting baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
 > Owner: Project
 
-This document describes implemented behavior through the V2-5B1 Claim runtime core. Future UX migration and cross-domain mapping requirements belong in the other canonical V2 documents.
+This document describes implemented behavior through the completed V2-5 Claim domain, runtime, and primary presentation. Cross-domain Claim consistency and mapping remain future V2-6 work.
 
 ## Baseline
 
@@ -52,7 +52,7 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Review and Sampling repositories do not mutate each other. Application-level decision transactions coordinate compound business actions.
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
-- V2-5B1 implements Snapshot-scoped ClaimMention and ClaimSignal runtime records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; schema 11 provides rebuildable `claim_mentions`, `claim_signals`, and `claim_signal_mentions` projections. The Snapshot/detail API exposes `claimAnalysisStatus`, `claimMentions`, and `claimSignals`, while the visible frontend remains on the legacy Effect presentation until V2-5B2.
+- V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; schema 11 provides rebuildable `claim_mentions`, `claim_signals`, and `claim_signal_mentions` projections. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
 - `claim-taxonomy-v2.0` remains the sole governed runtime taxonomy with 5 Claim types and 26 exact expressions. ClaimSignal is not an Official Health Function, RiskSignal, legality conclusion, substance, method, or Recommendation trigger. UGC and `excluded_other_product` Evidence cannot create formal Claims; SearchQuery/task keywords are not Claim input.
 
 ## Current product-reading UX
@@ -65,6 +65,8 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Seller-managed Evidence is primary, UGC is explicitly auxiliary, and excluded-other-product content is outside the primary counts.
 - Saved images and OCR text open in an in-application modal. Image preview supports close/escape/backdrop, previous/next, zoom, viewport containment, and the Evidence associated with the active image.
 - Analysis presentation distinguishes not analyzed, analyzed with zero Evidence, Evidence without a verified mapping, mapped Risk without a verified Method, available Recommendation, unavailable Recommendation, and Recommendation error.
+- 页面宣传线索 is the primary Claim presentation in Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling. Complete-with-Claims, complete-zero, not-generated, and error remain distinct; ClaimMention expansion shows original text, the exact expression, friendly source type, and existing Evidence trace.
+- Legacy Effect badges/keywords are hidden from the active primary Claim UX. Frozen Sampling history is unchanged and, when shown, is explicitly labeled 旧版冻结分析结果 rather than V2 Claim.
 - Search-page region and product-declared origin are independent keys. Explicit seller-managed DOM parameters and conservatively labeled detail-image OCR may supply `declared_origin`; search region, title wording, UGC, shipping, seller/manufacturer/warehouse addresses and raw-material origin never do.
 - Product Detail and Inspection Workspace expose a separate 保健食品身份 section. Only a valid unambiguous identifier, a found official record, and formatting-normalized exact equality with an explicit page product name can display `保健食品 · 已核验`. Page and official sources remain separate; candidates, unavailable lookup, not-found, mismatch and conflict remain explicit.
 - A missing declared origin is `—`. Equal DOM/OCR values retain both sources under one presentation value; different explicit values are displayed as a conflict without automatic arbitration.
@@ -126,16 +128,17 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-4 exit validation: Batch `v2-4b-batch-02c` human review skipped ambiguous Rank 8 and used Rank 11, producing 10 assessable / 9 relevant / 1 raw-scope / 90% observed relevance and `promote`. The immutable result is [Batch 02C](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md). Targeted Monitor/query/task regression passed 74/74; Historical Validation builder passed 6/6; Python full regression discovered 462 / passed 461 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. All B7 validation was offline; no Detail or downstream processing ran.
 - V2-5A Claim Taxonomy & Domain Contract is **DESIGN BASELINE / COMPLETE**. The machine-readable `claim-taxonomy-v2.0` covers every one of the 26 current legacy expressions exactly once across five marketing topics, with no taxonomy gap and no HealthFunction/Risk/inspection mapping. Claim taxonomy tests passed 14/14; Monitor regression passed 74/74; Python full regression discovered 476 / passed 475 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline and schema remains 10.
 - V2-5B1 ClaimMention / ClaimSignal runtime core is **COMPLETE**. Deterministic seller-managed extraction, UGC/excluded-source blocking, zero/not-generated/error artifact semantics, schema 10→11 preservation and rebuild, additive Snapshot API projection, and legacy Effect/Risk/Recommendation/Review/Sampling compatibility are covered. Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline with no Detail, OCR or external network execution.
+- V2-5B2 Claim UX and legacy presentation migration is **COMPLETE**. Primary active-Snapshot surfaces use V2 Claim projections; Product list filtering is exact and same-Snapshot; ClaimMention source drill-down reuses Evidence; current Sampling and frozen legacy history stay distinct. Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No taxonomy, schema, Risk/Recommendation, Review/Sampling business state, frozen export, Detail/OCR, or external network behavior changed.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-5B2 Claim UX and legacy presentation migration. The current visible 页面功效线索 UI is intentionally unchanged in B1.
-- **FUTURE CHANGE:** claim-consistency assessment and explicit Claim-to-HealthFunction/Claim-to-Risk mappings.
+- **NEXT:** V2-6 Health-food Claim Consistency, subject to a separate human Gate.
+- **FUTURE CHANGE:** claim-consistency assessment and any explicit Claim-to-HealthFunction or Claim-to-Risk mapping. No such mapping exists at the V2-5 baseline.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. The parallel V2 Claim runtime does not consume those effect conclusions and blocks UGC formally without rewriting legacy Evidence or frozen exports.
+- Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 
