@@ -4,7 +4,7 @@
 
 - Branch: `ux-redesign-v1`
 - V2-4 Wave 1 starting commit: `698b8ad482367ffbd20ba696799c47ebd372d2c3`
-- SQLite schema: 10
+- SQLite schema: 11
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
 
@@ -21,7 +21,7 @@
 - Snapshot-scoped ProductFact extraction for explicit `declared_origin`, with DOM/OCR provenance, conflict presentation and source trace
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
-- V2 Claim design baseline with separate ClaimMention/ClaimSignal contracts, seller-managed Evidence boundary, and a governed 5-type/26-expression exact taxonomy
+- V2 Claim runtime core with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 projection, and additive Snapshot API fields
 
 ## Current Coverage
 
@@ -39,16 +39,18 @@ V2-4 is complete. Wave 1 promoted five standard-name Queries and held 乌梅; Wa
 
 V2-5A Claim Taxonomy & Domain Contract is complete. All 5 legacy Effect labels and 26 exact keywords were inventoried from the repository and migrated exactly once into five marketing-topic Claim types with no gap. ClaimSignal remains separate from HealthFunction, RiskSignal and InspectionRecommendation; formal Claim sources are seller-managed only. Claim taxonomy tests passed 14/14, Monitor regression passed 74/74, Python full regression discovered 476 / passed 475 / skipped 1, and frontend workflow 26/26, typecheck and build passed offline.
 
+V2-5B1 Claim runtime core validation passed offline: Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Claim derivation, artifact/rebuild, schema 10→11 preservation, additive Snapshot API, legacy bridge/Recommendation, Review/Sampling and Monitor compatibility are covered without Detail, OCR or external network execution.
+
 ## Known Limitations
 
-Production ClaimMention/ClaimSignal extraction/storage/API/UI, additional ProductFact types, human fact editing, claim-consistency assessment, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. Current Phase3 still emits the legacy Effect compatibility contract; no runtime behavior changed in V2-5A. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Visible Claim UX migration, additional ProductFact types, human fact editing, claim-consistency assessment, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2-5B1 now derives formal Claims from seller-managed Evidence in parallel, while Phase3 still emits the unchanged legacy Effect compatibility contract. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
-V2-5A — COMPLETE. Claim Taxonomy & Domain Contract design baseline is frozen; schema remains 10 and runtime Claim extraction is unchanged.
+V2-5B1 — COMPLETE. ClaimMention/ClaimSignal runtime core, artifact authority, schema 11 projection, and additive Snapshot API contract are implemented; visible UX remains unchanged.
 
 ## Next Gate
 
-V2-5B ClaimMention / ClaimSignal runtime implementation is NEXT and requires a separate human Gate.
+V2-5B2 Claim UX and legacy presentation migration is NEXT and requires a separate human Gate.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

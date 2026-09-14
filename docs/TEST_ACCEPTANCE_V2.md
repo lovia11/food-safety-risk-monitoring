@@ -17,7 +17,7 @@ Every implementation report states the starting commit, changed files, schema/AP
 - Links resolve and canonical documents link to the right authority.
 - Terminology matches the registry in Product Requirements.
 - Current implementation and Future changes are distinguishable.
-- Active docs identify schema 10 as the sole current schema; prior-version details remain only in archived or explicit migration history.
+- Active docs identify schema 11 as the sole current schema; prior-version details remain only in archived or explicit migration history.
 - Retired IA and `web/` do not appear as current.
 - Archived material is marked non-normative and is never cited as a higher authority.
 - A cold-start reader can answer the 16 canonical baseline questions without chat context.
@@ -99,7 +99,7 @@ Real validation compares a bounded set with official records and preserves the l
 
 ## 7. Claim gate
 
-### 7.1 V2-5A design baseline — Current
+### 7.1 V2-5A design baseline — Accepted history
 
 Acceptance requires:
 
@@ -113,9 +113,23 @@ Acceptance requires:
 - ClaimSignal, HealthFunction, RiskSignal, and InspectionRecommendation have separate contracts;
 - no Claim type or expression contains Risk, HealthFunction, legality, substance, method, or inspection mapping;
 - deterministic schema/governance tests, full Python regression, Monitor regression, frontend workflow, typecheck, and build pass offline;
-- schema remains 10 and production Claim extraction behavior is unchanged.
+- the V2-5A acceptance itself left schema 10 and production Claim extraction unchanged.
 
-### 7.2 Future V2-5B/V2-6 runtime gates
+### 7.2 V2-5B1 Claim runtime core — Current
+
+Acceptance requires:
+
+- the strict runtime loader consumes only `config/claim_taxonomy_v2.json`, rejects duplicate/unknown IDs, unsupported modes, missing provenance, and forbidden cross-domain mappings;
+- literal substring matching retains every configured overlapping expression and every repeated occurrence with deterministic IDs and ordering;
+- only seller-managed Evidence creates formal ClaimMentions; UGC and `excluded_other_product` remain retained outside formal Claims, while SearchQuery/task keywords are never Claim input;
+- each Mention retains raw/normalized text, expression identity, Evidence ID, asset type and source locator; each Signal retains every Mention/Evidence ID;
+- zero Claim is a valid complete artifact, while missing and failed/invalid artifacts remain `not_generated` and `error`;
+- schema 10→11 is additive, preserves all entities and human Review/Sampling state, and rebuilds Claim projections transactionally from `claim_analysis.json` without rerunning Detail/OCR/Phase3;
+- Snapshot/detail APIs add Claim status/Mentions/Signals while legacy Effect fields remain available;
+- Claim success/zero/failure cannot change Analysis readiness, Review eligibility/state, Sampling, Risk bridge, or Recommendation;
+- pipeline, API, schema, compatibility, full Python, Monitor, frontend workflow, typecheck, and build regressions pass offline with zero live collection/OCR/network work.
+
+### 7.3 Future V2-5B2/V2-6 gates
 
 At minimum test:
 

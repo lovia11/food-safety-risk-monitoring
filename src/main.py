@@ -10,7 +10,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from src.data_store import make_snapshot_id
+from src.claim_analysis import (
+    CLAIM_ANALYSIS_FILE,
+    record_claim_analysis_failure,
+    write_claim_analysis,
+)
+from src.data_store import make_evidence_id, make_snapshot_id
 from src.discovery import DiscoveryCoordinator
 from src.inspection_runtime import (
     DEFAULT_INSPECTION_CONFIG_PATH,
@@ -237,6 +242,52 @@ class StandalonePipeline:
                 "商品%s 保健食品身份抽取失败；继续执行风险分析", product_id
             )
 
+    def _extract_claim_analysis(self, product_id: str, product_root: Path) -> None:
+        """Derive the degradable V2 Claim sidecar from persisted Evidence details."""
+
+        snapshot_id = make_snapshot_id(self.run_root.name, product_id)
+        try:
+            analysis = read_json(product_root / "analysis.json")
+            if not isinstance(analysis, dict):
+                raise ValueError("analysis.json must contain an object")
+            evidence_details = analysis.get("evidence_details")
+            if not isinstance(evidence_details, list):
+                raise ValueError("analysis.json evidence_details must be an array")
+            evidence_records = []
+            for ordinal, item in enumerate(evidence_details, start=1):
+                if not isinstance(item, dict):
+                    raise ValueError(
+                        f"analysis.json evidence_details[{ordinal - 1}] must be an object"
+                    )
+                evidence_records.append(
+                    {
+                        **item,
+                        "evidenceId": make_evidence_id(snapshot_id, ordinal),
+                        "snapshotId": snapshot_id,
+                    }
+                )
+            payload = write_claim_analysis(
+                product_root,
+                snapshot_id,
+                evidence_records,
+            )
+            self.logger.info(
+                "商品%s Claim analysis完成：%s mentions / %s signals / %s",
+                product_id,
+                len(payload["claimMentions"]),
+                len(payload["claimSignals"]),
+                payload["taxonomyVersion"],
+            )
+        except Exception as exc:
+            try:
+                record_claim_analysis_failure(product_root, snapshot_id, exc)
+            except Exception:
+                self.logger.exception("商品%s Claim失败诊断写入失败", product_id)
+            self.logger.exception(
+                "商品%s Claim analysis失败；不影响风险分析、复核或抽检状态",
+                product_id,
+            )
+
     def _records_and_batch_payload(
         self,
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -410,6 +461,8 @@ class StandalonePipeline:
                     self._extract_product_facts(product_id, product_root)
                 if not (product_root / "health_food_identity.json").is_file():
                     self._extract_health_food_identity(product_id, product_root)
+                if not (product_root / CLAIM_ANALYSIS_FILE).is_file():
+                    self._extract_claim_analysis(product_id, product_root)
                 if self.inspection_runtime is None or recommendation_exists:
                     self.logger.info("商品%s已有成功分析结果，断点续跑跳过", product_id)
                     continue
@@ -455,6 +508,7 @@ class StandalonePipeline:
                     self.options.rule_config,
                     write_run_outputs=False,
                 )
+                self._extract_claim_analysis(product_id, product_root)
                 set_state(state, ProductStatus.SUCCESS)
                 generated = self._generate_inspection_recommendation(product_root)
                 self.web_message = (

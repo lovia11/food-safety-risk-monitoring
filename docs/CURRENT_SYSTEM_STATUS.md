@@ -6,13 +6,13 @@
 > V2-5A design starting baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
 > Owner: Project
 
-This document describes implemented behavior through the V2-4 delivery and the accepted V2-5A Claim design baseline. Future runtime requirements belong in the other canonical V2 documents.
+This document describes implemented behavior through the V2-5B1 Claim runtime core. Future UX migration and cross-domain mapping requirements belong in the other canonical V2 documents.
 
 ## Baseline
 
 - Branch: `ux-redesign-v1`
 - V2-3 starting HEAD: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
-- SQLite schema: 10
+- SQLite schema: 11
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
 - Current primary navigation: 商品总览、排查档案、抽检清单
@@ -46,13 +46,14 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - One stable Product may have multiple ProductSnapshots.
 - Evidence remains snapshot-scoped and preserves seller-managed, UGC, and excluded-other-product origins.
 - ProductFact is Snapshot-scoped. Its authority is `product_facts.json`; SQLite is a rebuildable query projection. V2-2 implements only `declared_origin`.
-- HealthFoodIdentity is a separate Snapshot-scoped enrichment. Its authority is `health_food_identity.json`; SQLite schema 10 indexes the identity assessment and reusable normalized official record. Page clue, identifier candidate, official record and verified current-product match are never collapsed into one boolean.
+- HealthFoodIdentity is a separate Snapshot-scoped enrichment. Its authority is `health_food_identity.json`; SQLite indexes the identity assessment and reusable normalized official record. Page clue, identifier candidate, official record and verified current-product match are never collapsed into one boolean.
 - Review is Snapshot-scoped with `pending`, `recommend_follow_up`, and `no_further_action`.
 - Current Sampling Membership is Product-scoped and records its source Snapshot.
 - Review and Sampling repositories do not mutate each other. Application-level decision transactions coordinate compound business actions.
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
-- V2-5A defines Snapshot-scoped ClaimMention and ClaimSignal contracts plus `claim-taxonomy-v2.0`. The 5 Claim types/26 exact expressions are a governed marketing-topic design baseline, not an Official Health Function or Risk taxonomy. Production Phase3/API/SQLite/frontend behavior still uses the legacy Effect compatibility contract.
+- V2-5B1 implements Snapshot-scoped ClaimMention and ClaimSignal runtime records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; schema 11 provides rebuildable `claim_mentions`, `claim_signals`, and `claim_signal_mentions` projections. The Snapshot/detail API exposes `claimAnalysisStatus`, `claimMentions`, and `claimSignals`, while the visible frontend remains on the legacy Effect presentation until V2-5B2.
+- `claim-taxonomy-v2.0` remains the sole governed runtime taxonomy with 5 Claim types and 26 exact expressions. ClaimSignal is not an Official Health Function, RiskSignal, legality conclusion, substance, method, or Recommendation trigger. UGC and `excluded_other_product` Evidence cannot create formal Claims; SearchQuery/task keywords are not Claim input.
 
 ## Current product-reading UX
 
@@ -96,7 +97,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Paused Reference targets | 2 |
 | Separate development-seed targets/queries | 1 / 2 |
 | Legacy/current Phase3 clue categories/keywords | 5 / 26 |
-| V2 Claim design-baseline types/expressions | 5 / 26 |
+| V2 Claim runtime types/expressions | 5 / 26 |
 | Evidence-to-risk Bridge mappings | 3 |
 | Risk-to-substance/group mappings | 8 |
 | Inspection methods | 5 |
@@ -124,16 +125,17 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-4B6 validation: PART A targeted Monitor governance tests 47/47; final Monitor/Query regression 56/56; Python 461 discovered / 460 passed / 1 skipped; frontend workflow 24/24; frontend typecheck and production build passed. Batch `v2-4b-batch-02c` collected 15 unique `食用百合` Search Result cards with every human-review and decision field still empty. No Detail or downstream processing ran.
 - V2-4 exit validation: Batch `v2-4b-batch-02c` human review skipped ambiguous Rank 8 and used Rank 11, producing 10 assessable / 9 relevant / 1 raw-scope / 90% observed relevance and `promote`. The immutable result is [Batch 02C](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md). Targeted Monitor/query/task regression passed 74/74; Historical Validation builder passed 6/6; Python full regression discovered 462 / passed 461 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. All B7 validation was offline; no Detail or downstream processing ran.
 - V2-5A Claim Taxonomy & Domain Contract is **DESIGN BASELINE / COMPLETE**. The machine-readable `claim-taxonomy-v2.0` covers every one of the 26 current legacy expressions exactly once across five marketing topics, with no taxonomy gap and no HealthFunction/Risk/inspection mapping. Claim taxonomy tests passed 14/14; Monitor regression passed 74/74; Python full regression discovered 476 / passed 475 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline and schema remains 10.
+- V2-5B1 ClaimMention / ClaimSignal runtime core is **COMPLETE**. Deterministic seller-managed extraction, UGC/excluded-source blocking, zero/not-generated/error artifact semantics, schema 10→11 preservation and rebuild, additive Snapshot API projection, and legacy Effect/Risk/Recommendation/Review/Sampling compatibility are covered. Python full regression discovered 496 / passed 495 / skipped 1; frontend workflow passed 26/26; typecheck and production build passed. Validation was fully offline with no Detail, OCR or external network execution.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-5B production ClaimMention/ClaimSignal artifact, storage, API and UI implementation under a separate Gate.
+- **NEXT:** V2-5B2 Claim UX and legacy presentation migration. The current visible 页面功效线索 UI is intentionally unchanged in B1.
 - **FUTURE CHANGE:** claim-consistency assessment and explicit Claim-to-HealthFunction/Claim-to-Risk mappings.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
-- Current production Claim extraction still uses `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. The known UGC compatibility behavior is documented in [CLAIM_TAXONOMY_V2.md](CLAIM_TAXONOMY_V2.md) for V2-5B migration; it was not changed in V2-5A.
+- Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. The parallel V2 Claim runtime does not consume those effect conclusions and blocks UGC formally without rewriting legacy Evidence or frozen exports.
 
 The five existing Effect categories are an operational Phase3 clue vocabulary, not the final V2 Claim taxonomy.
 

@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.claim_analysis import CLAIM_ANALYSIS_ERROR_FILE, CLAIM_ANALYSIS_FILE
 from src.data_store import DataStore, ReviewEligibilityError
 from src.local_api import task_business_dto
 from src.main import PipelineOptions, ProductStatus, StandalonePipeline, initial_state
@@ -244,6 +245,173 @@ class MixedPipelineIntegrationTest(unittest.TestCase):
 
 
 class OCRRuntimeInitializationIntegrationTest(unittest.TestCase):
+    def test_pipeline_derives_claim_sidecar_from_phase3_evidence_and_projects_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="发现策略词不进入 Claim",
+                    output_root=output_root,
+                    run_id="claim-pipeline",
+                )
+            )
+            product_id = "A"
+            candidate = {
+                "product_id": product_id,
+                "product_name": "商品 A",
+                "product_url": "https://item.example/A",
+                "rank": 1,
+            }
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            product_root = pipeline.products_root / product_id
+            (product_root / "analysis.json").unlink()
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.search_payload = {
+                "keyword": "减肥",
+                "candidates": [candidate],
+            }
+
+            def write_analysis(target, *_args, **_kwargs):
+                write_json(
+                    target / "analysis.json",
+                    {
+                        "detected_effects": ["助眠"],
+                        "review_required": True,
+                        "risk_reason": "legacy output",
+                        "evidence_details": [
+                            {
+                                "effect": "助眠",
+                                "text": "本品帮助安睡",
+                                "matched_keywords": ["安睡"],
+                                "source_type": "ocr",
+                                "source_label": "详情图 OCR",
+                                "content_origin": "seller_managed",
+                                "source_path": "ocr/original_002.txt",
+                                "line_number": 1,
+                            }
+                        ],
+                    },
+                )
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr"),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+            ):
+                pipeline._process_products()
+
+            artifact = read_json(product_root / CLAIM_ANALYSIS_FILE)
+            self.assertEqual(artifact["status"], "complete")
+            self.assertEqual(
+                [item["matchedExpression"] for item in artifact["claimMentions"]],
+                ["安睡"],
+            )
+            self.assertEqual(artifact["claimSignals"][0]["claimType"], "sleep_related")
+            self.assertEqual(
+                pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS
+            )
+
+            pipeline.web_stage = "completed"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(
+                pipeline.run_root / "task_request.json",
+                {
+                    "task_id": pipeline.run_root.name,
+                    "keyword": "减肥",
+                    "candidate_limit": 1,
+                    "detail_limit": 1,
+                },
+            )
+            store = DataStore(root / "data" / "app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            detail = store.get_snapshot(store.list_products()[0]["snapshotId"])
+            self.assertTrue(detail["readiness"]["reviewEligible"])
+            self.assertEqual(detail["review"]["status"], "pending")
+            self.assertEqual(detail["claimAnalysisStatus"], "complete")
+            self.assertEqual(detail["claimSignals"][0]["claimType"], "sleep_related")
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
+    def test_claim_sidecar_failure_is_degradable_and_does_not_change_review_readiness(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_root = root / "output"
+            pipeline = StandalonePipeline(
+                PipelineOptions(
+                    keyword="Claim 降级",
+                    output_root=output_root,
+                    run_id="claim-failure",
+                )
+            )
+            product_id = "A"
+            candidate = {
+                "product_id": product_id,
+                "product_name": "商品 A",
+                "product_url": "https://item.example/A",
+                "rank": 1,
+            }
+            _write_analysis_ready_product(pipeline.run_root, product_id)
+            product_root = pipeline.products_root / product_id
+            (product_root / "analysis.json").unlink()
+            pipeline.prepared_roots[product_id] = product_root
+            pipeline.state_by_id[product_id] = initial_state(candidate)
+            pipeline.search_payload = {"keyword": "Claim 降级", "candidates": [candidate]}
+
+            def write_analysis(target, *_args, **_kwargs):
+                write_json(
+                    target / "analysis.json",
+                    {
+                        "detected_effects": [],
+                        "review_required": False,
+                        "risk_reason": "分析完成",
+                        "evidence_details": [],
+                    },
+                )
+
+            with (
+                patch("src.main.create_ocr_runtime", return_value=object()),
+                patch("src.main.run_ocr"),
+                patch("src.main.run_analysis", side_effect=write_analysis),
+                patch(
+                    "src.main.write_claim_analysis",
+                    side_effect=RuntimeError("claim sidecar unavailable"),
+                ),
+            ):
+                pipeline._process_products()
+
+            self.assertEqual(
+                pipeline.state_by_id[product_id]["status"], ProductStatus.SUCCESS
+            )
+            self.assertTrue((product_root / "analysis.json").is_file())
+            self.assertFalse((product_root / CLAIM_ANALYSIS_FILE).exists())
+            error = read_json(product_root / CLAIM_ANALYSIS_ERROR_FILE)
+            self.assertEqual(error["errorType"], "RuntimeError")
+            pipeline.web_stage = "completed"
+            pipeline._write_outputs(pipeline.search_payload)
+            write_json(
+                pipeline.run_root / "task_request.json",
+                {
+                    "task_id": pipeline.run_root.name,
+                    "keyword": "Claim 降级",
+                    "candidate_limit": 1,
+                    "detail_limit": 1,
+                },
+            )
+            store = DataStore(root / "data" / "app.db", output_root)
+            store.initialize()
+            store.import_run(pipeline.run_root)
+            detail = store.get_snapshot(store.list_products()[0]["snapshotId"])
+            self.assertTrue(detail["readiness"]["reviewEligible"])
+            self.assertEqual(detail["review"]["status"], "pending")
+            self.assertEqual(detail["claimAnalysisStatus"], "error")
+            for handler in list(pipeline.logger.handlers):
+                handler.close()
+                pipeline.logger.removeHandler(handler)
+
     def test_shared_runtime_failure_records_each_product_and_blocks_review(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

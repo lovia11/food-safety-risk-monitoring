@@ -120,6 +120,8 @@ These concepts must not be compressed into one `Effect` field. The five categori
 
 V2-5A further separates a page Claim into an Evidence-backed `ClaimMention` occurrence and a governed `ClaimSignal` marketing topic. A formal Claim can originate only from current-product seller-managed Evidence; UGC is auxiliary and other-product content is excluded. The system may say “检测到睡眠相关宣传表达” or “页面出现体重管理相关宣传”, but it must not say that the product has the effect, that the expression is an Official Health Function, or that it is legal/illegal. The initial V2 taxonomy and full legacy migration are governed by [CLAIM_TAXONOMY_V2.md](CLAIM_TAXONOMY_V2.md).
 
+V2-5B1 implements this Claim observation contract as a parallel, degradable runtime. `claim_analysis.json` is authoritative and schema 11/API projections are rebuildable; complete zero-Claim, not-generated, and error states remain distinct. Claim runtime success or failure does not change Review eligibility, Recommendation, Review, or Sampling. Visible 页面宣传线索 migration is deferred to V2-5B2, so current legacy Effect presentation remains a compatibility surface rather than Claim authority.
+
 ## 7. Product Facts
 
 **FUTURE CHANGE:** V2 will introduce provenance-bearing ProductFacts, initially including:

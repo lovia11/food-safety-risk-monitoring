@@ -102,7 +102,7 @@ class ClaimTaxonomySchemaTest(unittest.TestCase):
         self.assertEqual(self.taxonomy["status"], "design_baseline")
         self.assertEqual(
             self.taxonomy["metadata"]["runtime_status"],
-            "design_only_not_consumed",
+            "runtime_active_v2_5b1",
         )
 
     def test_claim_type_ids_are_unique_and_schema_is_bounded(self):

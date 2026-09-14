@@ -118,21 +118,31 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Real-world validation:** None; offline design/governance phase.
 - **Exit result:** All 26 legacy expressions map exactly once into five marketing topics with no taxonomy gap; the three legacy Effect/Risk bridges remain separately documented compatibility paths.
 
-### V2-5B — ClaimMention / ClaimSignal runtime implementation
+### V2-5B1 — ClaimMention / ClaimSignal runtime core
 
-**Status:** NEXT — implementation requires a separate human Gate.
+**Status:** COMPLETE — runtime, artifact, schema 11 projection, and additive Snapshot API contract implemented offline.
 
 - **Goal:** Produce provenance-bearing ClaimMention and ClaimSignal artifacts and expose them through compatible read models/API/UI.
 - **Dependencies:** Accepted V2-5A contract and taxonomy.
-- **In Scope:** Seller-managed exact-expression extraction, signal aggregation, artifact authority, additive storage/API implementation, compatibility migration and Claim presentation.
+- **In Scope:** Seller-managed exact-expression extraction, signal aggregation, artifact authority, additive storage/API implementation, and compatibility migration.
 - **Out of Scope:** Claim-to-HealthFunction consistency, automated RiskSignal, legality/compliance judgment, or new inspection mapping.
 - **Domain impact:** Implements the accepted ClaimMention/ClaimSignal entities without changing their meaning.
-- **Schema impact:** Additive only after migration/API review; schema 10 and human state must be preserved.
+- **Schema impact:** Additive schema 10→11; all prior entities and human Review/Sampling state are preserved.
 - **Data requirements:** Positive, zero-hit, multiple-mention, OCR trace, UGC-only, and excluded-other-product fixtures.
-- **UX impact:** Introduces 页面宣传线索 with original wording/source trace while preserving explicit compatibility states.
+- **UX impact:** Adds typed Claim DTOs only; visible 页面宣传线索 migration remains V2-5B2.
 - **Testing:** Exact extraction, provenance, aggregation, taxonomy version, source boundary, compatibility, migration/rebuild, and non-adjudication language.
-- **Real-world validation:** Separately approved bounded artifact corpus; no automatic vocabulary expansion.
+- **Real-world validation:** None in B1; offline deterministic fixtures only, with no Detail/OCR/network execution or vocabulary expansion.
 - **Exit criteria:** Runtime Claim records reproduce source Evidence, only eligible sources create formal signals, and legacy behavior is migrated without silent loss.
+
+### V2-5B2 — Claim UX and legacy presentation migration
+
+**Status:** NEXT — requires a separate human Gate.
+
+- **Goal:** Present the implemented ClaimSignal/ClaimMention contract as 页面宣传线索 and downgrade legacy Effect wording without deleting compatibility data.
+- **Dependencies:** Accepted V2-5B1 runtime core and additive Snapshot API.
+- **In Scope:** Claim workspace presentation, Mention source trace, explicit not-generated/error/zero states, and any approved Claim filters.
+- **Out of Scope:** Claim-to-HealthFunction consistency, automated RiskSignal, legality/compliance judgment, new inspection mapping, or legacy artifact deletion.
+- **Schema impact:** None expected; any change requires separate review.
 
 ## V2-6 — Health-food claim consistency
 

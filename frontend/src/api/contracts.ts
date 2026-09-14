@@ -173,6 +173,7 @@ export type SnapshotSummary = {
     product: string;
     meta: string | null;
     analysis: string | null;
+    claimAnalysis: string | null;
   };
   counts: {
     originalImages: number;
@@ -241,6 +242,40 @@ export type Evidence = {
   contentOrigin: string;
   sourcePath: string;
   lineNumber: number | null;
+};
+
+export type ClaimAnalysisStatus = "not_generated" | "complete" | "error";
+
+export type ClaimMentionDTO = {
+  claimMentionId: string;
+  snapshotId: string;
+  claimType: string;
+  expressionId: string;
+  rawText: string;
+  normalizedText: string;
+  matchedExpression: string;
+  evidenceId: string;
+  sourceScope: "seller_managed";
+  sourceAssetType: string;
+  sourceLocator: {
+    sourcePath: string;
+    lineNumber: number | null;
+  };
+  extractionMethod: "exact_literal_occurrence";
+  taxonomyVersion: string;
+  createdAt: string;
+};
+
+export type ClaimSignalDTO = {
+  claimSignalId: string;
+  snapshotId: string;
+  claimType: string;
+  displayLabel: string;
+  mentionIds: string[];
+  evidenceIds: string[];
+  taxonomyVersion: string;
+  status: "normalized";
+  createdAt: string;
 };
 
 export type ProductFact = {
@@ -432,6 +467,9 @@ export type InspectionView = {
 export type SnapshotWorkspace = {
   snapshot: Omit<SnapshotSummary, "review" | "sampling">;
   evidence: Evidence[];
+  claimAnalysisStatus: ClaimAnalysisStatus;
+  claimMentions: ClaimMentionDTO[];
+  claimSignals: ClaimSignalDTO[];
   productFacts: ProductFact[];
   declaredOrigin: DeclaredOrigin;
   healthFoodIdentity: HealthFoodIdentity;

@@ -363,7 +363,7 @@
     "created_at": "2026-09-14",
     "legacy_source": "config/effect_keywords.json",
     "authority": "governed_claim_taxonomy",
-    "runtime_status": "design_only_not_consumed",
+    "runtime_status": "runtime_active_v2_5b1",
     "formal_claim_source_policy": {
       "eligible_content_origins": ["seller_managed"],
       "auxiliary_only_content_origins": ["user_generated"],

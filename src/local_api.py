@@ -575,6 +575,11 @@ def create_handler(
                 )
                 snapshot = dict(detail)
                 evidence = snapshot.pop("evidence", [])
+                claim_analysis_status = snapshot.pop(
+                    "claimAnalysisStatus", "not_generated"
+                )
+                claim_mentions = snapshot.pop("claimMentions", [])
+                claim_signals = snapshot.pop("claimSignals", [])
                 product_facts = snapshot.pop("productFacts", [])
                 declared_origin = snapshot.pop(
                     "declaredOrigin",
@@ -588,6 +593,9 @@ def create_handler(
                     {
                         "snapshot": snapshot,
                         "evidence": evidence,
+                        "claimAnalysisStatus": claim_analysis_status,
+                        "claimMentions": claim_mentions,
+                        "claimSignals": claim_signals,
                         "productFacts": product_facts,
                         "declaredOrigin": declared_origin,
                         "healthFoodIdentity": health_food_identity,

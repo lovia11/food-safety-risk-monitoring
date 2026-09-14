@@ -1,7 +1,7 @@
 # Claim Taxonomy V2
 
 > Status: CANONICAL DESIGN BASELINE
-> Applies to: V2-5A
+> Applies to: V2-5
 > Design baseline: `90dbb484e2aa01b8dab7b3872723cd1f251eb5cf`
 > Owner: Project
 
@@ -13,19 +13,18 @@ This document freezes the V2 Claim domain boundary and the migration baseline fo
 
 It records observed page wording and its governed marketing topic. It does not verify efficacy, identify an Official Health Function, determine compliance or illegality, create a RiskSignal, assert that a substance is present, or select an inspection method.
 
-The governed machine-readable baseline is [`config/claim_taxonomy_v2.json`](../config/claim_taxonomy_v2.json), version `claim-taxonomy-v2.0`. V2-5A does not make the production runtime consume it.
+The governed machine-readable baseline is [`config/claim_taxonomy_v2.json`](../config/claim_taxonomy_v2.json), version `claim-taxonomy-v2.0`. V2-5A froze its design contract; V2-5B1 now consumes the same file as the sole runtime Claim taxonomy without changing its five Claim types or 26 expressions.
 
 ## 2. Non-goals
 
-V2-5A does not:
+V2-5B1 does not:
 
-- change collector, OCR, Phase3, Recommendation, task or server behavior;
-- extract ClaimMentions or ClaimSignals at runtime;
+- change collector, OCR, Phase3, Recommendation, Review, Sampling, or visible frontend behavior;
 - establish ClaimSignal-to-HealthFunction equivalence;
 - create Claim consistency, RiskSignal, legality, compliance or probability results;
 - add a Claim-to-Risk, Risk-to-Substance or inspection mapping;
 - expand the 26-expression legacy lexicon;
-- migrate SQLite or add an API endpoint.
+- remove or reinterpret the legacy Effect compatibility fields.
 
 ## 3. Terminology and invariants
 
@@ -57,7 +56,7 @@ For example, `sleep_related` means “页面出现睡眠相关宣传”, not “
 
 ## 4. ClaimMention domain contract
 
-ClaimMention is an observation-level, Snapshot-scoped derived record. Its minimum future contract is:
+ClaimMention is an observation-level, Snapshot-scoped derived record. Its current runtime contract is:
 
 | Field | Contract |
 |---|---|
@@ -80,7 +79,7 @@ One Evidence text unit may yield multiple ClaimMentions when it contains multipl
 
 ## 5. ClaimSignal domain contract
 
-ClaimSignal is a Snapshot-scoped normalization result. Its minimum future contract is:
+ClaimSignal is a Snapshot-scoped normalization result. Its current runtime contract is:
 
 | Field | Contract |
 |---|---|
@@ -121,7 +120,9 @@ OCR text cannot bypass Evidence. A detail-image occurrence must trace through th
 - `migration[]` Effect-to-Claim type migration records;
 - metadata, runtime status, source policy, and explicit taxonomy gaps.
 
-It contains no risk, HealthFunction, legality, substance, method, or inspection mapping. Current `match_mode` is only `exact`; V2-5A introduces no fuzzy, embedding, semantic-similarity, or LLM classification.
+It contains no risk, HealthFunction, legality, substance, method, or inspection mapping. Current `match_mode` is only `exact`; V2-5B1 implements deterministic formatting-normalized literal substring matching and introduces no fuzzy, embedding, semantic-similarity, or LLM classification.
+
+Every matching occurrence is retained. Overlapping governed expressions are not arbitrated by length: for `高血压`, both `血压` and `高血压` produce Mentions in taxonomy-expression order. Repeated occurrences of one expression in one Evidence record receive separate stable IDs through an internal occurrence ordinal; offsets are not exposed. Mention order is Evidence canonical order, taxonomy expression order, then occurrence order. Signal order is Claim-type order in the taxonomy.
 
 ### 7.1 Initial claim types
 
@@ -147,7 +148,7 @@ The current repository contains five Effect labels and 26 unique exact keywords 
 | Phase3 config | `effect_categories: effect label → keywords[]` | Substring matching of exact configured expression text across title, DOM, and OCR text units. | Legacy extraction input. |
 | Phase3 artifact | `analysis.json`: `detected_effects`, `matched_keywords`, `evidence_details[].effect` | Stores Effect summaries and source-specific matches. | Compatibility artifact; unchanged. |
 | Batch/run artifact | `batch_state.json`, reports and web snapshot risk projection | Repeats `detected_effects`, match and review fields. | Compatibility projection; unchanged. |
-| SQLite schema 10 | `product_snapshots.detected_effects_json`; `evidence.effect`; `evidence.matched_keywords_json` | Rebuildable legacy query projection. | No migration in V2-5A. |
+| SQLite schema 11 | Legacy Effect fields plus `claim_mentions`, `claim_signals`, `claim_signal_mentions` and per-Snapshot Claim artifact status/path | Rebuildable query projections. | Claim tables are additive; legacy fields and human state remain. |
 | API | `detectedEffects`, `effect`, `matchedKeywords`; `/api/products?effect=`; filter `effects[]` | Product/filter/workspace DTO compatibility contract. | Deprecated-future compatibility shape; unchanged. |
 | Frontend | 页面功效线索 table/filter, badges, detail/review/sampling presentations | Displays Effect labels and Evidence keywords from current DTOs. | Runtime unchanged; future UI contract is in section 13. |
 | Sampling export | `detectedEffects`, `pageEffectClues`, 页面功效线索 | Freezes legacy wording in historical lists. | Frozen history must not be rewritten. |
@@ -180,7 +181,7 @@ The bridge references two current group-level Risk mapping records. The complete
 
 Current `phase3_analysis.py` includes `user_generated` units in `evidence_details` and derives `detected_effects`/`review_required` from them. `effect_risk_bridge.py` also preserves and bridges a matching UGC Effect/keyword pair; downstream Recommendation downgrades it to auxiliary evidence rather than preventing the legacy RiskSignal. This conflicts with the V2 formal-Claim source boundary.
 
-V2-5A records the issue only. V2-5B must ensure UGC occurrences remain auxiliary observations and cannot create formal ClaimMentions/ClaimSignals. It must do so without rewriting historical Evidence or frozen Sampling exports. Existing excluded-other-product units are already separated as `excluded_evidence` and do not enter `detected_effects`.
+V2-5B1 blocks UGC occurrences before formal ClaimMention creation. UGC remains available as Evidence/legacy auxiliary context, and historical Evidence or frozen Sampling exports are not rewritten. Existing excluded-other-product units remain excluded and cannot create a current-Snapshot Claim.
 
 ## 9. Complete legacy migration
 
@@ -244,23 +245,30 @@ Authority is divided as follows:
 | Raw OCR/DOM/title artifact | `output/<run_id>/...` source files | Immutable captured text/image facts. |
 | Evidence | Current Evidence artifact/index and exact source trace | Source-preserving observation; not a normalized Claim. |
 | Claim taxonomy | `config/claim_taxonomy_v2.json` | Governed Claim type/expression meaning and version. |
-| ClaimMention/ClaimSignal | Future `claim_analysis.json` under the product Snapshot artifact directory | Rebuildable derived Claim domain authority using a recorded taxonomy version. |
-| Claim query projection | Future SQLite tables | Rebuildable index only; never sole authority for source wording. |
+| ClaimMention/ClaimSignal | Current `claim_analysis.json` under the product Snapshot artifact directory | Rebuildable derived Claim domain authority using a recorded taxonomy version. |
+| Claim query projection | SQLite schema 11 Claim tables | Rebuildable index only; never sole authority for source wording. |
 
-Future additive schema design may use `claim_mentions`, `claim_signals`, and `claim_signal_mentions`, with Evidence and Snapshot references plus taxonomy version. V2-5A does not create them. A later migration must preserve schema 10 data and human Review/Sampling state.
+Schema 11 adds `claim_mentions`, `claim_signals`, and `claim_signal_mentions`, with Evidence and Snapshot references plus taxonomy version. Import transactionally replaces one Snapshot's Claim projection from the artifact and preserves prior schema 10 data and human Review/Sampling state.
 
-Future workspace DTO shape should add:
+Snapshot/detail workspace DTOs now add:
 
 ```text
+claimAnalysisStatus
 claimMentions[]
 claimSignals[]
 ```
 
-Each mention supplies raw text and source trace; each signal supplies its governed type, display label, mention IDs, Evidence IDs, version, and status. Existing `detectedEffects`/`effect` fields may remain temporarily as `legacyEffects`-equivalent deprecated compatibility fields, but they are not the V2 canonical contract. V2-5A does not add or rename any runtime field.
+Each mention supplies raw text and source trace; each signal supplies its governed type, display label, mention IDs, Evidence IDs, version, and status. `claimAnalysisStatus=complete` with empty arrays is a successful zero-Claim analysis. `not_generated` means no artifact exists; `error` means sidecar generation or artifact validation failed. Existing `detectedEffects`/`effect` fields remain legacy compatibility fields and are neither removed nor used as Claim authority.
+
+### 12.1 V2-5B1 implementation status
+
+V2-5B1 is implemented as a degradable parallel sidecar in `src/claim_analysis.py`. The pipeline derives Claims only from the ordered, canonical-ID Evidence records persisted through the Phase3 analysis artifact. It writes `claim_analysis.json` atomically; failure writes `claim_analysis_error.json` and cannot alter Product status, Analysis/Review readiness, Review, Sampling, or Recommendation.
+
+The artifact contains `schemaVersion`, `status`, `taxonomyVersion`, `snapshotId`, `generatedAt`, formal `claimMentions[]`, aggregated `claimSignals[]`, `sourcePolicy`, and summary counts. SQLite is not authority and can rebuild the three Claim projection tables from the artifact without rerunning Detail, OCR, or Phase3.
 
 ## 13. UX language
 
-Future Claim UI uses the section title **页面宣传线索**. A summary is phrased, for example:
+V2-5B2 Claim UI will use the section title **页面宣传线索**. A summary is phrased, for example:
 
 ```text
 睡眠相关宣传

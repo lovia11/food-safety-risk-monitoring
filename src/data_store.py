@@ -16,6 +16,13 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
+from src.claim_analysis import (
+    CLAIM_ANALYSIS_ERROR_FILE,
+    CLAIM_ANALYSIS_FILE,
+    ClaimAnalysisValidationError,
+    load_claim_analysis,
+    load_claim_taxonomy,
+)
 from src.health_food_identity import (
     HEALTH_FOOD_IDENTITY_FILE,
     load_health_food_identity,
@@ -60,7 +67,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -118,6 +125,14 @@ def make_snapshot_id(task_id: str, product_id: str) -> str:
 
     digest = hashlib.sha256(f"{task_id}\0{product_id}".encode("utf-8")).hexdigest()
     return f"ps_{digest[:24]}"
+
+
+def make_evidence_id(snapshot_id: str, ordinal: int) -> str:
+    """Return the canonical stable identity for ordered Snapshot Evidence."""
+
+    if ordinal < 1:
+        raise ValueError("Evidence ordinal must be positive")
+    return f"{snapshot_id}_e{ordinal:04d}"
 
 
 def _read_optional_json(path: Path, default: Any) -> Any:
@@ -535,6 +550,9 @@ class DataStore:
                     product_path TEXT NOT NULL,
                     meta_path TEXT,
                     analysis_path TEXT,
+                    claim_analysis_status TEXT NOT NULL DEFAULT 'not_generated'
+                        CHECK(claim_analysis_status IN ('not_generated', 'complete', 'error')),
+                    claim_analysis_path TEXT,
                     original_image_count INTEGER NOT NULL DEFAULT 0,
                     ocr_image_count INTEGER NOT NULL DEFAULT 0,
                     updated_at TEXT NOT NULL,
@@ -555,6 +573,51 @@ class DataStore:
                     source_path TEXT NOT NULL DEFAULT '',
                     line_number INTEGER,
                     UNIQUE(snapshot_id, ordinal)
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_mentions (
+                    claim_mention_id TEXT PRIMARY KEY,
+                    snapshot_id TEXT NOT NULL REFERENCES product_snapshots(snapshot_id)
+                        ON DELETE CASCADE,
+                    evidence_id TEXT NOT NULL REFERENCES evidence(evidence_id)
+                        ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    claim_type TEXT NOT NULL,
+                    expression_id TEXT NOT NULL,
+                    raw_text TEXT NOT NULL,
+                    normalized_text TEXT NOT NULL,
+                    matched_expression TEXT NOT NULL,
+                    source_scope TEXT NOT NULL CHECK(source_scope = 'seller_managed'),
+                    source_asset_type TEXT NOT NULL,
+                    source_locator_json TEXT NOT NULL DEFAULT '{}',
+                    extraction_method TEXT NOT NULL,
+                    taxonomy_version TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(snapshot_id, ordinal)
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_signals (
+                    claim_signal_id TEXT PRIMARY KEY,
+                    snapshot_id TEXT NOT NULL REFERENCES product_snapshots(snapshot_id)
+                        ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    claim_type TEXT NOT NULL,
+                    display_label TEXT NOT NULL,
+                    taxonomy_version TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status = 'normalized'),
+                    created_at TEXT NOT NULL,
+                    UNIQUE(snapshot_id, ordinal),
+                    UNIQUE(snapshot_id, claim_type, taxonomy_version)
+                );
+
+                CREATE TABLE IF NOT EXISTS claim_signal_mentions (
+                    claim_signal_id TEXT NOT NULL
+                        REFERENCES claim_signals(claim_signal_id) ON DELETE CASCADE,
+                    claim_mention_id TEXT NOT NULL
+                        REFERENCES claim_mentions(claim_mention_id) ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL CHECK(ordinal > 0),
+                    PRIMARY KEY(claim_signal_id, claim_mention_id),
+                    UNIQUE(claim_signal_id, ordinal)
                 );
 
                 CREATE TABLE IF NOT EXISTS product_facts (
@@ -634,6 +697,14 @@ class DataStore:
                     ON product_snapshots(product_id, collected_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_evidence_snapshot
                     ON evidence(snapshot_id, ordinal);
+                CREATE INDEX IF NOT EXISTS idx_claim_mentions_snapshot
+                    ON claim_mentions(snapshot_id, ordinal);
+                CREATE INDEX IF NOT EXISTS idx_claim_mentions_evidence
+                    ON claim_mentions(evidence_id);
+                CREATE INDEX IF NOT EXISTS idx_claim_signals_snapshot
+                    ON claim_signals(snapshot_id, ordinal);
+                CREATE INDEX IF NOT EXISTS idx_claim_signals_type
+                    ON claim_signals(claim_type, taxonomy_version);
                 CREATE INDEX IF NOT EXISTS idx_product_facts_snapshot
                     ON product_facts(snapshot_id, fact_type, fact_id);
                 CREATE INDEX IF NOT EXISTS idx_product_facts_type_value
@@ -942,6 +1013,18 @@ class DataStore:
             self._ensure_column(connection, "tasks", "per_query_candidate_limit", "INTEGER")
             self._ensure_column(
                 connection, "tasks", "display_name", "TEXT NOT NULL DEFAULT ''"
+            )
+            self._ensure_column(
+                connection,
+                "product_snapshots",
+                "claim_analysis_status",
+                "TEXT NOT NULL DEFAULT 'not_generated'",
+            )
+            self._ensure_column(
+                connection,
+                "product_snapshots",
+                "claim_analysis_path",
+                "TEXT",
             )
             self._ensure_column(
                 connection,
@@ -1894,7 +1977,14 @@ class DataStore:
         products = [
             item for item in (snapshot.get("products") or []) if isinstance(item, dict)
         ]
+        claim_taxonomy: dict[str, Any] | None
+        try:
+            claim_taxonomy = load_claim_taxonomy()
+        except ValueError:
+            claim_taxonomy = None
         imported_evidence = 0
+        imported_claim_mentions = 0
+        imported_claim_signals = 0
         imported_product_facts = 0
         imported_health_food_identities = 0
         imported_health_food_registry_records: set[str] = set()
@@ -1997,6 +2087,50 @@ class DataStore:
                 risk = product.get("risk") or {}
                 assets = product.get("assets") or {}
                 status = product.get("status") or {}
+                evidence_items = [
+                    item
+                    for item in (risk.get("evidenceDetails") or [])
+                    if isinstance(item, dict)
+                ]
+                evidence_ids = {
+                    make_evidence_id(snapshot_id, ordinal)
+                    for ordinal in range(1, len(evidence_items) + 1)
+                }
+                expected_evidence_records = {
+                    make_evidence_id(snapshot_id, ordinal): {
+                        **item,
+                        "evidenceId": make_evidence_id(snapshot_id, ordinal),
+                        "snapshotId": snapshot_id,
+                    }
+                    for ordinal, item in enumerate(evidence_items, start=1)
+                }
+                product_root = run_root / "products" / product_id
+                claim_artifact_path = product_root / CLAIM_ANALYSIS_FILE
+                claim_analysis: dict[str, Any] | None = None
+                claim_analysis_status = "not_generated"
+                claim_analysis_relative_path: str | None = None
+                try:
+                    if claim_artifact_path.is_file() and claim_taxonomy is None:
+                        raise ClaimAnalysisValidationError(
+                            "Governed Claim taxonomy is unavailable"
+                        )
+                    claim_analysis = load_claim_analysis(
+                        claim_artifact_path,
+                        expected_snapshot_id=snapshot_id,
+                        expected_evidence_ids=evidence_ids,
+                        expected_evidence_records=expected_evidence_records,
+                        taxonomy=claim_taxonomy,
+                    )
+                except ClaimAnalysisValidationError:
+                    claim_analysis_status = "error"
+                else:
+                    if claim_analysis is not None:
+                        claim_analysis_status = "complete"
+                        claim_analysis_relative_path = (
+                            f"products/{product_id}/{CLAIM_ANALYSIS_FILE}"
+                        )
+                    elif (product_root / CLAIM_ANALYSIS_ERROR_FILE).is_file():
+                        claim_analysis_status = "error"
                 review_required = risk.get("reviewRequired")
                 if review_required is not None:
                     review_required = 1 if review_required else 0
@@ -2007,8 +2141,9 @@ class DataStore:
                         shop_name, region, product_url, collected_at, status,
                         detected_effects_json, review_required, analysis_summary,
                         product_path, meta_path, analysis_path,
+                        claim_analysis_status, claim_analysis_path,
                         original_image_count, ocr_image_count, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(snapshot_id) DO UPDATE SET
                         rank=excluded.rank,
                         product_name=excluded.product_name,
@@ -2023,6 +2158,8 @@ class DataStore:
                         product_path=excluded.product_path,
                         meta_path=excluded.meta_path,
                         analysis_path=excluded.analysis_path,
+                        claim_analysis_status=excluded.claim_analysis_status,
+                        claim_analysis_path=excluded.claim_analysis_path,
                         original_image_count=excluded.original_image_count,
                         ocr_image_count=excluded.ocr_image_count,
                         updated_at=excluded.updated_at
@@ -2044,6 +2181,8 @@ class DataStore:
                         f"products/{product_id}",
                         assets.get("metaPath"),
                         assets.get("analysisPath"),
+                        claim_analysis_status,
+                        claim_analysis_relative_path,
                         int((product.get("counts") or {}).get("originalImages") or 0),
                         int((product.get("counts") or {}).get("ocrImages") or 0),
                         generated_at,
@@ -2056,13 +2195,8 @@ class DataStore:
                 connection.execute(
                     "DELETE FROM evidence WHERE snapshot_id = ?", (snapshot_id,)
                 )
-                evidence_items = [
-                    item
-                    for item in (risk.get("evidenceDetails") or [])
-                    if isinstance(item, dict)
-                ]
                 for ordinal, item in enumerate(evidence_items, start=1):
-                    evidence_id = f"{snapshot_id}_e{ordinal:04d}"
+                    evidence_id = make_evidence_id(snapshot_id, ordinal)
                     connection.execute(
                         """
                         INSERT INTO evidence (
@@ -2090,6 +2224,82 @@ class DataStore:
                         ),
                     )
                 imported_evidence += len(evidence_items)
+                connection.execute(
+                    "DELETE FROM claim_signals WHERE snapshot_id = ?", (snapshot_id,)
+                )
+                connection.execute(
+                    "DELETE FROM claim_mentions WHERE snapshot_id = ?", (snapshot_id,)
+                )
+                if claim_analysis is not None:
+                    for ordinal, item in enumerate(
+                        claim_analysis["claimMentions"], start=1
+                    ):
+                        connection.execute(
+                            """
+                            INSERT INTO claim_mentions (
+                                claim_mention_id, snapshot_id, evidence_id, ordinal,
+                                claim_type, expression_id, raw_text, normalized_text,
+                                matched_expression, source_scope, source_asset_type,
+                                source_locator_json, extraction_method,
+                                taxonomy_version, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                item["claimMentionId"],
+                                snapshot_id,
+                                item["evidenceId"],
+                                ordinal,
+                                item["claimType"],
+                                item["expressionId"],
+                                item["rawText"],
+                                item["normalizedText"],
+                                item["matchedExpression"],
+                                item["sourceScope"],
+                                item["sourceAssetType"],
+                                _json_text(item["sourceLocator"], {}),
+                                item["extractionMethod"],
+                                item["taxonomyVersion"],
+                                item["createdAt"],
+                            ),
+                        )
+                    for ordinal, item in enumerate(
+                        claim_analysis["claimSignals"], start=1
+                    ):
+                        connection.execute(
+                            """
+                            INSERT INTO claim_signals (
+                                claim_signal_id, snapshot_id, ordinal, claim_type,
+                                display_label, taxonomy_version, status, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                item["claimSignalId"],
+                                snapshot_id,
+                                ordinal,
+                                item["claimType"],
+                                item["displayLabel"],
+                                item["taxonomyVersion"],
+                                item["status"],
+                                item["createdAt"],
+                            ),
+                        )
+                        for relation_ordinal, mention_id in enumerate(
+                            item["mentionIds"], start=1
+                        ):
+                            connection.execute(
+                                """
+                                INSERT INTO claim_signal_mentions (
+                                    claim_signal_id, claim_mention_id, ordinal
+                                ) VALUES (?, ?, ?)
+                                """,
+                                (
+                                    item["claimSignalId"],
+                                    mention_id,
+                                    relation_ordinal,
+                                ),
+                            )
+                    imported_claim_mentions += len(claim_analysis["claimMentions"])
+                    imported_claim_signals += len(claim_analysis["claimSignals"])
                 connection.execute(
                     "DELETE FROM product_facts WHERE snapshot_id = ?", (snapshot_id,)
                 )
@@ -2272,6 +2482,8 @@ class DataStore:
             "tasks": 1,
             "products": len(products),
             "evidence": imported_evidence,
+            "claim_mentions": imported_claim_mentions,
+            "claim_signals": imported_claim_signals,
             "product_facts": imported_product_facts,
             "health_food_identities": imported_health_food_identities,
             "health_food_registry_records": len(imported_health_food_registry_records),
@@ -2315,6 +2527,7 @@ class DataStore:
                 "product": row["product_path"],
                 "meta": row["meta_path"],
                 "analysis": row["analysis_path"],
+                "claimAnalysis": row["claim_analysis_path"],
             },
             "counts": {
                 "originalImages": row["original_image_count"],
@@ -2802,6 +3015,28 @@ class DataStore:
             "SELECT * FROM evidence WHERE snapshot_id = ? ORDER BY ordinal",
             (snapshot_id,),
         ).fetchall()
+        claim_mention_rows = connection.execute(
+            "SELECT * FROM claim_mentions WHERE snapshot_id = ? ORDER BY ordinal",
+            (snapshot_id,),
+        ).fetchall()
+        claim_signal_rows = connection.execute(
+            "SELECT * FROM claim_signals WHERE snapshot_id = ? ORDER BY ordinal",
+            (snapshot_id,),
+        ).fetchall()
+        claim_relation_rows = connection.execute(
+            """
+            SELECT csm.claim_signal_id, csm.claim_mention_id, csm.ordinal,
+                   cm.evidence_id
+            FROM claim_signal_mentions csm
+            JOIN claim_mentions cm
+              ON cm.claim_mention_id = csm.claim_mention_id
+            JOIN claim_signals cs
+              ON cs.claim_signal_id = csm.claim_signal_id
+            WHERE cs.snapshot_id = ?
+            ORDER BY cs.ordinal, csm.ordinal
+            """,
+            (snapshot_id,),
+        ).fetchall()
         fact_rows = connection.execute(
             """
             SELECT * FROM product_facts
@@ -2824,6 +3059,57 @@ class DataStore:
                 "lineNumber": item["line_number"],
             }
             for item in evidence_rows
+        ]
+        result["claimAnalysisStatus"] = row["claim_analysis_status"]
+        result["claimMentions"] = [
+            {
+                "claimMentionId": item["claim_mention_id"],
+                "snapshotId": item["snapshot_id"],
+                "claimType": item["claim_type"],
+                "expressionId": item["expression_id"],
+                "rawText": item["raw_text"],
+                "normalizedText": item["normalized_text"],
+                "matchedExpression": item["matched_expression"],
+                "evidenceId": item["evidence_id"],
+                "sourceScope": item["source_scope"],
+                "sourceAssetType": item["source_asset_type"],
+                "sourceLocator": _json_value(item["source_locator_json"], {}),
+                "extractionMethod": item["extraction_method"],
+                "taxonomyVersion": item["taxonomy_version"],
+                "createdAt": item["created_at"],
+            }
+            for item in claim_mention_rows
+        ]
+        relations_by_signal: dict[str, list[sqlite3.Row]] = {}
+        for relation in claim_relation_rows:
+            relations_by_signal.setdefault(
+                str(relation["claim_signal_id"]), []
+            ).append(relation)
+        result["claimSignals"] = [
+            {
+                "claimSignalId": item["claim_signal_id"],
+                "snapshotId": item["snapshot_id"],
+                "claimType": item["claim_type"],
+                "displayLabel": item["display_label"],
+                "mentionIds": [
+                    relation["claim_mention_id"]
+                    for relation in relations_by_signal.get(
+                        str(item["claim_signal_id"]), []
+                    )
+                ],
+                "evidenceIds": list(
+                    dict.fromkeys(
+                        relation["evidence_id"]
+                        for relation in relations_by_signal.get(
+                            str(item["claim_signal_id"]), []
+                        )
+                    )
+                ),
+                "taxonomyVersion": item["taxonomy_version"],
+                "status": item["status"],
+                "createdAt": item["created_at"],
+            }
+            for item in claim_signal_rows
         ]
         result["productFacts"] = [
             {
@@ -3012,6 +3298,9 @@ class DataStore:
                     "products",
                     "product_snapshots",
                     "evidence",
+                    "claim_mentions",
+                    "claim_signals",
+                    "claim_signal_mentions",
                     "product_facts",
                     "health_food_identities",
                     "health_food_registry_records",

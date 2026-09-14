@@ -22,11 +22,12 @@ StandalonePipeline
     ├─ OCR
     ├─ Health-food identity enrichment
     ├─ Phase3 analysis
+    ├─ Claim analysis sidecar
     └─ Inspection Recommendation
     ↓
 output/<run_id>/ artifacts
     ↓ import/index
-DataStore (SQLite schema 10)
+DataStore (SQLite schema 11)
     ↓
 ReviewDecisionService / SamplingStore / SamplingExportService
 ```
@@ -42,9 +43,9 @@ ReviewDecisionService / SamplingStore / SamplingExportService
 
 ### 1.2 Current pipeline artifacts and stage contract
 
-Search writes run/task state and Candidate facts. Successful Detail collection produces a product directory with `meta.json` and captured source artifacts, including original images when available. OCR preserves `ocr/run_info.json`, `ocr/manifest.json`, diagnostic errors, and combined text as appropriate. Phase3 writes `analysis.json`. InspectionRuntime may write `inspection_recommendation.json`.
+Search writes run/task state and Candidate facts. Successful Detail collection produces a product directory with `meta.json` and captured source artifacts, including original images when available. OCR preserves `ocr/run_info.json`, `ocr/manifest.json`, diagnostic errors, and combined text as appropriate. Phase3 writes `analysis.json`. The V2 Claim analyzer then consumes the stable, ID-bearing Evidence records represented by Phase3 evidence details and writes `claim_analysis.json`; it never scans Discovery inputs or raw collector sources directly. InspectionRuntime may write `inspection_recommendation.json` through the unchanged legacy compatibility path.
 
-After OCR artifacts are available, the independent ProductFact extractor reads existing DOM/OCR artifacts and writes `product_facts.json`. The HealthFood Identity enrichment then reads the same bounded seller-managed sources, optionally queries the official registry through a cached provider, and writes `health_food_identity.json`. Both enrichments are degradable and never change Phase3 inputs, Analysis readiness, Review eligibility or Product status. Existing successful products can be backfilled offline without re-running collection, OCR or Phase3.
+After OCR artifacts are available, the independent ProductFact extractor reads existing DOM/OCR artifacts and writes `product_facts.json`. The HealthFood Identity enrichment then reads the same bounded seller-managed sources, optionally queries the official registry through a cached provider, and writes `health_food_identity.json`. Claim analysis is also degradable: a taxonomy/derivation failure writes `claim_analysis_error.json` and never changes Phase3 success, Analysis readiness, Review, Sampling, Recommendation readiness, or Product status. Existing successful products can derive a missing Claim sidecar from their stable analysis Evidence without re-running collection, OCR, or Phase3.
 
 The authoritative predicate in `src/pipeline_contract.py` distinguishes:
 
@@ -71,13 +72,13 @@ Recommendation is not a Review gate. A successful analysis with zero Evidence is
 
 | Store | Current role |
 |---|---|
-| `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, `health_food_identity.json`, analysis and recommendation artifacts. |
+| `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, `health_food_identity.json`, `claim_analysis.json`, analysis and recommendation artifacts. |
 | `output/_registry_cache/health_food/` | Best-effort official query cache with raw JSON, hash, retrieval time and normalized result; never committed. |
-| `data/app.db` | Query/read index including ProductFact/HealthFoodIdentity/normalized registry projections, imported run relationships, human Review, mutable current Sampling Membership, frozen-list index. |
+| `data/app.db` | Schema 11 query/read index including ProductFact, HealthFoodIdentity, ClaimMention/ClaimSignal, normalized registry projections, imported run relationships, human Review, mutable current Sampling Membership, and frozen-list index. |
 | Frozen JSON/XLSX/evidence export | Immutable historical sampling-list fact at export time. |
 | Governed `config/*.json` | Versioned operational/reference knowledge loaded by current runtime. |
 
-V2-5A additionally establishes `config/claim_taxonomy_v2.json` as a governed **design baseline**. No current runtime component loads it. Future ClaimMention/ClaimSignal authority will be a product-Snapshot `claim_analysis.json` derived artifact, while future SQLite Claim tables will be rebuildable query projections. Raw OCR/DOM/title artifacts remain source facts and Evidence remains the source-preserving observation layer; neither is replaced by a Claim record.
+`config/claim_taxonomy_v2.json` remains the governed **design baseline** and is now the sole runtime Claim taxonomy. Product-Snapshot `claim_analysis.json` is the derived ClaimMention/ClaimSignal authority; SQLite `claim_mentions`, `claim_signals`, and `claim_signal_mentions` are rebuildable projections. A complete artifact with empty arrays means zero Claims; a missing artifact projects `not_generated`, and an invalid/failed sidecar projects `error`. Raw OCR/DOM/title artifacts remain source facts and Evidence remains the source-preserving observation layer; neither is replaced by a Claim record.
 
 SQLite run-derived data can be re-imported, but the database also contains human business mutations. Rebuilding it without preserving Review and Sampling state may lose decisions. The term “index” therefore does not mean “always safe to delete.”
 
@@ -85,7 +86,7 @@ SQLite run-derived data can be re-imported, but the database also contains human
 
 The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. `GET /api/monitor-targets` defaults to the operational set for compatibility; `scope=reference` exposes all 106 formal Reference objects with `operational`, `query_pending`, or `paused` availability and derived coverage counts. Monitor task creation enforces the same operational predicate server-side. Old contract compatibility retained by the backend does not make an old frontend current.
 
-Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently.
+Workspace DTOs combine Snapshot, Evidence, additive Claim analysis status/Mentions/Signals, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently. V2-5B1 adds only frontend types; user-visible Claim presentation remains a V2-5B2 concern.
 
 ## 2. Current domain separation
 
@@ -93,6 +94,7 @@ Workspace DTOs combine Snapshot, Evidence, ProductFacts/declared-origin presenta
 - Evidence and Review are Snapshot-scoped.
 - ProductFact is Snapshot-scoped derived data with exact artifact provenance. The current implementation supports only `declared_origin`.
 - HealthFoodIdentity is Snapshot-scoped; HealthFoodRegistryRecord is an official identifier-keyed reusable projection. Neither rewrites Product, Review, Sampling, Evidence or Risk.
+- ClaimMention is Evidence- and Snapshot-scoped; ClaimSignal aggregates same-Snapshot Mentions by governed marketing topic. Neither creates HealthFunction, RiskSignal, Recommendation, Review, or Sampling state.
 - Current Sampling Membership is Product-scoped and records a source Snapshot.
 - Inspection Recommendation is derived from Evidence, Product Context, and versioned knowledge.
 - Review repositories do not write Membership; Sampling repositories do not write Review. Application services own compound transactions.
@@ -106,7 +108,7 @@ Search-only validation artifacts live under `output/query_validation/<batch_id>/
 
 ## 3. Target V2 architecture
 
-The ProductFact and HealthFood Identity branches below are current; the other branches and read models remain target design until their own gates are accepted:
+The ProductFact, HealthFood Identity, and Claim Analyzer branches below are current; the other branches and read models remain target design until their own gates are accepted:
 
 ```text
 Current artifact pipeline
@@ -132,9 +134,9 @@ Extracts structured facts only from identifiable Snapshot artifacts. It preserve
 
 Creates clues and registration/filing candidates only from current-product seller-managed DOM and detail-image OCR. UGC and recommendation-area DOM are excluded. Ambiguous OCR characters are retained without correction or lookup. A provider abstraction supports low-frequency cached official lookup and governed imported snapshots. A found record becomes `verified_match` only when an explicit page product name equals the official product name after formatting-only normalization; title-only similarity is insufficient. Candidate, unavailable, not-found, unverified relation, mismatch and conflict states remain distinct. See [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md).
 
-### 3.3 Claim Analyzer and consistency assessor
+### 3.3 Claim Analyzer — CURRENT V2-5B1; consistency assessor — FUTURE
 
-The V2-5A Claim contract freezes this future pipeline:
+The accepted Claim contract now implements the first four nodes of this pipeline:
 
 ```text
 ProductSnapshot
@@ -145,9 +147,9 @@ ProductSnapshot
 → [future] inspection bridge
 ```
 
-ClaimMention preserves the raw observed text, matching expression, Evidence identity and source locator. ClaimSignal groups same-Snapshot mentions under a governed marketing `claim_type` while retaining every mention/Evidence identity. UGC is auxiliary only and excluded-other-product content is forbidden. The current exact expression baseline introduces no fuzzy, embedding, semantic-similarity or LLM match.
+ClaimMention preserves the raw observed text, matching expression, Evidence identity and source locator. ClaimSignal groups same-Snapshot mentions under a governed marketing `claim_type` while retaining every mention/Evidence identity. Only `seller_managed` Evidence enters the formal runtime; UGC is auxiliary only, `excluded_other_product` is forbidden, and SearchQuery/task keywords are not inputs. Matching is formatting-normalized deterministic literal substring matching. All overlapping governed expressions are retained. Mention order is Evidence order, taxonomy-expression order, then occurrence order; signal order is taxonomy Claim-type order.
 
-V2-5A freezes only ClaimMention and ClaimSignal contracts. Runtime extraction, SQLite/API implementation, the consistency assessor, Claim-to-HealthFunction mapping and Claim-to-Risk mapping remain future. A marketing paraphrase never becomes an Official Health Function without an explicit governed mapping, and a ClaimSignal never directly selects an inspection substance or method.
+V2-5B1 implements runtime extraction, artifact authority, schema 11 projection, and additive Snapshot API fields. The consistency assessor, Claim-to-HealthFunction mapping, Claim-to-Risk mapping, visible Claim UX, and legacy presentation migration remain future. A marketing paraphrase never becomes an Official Health Function without an explicit governed mapping, and a ClaimSignal never directly selects an inspection substance or method.
 
 ### 3.4 Knowledge Resolver
 
@@ -159,7 +161,7 @@ Analytics will expose governed metric definitions and denominators, not ad hoc f
 
 ## 4. Provenance architecture
 
-Every automatically extracted ProductFact, and every future ClaimSignal or identity clue, must support this trace:
+Every automatically extracted ProductFact, ClaimSignal, or identity clue must support this trace:
 
 ```text
 ProductSnapshot
@@ -172,7 +174,7 @@ ProductSnapshot
 
 Derived records record the applicable dataset/version. Re-running with new knowledge may create a new derived result; it must not rewrite historical source Evidence or a frozen export.
 
-The future Claim API adds `claimMentions[]` and `claimSignals[]`. Existing `detectedEffects`/`effect` fields remain legacy compatibility fields until an implementation/migration gate; V2-5A adds no endpoint or DTO field.
+The Snapshot/detail API now adds `claimAnalysisStatus`, `claimMentions[]`, and `claimSignals[]`. Existing `detectedEffects`/`effect` fields remain legacy compatibility fields; Product-list Claim filters and visible Claim UX remain out of scope for V2-5B1.
 
 ## 5. Reliability boundaries
 

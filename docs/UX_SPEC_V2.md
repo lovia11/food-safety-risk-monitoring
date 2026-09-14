@@ -122,7 +122,7 @@ The UI must distinguish:
 
 The recommendation title is 抽检辅助建议. Do not expose internal D1–D6, Knowledge Trace, or mapping IDs as primary UI language. Method sections are 相关已核验方法, 需补充商品信息后判断, and collapsed 其他已知方法. Never invent a substance or method to avoid an empty state.
 
-### 7.1 Claim presentation — V2-5A future runtime contract
+### 7.1 Claim presentation — V2-5B2 future UX over the current B1 runtime
 
 The future V2 Claim section is titled **页面宣传线索**, not 商品功效. A normalized summary uses wording such as:
 
@@ -133,7 +133,7 @@ The future V2 Claim section is titled **页面宣传线索**, not 商品功效. 
 
 Expansion shows each ClaimMention's original text, source type, and Evidence location. The section distinguishes seller-managed formal Claim sources from auxiliary UGC and never presents excluded-other-product content as a current-product Claim. It must not say “具有助眠功效”, “确认能够减肥”, or “存在违法助眠宣传”. ClaimSignal, Official Health Function, RiskSignal, and Recommendation remain visibly separate sections/states.
 
-V2-5A changes no current frontend behavior. Existing 页面功效线索 and `detectedEffects` presentation remains an explicitly legacy compatibility surface until the V2-5B runtime/API/UI gate.
+V2-5B1 adds the typed `claimAnalysisStatus`, `claimMentions`, and `claimSignals` Snapshot contract but intentionally changes no visible frontend behavior. Existing 页面功效线索 and `detectedEffects` presentation remains an explicitly legacy compatibility surface until the V2-5B2 UX gate.
 
 ## 8. Review and Sampling interaction
 

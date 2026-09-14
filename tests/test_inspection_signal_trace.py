@@ -436,7 +436,7 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
         with sqlite3.connect(self.store.database_path) as connection:
             schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-        self.assertEqual(schema_version, 10)
+        self.assertEqual(schema_version, 11)
 
 
 if __name__ == "__main__":

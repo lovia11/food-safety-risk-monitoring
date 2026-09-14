@@ -9,7 +9,8 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
 
-from src.data_store import DataStore, make_snapshot_id
+from src.claim_analysis import write_claim_analysis
+from src.data_store import DataStore, make_evidence_id, make_snapshot_id
 from src.local_api import (
     create_handler,
     list_run_snapshots,
@@ -408,20 +409,30 @@ class LocalApiHelpersTest(unittest.TestCase):
             write_json(
                 run_root / "products" / "123" / "analysis.json",
                 {
-                    "detected_effects": ["助眠"],
+                    "detected_effects": ["助眠", "减脂"],
                     "review_required": True,
                     "risk_reason": "检测到助眠表达",
                     "evidence_details": [
                         {
                             "effect": "助眠",
-                            "text": "帮助睡眠",
-                            "matched_keywords": ["睡眠"],
+                            "text": "帮助睡眠并减肥",
+                            "matched_keywords": ["睡眠", "减肥"],
                             "source_type": "ocr",
                             "source_label": "详情图 OCR",
                             "content_origin": "seller_managed",
                             "source_path": "ocr/original_001.txt",
                             "line_number": 1,
-                        }
+                        },
+                        {
+                            "effect": "助眠",
+                            "text": "吃完感觉更安睡",
+                            "matched_keywords": ["安睡"],
+                            "source_type": "review",
+                            "source_label": "用户评论",
+                            "content_origin": "user_generated",
+                            "source_path": "reviews/review_001.txt",
+                            "line_number": 1,
+                        },
                     ],
                 },
             )
@@ -442,6 +453,31 @@ class LocalApiHelpersTest(unittest.TestCase):
                 },
             )
             snapshot_id = make_snapshot_id("run-1", "123")
+            write_claim_analysis(
+                run_root / "products" / "123",
+                snapshot_id,
+                [
+                    {
+                        "evidenceId": make_evidence_id(snapshot_id, 1),
+                        "snapshotId": snapshot_id,
+                        "text": "帮助睡眠并减肥",
+                        "contentOrigin": "seller_managed",
+                        "sourceType": "ocr",
+                        "sourcePath": "ocr/original_001.txt",
+                        "lineNumber": 1,
+                    },
+                    {
+                        "evidenceId": make_evidence_id(snapshot_id, 2),
+                        "snapshotId": snapshot_id,
+                        "text": "吃完感觉更安睡",
+                        "contentOrigin": "user_generated",
+                        "sourceType": "review",
+                        "sourcePath": "reviews/review_001.txt",
+                        "lineNumber": 1,
+                    },
+                ],
+                generated_at="2026-09-14T10:00:00+08:00",
+            )
             write_json(
                 run_root / "products" / "123" / "product_facts.json",
                 {
@@ -543,6 +579,53 @@ class LocalApiHelpersTest(unittest.TestCase):
                         "review_required": False,
                     }
                     for index in range(21)
+                ],
+                "completed",
+                "完成",
+            )
+            zero_root = output_root / "claim-zero-run"
+            zero_product_root = zero_root / "products" / "zero"
+            write_json(
+                zero_product_root / "meta.json",
+                {
+                    "productId": "zero",
+                    "productName": "无宣传词测试商品",
+                    "imageCount": 0,
+                    "images": [],
+                    "screenshots": [],
+                },
+            )
+            write_json(
+                zero_product_root / "analysis.json",
+                {
+                    "detected_effects": [],
+                    "review_required": False,
+                    "risk_reason": "未发现明确表达",
+                    "evidence_details": [],
+                },
+            )
+            zero_snapshot_id = make_snapshot_id("claim-zero-run", "zero")
+            write_claim_analysis(
+                zero_product_root,
+                zero_snapshot_id,
+                [],
+                generated_at="2026-09-14T10:00:00+08:00",
+            )
+            write_web_snapshot(
+                zero_root,
+                {
+                    "keyword": "普通商品",
+                    "candidates": [{"product_id": "zero", "rank": 1}],
+                },
+                [
+                    {
+                        "keyword": "普通商品",
+                        "product_id": "zero",
+                        "product_name": "无宣传词测试商品",
+                        "product_url": "https://item.example/zero",
+                        "crawl_status": "success",
+                        "review_required": False,
+                    }
                 ],
                 "completed",
                 "完成",
@@ -685,7 +768,34 @@ class LocalApiHelpersTest(unittest.TestCase):
                 ) as response:
                     workspace = json.load(response)
                 self.assertEqual(workspace["snapshot"]["taskId"], "run-1")
-                self.assertEqual(workspace["evidence"][0]["text"], "帮助睡眠")
+                self.assertEqual(
+                    workspace["evidence"][0]["text"], "帮助睡眠并减肥"
+                )
+                self.assertEqual(workspace["claimAnalysisStatus"], "complete")
+                self.assertEqual(
+                    [item["matchedExpression"] for item in workspace["claimMentions"]],
+                    ["睡眠", "减肥"],
+                )
+                self.assertEqual(
+                    [item["claimType"] for item in workspace["claimSignals"]],
+                    ["sleep_related", "weight_management"],
+                )
+                self.assertTrue(
+                    all(
+                        item["sourceAssetType"] == "ocr"
+                        and item["evidenceId"]
+                        == workspace["evidence"][0]["evidenceId"]
+                        for item in workspace["claimMentions"]
+                    )
+                )
+                self.assertNotIn(
+                    workspace["evidence"][1]["evidenceId"],
+                    {
+                        evidence_id
+                        for item in workspace["claimSignals"]
+                        for evidence_id in item["evidenceIds"]
+                    },
+                )
                 self.assertEqual(workspace["review"]["status"], "pending")
                 self.assertEqual(len(workspace["productFacts"]), 2)
                 self.assertEqual(workspace["declaredOrigin"]["state"], "conflict")
@@ -705,6 +815,23 @@ class LocalApiHelpersTest(unittest.TestCase):
                     workspace["assets"]["analysisPath"],
                     "products/123/analysis.json",
                 )
+                with urlopen(
+                    f"{base}/api/snapshots/{zero_snapshot_id}/workspace"
+                ) as response:
+                    zero_workspace = json.load(response)
+                self.assertEqual(zero_workspace["claimAnalysisStatus"], "complete")
+                self.assertEqual(zero_workspace["claimMentions"], [])
+                self.assertEqual(zero_workspace["claimSignals"], [])
+                missing_snapshot_id = make_snapshot_id("monitor-run", "456")
+                with urlopen(
+                    f"{base}/api/snapshots/{missing_snapshot_id}"
+                ) as response:
+                    missing_claims = json.load(response)
+                self.assertEqual(
+                    missing_claims["claimAnalysisStatus"], "not_generated"
+                )
+                self.assertEqual(missing_claims["claimMentions"], [])
+                self.assertEqual(missing_claims["claimSignals"], [])
                 request = Request(
                     f"{base}/api/snapshots/{snapshot_id}/review",
                     data=json.dumps(
