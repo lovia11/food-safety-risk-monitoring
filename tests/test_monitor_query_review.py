@@ -80,6 +80,36 @@ class MonitorQueryReviewTest(unittest.TestCase):
         self.assertEqual(metrics["ambiguousSkipped"], 1)
         self.assertEqual(metrics["relevanceRate"], 0.9)
 
+    def test_refined_lily_metrics_skip_rank_eight_and_promote(self):
+        assignments = []
+        for rank in range(1, 12):
+            if rank == 8:
+                label = "ambiguous"
+            elif rank == 9:
+                label = "raw_medicinal_or_nonfood_scope"
+            else:
+                label = "relevant_food"
+            assignments.append({"rank": rank, "label": label})
+        reviewed = finalize_review_queue(
+            review_queue(),
+            assignments=assignments,
+            decision="promote",
+            decision_note="食用百合通过固定Gate。",
+            systematic_scope_issue=False,
+            observed_product_forms=[],
+            reviewed_at="2026-09-14T02:47:03+08:00",
+        )
+        metrics = reviewed["metrics"]
+        self.assertEqual(metrics["evaluationRanks"], [1, 2, 3, 4, 5, 6, 7, 9, 10, 11])
+        self.assertEqual(metrics["assessableCount"], 10)
+        self.assertEqual(metrics["relevantCount"], 9)
+        self.assertEqual(metrics["rawMedicinalOrNonfoodScopeCount"], 1)
+        self.assertEqual(metrics["nonFoodCount"], 0)
+        self.assertEqual(metrics["ambiguousSkipped"], 1)
+        self.assertEqual(metrics["relevanceRate"], 0.9)
+        self.assertTrue(reviewed["numericGatePassed"])
+        self.assertEqual(reviewed["decision"], "promote")
+
     def test_wave_two_b_metrics_preserve_lily_rejection_and_chrysanthemum_promotion(self):
         lily_rows = review_queue(10)["results"]
         for row in lily_rows:

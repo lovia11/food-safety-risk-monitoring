@@ -215,6 +215,41 @@ test("monitor reference picker searches all availability states and exposes vali
   assert.equal(filterMonitorTargets(targets, "当归", "paused").length, 1);
 });
 
+test("lily remains the target identity while its refined strategy is executable", () => {
+  const base = {
+    query_id: "lily-base",
+    query_text: "百合",
+    validation_status: "rejected_low_relevance",
+    enabled: false,
+  };
+  const refined = {
+    query_id: "lily-edible",
+    query_text: "食用百合",
+    query_source: "manually_curated",
+    validation_status: "search_validated",
+    enabled: true,
+  };
+  const lily = {
+    ...monitorTarget("百合", "operational", [refined]),
+    queries: [base, refined],
+  };
+  assert.equal(lily.standard_name, "百合");
+  assert.equal(canCreateMonitorTask(lily), true);
+  assert.deepEqual(lily.validated_queries.map((item) => item.query_text), ["食用百合"]);
+  assert.equal(filterMonitorTargets([lily], "食用百合", "operational")[0], lily);
+});
+
+test("monitor picker labels operational queries as governed search strategies", () => {
+  const source = readFileSync(
+    new URL("../src/pages/inspections/NewInspectionPage.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /官方目录/);
+  assert.match(source, /当前可排查/);
+  assert.match(source, /已验证搜索策略/);
+  assert.doesNotMatch(source, /已验证搜索词/);
+});
+
 test("non-operational monitor targets cannot create tasks", () => {
   const pending = monitorTarget("山药", "query_pending");
   const rejectedStrategy = {

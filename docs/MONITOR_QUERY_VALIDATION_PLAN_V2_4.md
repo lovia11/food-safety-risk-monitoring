@@ -1,8 +1,8 @@
 # Monitor Query Validation Plan V2-4
 
-> Status: **IN PROGRESS — planned standard-name waves reviewed; 食用百合 collection complete and human review pending**
+> Status: **COMPLETE — planned standard-name waves and governed 食用百合 refinement reviewed**
 >
-> Completed collection batches: Wave 1 `v2-4b-batch-01a`, Wave 2A `v2-4b-batch-02a`, Wave 2B `v2-4b-batch-02b`, Lily refinement `v2-4b-batch-02c`; only the `食用百合` human-review gate remains
+> Completed collection/review batches: Wave 1 `v2-4b-batch-01a`, Wave 2A `v2-4b-batch-02a`, Wave 2B `v2-4b-batch-02b`, Lily refinement `v2-4b-batch-02c`
 >
 > Collection ceiling: first 15 unique Search Result cards per Query
 >
@@ -53,7 +53,7 @@ At the V2-4A baseline, the unfiltered dry run resolved all 12 disabled candidate
 
 The collection ceiling and promotion evaluation sample are deliberately different. A bounded live run stops after at most 15 unique Search Result cards (or natural exhaustion/blocker). Human review then evaluates the first 10 unique assessable results in original search order. If fewer than 10 assessable results remain after the 15-card ceiling, the decision is `hold`; collection must not continue through unbounded pagination to fill the sample. The fixed `70%`, five-relevant-result, ten-assessable-result, and systematic-scope-issue gates remain unchanged.
 
-Wave 1 decisions and immutable manifest evidence are recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Wave 2A is recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md), and Wave 2B in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md). A refined 百合 candidate must retain explicit provenance to the rejected standard-name artifact and pass the same unchanged gate.
+Wave 1 decisions and immutable manifest evidence are recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md). Wave 2A is recorded in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md), Wave 2B in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md), and the independently revalidated 百合 refinement in [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md).
 
 ## Lily refinement candidate
 
@@ -63,8 +63,9 @@ The standard-name `百合` Query produced only 50% observed relevance because ha
 - Query ID: `food-medicine-2002-022-edible-candidate`
 - Query source: `manually_curated`
 - Provenance: `derived_from_validation_batch=v2-4b-batch-02b`
-- Lifecycle: disabled `candidate_unvalidated`
+- Lifecycle: enabled `search_validated`
 - Collection batch: `v2-4b-batch-02c`
-- Collection status: complete, 15 unique Search Result cards, human review pending
+- Collection status: complete, 15 unique Search Result cards
+- Human-review result: 10 assessable, 9 relevant, 1 raw medicinal/non-food scope, 1 ambiguous skipped, 90% observed relevance, `promote`
 
-The `食用百合` collection does not change target availability, does not constitute promotion, and must not be treated as a final relevance result until explicit human labels are finalized.
+The completed review promotes `食用百合` without changing MonitorTarget identity or rehabilitating the rejected standard-name Query. 百合 is operational only through the refined strategy; the naked `百合` Query remains disabled and retains its Batch 02B history.

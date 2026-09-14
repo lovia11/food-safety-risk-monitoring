@@ -85,12 +85,17 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
             self.assertEqual([item["product_id"] for item in result["candidates"]], ["A", "B", "C"])
             self.assertEqual([item["rank"] for item in result["candidates"]], [1, 2, 3])
             self.assertEqual(result["selected_for_detail"], 2)
+            self.assertEqual(result["target_id"], "target-1")
+            self.assertEqual(result["target_name"], "酸枣仁")
             self.assertEqual(len(result["candidate_hits"]), 4)
+            self.assertTrue(all(item["task_id"] == "monitor_run" for item in result["candidate_hits"]))
+            self.assertTrue(all(item["query_id"] and item["query_text"] for item in result["candidate_hits"]))
             self.assertEqual(
                 [item["query_id"] for item in result["candidate_hits"] if item["product_id"] == "B"],
                 ["base", "tea"],
             )
             saved = read_json(run_root / "search" / "discovery_summary.json")
+            self.assertEqual(saved["target_id"], "target-1")
             self.assertEqual(saved["deduplicated_count"], 3)
             self.assertEqual(saved["query_results"][0]["raw_card_count"], 4)
 

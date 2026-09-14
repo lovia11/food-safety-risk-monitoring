@@ -125,7 +125,7 @@ Every governed dataset change tests:
 - UI/API reads the same runtime dataset;
 - per-layer coverage metrics use correct denominators.
 
-### 8.1 Monitor coverage gate — Current V2-4 Wave 2B
+### 8.1 Monitor coverage gate — Current V2-4 accepted baseline
 
 - `scope=reference` returns exactly 106 formal Reference targets; default/`scope=operational` returns only targets satisfying the strict operational predicate.
 - Every enabled Query is `search_validated`; every enabled target has at least one enabled validated Query.
@@ -141,8 +141,10 @@ Every governed dataset change tests:
 - The 莲子 review skips ambiguous Rank 4 and uses Rank 11 as the tenth assessable result.
 - 菊花 is operational through its enabled `search_validated` standard-name Query. The standard-name 百合 Query is disabled `rejected_low_relevance`; the 百合 MonitorTarget remains Reference-visible, non-operational, and server-rejected for task creation.
 - A rejected Query is never enabled. Rejecting a Query does not remove or mark invalid its MonitorTarget, and the UI presents the target as needing a usable search strategy rather than as unsupported.
-- The refined `食用百合` Query is `manually_curated`, records its Batch 02B provenance/rationale, remains disabled `candidate_unvalidated`, cannot pass the task execution guard, and leaves 百合 non-operational.
-- Batch `v2-4b-batch-02c` is search-only collection evidence: its labels, metrics, decision and promotion remain empty until explicit human review.
+- The refined `食用百合` Query is `manually_curated`, retains its Batch 02B provenance/rationale, and is independently promoted through Batch 02C at 90% observed relevance. It is the only executable Query for the operational 百合 Target.
+- The standard-name `百合` Query retains its Batch 02B 50% result as disabled `rejected_low_relevance`; promotion of the refined strategy never rehabilitates or executes it.
+- Batch 02C skips ambiguous Rank 8, uses Rank 11 as the tenth assessable item, and calculates 10 assessable / 9 relevant / 1 raw-scope / 90% from explicit human labels.
+- Reference remains 106 while actual operational coverage is 16/106. Coverage presentation and API keep these denominators distinct.
 
 ## 9. Pipeline and Review gate
 

@@ -3,10 +3,9 @@ import io
 import tempfile
 import threading
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from src.data_store import DataStore, validate_monitor_config
@@ -47,12 +46,12 @@ class MonitorCoverageV2Test(unittest.TestCase):
             {
                 "reference_target_count": 106,
                 "targets_with_query_count": 18,
-                "operational_target_count": 15,
-                "enabled_query_count": 18,
-                "validated_query_count": 18,
-                "disabled_query_count": 4,
-                "candidate_query_count": 1,
-                "paused_target_count": 3,
+                "operational_target_count": 16,
+                "enabled_query_count": 19,
+                "validated_query_count": 19,
+                "disabled_query_count": 3,
+                "candidate_query_count": 0,
+                "paused_target_count": 2,
             },
         )
         self.assertEqual(
@@ -69,8 +68,8 @@ class MonitorCoverageV2Test(unittest.TestCase):
             if target["dataset_status"] == "verified_reference"
         ]
         self.assertEqual(len(reference), 106)
-        self.assertEqual(len(formal_operational), 15)
-        self.assertEqual(len(operational), 16)  # includes the independent development seed
+        self.assertEqual(len(formal_operational), 16)
+        self.assertEqual(len(operational), 17)  # includes the independent development seed
         self.assertTrue(
             all(target["availability"] == "operational" for target in operational)
         )
@@ -90,54 +89,80 @@ class MonitorCoverageV2Test(unittest.TestCase):
         self.assertEqual(mountain_yam["availability"], "operational")
         self.assertEqual(mountain_yam["validated_query_count"], 1)
         self.assertEqual(mountain_yam["validated_queries"][0]["query_text"], "山药")
-        self.assertEqual(lily["availability"], "paused")
-        self.assertEqual(lily["candidate_query_count"], 1)
-        self.assertEqual(lily["validated_queries"], [])
+        self.assertEqual(lily["availability"], "operational")
+        self.assertEqual(lily["candidate_query_count"], 0)
+        self.assertEqual(
+            [item["query_text"] for item in lily["validated_queries"]],
+            ["食用百合"],
+        )
         self.assertEqual(lily["queries"][0]["validation_status"], "rejected_low_relevance")
+        self.assertFalse(lily["queries"][0]["enabled"])
         self.assertEqual(lily["queries"][1]["query_text"], "食用百合")
         self.assertEqual(lily["queries"][1]["query_source"], "manually_curated")
-        self.assertEqual(lily["queries"][1]["validation_status"], "candidate_unvalidated")
-        self.assertFalse(lily["queries"][1]["enabled"])
+        self.assertEqual(lily["queries"][1]["validation_status"], "search_validated")
+        self.assertTrue(lily["queries"][1]["enabled"])
         self.assertIn("v2-4b-batch-02b", lily["queries"][1]["query_note"])
-        self.assertIn("观察相关率50%", lily["availability_reason"])
+        self.assertIn("观察相关率90%", lily["queries"][1]["query_note"])
         self.assertEqual(angelica["availability"], "paused")
         self.assertIn("中药材/饮片", angelica["availability_reason"])
         self.assertEqual(angelica["validated_queries"], [])
 
-    def test_candidate_rejected_and_paused_queries_are_never_operational(self):
+    def test_only_enabled_validated_lily_refinement_is_operational(self):
         reference = self.store.list_monitor_targets(scope="reference")
         lily_queries = next(item for item in reference if item["standard_name"] == "百合")["queries"]
-        rejected, candidate = lily_queries
+        rejected, refined = lily_queries
         paused = next(item for item in reference if item["standard_name"] == "当归")["queries"][0]
         self.assertFalse(is_operational_query(rejected))
-        self.assertFalse(is_operational_query(candidate))
+        self.assertTrue(is_operational_query(refined))
         self.assertFalse(is_operational_query(paused))
 
-    def test_reference_only_target_is_rejected_by_server_business_guard(self):
+    def test_refined_lily_target_passes_server_guard_with_only_validated_query(self):
+        captured = []
+
+        class NoNetworkPipeline:
+            def __init__(self, options):
+                captured.append(options)
+
+            def run(self):
+                return None
+
         manager = TaskManager(
             self.root / "output",
+            pipeline_factory=NoNetworkPipeline,
             monitor_target_provider=self.store.get_monitor_target,
         )
-        with self.assertRaisesRegex(
-            MonitorTargetNotOperationalError,
-            "没有已验证并启用",
-        ):
-            manager.create_task(
-                {
-                    "task_type": "monitor",
-                    "target_id": "food-medicine-2002-022",
-                    "per_query_candidate_limit": 10,
-                    "detail_limit": 10,
-                }
-            )
-        self.assertEqual(list((self.root / "output").iterdir()), [])
+        created = manager.create_task(
+            {
+                "task_type": "monitor",
+                "target_id": "food-medicine-2002-022",
+                "per_query_candidate_limit": 10,
+                "detail_limit": 10,
+            }
+        )
+        self.assertTrue(manager.wait_for_idle())
+        self.assertEqual(created["runtime"]["request"]["targetName"], "百合")
+        self.assertEqual(
+            [query["query_text"] for query in captured[0].search_queries],
+            ["食用百合"],
+        )
+        self.assertEqual(captured[0].search_queries[0]["query_source"], "manually_curated")
 
-    def test_api_returns_specific_non_operational_error_code(self):
+    def test_api_accepts_lily_target_without_executing_rejected_base_query(self):
         web_root = self.root / "web"
         web_root.mkdir()
         (web_root / "index.html").write_text("ok", encoding="utf-8")
+        captured = []
+
+        class NoNetworkPipeline:
+            def __init__(self, options):
+                captured.append(options)
+
+            def run(self):
+                return None
+
         manager = TaskManager(
             self.root / "output",
+            pipeline_factory=NoNetworkPipeline,
             monitor_target_provider=self.store.get_monitor_target,
         )
         server = ThreadingHTTPServer(
@@ -166,11 +191,15 @@ class MonitorCoverageV2Test(unittest.TestCase):
                     }
                 ).encode("utf-8"),
             )
-            with self.assertRaises(HTTPError) as raised:
-                urlopen(request)
-            self.assertEqual(raised.exception.code, 409)
-            body = json.loads(raised.exception.read().decode("utf-8"))
-            self.assertEqual(body["error"]["code"], "monitor_target_not_operational")
+            with urlopen(request) as response:
+                self.assertEqual(response.status, 202)
+                body = json.load(response)
+            self.assertTrue(manager.wait_for_idle())
+            self.assertEqual(body["runtime"]["request"]["targetName"], "百合")
+            self.assertEqual(
+                [query["query_text"] for query in captured[0].search_queries],
+                ["食用百合"],
+            )
         finally:
             server.shutdown()
             server.server_close()
@@ -179,7 +208,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
     def test_validation_ledger_covers_every_governed_final_query(self):
         config = validate_monitor_config(read_json(REFERENCE_CONFIG))
         ledger = validate_validation_ledger(config, read_json(LEDGER))
-        self.assertEqual(len(ledger["records"]), 21)
+        self.assertEqual(len(ledger["records"]), 22)
         wave_one = {
             item["query_text"]: item
             for item in ledger["records"]
@@ -217,25 +246,38 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "c130bb453df91397bab926a722ef759d56fee038def2bdeb12dcfc145cb3b16e",
         )
 
-    def test_unfiltered_dry_run_selects_only_refined_lily_candidate(self):
-        config = validate_monitor_config(read_json(REFERENCE_CONFIG))
-        selected = select_validation_queries(config)
-        plan = validation_dry_run(
-            batch_id="v2-4b-batch-02c",
-            output_root=self.root / "query-validation",
-            max_results=15,
-            selected=selected,
+        lily_refinement = next(
+            item
+            for item in ledger["records"]
+            if item["query_id"] == "food-medicine-2002-022-edible-candidate"
         )
-        self.assertEqual(plan["queryCount"], 1)
-        self.assertEqual(plan["queries"][0]["standardName"], "百合")
-        self.assertEqual(plan["queries"][0]["queryText"], "食用百合")
-        self.assertEqual(plan["queries"][0]["queryId"], "food-medicine-2002-022-edible-candidate")
-        self.assertEqual(plan["queries"][0]["validationStatus"], "candidate_unvalidated")
+        self.assertEqual(lily_refinement["batch_id"], "v2-4b-batch-02c")
+        self.assertEqual(lily_refinement["query_source"], "manually_curated")
+        self.assertEqual(
+            lily_refinement["provenance"],
+            "derived_from_validation_batch=v2-4b-batch-02b",
+        )
+        self.assertEqual(lily_refinement["assessable_count"], 10)
+        self.assertEqual(lily_refinement["relevant_count"], 9)
+        self.assertEqual(lily_refinement["raw_medicinal_or_nonfood_scope_count"], 1)
+        self.assertEqual(lily_refinement["ambiguous_skipped"], 1)
+        self.assertEqual(lily_refinement["relevance_rate"], 0.9)
+        self.assertEqual(lily_refinement["decision"], "promote")
+        self.assertEqual(
+            lily_refinement["artifact_manifest_sha256"],
+            "230b3f7ecf1be2160b21a1cb4a22ba5f457e0828ebb34139466bdc2f234b204f",
+        )
 
-    def test_validation_tool_dry_run_prints_plan_without_creating_runtime_output(self):
+    def test_unfiltered_dry_run_has_no_unvalidated_queries_after_exit_gate(self):
+        config = validate_monitor_config(read_json(REFERENCE_CONFIG))
+        with self.assertRaisesRegex(ValueError, "没有符合条件"):
+            select_validation_queries(config)
+
+    def test_validation_tool_reports_no_pending_query_without_creating_output(self):
         destination = self.root / "validation-output"
         stdout = io.StringIO()
-        with redirect_stdout(stdout):
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
             result = validation_tool_main(
                 [
                     "--batch",
@@ -249,10 +291,9 @@ class MonitorCoverageV2Test(unittest.TestCase):
                     str(REFERENCE_CONFIG),
                 ]
             )
-        plan = json.loads(stdout.getvalue())
-        self.assertEqual(result, 0)
-        self.assertEqual(plan["queryCount"], 1)
-        self.assertEqual(plan["queries"][0]["queryText"], "食用百合")
+        self.assertEqual(result, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("没有符合条件", stderr.getvalue())
         self.assertFalse(destination.exists())
 
     def test_wave_one_dry_run_separates_collection_ceiling_from_review_sample(self):
@@ -324,6 +365,7 @@ class MonitorCoverageV2Test(unittest.TestCase):
             "food-medicine-2002-045",
             "food-medicine-2002-060",
             "food-medicine-2002-064",
+            "food-medicine-2002-022",
         ]
         for target_id in promoted_ids:
             created = manager.create_task(
@@ -336,14 +378,16 @@ class MonitorCoverageV2Test(unittest.TestCase):
             )
             self.assertEqual(created["runtime"]["request"]["targetId"], target_id)
             self.assertTrue(manager.wait_for_idle())
-        self.assertEqual(len(captured), 10)
+        self.assertEqual(len(captured), 11)
         self.assertTrue(
             all(
-                options.search_queries[0]["query_source"] == "standard_name"
-                and options.search_queries[0]["validation_status"] == "search_validated"
+                options.search_queries[0]["validation_status"] == "search_validated"
                 for options in captured
             )
         )
+        lily = next(options for options in captured if options.target_id == "food-medicine-2002-022")
+        self.assertEqual([item["query_text"] for item in lily.search_queries], ["食用百合"])
+        self.assertEqual(lily.search_queries[0]["query_source"], "manually_curated")
         with self.assertRaises(MonitorTargetNotOperationalError):
             manager.create_task(
                 {

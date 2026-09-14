@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "ledger_id": "monitor-query-validation",
-  "updated_at": "2026-09-13",
+  "updated_at": "2026-09-14",
   "metric_policy": "V2-4 food-scope labels; legacy title-relevance pilots retain explicit null food-scope metrics until governed revalidation",
   "records": [
     {
@@ -441,6 +441,34 @@
       "artifact_ref": "output/query_validation/v2-4b-batch-02b/manifest.json",
       "review_artifact_ref": "output/query_validation/v2-4b-batch-02b/review/food-medicine-2002-064-base-candidate.json",
       "artifact_manifest_sha256": "c130bb453df91397bab926a722ef759d56fee038def2bdeb12dcfc145cb3b16e"
+    },
+    {
+      "query_id": "food-medicine-2002-022-edible-candidate",
+      "target_id": "food-medicine-2002-022",
+      "query_text": "食用百合",
+      "query_source": "manually_curated",
+      "provenance": "derived_from_validation_batch=v2-4b-batch-02b",
+      "batch_id": "v2-4b-batch-02c",
+      "validation_date": "2026-09-14",
+      "reviewed_at": "2026-09-14T02:47:03+08:00",
+      "sample_size": 10,
+      "assessable_count": 10,
+      "relevant_count": 9,
+      "raw_medicinal_or_nonfood_scope_count": 1,
+      "non_food_count": 0,
+      "ambiguous_count": 1,
+      "ambiguous_skipped": 1,
+      "duplicate_skipped": 0,
+      "relevance_rate": 0.9,
+      "decision": "promote",
+      "decision_note": "‘食用百合’前10个可评估搜索结果中9个属于食品相关，仅1个明确属于中药材/药用销售语境；另有1个混合食用与种植用途的结果按协议跳过。观察相关率为90%，未发现系统性范围问题，因此该 refinement SearchQuery 通过验证。",
+      "validation_note": "‘食用百合’前10个可评估搜索结果中9个属于食品相关，仅1个明确属于中药材/药用销售语境；另有1个混合食用与种植用途的结果按协议跳过。观察相关率为90%，未发现系统性范围问题，因此该 refinement SearchQuery 通过验证。",
+      "systematic_scope_issue": false,
+      "observed_product_forms": [],
+      "protocol_version": "V2-4",
+      "artifact_ref": "output/query_validation/v2-4b-batch-02c/manifest.json",
+      "review_artifact_ref": "output/query_validation/v2-4b-batch-02c/review/food-medicine-2002-022-edible-candidate.json",
+      "artifact_manifest_sha256": "230b3f7ecf1be2160b21a1cb4a22ba5f457e0828ebb34139466bdc2f234b204f"
     }
   ]
 }

@@ -78,7 +78,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-4 — Monitor coverage
 
-**Status:** IN PROGRESS — V2-4A foundation and all planned standard-name waves are governed; refined `食用百合` collection is complete and human review remains. V2-4 as a whole is not complete.
+**Status:** COMPLETE — full Reference visibility, governed Query lifecycle, bounded human-reviewed validation, and promote/hold/reject/refine paths are implemented and accepted.
 
 - **Goal:** Expand operational SearchQuery coverage safely while exposing all 106 Reference targets.
 - **Why:** Reference breadth and reliable discovery are different quality dimensions.
@@ -96,9 +96,12 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **V2-4 Wave 1 result:** 5 standard-name Queries/Targets (山楂、沙棘、罗汉果、黑芝麻、蜂蜜) were promoted; 乌梅 was held as disabled `paused_scope_issue`. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_01A.md).
 - **V2-4 Wave 2A result:** 4 standard-name Queries/Targets (山药、赤小豆、枸杞子、莲子) were promoted. Operational Reference coverage is now 14/106; 百合 and 菊花 remain disabled Wave 2B candidates. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02A.md).
 - **V2-4 Wave 2B result:** 菊花 was promoted; the standard-name 百合 Query was rejected at 50% observed relevance while its MonitorTarget remains in the Reference. Operational Reference coverage is 15/106. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02B.md).
-- **V2-4 Lily refinement:** disabled `manually_curated` candidate `食用百合` records provenance to Batch 02B and completed bounded search-only Batch `v2-4b-batch-02c`; it has no final labels or decision and cannot drive task execution before human review.
+- **V2-4 Lily refinement result:** `食用百合` retained its `manually_curated` provenance, passed the unchanged Gate at 90% observed relevance, and became the only active Query for the 百合 Target. The standard-name `百合` Query remains rejected and disabled. See [MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md](MONITOR_QUERY_VALIDATION_RESULTS_V2_4_BATCH_02C.md).
+- **V2-4 exit result:** all enabled Queries are traceable `search_validated` records; all 106 Reference Targets remain visible; operational coverage is reported separately as 16/106; Promote, Hold, Reject, and Refinement each have preserved real governance evidence.
 
 ## V2-5 — Claim taxonomy
+
+**Status:** NEXT — planned only; implementation requires a separate human Gate.
 
 - **Goal:** Replace the overloaded Effect concept with governed claim domains.
 - **Why:** Page marketing, official functions, risk expressions, and disease/treatment wording have different semantics.

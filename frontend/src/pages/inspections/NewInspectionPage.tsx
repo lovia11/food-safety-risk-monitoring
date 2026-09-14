@@ -179,12 +179,12 @@ function MonitorTargetPicker({
   return (
     <section className="monitor-target-picker" aria-label="监测对象">
       <div className="monitor-target-heading">
-        <div><strong>监测对象</strong><span>完整官方 Reference，可运行范围独立标识</span></div>
+        <div><strong>监测对象</strong><span>完整官方目录与当前可排查范围分别统计</span></div>
         <p>官方目录 {coverage?.reference_target_count || targetList?.count || 0}项 · 当前可排查 {coverage?.operational_target_count || 0}项</p>
       </div>
       <div className="input-with-icon monitor-target-search">
         <Search size={16} />
-        <input value={targetSearch} onChange={(event) => onSearch(event.target.value)} placeholder="搜索官方标准名称或已验证搜索词" />
+        <input value={targetSearch} onChange={(event) => onSearch(event.target.value)} placeholder="搜索官方标准名称或已验证搜索策略" />
       </div>
       <div className="monitor-target-filters" aria-label="对象可用状态">
         {AVAILABILITY_FILTERS.map((item) => (
@@ -209,7 +209,7 @@ function MonitorTargetPicker({
             </span>
             {target.availability === "operational" ? (
               <span className="monitor-query-line">
-                <span>已验证搜索词 {target.validated_query_count}</span>
+                <span>已验证搜索策略 {target.validated_query_count}</span>
                 {target.validated_queries.map((query) => <span className="monitor-query-chip" key={query.query_id}>{query.query_text}</span>)}
               </span>
             ) : target.availability === "paused" ? (
