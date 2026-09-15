@@ -202,7 +202,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
     def test_bjs_202209_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         self.assertEqual(payload["dataset_id"], "inspection-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-b5")
+        self.assertEqual(payload["dataset_version"], "2026.09-b6")
         self.assertEqual(payload["dataset_status"], "verified_reference")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
@@ -540,7 +540,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
 
     def test_kj_201903_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b5")
+        self.assertEqual(payload["dataset_version"], "2026.09-b6")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
         methods = {item["method_id"]: item for item in payload["methods"]}
@@ -654,7 +654,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
 
     def test_gbt_45443_and_melatonin_context_match_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b5")
+        self.assertEqual(payload["dataset_version"], "2026.09-b6")
 
         methods = {item["method_id"]: item for item in payload["methods"]}
         self.assertEqual(
@@ -771,11 +771,13 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             store.initialize()
             expected = {
                 "dataset": 1,
+                "regulatory_documents": 5,
                 "methods": 5,
                 "substances": 117,
                 "method_substances": 132,
                 "applicabilities": 37,
                 "regulatory_contexts": 1,
+                "group_memberships": 0,
             }
             self.assertEqual(store.import_inspection_config(REFERENCE_CONFIG), expected)
             first = store.table_counts()
@@ -786,6 +788,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 scoped_counts = {
                     "dataset": connection.execute(
                         "SELECT COUNT(*) FROM inspection_datasets WHERE dataset_id = ?",
+                        ("inspection-reference",),
+                    ).fetchone()[0],
+                    "regulatory_documents": connection.execute(
+                        "SELECT COUNT(*) FROM inspection_regulatory_documents "
+                        "WHERE dataset_id = ?",
                         ("inspection-reference",),
                     ).fetchone()[0],
                     "methods": connection.execute(
@@ -823,9 +830,45 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                         """,
                         ("inspection-reference",),
                     ).fetchone()[0],
+                    "group_memberships": connection.execute(
+                        "SELECT COUNT(*) FROM substance_group_memberships "
+                        "WHERE dataset_id = ?",
+                        ("inspection-reference",),
+                    ).fetchone()[0],
                 }
             connection.close()
             self.assertEqual(scoped_counts, expected)
+
+    def test_v2_reference_index_depth_documents_and_group_baseline(self):
+        payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
+
+        self.assertEqual(payload["schema_version"], 2)
+        self.assertEqual(
+            {item["knowledge_depth"] for item in payload["methods"]},
+            {"recommendation_ready"},
+        )
+        self.assertEqual(len(payload["regulatory_documents"]), 5)
+        self.assertEqual(
+            {item["regulatory_document_id"] for item in payload["methods"]},
+            {item["document_id"] for item in payload["regulatory_documents"]},
+        )
+        for document in payload["regulatory_documents"]:
+            self.assertTrue(document["source_reference"].startswith("https://"))
+            self.assertIn("published_date", document)
+            self.assertIn("effective_date", document)
+            self.assertNotEqual(document["published_date"], "")
+        self.assertEqual(payload["substance_group_memberships"], [])
+
+        successor = next(
+            item
+            for item in payload["methods"]
+            if item["method_id"] == "gbt-45443-2025"
+        )
+        self.assertEqual(successor["replaces_method_no"], "GB/T 5009.170-2003")
+        self.assertNotIn(
+            "GB/T 5009.170-2003",
+            {item["method_no"] for item in payload["methods"]},
+        )
 
 
 if __name__ == "__main__":

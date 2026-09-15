@@ -21,15 +21,19 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.effect_risk_bridge import validate_effect_risk_bridge_config
+from src.inspection_method_candidates import validate_inspection_candidate_manifest
 from src.inspection_reference import validate_inspection_config
 from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
 
 
-AUDIT_CONTRACT_VERSION = "v2.7a-1"
+AUDIT_CONTRACT_VERSION = "v2.7b1-1"
 DEFAULT_INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 DEFAULT_RISK_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
+DEFAULT_CANDIDATE_CONFIG = (
+    PROJECT_ROOT / "config" / "inspection_method_candidates_v2.json"
+)
 
 _METHOD_STATUSES = ("current", "superseded", "revoked", "verification_pending")
 _METHOD_TYPES = ("supplementary_bjs", "rapid_kj", "national_standard_gbt")
@@ -75,10 +79,9 @@ def _method_audit(
             "method_type",
             "method_status",
             "publisher",
-            "published_date",
             "source_name",
             "source_reference",
-            "source_date",
+            "regulatory_document_id",
         )
     ) and _official_source_reference(method.get("source_reference"))
     analyte_verified = bool(relations) and all(
@@ -106,12 +109,13 @@ def _method_audit(
         and applicability_verified
         and lifecycle_complete
         and status == "current"
+        and method.get("source_date")
     )
     if not reference_complete:
         depth = "reference_incomplete"
     elif not analyte_verified:
         depth = "reference_only"
-    elif not applicability_verified or not lifecycle_complete:
+    elif not applicability_verified:
         depth = "analyte_verified"
     elif recommendation_ready:
         depth = "recommendation_ready"
@@ -124,6 +128,8 @@ def _method_audit(
         "method_name": method["method_name"],
         "method_type": method["method_type"],
         "method_status": status,
+        "declared_knowledge_depth": method["knowledge_depth"],
+        "regulatory_document_id": method["regulatory_document_id"],
         "publisher": method["publisher"],
         "published_date": method["published_date"],
         "effective_date": method["effective_date"],
@@ -146,6 +152,7 @@ def _method_audit(
         "applicability_verified": applicability_verified,
         "lifecycle_complete": lifecycle_complete,
         "knowledge_depth": depth,
+        "depth_contract_matches": method["knowledge_depth"] == depth,
         "recommendation_ready": recommendation_ready,
         "note": method["note"],
     }
@@ -155,6 +162,7 @@ def build_audit(
     inspection: Mapping[str, Any],
     risk: Mapping[str, Any],
     bridge: Mapping[str, Any],
+    candidates: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic report from already-normalized governed inputs."""
 
@@ -163,8 +171,11 @@ def build_audit(
     method_substances = list(inspection["method_substances"])
     applicabilities = list(inspection["method_applicabilities"])
     regulatory_contexts = list(inspection["substance_regulatory_contexts"])
+    regulatory_documents = list(inspection["regulatory_documents"])
+    group_memberships = list(inspection["substance_group_memberships"])
     risk_mappings = list(risk["mappings"])
     bridge_mappings = list(bridge["mappings"])
+    candidate_methods = list((candidates or {}).get("candidates", []))
 
     method_ids = {item["method_id"] for item in methods}
     substance_ids = {item["substance_id"] for item in substances}
@@ -213,6 +224,21 @@ def build_audit(
             not in {mapping["mapping_id"] for mapping in risk_mappings}
         }
     )
+    document_ids = {item["document_id"] for item in regulatory_documents}
+    dangling_method_documents = sorted(
+        {
+            item["regulatory_document_id"]
+            for item in methods
+            if item["regulatory_document_id"] not in document_ids
+        }
+    )
+    dangling_group_substances = sorted(
+        {
+            item["substance_id"]
+            for item in group_memberships
+            if item["substance_id"] not in substance_ids
+        }
+    )
     dangling = {
         "method_substance_method_ids": dangling_method_relations,
         "method_substance_substance_ids": dangling_substance_relations,
@@ -220,6 +246,8 @@ def build_audit(
         "applicability_substance_ids": dangling_applicability_substances,
         "risk_substance_ids": dangling_risk_substances,
         "bridge_reference_mapping_ids": dangling_bridge_references,
+        "method_regulatory_document_ids": dangling_method_documents,
+        "group_membership_substance_ids": dangling_group_substances,
     }
     if any(dangling.values()):
         raise InspectionKnowledgeAuditError(
@@ -257,6 +285,17 @@ def build_audit(
         for method in sorted(methods, key=lambda item: item["method_id"])
     ]
     method_audit_by_id = {item["method_id"]: item for item in method_matrix}
+    governed_method_numbers = {item["method_no"] for item in methods}
+    candidate_collisions = sorted(
+        item["method_no"]
+        for item in candidate_methods
+        if item["method_no"] in governed_method_numbers
+    )
+    if candidate_collisions:
+        raise InspectionKnowledgeAuditError(
+            "Candidate manifest overlaps the governed index: "
+            + ", ".join(candidate_collisions)
+        )
 
     relation_paths_with_applicability = 0
     missing_applicability_paths: list[dict[str, str]] = []
@@ -379,6 +418,36 @@ def build_audit(
         for item in method_matrix
         if item["knowledge_depth"] == "recommendation_ready"
     }
+    depth_counts = {
+        depth: sum(item["knowledge_depth"] == depth for item in method_matrix)
+        for depth in (
+            "reference_only",
+            "analyte_verified",
+            "applicability_verified",
+            "recommendation_ready",
+        )
+    }
+    document_numbers = {
+        item["document_no"]
+        for item in regulatory_documents
+        if item["document_no"]
+    }
+    method_numbers = {item["method_no"] for item in methods}
+    unresolved_lifecycle_edges = []
+    for method in methods:
+        for field, direction in (
+            ("replaces_method_no", "replaces"),
+            ("replaced_by_method_no", "replaced_by"),
+        ):
+            target = method[field]
+            if target and target not in method_numbers and target not in document_numbers:
+                unresolved_lifecycle_edges.append(
+                    {
+                        "method_id": method["method_id"],
+                        "direction": direction,
+                        "target_method_no": target,
+                    }
+                )
 
     used_risk_rows = [
         item
@@ -480,6 +549,12 @@ def build_audit(
             "effect_risk_bridges": 1,
             "governed_dataset_count": 3,
             "methods": len(methods),
+            "indexed_methods": len(methods),
+            "candidate_methods": len(candidate_methods),
+            "candidate_method_ids": sorted(
+                item["candidate_id"] for item in candidate_methods
+            ),
+            "knowledge_depth_counts": depth_counts,
             "method_type_counts": {
                 key: sum(item["method_type"] == key for item in methods)
                 for key in _METHOD_TYPES
@@ -498,6 +573,13 @@ def build_audit(
             "method_applicabilities": len(applicabilities),
             "applicability_scope_counts": dict(sorted(source_scope_counts.items())),
             "substance_regulatory_contexts": len(regulatory_contexts),
+            "regulatory_documents": len(regulatory_documents),
+            "method_regulatory_document_links": sum(
+                bool(item["regulatory_document_id"]) for item in methods
+            ),
+            "unresolved_lifecycle_document_edges": len(
+                unresolved_lifecycle_edges
+            ),
             "risk_substance_mappings": len(explicit_rows),
             "risk_substance_group_mappings": len(group_rows),
             "risk_mappings_total": len(risk_mappings),
@@ -509,7 +591,7 @@ def build_audit(
                     if item["target_type"] == "substance_group"
                 }
             ),
-            "group_membership_relations": 0,
+            "group_membership_relations": len(group_memberships),
             "evidence_risk_bridge_mappings": len(bridge_mappings),
             "runtime_recommendation_usage": {
                 "risk_categories": len(bridge_risk_categories),
@@ -524,6 +606,29 @@ def build_audit(
             },
         },
         "method_matrix": method_matrix,
+        "candidate_manifest": {
+            "manifest_id": (candidates or {}).get("manifest_id"),
+            "manifest_version": (candidates or {}).get("manifest_version"),
+            "runtime_consumed": (candidates or {}).get("runtime_consumed"),
+            "candidate_ids": sorted(
+                item["candidate_id"] for item in candidate_methods
+            ),
+            "excluded_from_coverage_denominator": True,
+        },
+        "regulatory_documents": {
+            "count": len(regulatory_documents),
+            "method_link_count": sum(
+                bool(item["regulatory_document_id"]) for item in methods
+            ),
+            "unresolved_lifecycle_edges": sorted(
+                unresolved_lifecycle_edges,
+                key=lambda item: (
+                    item["method_id"],
+                    item["direction"],
+                    item["target_method_no"],
+                ),
+            ),
+        },
         "risk_reachability": reachability,
         "risk_category_reachability": categories,
         "applicability_quality": {
@@ -541,6 +646,10 @@ def build_audit(
             "dangling_identities": dangling,
             "groups_expanded": False,
             "risk_mappings_derived_from_methods": False,
+            "candidate_manifest_runtime_consumed": False,
+            "depth_declarations_match_static_gate": all(
+                item["depth_contract_matches"] for item in method_matrix
+            ),
         },
         "metrics": metrics,
     }
@@ -550,19 +659,22 @@ def load_and_build_audit(
     inspection_path: Path = DEFAULT_INSPECTION_CONFIG,
     risk_path: Path = DEFAULT_RISK_CONFIG,
     bridge_path: Path = DEFAULT_BRIDGE_CONFIG,
+    candidate_path: Path = DEFAULT_CANDIDATE_CONFIG,
 ) -> dict[str, Any]:
     """Validate governed files and build an offline audit."""
 
     inspection_raw = read_json(inspection_path)
     risk_raw = read_json(risk_path)
     bridge_raw = read_json(bridge_path)
+    candidate_raw = read_json(candidate_path)
     inspection = validate_inspection_config(inspection_raw)
     risk = validate_risk_substance_config(risk_raw)
     bridge = validate_effect_risk_bridge_config(
         bridge_raw,
         risk_reference_config=risk_raw,
     )
-    return build_audit(inspection, risk, bridge)
+    candidates = validate_inspection_candidate_manifest(candidate_raw)
+    return build_audit(inspection, risk, bridge, candidates)
 
 
 def render_markdown(report: Mapping[str, Any]) -> str:
@@ -579,6 +691,8 @@ def render_markdown(report: Mapping[str, Any]) -> str:
         "| Fact | Count |",
         "|---|---:|",
         f"| Methods | {inventory['methods']} |",
+        f"| Non-runtime candidates | {inventory['candidate_methods']} |",
+        f"| Regulatory documents | {inventory['regulatory_documents']} |",
         f"| Substances | {inventory['substances']} |",
         f"| Method→Substance | {inventory['method_substance_relations']} |",
         f"| Applicabilities | {inventory['method_applicabilities']} |",
@@ -586,6 +700,7 @@ def render_markdown(report: Mapping[str, Any]) -> str:
         f"| Risk→Substance | {inventory['risk_substance_mappings']} |",
         f"| Risk→Group | {inventory['risk_substance_group_mappings']} |",
         f"| Evidence→Risk bridge | {inventory['evidence_risk_bridge_mappings']} |",
+        f"| Governed group memberships | {inventory['group_membership_relations']} |",
         "",
         "## Methods",
         "",
@@ -620,10 +735,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inspection", type=Path, default=DEFAULT_INSPECTION_CONFIG)
     parser.add_argument("--risk", type=Path, default=DEFAULT_RISK_CONFIG)
     parser.add_argument("--bridge", type=Path, default=DEFAULT_BRIDGE_CONFIG)
+    parser.add_argument("--candidates", type=Path, default=DEFAULT_CANDIDATE_CONFIG)
     parser.add_argument("--format", choices=("json", "markdown"), default="json")
     args = parser.parse_args(argv)
 
-    report = load_and_build_audit(args.inspection, args.risk, args.bridge)
+    report = load_and_build_audit(
+        args.inspection,
+        args.risk,
+        args.bridge,
+        args.candidates,
+    )
     if args.format == "markdown":
         sys.stdout.write(render_markdown(report))
     else:

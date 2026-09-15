@@ -9,7 +9,7 @@
 
 `ClaimConsistencyAssessment` is a Snapshot-scoped, evidence-bearing comparison between the page's V2 Claim records and the verified product's official HealthFunctions. It supplies transparent comparison clues for human review. It does not decide legality, compliance, approval, efficacy, risk probability, substance presence, or an inspection method.
 
-V2-6A froze the domain and governed knowledge contract. V2-6B1 implements the production assessment artifact, schema 12 rebuildable projection and additive Snapshot read contract. V2-6B2 presents that read contract in Product Detail and Inspection Workspace without Review side effects or RiskSignal/InspectionRecommendation changes.
+V2-6A froze the domain and governed knowledge contract. V2-6B1 implements the production assessment artifact, a rebuildable projection introduced in schema 12 and retained by current schema 13, and an additive Snapshot read contract. V2-6B2 presents that read contract in Product Detail and Inspection Workspace without Review side effects or RiskSignal/InspectionRecommendation changes.
 
 ## 2. Inputs and eligibility
 

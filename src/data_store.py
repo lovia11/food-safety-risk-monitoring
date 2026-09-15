@@ -76,7 +76,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -929,6 +929,30 @@ class DataStore:
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS inspection_regulatory_documents (
+                    document_id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
+                    dataset_version TEXT NOT NULL,
+                    document_type TEXT NOT NULL CHECK(document_type IN (
+                        'official_method_page', 'official_announcement',
+                        'national_standard_record'
+                    )),
+                    document_no TEXT,
+                    title TEXT NOT NULL,
+                    publisher TEXT NOT NULL,
+                    published_date TEXT,
+                    effective_date TEXT,
+                    status TEXT NOT NULL CHECK(status IN (
+                        'current', 'superseded', 'revoked', 'verification_pending'
+                    )),
+                    source_reference TEXT NOT NULL,
+                    jurisdiction TEXT NOT NULL,
+                    supersedes_json TEXT NOT NULL DEFAULT '[]',
+                    superseded_by_json TEXT NOT NULL DEFAULT '[]',
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(dataset_id, document_no)
+                );
+
                 CREATE TABLE IF NOT EXISTS inspection_methods (
                     method_id TEXT PRIMARY KEY,
                     dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
@@ -942,6 +966,13 @@ class DataStore:
                         CHECK(method_status IN (
                             'current', 'superseded', 'revoked', 'verification_pending'
                         )),
+                    knowledge_depth TEXT NOT NULL DEFAULT 'reference_only'
+                        CHECK(knowledge_depth IN (
+                            'reference_only', 'analyte_verified',
+                            'applicability_verified', 'recommendation_ready'
+                        )),
+                    regulatory_document_id TEXT
+                        REFERENCES inspection_regulatory_documents(document_id),
                     publisher TEXT NOT NULL DEFAULT '',
                     published_date TEXT,
                     effective_date TEXT,
@@ -1020,6 +1051,25 @@ class DataStore:
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS substance_group_memberships (
+                    membership_id TEXT PRIMARY KEY,
+                    group_identity TEXT NOT NULL,
+                    group_label TEXT NOT NULL,
+                    substance_id TEXT NOT NULL
+                        REFERENCES inspection_substances(substance_id),
+                    membership_scope TEXT NOT NULL,
+                    completeness_context TEXT NOT NULL
+                        CHECK(completeness_context IN ('partial', 'complete')),
+                    source_basis TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    status TEXT NOT NULL
+                        CHECK(status IN ('current', 'historical', 'verification_pending')),
+                    dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
+                    dataset_version TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(group_identity, substance_id)
+                );
+
                 CREATE TABLE IF NOT EXISTS risk_mapping_datasets (
                     dataset_id TEXT PRIMARY KEY,
                     dataset_version TEXT NOT NULL,
@@ -1083,6 +1133,8 @@ class DataStore:
 
                 CREATE INDEX IF NOT EXISTS idx_inspection_methods_dataset
                     ON inspection_methods(dataset_id, method_no);
+                CREATE INDEX IF NOT EXISTS idx_inspection_documents_dataset
+                    ON inspection_regulatory_documents(dataset_id, document_id);
                 CREATE INDEX IF NOT EXISTS idx_inspection_substances_dataset
                     ON inspection_substances(dataset_id, canonical_name);
                 CREATE INDEX IF NOT EXISTS idx_inspection_method_substances_substance
@@ -1091,6 +1143,8 @@ class DataStore:
                     ON inspection_method_applicabilities(method_id, applicability_id);
                 CREATE INDEX IF NOT EXISTS idx_regulatory_contexts_substance
                     ON substance_regulatory_contexts(substance_id, context_id);
+                CREATE INDEX IF NOT EXISTS idx_group_memberships_group
+                    ON substance_group_memberships(group_identity, status, substance_id);
                 CREATE INDEX IF NOT EXISTS idx_risk_mappings_dataset
                     ON risk_substance_mappings(dataset_id, risk_category);
                 CREATE INDEX IF NOT EXISTS idx_risk_mappings_substance
@@ -1156,6 +1210,24 @@ class DataStore:
                 "inspection_method_applicabilities",
                 "substance_id",
                 "TEXT REFERENCES inspection_substances(substance_id)",
+            )
+            self._ensure_column(
+                connection,
+                "inspection_methods",
+                "knowledge_depth",
+                "TEXT NOT NULL DEFAULT 'reference_only' CHECK(knowledge_depth IN ("
+                "'reference_only', 'analyte_verified', 'applicability_verified', "
+                "'recommendation_ready'))",
+            )
+            self._ensure_column(
+                connection,
+                "inspection_methods",
+                "regulatory_document_id",
+                "TEXT REFERENCES inspection_regulatory_documents(document_id)",
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_inspection_methods_depth "
+                "ON inspection_methods(knowledge_depth, method_status, method_id)"
             )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
@@ -1346,6 +1418,21 @@ class DataStore:
                         f" {previous_status} 自动变更为 {next_status}"
                     )
 
+            for document in payload["regulatory_documents"]:
+                existing_document = connection.execute(
+                    "SELECT dataset_id FROM inspection_regulatory_documents "
+                    "WHERE document_id = ?",
+                    (document["document_id"],),
+                ).fetchone()
+                if (
+                    existing_document is not None
+                    and existing_document["dataset_id"] != payload["dataset_id"]
+                ):
+                    raise DataStoreError(
+                        f"Inspection document_id {document['document_id']} 已属于数据集"
+                        f" {existing_document['dataset_id']}，不能转入 {payload['dataset_id']}"
+                    )
+
             for method in payload["methods"]:
                 existing_method = connection.execute(
                     "SELECT dataset_id FROM inspection_methods WHERE method_id = ?",
@@ -1372,6 +1459,25 @@ class DataStore:
                     raise DataStoreError(
                         f"Inspection substance_id {substance['substance_id']} 已属于数据集"
                         f" {existing_substance['dataset_id']}，不能转入 {payload['dataset_id']}"
+                    )
+
+            for membership in payload["substance_group_memberships"]:
+                existing_membership = connection.execute(
+                    "SELECT group_identity, substance_id, dataset_id "
+                    "FROM substance_group_memberships WHERE membership_id = ?",
+                    (membership["membership_id"],),
+                ).fetchone()
+                if existing_membership is not None and (
+                    existing_membership["group_identity"]
+                    != membership["group_identity"]
+                    or existing_membership["substance_id"]
+                    != membership["substance_id"]
+                    or existing_membership["dataset_id"]
+                    != membership["dataset_id"]
+                ):
+                    raise DataStoreError(
+                        "SubstanceGroupMembership membership_id "
+                        f"{membership['membership_id']} 不能改绑Group、Substance或Dataset"
                     )
 
             connection.execute(
@@ -1407,21 +1513,68 @@ class DataStore:
                 ),
             )
 
+            for document in payload["regulatory_documents"]:
+                connection.execute(
+                    """
+                    INSERT INTO inspection_regulatory_documents (
+                        document_id, dataset_id, dataset_version, document_type,
+                        document_no, title, publisher, published_date, effective_date,
+                        status, source_reference, jurisdiction, supersedes_json,
+                        superseded_by_json, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(document_id) DO UPDATE SET
+                        dataset_id=excluded.dataset_id,
+                        dataset_version=excluded.dataset_version,
+                        document_type=excluded.document_type,
+                        document_no=excluded.document_no,
+                        title=excluded.title,
+                        publisher=excluded.publisher,
+                        published_date=excluded.published_date,
+                        effective_date=excluded.effective_date,
+                        status=excluded.status,
+                        source_reference=excluded.source_reference,
+                        jurisdiction=excluded.jurisdiction,
+                        supersedes_json=excluded.supersedes_json,
+                        superseded_by_json=excluded.superseded_by_json,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        document["document_id"],
+                        document["dataset_id"],
+                        document["dataset_version"],
+                        document["document_type"],
+                        document["document_no"],
+                        document["title"],
+                        document["publisher"],
+                        document["published_date"],
+                        document["effective_date"],
+                        document["status"],
+                        document["source_reference"],
+                        document["jurisdiction"],
+                        json.dumps(document["supersedes"], ensure_ascii=False),
+                        json.dumps(document["superseded_by"], ensure_ascii=False),
+                        now,
+                    ),
+                )
+
             for method in payload["methods"]:
                 connection.execute(
                     """
                     INSERT INTO inspection_methods (
                         method_id, dataset_id, method_no, method_name, method_type,
-                        method_status, publisher, published_date, effective_date,
-                        replaces_method_no, replaced_by_method_no, source_name,
-                        source_reference, source_date, note, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        method_status, knowledge_depth, regulatory_document_id,
+                        publisher, published_date, effective_date, replaces_method_no,
+                        replaced_by_method_no, source_name, source_reference,
+                        source_date, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(method_id) DO UPDATE SET
                         dataset_id=excluded.dataset_id,
                         method_no=excluded.method_no,
                         method_name=excluded.method_name,
                         method_type=excluded.method_type,
                         method_status=excluded.method_status,
+                        knowledge_depth=excluded.knowledge_depth,
+                        regulatory_document_id=excluded.regulatory_document_id,
                         publisher=excluded.publisher,
                         published_date=excluded.published_date,
                         effective_date=excluded.effective_date,
@@ -1440,6 +1593,8 @@ class DataStore:
                         method["method_name"],
                         method["method_type"],
                         method["method_status"],
+                        method["knowledge_depth"],
+                        method["regulatory_document_id"],
                         method["publisher"],
                         method["published_date"],
                         method["effective_date"],
@@ -1612,8 +1767,47 @@ class DataStore:
                     ),
                 )
 
+            for membership in payload["substance_group_memberships"]:
+                connection.execute(
+                    """
+                    INSERT INTO substance_group_memberships (
+                        membership_id, group_identity, group_label, substance_id,
+                        membership_scope, completeness_context, source_basis,
+                        source_reference, status, dataset_id, dataset_version,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(membership_id) DO UPDATE SET
+                        group_identity=excluded.group_identity,
+                        group_label=excluded.group_label,
+                        substance_id=excluded.substance_id,
+                        membership_scope=excluded.membership_scope,
+                        completeness_context=excluded.completeness_context,
+                        source_basis=excluded.source_basis,
+                        source_reference=excluded.source_reference,
+                        status=excluded.status,
+                        dataset_id=excluded.dataset_id,
+                        dataset_version=excluded.dataset_version,
+                        updated_at=excluded.updated_at
+                    """,
+                    (
+                        membership["membership_id"],
+                        membership["group_identity"],
+                        membership["group_label"],
+                        membership["substance_id"],
+                        membership["membership_scope"],
+                        membership["completeness_context"],
+                        membership["source_basis"],
+                        membership["source_reference"],
+                        membership["status"],
+                        membership["dataset_id"],
+                        membership["dataset_version"],
+                        now,
+                    ),
+                )
+
         return {
             "dataset": 1,
+            "regulatory_documents": len(payload["regulatory_documents"]),
             "methods": len(payload["methods"]),
             "substances": len(payload["substances"]),
             "method_substances": len(payload["method_substances"]),
@@ -1621,6 +1815,7 @@ class DataStore:
             "regulatory_contexts": len(
                 payload["substance_regulatory_contexts"]
             ),
+            "group_memberships": len(payload["substance_group_memberships"]),
         }
 
     def import_risk_substance_config(self, config_path: Path) -> dict[str, int]:
@@ -1830,22 +2025,42 @@ class DataStore:
             ).fetchone()
         return dict(row) if row is not None else None
 
-    def list_substance_methods(self, substance_id: str) -> list[dict[str, Any]]:
-        """Resolve MethodSubstance to Method rows without assigning priority."""
+    def list_substance_methods(
+        self,
+        substance_id: str,
+        *,
+        recommendation_ready_only: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Resolve explicit MethodSubstance rows without inferring priority.
+
+        Reference/index consumers receive every declared depth.  Operational
+        Recommendation composition must opt into the defensive depth filter.
+        Lifecycle remains a separate downstream gate.
+        """
+
+        if not isinstance(recommendation_ready_only, bool):
+            raise TypeError("recommendation_ready_only must be a boolean")
+        depth_filter = (
+            " AND m.knowledge_depth = 'recommendation_ready'"
+            if recommendation_ready_only
+            else ""
+        )
 
         with self._connect() as connection:
             rows = connection.execute(
                 """
                 SELECT m.method_id, m.method_no, m.method_name, m.method_type,
-                       m.method_status, m.publisher, m.published_date,
+                       m.method_status, m.knowledge_depth,
+                       m.regulatory_document_id, m.publisher, m.published_date,
                        m.effective_date, ms.determination_role, ms.source_label,
                        ms.source_cas_no, ms.normalization_note, m.source_name,
                        m.source_reference, m.source_date, m.note
                 FROM inspection_method_substances ms
                 JOIN inspection_methods m ON m.method_id = ms.method_id
                 WHERE ms.substance_id = ?
-                ORDER BY m.method_no, m.method_id
-                """,
+                """
+                + depth_filter
+                + " ORDER BY m.method_no, m.method_id",
                 (substance_id,),
             ).fetchall()
         return [dict(row) for row in rows]
@@ -3859,11 +4074,13 @@ class DataStore:
                     "search_queries",
                     "candidate_hits",
                     "inspection_datasets",
+                    "inspection_regulatory_documents",
                     "inspection_methods",
                     "inspection_substances",
                     "inspection_method_substances",
                     "inspection_method_applicabilities",
                     "substance_regulatory_contexts",
+                    "substance_group_memberships",
                     "risk_mapping_datasets",
                     "risk_substance_mappings",
                 )

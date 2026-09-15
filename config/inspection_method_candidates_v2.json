@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inspection-method-candidates-v2",
+  "manifest_version": "2026.09-b1",
+  "status": "non_runtime_candidate_manifest",
+  "runtime_consumed": false,
+  "description": "V2-7A批准的官方方法发现候选。候选不属于Inspection Reference Index，不导入SQLite，不参与Recommendation或coverage denominator。",
+  "candidates": [
+    {
+      "candidate_id": "candidate-bjs-202405",
+      "method_no": "BJS 202405",
+      "title": null,
+      "status": "candidate",
+      "expected_depth": "recommendation_ready",
+      "discovery_source_name": "市场监管总局办公厅关于发布西布曲明及其系列衍生物有毒有害认定意见及执法检验方法的通知",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/art_935c1a68c87445729ad2e6c1d88607c6.html",
+      "discovery_source_date": "2025-10-18",
+      "discovery_source_record_id": "weight-loss-sibutramine-group-cn-2025",
+      "reason": "当前治理的减重方向官方来源提及该方法；正式标题、全文、分析物和适用范围仍需V2-7B2一手来源核验。"
+    },
+    {
+      "candidate_id": "candidate-gbt-5009-170-2003",
+      "method_no": "GB/T 5009.170-2003",
+      "title": "保健食品中褪黑素的测定",
+      "status": "candidate",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "国家标准全文公开系统中的GB/T 45443-2025现行标准记录",
+      "discovery_source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=647D466911910DA6D8ADAEB957E2E9CD",
+      "discovery_source_date": "2025-03-28",
+      "discovery_source_record_id": "gbt-45443-2025",
+      "reason": "现行标准记录声明全部代替该前代标准；前代标准自身身份、全文和生命周期尚未独立核验，不得直接提升为正式Method。"
+    }
+  ]
+}

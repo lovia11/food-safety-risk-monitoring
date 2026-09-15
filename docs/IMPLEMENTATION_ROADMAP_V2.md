@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-7A
+> Last verified phase: V2-7B1
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -200,7 +200,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-7 — Inspection knowledge coverage
 
-**Status:** IN PROGRESS — V2-7A complete; V2-7B is NEXT.
+**Status:** IN PROGRESS — V2-7A and V2-7B1 complete; V2-7B2 is NEXT.
 
 - **Goal:** Expand governed inspection knowledge using **wide Reference Index + deep Verified Subset**.
 - **Why:** Broad discoverability is useful, but only deeply parsed, provenance-complete mappings can drive recommendations.
@@ -227,17 +227,31 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-7B — Wide Official Method Reference Expansion
 
-**Status:** NEXT — requires its own implementation Gate.
+**Status:** IN PROGRESS — B1 infrastructure is complete; B2 knowledge verification/promotion is NEXT.
 
 - **Goal:** Expand first-party official method identity/lifecycle coverage without making shallow records Recommendation-capable.
-- **Dependencies:** V2-7A coverage contract and an approved additive depth/candidate boundary.
+- **Dependencies:** V2-7A coverage contract and the completed V2-7B1 depth/candidate boundary.
 - **Initial candidates:** BJS 202405 exact identity/full text from its current SAMR discovery source; GB/T 5009.170-2003 predecessor identity/lifecycle from first-party standards evidence.
 - **Required boundary:** Reference-only records cannot enter D5 resolution. Exact titles, lifecycle and documents must be verified before promotion; candidate status is not `verified_reference`.
 - **Out of Scope:** Bulk third-party imports, Risk inference from analytes, Claim→Risk, and deep promotion without source scope.
 
+#### V2-7B1 — Inspection Reference Index Infrastructure & Recommendation Boundary
+
+**Status:** COMPLETE — additive storage, validation and runtime isolation accepted offline.
+
+- **Result:** Schema 13 persists independent lifecycle/depth, normalized RegulatoryDocument links and explicit group membership. A validated non-runtime manifest records exactly two candidates. The five existing methods remain the complete runtime index and all explicitly pass `recommendation_ready`; operational resolution filters by both readiness and lifecycle.
+- **Non-result:** No candidate, method, analyte, applicability, Risk/group mapping or group member was added; no API/frontend or Recommendation output changed.
+
+#### V2-7B2 — Bounded Official Method Verification & Promotion
+
+**Status:** NEXT — requires a separate phase Gate and first-party source verification.
+
+- **Goal:** Resolve the approved candidate identities/documents and promote only the records whose verified depth is supported by evidence.
+- **Boundary:** Candidate count is not index coverage. Lower-depth records remain excluded from Recommendation by construction.
+
 ### V2-7C — Deep Verified Subset & V2-7 Exit Gate
 
-**Status:** PLANNED — not authorized until V2-7B is accepted.
+**Status:** PLANNED — not authorized until V2-7B2 is accepted.
 
 - **Goal:** Deep-verify priority analyte/scope/applicability paths and close V2-7 with context-corpus reachability evidence.
 - **Dependencies:** Versioned V2-7B index, depth-aware resolver, RegulatoryDocument/lifecycle handling, and accepted priority set.

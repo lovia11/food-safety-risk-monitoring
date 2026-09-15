@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B1
+> Last verified phase: V2-7B1
 > Owner: Project
 
 ## 1. Product position
@@ -112,11 +112,11 @@ These concepts must not be compressed into one `Effect` field. The five categori
 
 V2-5A further separates a page Claim into an Evidence-backed `ClaimMention` occurrence and a governed `ClaimSignal` marketing topic. A formal Claim can originate only from current-product seller-managed Evidence; UGC is auxiliary and other-product content is excluded. The system may say “检测到睡眠相关宣传表达” or “页面出现体重管理相关宣传”, but it must not say that the product has the effect, that the expression is an Official Health Function, or that it is legal/illegal. The initial V2 taxonomy and full legacy migration are governed by [CLAIM_TAXONOMY_V2.md](CLAIM_TAXONOMY_V2.md).
 
-V2-5B1 implements this Claim observation contract as a parallel, degradable runtime. `claim_analysis.json` is authoritative and the schema 11 Claim/API projections retained by current schema 12 are rebuildable; complete zero-Claim, not-generated, and error states remain distinct. Claim runtime success or failure does not change Review eligibility, Recommendation, Review, or Sampling.
+V2-5B1 implements this Claim observation contract as a parallel, degradable runtime. `claim_analysis.json` is authoritative and the schema 11 Claim/API projections retained by current schema 13 are rebuildable; complete zero-Claim, not-generated, and error states remain distinct. Claim runtime success or failure does not change Review eligibility, Recommendation, Review, or Sampling.
 
 V2-5B2 makes that contract the primary **页面宣传线索** presentation in Product Overview, Product Detail, Review Queue, Inspection Workspace, and current Sampling. It displays what wording was detected and suggests human review without confirming efficacy or making an automatic legality judgment. `complete + []`, `not_generated`, and `error` have different wording. Compact list/filter projections come from same-Snapshot `claim_signals`; they never derive a Claim from `detectedEffects`, Evidence keywords, or a SearchQuery. Legacy Effect/Risk/Recommendation fields and frozen Sampling exports remain compatibility contracts rather than V2 Claim authority.
 
-V2-6A governs the separate official HealthFunction framework, exact current/official-transition Registry normalization, four explicit `topic_related` Claim mappings, and the non-adjudicative ClaimConsistencyAssessment contract. V2-6B1 implements that contract as a degradable Snapshot sidecar, schema 12 rebuildable projection, and additive Snapshot read model. Official aliases normalize Registry strings only; they never turn the same page expression into approved wording. The governed contracts are [HEALTH_FUNCTION_FRAMEWORK_V2.md](HEALTH_FUNCTION_FRAMEWORK_V2.md) and [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md); visible presentation remains V2-6B2 work.
+V2-6A governs the separate official HealthFunction framework, exact current/official-transition Registry normalization, four explicit `topic_related` Claim mappings, and the non-adjudicative ClaimConsistencyAssessment contract. V2-6B1 implements that contract as a degradable Snapshot sidecar, a rebuildable projection introduced in schema 12 and retained by current schema 13, and an additive Snapshot read model. Official aliases normalize Registry strings only; they never turn the same page expression into approved wording. The governed contracts are [HEALTH_FUNCTION_FRAMEWORK_V2.md](HEALTH_FUNCTION_FRAMEWORK_V2.md) and [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md); visible presentation remains V2-6B2 work.
 
 ## 7. Product Facts
 

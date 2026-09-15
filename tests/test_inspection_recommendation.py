@@ -311,6 +311,84 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
         self.assertEqual(bjs_201701["method_status"], "superseded")
         self.assertEqual(bjs_201701["applicability_status"], "applicable")
 
+    def test_non_recommendation_ready_depths_are_excluded_by_backend_resolver(self):
+        self._execute(
+            """
+            INSERT INTO inspection_methods (
+                method_id, dataset_id, method_no, method_name, method_type,
+                method_status, knowledge_depth, regulatory_document_id,
+                publisher, published_date, effective_date, replaces_method_no,
+                replaced_by_method_no, source_name, source_reference, source_date,
+                note, updated_at
+            ) VALUES (
+                'test-nondeep-method', 'inspection-reference', 'TEST NONDEEP',
+                '仅用于深度门槛测试的方法', 'supplementary_bjs', 'current',
+                'reference_only', NULL, '测试发布方', '2026-01-01', NULL,
+                NULL, NULL, '测试来源', 'test://nondeep', '2026-01-01',
+                'synthetic test only', '2026-01-01T00:00:00+08:00'
+            )
+            """
+        )
+        self._execute(
+            """
+            INSERT INTO inspection_method_substances (
+                method_id, substance_id, source_label, source_cas_no,
+                determination_role, normalization_note, ordinal, updated_at
+            ) VALUES (
+                'test-nondeep-method', ?, '西布曲明', '106650-56-0',
+                'qualitative', '', 1, '2026-01-01T00:00:00+08:00'
+            )
+            """,
+            (SIBUTRAMINE_ID,),
+        )
+        self._execute(
+            """
+            INSERT INTO inspection_method_applicabilities (
+                applicability_id, method_id, substance_id, scope_type,
+                product_category, product_form, ingredient_context,
+                source_scope_text, note, updated_at
+            ) VALUES (
+                'test-nondeep-scope', 'test-nondeep-method', NULL, 'include',
+                '饼干', '', '', '测试适用范围', 'synthetic test only',
+                '2026-01-01T00:00:00+08:00'
+            )
+            """
+        )
+
+        self.assertIn(
+            "test-nondeep-method",
+            {
+                item["method_id"]
+                for item in self.store.list_substance_methods(SIBUTRAMINE_ID)
+            },
+        )
+        for depth in (
+            "reference_only",
+            "analyte_verified",
+            "applicability_verified",
+        ):
+            with self.subTest(depth=depth):
+                self._execute(
+                    "UPDATE inspection_methods SET knowledge_depth = ? "
+                    "WHERE method_id = 'test-nondeep-method'",
+                    (depth,),
+                )
+                follow_up = self._follow_up(self._build_weight_loss())
+                operational_ids = {
+                    item["method_id"]
+                    for field in (
+                        "suggested_methods",
+                        "methods_needing_context",
+                        "other_known_methods",
+                    )
+                    for item in follow_up[field]
+                }
+                self.assertNotIn("test-nondeep-method", operational_ids)
+                self.assertEqual(
+                    [item["method_id"] for item in follow_up["suggested_methods"]],
+                    ["bjs-201701"],
+                )
+
     def test_composition_gap_blocks_suggestion_but_keeps_known_methods(self):
         self._execute(
             "DELETE FROM risk_substance_mappings WHERE mapping_id = ?",
@@ -602,7 +680,7 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
         with sqlite3.connect(self.store.database_path) as connection:
             schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-        self.assertEqual(schema_version, 12)
+        self.assertEqual(schema_version, 13)
 
 
 if __name__ == "__main__":

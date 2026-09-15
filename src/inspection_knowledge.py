@@ -57,6 +57,8 @@ class InspectionMethodTrace(TypedDict):
     method_name: str
     method_type: str
     method_status: str
+    knowledge_depth: str
+    regulatory_document_id: str | None
     publisher: str
     published_date: str | None
     effective_date: str | None
@@ -156,7 +158,10 @@ class InspectionKnowledgeResolver:
         self, substance_id: str
     ) -> list[InspectionMethodTrace]:
         methods: list[InspectionMethodTrace] = []
-        for method_row in self.data_store.list_substance_methods(substance_id):
+        for method_row in self.data_store.list_substance_methods(
+            substance_id,
+            recommendation_ready_only=True,
+        ):
             applicability_rows = self.data_store.list_method_applicabilities(
                 str(method_row["method_id"]), substance_id
             )

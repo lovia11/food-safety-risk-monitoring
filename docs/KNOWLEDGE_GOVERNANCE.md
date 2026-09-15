@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7A
+> Last verified phase: V2-7B1
 > Owner: Project
 
 This document is the hard constraint for creating, changing, loading, presenting, and measuring regulated knowledge.
@@ -116,13 +116,15 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 
 - A method record states its official number/name, publisher, source, dates, status, and analyte facts.
 - The Wide Reference Index is distinct from the Deep Verified Subset. `method_status` describes official lifecycle; `knowledge_depth` describes project verification depth. Neither substitutes for the other.
-- The depth progression is `reference_only` → `analyte_verified` → `applicability_verified` → `recommendation_ready`. V2-7A uses it as an audit/design projection only; schema 12 does not persist it.
+- The depth progression is `reference_only` → `analyte_verified` → `applicability_verified` → `recommendation_ready`. V2-7B1 persists it in schema 13 and validates the facts required at each declared depth; schema 12→13 migration conservatively defaults old method rows to `reference_only`.
 - Deep promotion requires official identity/source, explicit source-backed analyte relations, parsed scope, lifecycle, applicability handling and dataset/version provenance.
 - Substance-to-Method means a method covers an analyte; it does not create a Risk mapping.
 - Applicability requires explicit product context and basis. Include, conditional and exclude facts stay distinct. Unknown context or a missing applicability record stays “needs context”/unknown, not silently suitable or not applicable.
 - Risk-to-Substance plus Substance-to-Method is still insufficient for a Recommendation until method depth, current lifecycle and product-context applicability pass.
 - A Risk-to-SubstanceGroup mapping is not expanded from MethodSubstance, a matching name, CAS data, pharmacology or model knowledge.
-- The current five methods are a small deep-parsed corpus, not a wide or nationally complete method index. Future reference-only candidates must remain outside Recommendation runtime until an explicit depth-aware storage/resolver gate exists.
+- The current five methods are a small deep-parsed corpus, not a wide or nationally complete method index. The Recommendation resolver admits only current `recommendation_ready` methods. The two B1 candidates remain in a separately validated non-runtime manifest and are not imported into SQLite.
+- RegulatoryDocument identity/lifecycle is normalized separately from InspectionMethod; a missing predecessor remains an explicit unresolved edge.
+- SubstanceGroup membership requires an explicit governed membership record with source provenance and completeness. It is never inferred from MethodSubstance, naming, CAS data or model knowledge; the current governed membership count is zero.
 
 ### 4.5 Health-food registry
 

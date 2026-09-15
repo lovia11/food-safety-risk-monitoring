@@ -1,14 +1,14 @@
-# Inspection Knowledge Audit V2-7A
+# Inspection Knowledge Audit V2-7
 
-> Status: AUDIT BASELINE
+> Status: V2-7A AUDIT BASELINE + V2-7B1 INFRASTRUCTURE UPDATE
 > Repository baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
-> Audit contract: `v2.7a-1`
-> Inputs: `inspection-reference@2026.09-b5`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
+> Audit contract: `v2.7b1-1`
+> Inputs: `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
 > Audit mode: deterministic and offline
 
 ## 1. Scope and result
 
-V2-7A inventories the current governed inspection knowledge and freezes the coverage contract. It does not promote a candidate, edit a knowledge record, migrate schema, change API/frontend behavior, or change Recommendation semantics.
+V2-7A inventories the current governed inspection knowledge and freezes the coverage contract. V2-7B1 implements only the infrastructure boundary: schema 13 persists knowledge depth, RegulatoryDocument links and explicit group-membership records; a separate non-runtime manifest records two candidates. It does not promote either candidate, alter existing analyte/applicability/Risk knowledge, change API/frontend behavior, or change Recommendation semantics.
 
 The current five methods form a small, deep-parsed corpus rather than a wide national index. All five pass the current static Recommendation-depth gate for their explicitly recorded analyte relations, but only two are used by the present operational bridge path. Group mappings remain unresolved and are not expanded from method analytes.
 
@@ -27,6 +27,8 @@ python scripts/audit_inspection_knowledge.py --format markdown
 | Risk-mapping datasets | 1 |
 | Effect/Risk bridge datasets | 1 |
 | Inspection methods | 5 |
+| Non-runtime candidate methods | 2 |
+| Regulatory documents / linked methods | 5 / 5 |
 | `supplementary_bjs` / `rapid_kj` / `national_standard_gbt` | 3 / 1 / 1 |
 | `current` / `superseded` / `revoked` / `verification_pending` | 5 / 0 / 0 / 0 |
 | Deprecated methods | 0; `deprecated` is not a current enum value |
@@ -47,7 +49,8 @@ These values match the approximate canonical status. The audit makes the previou
 
 | Dataset | Status | Version | Authority retained | Role |
 |---|---|---|---|---|
-| `inspection-reference` | `verified_reference` | `2026.09-b5` | SAMR method pages / National Standards public system | Method, Substance, MethodSubstance, applicability and one context. |
+| `inspection-reference` | `verified_reference` | `2026.09-b6` | SAMR method pages / National Standards public system | Method, RegulatoryDocument, Substance, MethodSubstance, applicability, explicit group membership and one context. |
+| `inspection-method-candidates-v2` | `non_runtime_candidate_manifest` | `v2-7b1` | Existing first-party discovery locators only | Two isolated candidate work items; never imported by DataStore or Recommendation. |
 | `risk-substance-reference` | `verified_reference` | `2026.09-c3` | SAMR current official guidance | Independent Risk→Substance/Group facts. |
 | `phase3-effect-risk-bridge` | governed bridge | `2026.09-d2` | References exact current Risk mapping IDs | Three exact legacy Effect/keyword pairs; no Claim input. |
 
@@ -55,7 +58,7 @@ All five methods retain a first-party HTTPS locator, publisher, publication/sour
 
 ## 4. Method-by-method audit
 
-The `knowledge_depth` column is an audit projection, not a stored field and not a runtime change.
+The `knowledge_depth` column is now an explicit governed field and schema 13 projection. The audit independently recomputes static depth and fails when the declaration and facts disagree.
 
 | Method | Lifecycle | Reference / formal basis | Analyte parsing | Applicability parsing | Lifecycle / regulatory context gaps | Audit depth |
 |---|---|---|---|---|---|---|
@@ -65,21 +68,20 @@ The `knowledge_depth` column is an audit projection, not a stored field and not 
 | KJ201903 | `current`; published 2019-09-27; effective date not separately recorded | SAMR 2019 No. 41 announcement | 4 explicit rapid-screen reference/performance substances | 6 method-level `include` product forms | The four relations are not an exhaustive claim about every barbiturate response; positive screening requires confirmation; no context records | `recommendation_ready` only for the four explicit relations, never for an inferred class |
 | GB/T 45443-2025 | `current`; published 2025-03-28; effective 2025-10-01 | National Standards public system entry | 1 quantitative melatonin relation | 7 method-level `include` forms | Replaces GB/T 5009.170-2003, but the predecessor has no normalized Method/Document record; one melatonin context exists | `recommendation_ready` for the explicit melatonin relation |
 
-Why all five reach the static top depth: the current `verified_reference` validator already requires every method to have official identity/source/date, at least one MethodSubstance relation, at least one method-level applicability record, and source scope text. That is a property of this small curated corpus, not evidence of broad external coverage.
+Why all five reach the static top depth: each explicitly declares `recommendation_ready` and passes its conditional gate: official identity/source/date, current lifecycle, a linked RegulatoryDocument, at least one MethodSubstance relation, method-level applicability, and source scope text. That is a property of this small curated corpus, not evidence of broad external coverage.
 
 ## 5. Schema, importer and runtime audit
 
-Schema 12 stores `inspection_datasets`, `inspection_methods`, `inspection_substances`, `inspection_method_substances`, `inspection_method_applicabilities`, `substance_regulatory_contexts`, `risk_mapping_datasets`, and `risk_substance_mappings`. SQLite is a rebuildable read index for the committed JSON authorities.
+Schema 13 retains the existing inspection/risk tables and adds normalized `inspection_regulatory_documents`, explicit `knowledge_depth` and `regulatory_document_id` on methods, plus `substance_group_memberships`. SQLite remains a rebuildable read index for committed JSON authorities.
 
-Current limitations relevant to V2-7B:
+The V2-7B1 boundary is enforced at four independent points:
 
-1. `inspection_methods` has lifecycle status but no independent `knowledge_depth`.
-2. `validate_inspection_config()` rejects a method in a `verified_reference` dataset unless it already has analytes and method-level applicability. The current contract therefore cannot represent a verified `reference_only` row in that dataset.
-3. `list_substance_methods()` returns explicit relations and D5 later separates non-current methods, but there is no future depth gate. A reference-only import must not become runtime-visible by accident.
-4. RegulatoryDocument is not normalized; source and lifecycle fields are inline strings.
-5. Supersession uses method-number strings. The GB/T predecessor is not a first-class record, so the reverse edge cannot be validated.
+1. `validate_inspection_config()` applies conditional facts by declared depth rather than requiring every indexed method to be deep.
+2. Schema 12→13 migration defaults pre-existing rows to `reference_only`; it never silently declares historical methods Recommendation-ready.
+3. Reference queries can return every indexed depth, while the operational Recommendation resolver explicitly requests only `recommendation_ready` methods and still applies lifecycle separately.
+4. `config/inspection_method_candidates_v2.json` is validated by a non-runtime loader and has no DataStore importer or Recommendation call path.
 
-V2-7A does not change these structures. V2-7B must first choose an additive safe representation or keep candidates outside runtime import until their deep promotion is complete.
+Five normalized RegulatoryDocument rows retain the existing method provenance and all five indexed methods link to one. The only unresolved lifecycle/document edge is the recorded GB/T 5009.170-2003 predecessor, which remains a candidate rather than a fabricated current document. The group-membership schema/validator contract exists, but the governed membership count remains zero.
 
 ## 6. Substance→Method and applicability quality
 
@@ -154,9 +156,9 @@ Priority is knowledge-engineering order, not product risk probability.
 
 | Priority | Gap | Evidence from current chain | Required next action |
 |---|---|---|---|
-| P0 | Wide index cannot safely represent `reference_only` separately from runtime-ready methods | No `knowledge_depth`; verified dataset validation requires analyte/applicability; resolver has no depth filter | Before importing wide candidates, add an explicit additive depth/candidate boundary and Recommendation gate, or keep candidates non-importable. |
-| P0 | Group mappings have no governed membership contract | 3 group rows, 0 membership relations; runtime correctly reports partial/unresolved | Define source-backed partial/complete group membership and explicit unknown remainder; never derive members from MethodSubstance. |
-| P0 | RegulatoryDocument and supersession are not first-class | Inline URLs and method-number strings; GB/T predecessor absent | Normalize document identity/lifecycle design before bulk expansion; preserve current URLs during migration. |
+| Resolved in B1 | Wide index could not safely represent `reference_only` separately from runtime-ready methods | Schema 13 depth, conditional validation, non-runtime candidates and an explicit operational resolver filter now enforce the boundary | Keep these gates mandatory during B2 expansion. |
+| Resolved contract / data gap remains | Group mappings had no governed membership contract | Schema 13 and config validation now support explicit source-backed membership; actual membership count remains 0 | Add no member without source evidence; all three group mappings remain unresolved. |
+| Resolved baseline / lifecycle gap remains | RegulatoryDocument was not first-class | Five current source records are normalized and linked; the GB/T predecessor itself is still absent | Verify the predecessor in B2 before adding its document/method record. |
 | P1 | BJS 202405 is source-discovered but not verified in Inspection Reference | Current official weight-loss guidance mentions the method; repo has no verified method/analyte/scope record | V2-7B must retrieve and verify the official method page/full text before any promotion or Risk shortcut. |
 | P1 | GB/T 5009.170-2003 predecessor is not indexed | GB/T 45443-2025 declares full replacement | Add a superseded reference record/document only after first-party identity and lifecycle verification; never recommend it as current. |
 | P1 | `anti_fatigue` has structural knowledge but no Evidence→Risk bridge | Two explicit Substance paths are ready; bridge count is zero | Treat as a separate future Risk-bridge governance decision, not as an Inspection-method expansion or automatic Claim mapping. |
@@ -164,22 +166,22 @@ Priority is knowledge-engineering order, not product risk probability.
 
 ## 11. V2-7B candidate official-method list
 
-Candidates are planning records only. They are not added to `config/inspection_reference.json`, SQLite or Recommendation runtime.
+Candidates are governed planning records in `config/inspection_method_candidates_v2.json` only. They are not added to `config/inspection_reference.json`, SQLite or Recommendation runtime, and they are excluded from every indexed-method coverage denominator.
 
 | Candidate ID | Method number / title | Official discovery source | Source type | Existing governed direction | Why prioritized | Expected depth | Verification status |
 |---|---|---|---|---|---|---|---|
 | `candidate-bjs-202405` | BJS 202405 / **official title not yet verified** | Current SAMR notice retained by `weight-loss-sibutramine-group-cn-2025` | First-party official notice; method full text still required | `weight_loss` / 西布曲明及其系列衍生物 | Directly named by the current operational gap; may clarify the 2025 method and analyte/scope facts | Target `recommendation_ready` only after all gates | `candidate` |
 | `candidate-gbt-5009-170-2003` | GB/T 5009.170-2003 / 保健食品中褪黑素的测定 | Current National Standards entry for GB/T 45443-2025 records replacement | First-party national-standard lifecycle entry; predecessor record/full text still required | Existing melatonin Method/Substance lifecycle | Completes the explicit predecessor edge and historical derivation trace | `reference_only` or `applicability_verified`; never current Recommendation | `candidate` |
 
-The audit deliberately does not invent further titles from third-party lists. V2-7B may widen the candidate corpus only through SAMR, the National Standards public system, NHC or another first-party authority, recording rejected and pending candidates separately.
+The audit deliberately does not invent further titles from third-party lists. V2-7B2 may promote or widen the candidate corpus only through SAMR, the National Standards public system, NHC or another first-party authority, recording rejected and pending candidates separately.
 
 ## 12. V2-7B plan — Wide Official Method Reference Expansion
 
-1. Establish a non-runtime candidate manifest and explicit depth field/contract.
-2. Re-verify candidate identity, exact title, publisher, dates, status, official locator and document relationship.
-3. Import reference-only candidates only after queries and D5 exclude them by construction.
+1. **B1 complete:** non-runtime candidate manifest, explicit depth field/validator, schema 13 projection, RegulatoryDocument baseline, group-membership contract and Recommendation-ready resolver gate.
+2. **B2 next:** re-verify candidate identity, exact title, publisher, dates, status, official locator and document relationship.
+3. Import a reference-only record only after it passes the appropriate gate; D5 will still exclude it by construction.
 4. Start with BJS 202405 and the GB/T predecessor lifecycle record because both arise from existing governed paths.
-5. Record candidates rejected, superseded or unavailable; do not force them into `verified_reference`.
+5. Record candidates rejected, superseded or unavailable; do not force them into `verified_reference` or `recommendation_ready`.
 6. Recompute the same denominator-defined audit after each versioned release.
 
 ## 13. V2-7C plan — Deep Verified Subset and exit gate
@@ -187,16 +189,18 @@ The audit deliberately does not invent further titles from third-party lists. V2
 1. Select deep-verification work from existing governed Risk→explicit Substance paths and observed Recommendation gaps, not popularity lists.
 2. Parse analytes, source labels/CAS, determination role and normalization notes from official full text.
 3. Parse positive, conditional and negative scope without turning missing facts into `not_applicable`.
-4. Normalize RegulatoryDocument and lifecycle/supersession links or explicitly defer them with a gap.
+4. Complete candidate-specific RegulatoryDocument and lifecycle/supersession links or explicitly retain them as gaps.
 5. Promote only records passing the full gate; verify D5 ignores every lower-depth method.
 6. Test a defined Product Context corpus for context-applicable reachability; keep that metric separate from static coverage.
 7. Preserve exact existing Recommendation fixtures and frozen historical artifacts.
 
 ## 14. Explicitly unchanged
 
-- `config/inspection_reference.json`, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` knowledge records;
+- the five existing methods, their analytes/applicability, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` knowledge semantics;
 - Phase3, D2–D6 and Recommendation output;
 - ClaimSignal, Claim consistency, Review and Sampling semantics;
-- schema 12, API and frontend;
+- API and frontend behavior;
 - historical Evidence and frozen Sampling exports;
 - live collection and network behavior.
+
+V2-7B1 changes only additive inspection-reference metadata/contracts and SQLite schema 12→13. It adds no method, analyte, applicability, Risk/group mapping, or group member.

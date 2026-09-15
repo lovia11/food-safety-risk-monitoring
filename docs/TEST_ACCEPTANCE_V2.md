@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7A
+> Last verified phase: V2-7B1
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -17,7 +17,7 @@ Every implementation report states the starting commit, changed files, schema/AP
 - Links resolve and canonical documents link to the right authority.
 - Terminology matches the registry in Product Requirements.
 - Current implementation and Future changes are distinguishable.
-- Active docs identify schema 12 as the sole current schema; prior-version details remain only in archived or explicit migration history.
+- Active docs identify schema 13 as the sole current schema; prior-version details remain only in archived or explicit migration history.
 - Retired IA and `web/` do not appear as current.
 - Archived material is marked non-normative and is never cited as a higher authority.
 - A cold-start reader can answer the 16 canonical baseline questions without chat context.
@@ -247,9 +247,24 @@ Every governed dataset change tests:
 - include, conditional and exclude source facts remain distinct, and product-level applicability still requires explicit context;
 - Method Reference, Deep Verification, Substance→Method, Applicability, Risk→Substance, Group Resolution, and Recommendation Reachability metrics each record numerator, denominator and dataset versions;
 - Recommendation fixtures remain byte-for-byte semantically compatible; no schema, API, frontend, config record, Phase3, D2–D6, Review, Sampling, frozen history or runtime business output changes;
-- V2-7B candidate records remain planning-only until an approved depth-aware storage/resolver gate exists.
+- V2-7A candidate records remain planning-only; V2-7B1 establishes the depth-aware storage/resolver gate without promoting them.
 
 V2-7A exit validation passed offline: audit/governance tests 9/9; Inspection config/Risk/bridge/knowledge/applicability/Recommendation/runtime targeted regression 210/210; Claim/Consistency 49/49; Review/Sampling 30/30; Monitor/Discovery/Task 39/39; Python full regression discovered 541 / passed 540 / skipped 1; frontend workflow 38/38; typecheck and production build passed. No external network, collection, schema/API/frontend runtime change, knowledge-record promotion, or historical rewrite occurred.
+
+### 8.3 Inspection reference index boundary — V2-7B1
+
+- schema 12→13 preserves existing rows and assigns old method rows the conservative `reference_only` depth rather than silently promoting them;
+- config schema 2 validates `reference_only`, `analyte_verified`, `applicability_verified`, and `recommendation_ready` with depth-appropriate requirements independent of lifecycle;
+- all five current methods explicitly declare and satisfy `recommendation_ready`, link to one of five normalized RegulatoryDocument records, and retain their existing analyte/applicability semantics;
+- ordinary reference queries may inspect all indexed depths, while the production Recommendation resolver explicitly admits only `recommendation_ready` and independently lifecycle-valid methods;
+- a deterministic lower-depth method remains reference-visible but cannot appear in any Recommendation bucket;
+- the candidate manifest contains exactly `candidate-bjs-202405` and `candidate-gbt-5009-170-2003`, is marked non-runtime, has no DataStore importer, and is excluded from every method coverage denominator;
+- RegulatoryDocument identity, source, lifecycle and bidirectional supersession references are validated; the GB/T predecessor remains an explicit unresolved edge;
+- the explicit SubstanceGroup membership validator/projection supports provenance and partial/complete scope, while the governed baseline remains zero rows and 0/3 resolved group mappings;
+- existing Recommendation fixtures remain semantically unchanged, and no candidate/method/analyte/Risk/group mapping is added by B1;
+- full offline Python and frontend regression passes without collection or network access.
+
+V2-7B1 exit validation passed offline: focused Inspection/Reference/Risk/Recommendation regression 193/193; Python full regression discovered 552 / passed 551 / skipped 1; frontend workflow 38/38; typecheck and production build passed. The deterministic audit reports 5 indexed methods, 2 non-runtime candidates, 5 `recommendation_ready` methods, 5 RegulatoryDocuments/links, 1 unresolved lifecycle/document edge and 0 group memberships. No external retrieval, collection, candidate promotion, historical rewrite or visible UI behavior change occurred.
 
 ## 9. Pipeline and Review gate
 

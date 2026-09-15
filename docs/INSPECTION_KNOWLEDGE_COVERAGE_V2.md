@@ -2,14 +2,14 @@
 
 > Status: CANONICAL DESIGN BASELINE
 > Applies to: V2-7
-> Baseline datasets: `inspection-reference@2026.09-b5`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
+> Baseline datasets: `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
 > Owner: Project
 
 ## 1. Purpose
 
 This contract separates the size of the project's official-method index from the depth required to drive an Inspection Recommendation. It defines auditable denominators and promotion gates without claiming coverage of every official Chinese inspection method.
 
-V2-7A changes no runtime output, schema, API, frontend behavior, Recommendation semantics, Risk mapping, Claim mapping, or governed knowledge record. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
+V2-7A changed no runtime output. V2-7B1 implements the additive schema/validation/resolver boundary required by this contract while preserving API/frontend behavior, Recommendation output, Risk mapping, Claim mapping, and every existing method/analyte/applicability fact. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
 
 ## 2. Two knowledge sets
 
@@ -50,7 +50,7 @@ These dimensions must never be collapsed. In particular:
 - `verified_reference` at dataset level does not prove that a future reference-only row is Recommendation-capable.
 - `recommendation_ready` is a static knowledge classification, not a product-level recommendation result.
 
-The current schema has no persisted `knowledge_depth`. V2-7A computes it for audit only and does not change runtime. Before V2-7B imports reference-only records, an additive representation and resolver gate are required; a candidate file that is not imported into runtime is an acceptable interim boundary.
+Schema 13 persists `knowledge_depth` independently from `method_status`. The production validator applies conditional gates by depth, and the Recommendation resolver explicitly requests only `recommendation_ready` methods while lifecycle remains a separate check. Schema 12→13 migration assigns pre-existing rows the conservative `reference_only` default. The non-runtime candidate manifest remains outside DataStore and Recommendation.
 
 ## 4. Promotion gate
 
@@ -129,7 +129,7 @@ These are source-scope classes, not a claim that an arbitrary product is applica
 
 ## 9. RegulatoryDocument contract
 
-Future normalized `RegulatoryDocument` records must include at least:
+Normalized `RegulatoryDocument` records include at least:
 
 | Field | Meaning |
 |---|---|
@@ -146,7 +146,7 @@ Future normalized `RegulatoryDocument` records must include at least:
 | `supersedes` / `superseded_by` | Directed document lifecycle links. |
 | dataset/version provenance | Governing dataset identity and version. |
 
-InspectionMethod must eventually reference the document/database entry that defines it rather than relying only on a URL string. V2-7A freezes this design but requires no schema migration.
+InspectionMethod references the document/database entry that defines it rather than relying only on a URL string. V2-7B1 normalizes five existing source records and links all five indexed methods; it does not invent the missing GB/T predecessor document.
 
 ## 10. Coverage metrics
 
@@ -166,9 +166,9 @@ Every metric is version-scoped and keeps its denominator. Percentages describe o
 
 Context-applicable coverage is evaluated only over a defined Product/Snapshot context corpus. It must not be reported from static knowledge alone.
 
-## 11. Current V2-7A baseline
+## 11. Current V2-7B1 baseline
 
-For `inspection-reference@2026.09-b5`, `risk-substance-reference@2026.09-c3`, and `phase3-effect-risk-bridge@2026.09-d2`:
+For `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, and `phase3-effect-risk-bridge@2026.09-d2`:
 
 | Metric | Result |
 |---|---:|
@@ -188,7 +188,7 @@ The first four high percentages describe a deliberately small, already deep-pars
 
 - Each report records the audit contract and all three input versions.
 - Changing a denominator requires a versioned dataset or contract change.
-- Candidate methods are excluded until promoted into the governed index.
+- The two candidate methods are excluded from every indexed-method denominator until separately verified and promoted into the governed index.
 - Historical derived output retains its recorded knowledge version; no audit rewrites Evidence, Recommendation or frozen Sampling history.
 - The offline audit validates configs through the production validators before calculating counts.
 

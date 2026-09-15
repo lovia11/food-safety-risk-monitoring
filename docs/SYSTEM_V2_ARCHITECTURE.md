@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7A
+> Last verified phase: V2-7B1
 > Owner: Project
 
 This document deliberately separates current implementation from target V2 design. Items under Target Architecture are `FUTURE CHANGE` until implemented and accepted.
@@ -28,7 +28,7 @@ StandalonePipeline
     ↓
 output/<run_id>/ artifacts
     ↓ import/index
-DataStore (SQLite schema 12)
+DataStore (SQLite schema 13)
     ↓
 ReviewDecisionService / SamplingStore / SamplingExportService
 ```
@@ -75,15 +75,15 @@ Recommendation is not a Review gate. A successful analysis with zero Evidence is
 |---|---|
 | `output/<run_id>/` | Raw and processed run facts, evidence inputs, `product_facts.json`, `health_food_identity.json`, `claim_analysis.json`, `claim_consistency.json`, analysis and recommendation artifacts. |
 | `output/_registry_cache/health_food/` | Best-effort official query cache with raw JSON, hash, retrieval time and normalized result; never committed. |
-| `data/app.db` | Schema 12 query/read index including ProductFact, HealthFoodIdentity, ClaimMention/ClaimSignal, ClaimConsistencyAssessment, normalized registry projections, imported run relationships, human Review, mutable current Sampling Membership, and frozen-list index. |
+| `data/app.db` | Schema 13 query/read index including ProductFact, HealthFoodIdentity, ClaimMention/ClaimSignal, ClaimConsistencyAssessment, normalized registry projections, depth-aware Inspection methods/RegulatoryDocuments/explicit group memberships, imported run relationships, human Review, mutable current Sampling Membership, and frozen-list index. |
 | Frozen JSON/XLSX/evidence export | Immutable historical sampling-list fact at export time. |
 | Governed `config/*.json` | Versioned operational/reference knowledge loaded by current runtime. |
 
 `config/claim_taxonomy_v2.json` remains the governed **design baseline** and is now the sole runtime Claim taxonomy. Product-Snapshot `claim_analysis.json` is the derived ClaimMention/ClaimSignal authority; SQLite `claim_mentions`, `claim_signals`, and `claim_signal_mentions` are rebuildable projections. A complete artifact with empty arrays means zero Claims; a missing artifact projects `not_generated`, and an invalid/failed sidecar projects `error`. Raw OCR/DOM/title artifacts remain source facts and Evidence remains the source-preserving observation layer; neither is replaced by a Claim record.
 
-`config/health_functions_v2.json` and `config/claim_health_function_mapping_v2.json` are the sole governed consistency knowledge sources. `claim_consistency.json` is the derived authority. Schema 12 stores a rebuildable assessment row, every raw Registry function and its exact resolution state, and compact per-Claim relations. It does not store a mutable copy of the governed function catalog. Missing, complete, and error sidecar states are separate; invalid re-import clears stale consistency rows transactionally.
+`config/health_functions_v2.json` and `config/claim_health_function_mapping_v2.json` are the sole governed consistency knowledge sources. `claim_consistency.json` is the derived authority. The schema 12 projection, retained in current schema 13, stores a rebuildable assessment row, every raw Registry function and its exact resolution state, and compact per-Claim relations. It does not store a mutable copy of the governed function catalog. Missing, complete, and error sidecar states are separate; invalid re-import clears stale consistency rows transactionally.
 
-`config/inspection_reference.json`, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` remain the current inspection-chain authorities. V2-7A adds only an offline audit projection and coverage design: Wide Reference Index and Deep Verified Subset are distinct, lifecycle is independent from knowledge depth, and every metric carries its denominator. Schema 12 has no `knowledge_depth`, so future reference-only candidates cannot enter runtime import until an additive depth-aware gate is approved.
+`config/inspection_reference.json`, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` remain the current inspection-chain authorities. V2-7B1 implements the V2-7A boundary: schema 13 stores independent `knowledge_depth`, normalized RegulatoryDocument links and explicit group membership; conditional validation allows mixed index depth; Recommendation resolution explicitly filters to current `recommendation_ready` methods. `config/inspection_method_candidates_v2.json` is a separately validated non-runtime planning manifest with no DataStore or Recommendation path.
 
 SQLite run-derived data can be re-imported, but the database also contains human business mutations. Rebuilding it without preserving Review and Sampling state may lose decisions. The term “index” therefore does not mean “always safe to delete.”
 
@@ -187,7 +187,7 @@ ClaimConsistencyAssessment does not output RiskSignal, InspectionRecommendation,
 
 Resolves only versioned, lifecycle-valid, provenance-bearing links across claims, risk categories, substances/groups, methods, applicability, regulatory documents, and health-food records. Missing links remain Knowledge Gaps.
 
-The current compatibility path is strictly directed: observed legacy Evidence → governed Risk category → Risk→explicit Substance or unresolved Group → Method→Substance → Product Context applicability → Recommendation. Method analytes never create Risk mappings or group membership. V2-7A defines `reference_only`, `analyte_verified`, `applicability_verified`, and `recommendation_ready` as an independent design dimension but does not alter the current resolver; V2-7B must add a safe gate before widening the runtime index.
+The current compatibility path is strictly directed: observed legacy Evidence → governed Risk category → Risk→explicit Substance or unresolved Group → Method→Substance → Product Context applicability → Recommendation. Method analytes never create Risk mappings or group membership. V2-7B1 persists `reference_only`, `analyte_verified`, `applicability_verified`, and `recommendation_ready` independently from lifecycle; reference readers may inspect every depth, while the operational resolver requests only `recommendation_ready` and still rejects non-current methods.
 
 ### 3.5 Analytics Read Model and Knowledge API
 

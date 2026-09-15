@@ -14,11 +14,13 @@ from src.runtime import write_json
 
 INSPECTION_TABLES = {
     "inspection_datasets",
+    "inspection_regulatory_documents",
     "inspection_methods",
     "inspection_substances",
     "inspection_method_substances",
     "inspection_method_applicabilities",
     "substance_regulatory_contexts",
+    "substance_group_memberships",
 }
 
 
@@ -29,7 +31,7 @@ def inspection_dataset(
     include_records: bool = True,
 ) -> dict:
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset_id": dataset_id,
         "dataset_version": "test-1",
         "dataset_status": status,
@@ -43,14 +45,34 @@ def inspection_dataset(
             else None
         ),
         "description": "仅用于自动化测试，不是正式监管知识。",
+        "regulatory_documents": [],
         "methods": [],
         "substances": [],
         "method_substances": [],
         "method_applicabilities": [],
         "substance_regulatory_contexts": [],
+        "substance_group_memberships": [],
     }
     if not include_records:
         return payload
+    payload["regulatory_documents"] = [
+        {
+            "document_id": "test-document-1",
+            "document_type": "official_method_page",
+            "document_no": "TEST 0001",
+            "title": "测试检验方法",
+            "publisher": "测试发布方",
+            "published_date": "2026-08-01",
+            "effective_date": "2026-09-01",
+            "status": "current",
+            "source_reference": "test://method-1",
+            "jurisdiction": "CN",
+            "supersedes": [],
+            "superseded_by": [],
+            "dataset_id": dataset_id,
+            "dataset_version": "test-1",
+        }
+    ]
     payload["methods"] = [
         {
             "method_id": "test-method-1",
@@ -59,6 +81,8 @@ def inspection_dataset(
             "method_name": "测试检验方法",
             "method_type": "supplementary_bjs",
             "method_status": "current",
+            "knowledge_depth": "recommendation_ready",
+            "regulatory_document_id": "test-document-1",
             "publisher": "测试发布方",
             "published_date": "2026-08-01",
             "effective_date": "2026-09-01",
@@ -166,7 +190,7 @@ class InspectionReferenceValidationTest(unittest.TestCase):
             validate_inspection_config(missing_time)
 
         empty = inspection_dataset(status="verified_reference", include_records=False)
-        with self.assertRaisesRegex(InspectionConfigValidationError, "Method和一个Substance"):
+        with self.assertRaisesRegex(InspectionConfigValidationError, "一个Method"):
             validate_inspection_config(empty)
 
     def test_duplicate_primary_and_business_identifiers_are_rejected(self):
@@ -300,6 +324,7 @@ class InspectionReferenceValidationTest(unittest.TestCase):
 
     def test_verified_reference_requires_applicability_source_scope_text(self):
         development = inspection_dataset()
+        development["methods"][0]["knowledge_depth"] = "analyte_verified"
         development["method_applicabilities"][0]["source_scope_text"] = ""
         self.assertEqual(
             validate_inspection_config(development)["method_applicabilities"][0][
@@ -414,7 +439,7 @@ class InspectionReferenceValidationTest(unittest.TestCase):
         cases = []
         pending_method = inspection_dataset(status="verified_reference")
         pending_method["methods"][0]["method_status"] = "verification_pending"
-        cases.append(("verification_pending", pending_method))
+        cases.append(("method_status.*current", pending_method))
         no_method_relation = inspection_dataset(status="verified_reference")
         no_method_relation["method_substances"] = []
         no_method_relation["method_applicabilities"] = [
@@ -455,6 +480,165 @@ class InspectionReferenceValidationTest(unittest.TestCase):
             ):
                 validate_inspection_config(payload)
 
+    def test_knowledge_depth_gates_are_enforced_without_global_relaxation(self):
+        reference_only = inspection_dataset(status="verified_reference")
+        reference_only["methods"][0]["knowledge_depth"] = "reference_only"
+        reference_only["method_substances"] = []
+        reference_only["method_applicabilities"] = []
+        normalized = validate_inspection_config(reference_only)
+        self.assertEqual(
+            normalized["methods"][0]["knowledge_depth"], "reference_only"
+        )
+
+        analyte_without_relation = inspection_dataset(status="verified_reference")
+        analyte_without_relation["methods"][0]["knowledge_depth"] = (
+            "analyte_verified"
+        )
+        analyte_without_relation["method_substances"] = []
+        analyte_without_relation["method_applicabilities"] = []
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "analyte_verified.*MethodSubstance"
+        ):
+            validate_inspection_config(analyte_without_relation)
+
+        applicability_without_scope = inspection_dataset(
+            status="verified_reference"
+        )
+        applicability_without_scope["methods"][0]["knowledge_depth"] = (
+            "applicability_verified"
+        )
+        applicability_without_scope["method_applicabilities"] = []
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError,
+            "applicability_verified.*MethodApplicability",
+        ):
+            validate_inspection_config(applicability_without_scope)
+
+        ready_without_scope = inspection_dataset(status="verified_reference")
+        ready_without_scope["method_applicabilities"] = []
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError,
+            "recommendation_ready.*MethodApplicability",
+        ):
+            validate_inspection_config(ready_without_scope)
+
+        ready_without_relation = inspection_dataset(status="verified_reference")
+        ready_without_relation["method_substances"] = []
+        ready_without_relation["method_applicabilities"] = []
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError,
+            "recommendation_ready.*MethodSubstance",
+        ):
+            validate_inspection_config(ready_without_relation)
+
+    def test_lifecycle_and_knowledge_depth_are_independent(self):
+        current_reference = inspection_dataset(status="verified_reference")
+        current_reference["methods"][0]["knowledge_depth"] = "reference_only"
+        current_reference["method_substances"] = []
+        current_reference["method_applicabilities"] = []
+        self.assertEqual(
+            validate_inspection_config(current_reference)["methods"][0][
+                "method_status"
+            ],
+            "current",
+        )
+
+        superseded_deep = inspection_dataset(status="verified_reference")
+        superseded_deep["methods"][0].update(
+            {
+                "method_status": "superseded",
+                "knowledge_depth": "applicability_verified",
+                "replaced_by_method_no": "TEST 0002",
+            }
+        )
+        normalized = validate_inspection_config(superseded_deep)
+        self.assertEqual(
+            (
+                normalized["methods"][0]["method_status"],
+                normalized["methods"][0]["knowledge_depth"],
+            ),
+            ("superseded", "applicability_verified"),
+        )
+
+    def test_regulatory_document_links_and_lifecycle_direction_are_validated(self):
+        normalized = validate_inspection_config(
+            inspection_dataset(status="verified_reference")
+        )
+        self.assertEqual(len(normalized["regulatory_documents"]), 1)
+        self.assertEqual(
+            normalized["methods"][0]["regulatory_document_id"],
+            "test-document-1",
+        )
+
+        missing = inspection_dataset()
+        missing["methods"][0]["regulatory_document_id"] = "missing-document"
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "RegulatoryDocument不存在"
+        ):
+            validate_inspection_config(missing)
+
+        one_way = inspection_dataset()
+        predecessor = copy.deepcopy(one_way["regulatory_documents"][0])
+        predecessor.update(
+            {
+                "document_id": "test-document-predecessor",
+                "document_no": "TEST 0000",
+                "superseded_by": [],
+            }
+        )
+        one_way["regulatory_documents"].append(predecessor)
+        one_way["regulatory_documents"][0]["supersedes"] = [
+            "test-document-predecessor"
+        ]
+        with self.assertRaisesRegex(InspectionConfigValidationError, "双向一致"):
+            validate_inspection_config(one_way)
+
+        wrong_version = inspection_dataset()
+        wrong_version["regulatory_documents"][0]["dataset_version"] = "other"
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "dataset_version必须等于"
+        ):
+            validate_inspection_config(wrong_version)
+
+    def test_group_membership_contract_accepts_zero_and_rejects_inference(self):
+        baseline = validate_inspection_config(
+            inspection_dataset(status="verified_reference")
+        )
+        self.assertEqual(baseline["substance_group_memberships"], [])
+
+        explicit = inspection_dataset(status="verified_reference")
+        explicit["substance_group_memberships"] = [
+            {
+                "membership_id": "test-group-member-1",
+                "group_identity": "test-group-1",
+                "group_label": "测试来源组",
+                "substance_id": "test-substance-1",
+                "membership_scope": "来源明确列名成员",
+                "completeness_context": "partial",
+                "source_basis": "synthetic explicit membership only",
+                "source_reference": "test://group-membership",
+                "status": "current",
+                "dataset_id": "inspection-test-dataset",
+                "dataset_version": "test-1",
+            }
+        ]
+        normalized = validate_inspection_config(explicit)
+        self.assertEqual(
+            normalized["substance_group_memberships"][0][
+                "completeness_context"
+            ],
+            "partial",
+        )
+
+        wrong_version = copy.deepcopy(explicit)
+        wrong_version["substance_group_memberships"][0]["dataset_version"] = (
+            "other"
+        )
+        with self.assertRaisesRegex(
+            InspectionConfigValidationError, "dataset_version必须匹配"
+        ):
+            validate_inspection_config(wrong_version)
+
 
 class InspectionReferencePersistenceTest(unittest.TestCase):
     def setUp(self):
@@ -486,22 +670,101 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "PRAGMA table_info(inspection_method_applicabilities)"
                 )
             }
-        self.assertEqual(version, 12)
+        self.assertEqual(version, 13)
         self.assertTrue(INSPECTION_TABLES <= all_tables)
         self.assertIn("substance_id", applicability_columns)
         self.assertIn("risk_mapping_datasets", all_tables)
         self.assertIn("risk_substance_mappings", all_tables)
         self.assertNotIn("inspection_recommendations", all_tables)
 
+    def test_schema_twelve_upgrades_depth_safely_and_preserves_method_row(self):
+        database = self.root / "legacy-v12.db"
+        with sqlite3.connect(database) as connection:
+            connection.executescript(
+                """
+                CREATE TABLE inspection_datasets (
+                    dataset_id TEXT PRIMARY KEY,
+                    dataset_version TEXT NOT NULL,
+                    dataset_status TEXT NOT NULL,
+                    source_name TEXT,
+                    source_reference TEXT,
+                    source_date TEXT,
+                    collected_at TEXT,
+                    verified_at TEXT,
+                    description TEXT NOT NULL DEFAULT '',
+                    imported_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE inspection_methods (
+                    method_id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL REFERENCES inspection_datasets(dataset_id),
+                    method_no TEXT NOT NULL,
+                    method_name TEXT NOT NULL,
+                    method_type TEXT NOT NULL,
+                    method_status TEXT NOT NULL,
+                    publisher TEXT NOT NULL DEFAULT '',
+                    published_date TEXT,
+                    effective_date TEXT,
+                    replaces_method_no TEXT,
+                    replaced_by_method_no TEXT,
+                    source_name TEXT NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    source_date TEXT,
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(dataset_id, method_no)
+                );
+                INSERT INTO inspection_datasets VALUES (
+                    'legacy-inspection', 'legacy-v12', 'verified_reference',
+                    'legacy source', 'legacy reference', '2026-01-01', NULL,
+                    '2026-01-01T00:00:00+08:00', '',
+                    '2026-01-01T00:00:00+08:00',
+                    '2026-01-01T00:00:00+08:00'
+                );
+                INSERT INTO inspection_methods VALUES (
+                    'legacy-method', 'legacy-inspection', 'LEGACY 1',
+                    '旧方法', 'supplementary_bjs', 'current', '旧发布方',
+                    '2026-01-01', NULL, NULL, NULL, '旧来源', 'legacy reference',
+                    '2026-01-01', 'must survive',
+                    '2026-01-01T00:00:00+08:00'
+                );
+                PRAGMA user_version = 12;
+                """
+            )
+
+        DataStore(database, self.root / "legacy-v12-output").initialize()
+        with sqlite3.connect(database) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            method = connection.execute(
+                "SELECT method_no, note, knowledge_depth, regulatory_document_id "
+                "FROM inspection_methods WHERE method_id='legacy-method'"
+            ).fetchone()
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+
+        self.assertEqual(version, 13)
+        self.assertEqual(
+            method,
+            ("LEGACY 1", "must survive", "reference_only", None),
+        )
+        self.assertIn("inspection_regulatory_documents", tables)
+        self.assertIn("substance_group_memberships", tables)
+
     def test_import_is_idempotent_and_preserves_distinct_names_and_context(self):
         path = self._write(inspection_dataset(status="verified_reference"))
         expected = {
             "dataset": 1,
+            "regulatory_documents": 1,
             "methods": 1,
             "substances": 1,
             "method_substances": 1,
             "applicabilities": 2,
             "regulatory_contexts": 1,
+            "group_memberships": 0,
         }
         self.assertEqual(self.store.import_inspection_config(path), expected)
         first = self.store.table_counts()
@@ -521,6 +784,38 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         self.assertEqual(names[:2], ("测试物质原文名", "测试物质"))
         self.assertTrue(names[2])
         self.assertEqual(context, ("context_dependent", "测试产品范围"))
+
+    def test_explicit_group_membership_rebuilds_without_method_inference(self):
+        payload = inspection_dataset(dataset_id="group-contract")
+        payload["substance_group_memberships"] = [
+            {
+                "membership_id": "group-contract-member-1",
+                "group_identity": "source-group-1",
+                "group_label": "来源明确测试组",
+                "substance_id": "test-substance-1",
+                "membership_scope": "来源明确列名成员",
+                "completeness_context": "partial",
+                "source_basis": "synthetic explicit membership only",
+                "source_reference": "test://group-contract",
+                "status": "current",
+                "dataset_id": "group-contract",
+                "dataset_version": "test-1",
+            }
+        ]
+        result = self.store.import_inspection_config(
+            self._write(payload, "group-contract.json")
+        )
+
+        self.assertEqual(result["group_memberships"], 1)
+        with sqlite3.connect(self.store.database_path) as connection:
+            row = connection.execute(
+                "SELECT group_identity, substance_id, completeness_context "
+                "FROM substance_group_memberships"
+            ).fetchone()
+        self.assertEqual(
+            row,
+            ("source-group-1", "test-substance-1", "partial"),
+        )
 
     def test_upsert_does_not_delete_records_omitted_from_later_payload(self):
         initial = inspection_dataset(dataset_id="nondeleting-dataset")
@@ -559,6 +854,12 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
 
         development = inspection_dataset(dataset_id="development-transition")
         development["methods"][0]["method_id"] = "development-method"
+        development["methods"][0]["regulatory_document_id"] = (
+            "development-document"
+        )
+        development["regulatory_documents"][0]["document_id"] = (
+            "development-document"
+        )
         development["method_substances"][0]["method_id"] = "development-method"
         for applicability in development["method_applicabilities"]:
             applicability["method_id"] = "development-method"
@@ -594,7 +895,13 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         )
         method = copy.deepcopy(first["methods"][0])
         method["dataset_id"] = "owner-b"
+        method["knowledge_depth"] = "reference_only"
+        method["regulatory_document_id"] = "owner-b-document"
         method_takeover["methods"] = [method]
+        document = copy.deepcopy(first["regulatory_documents"][0])
+        document["dataset_id"] = "owner-b"
+        document["document_id"] = "owner-b-document"
+        method_takeover["regulatory_documents"] = [document]
         with self.assertRaisesRegex(DataStoreError, "method_id"):
             self.store.import_inspection_config(
                 self._write(method_takeover, "method-takeover.json")
@@ -633,6 +940,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
         self.store.import_inspection_config(self._write(initial, "parents.json"))
 
         null_to_substance = copy.deepcopy(initial)
+        null_to_substance["methods"][0]["knowledge_depth"] = "analyte_verified"
         null_to_substance["method_applicabilities"][0]["substance_id"] = (
             "test-substance-1"
         )
@@ -642,6 +950,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
             )
 
         substance_to_other = copy.deepcopy(initial)
+        substance_to_other["methods"][0]["knowledge_depth"] = "analyte_verified"
         substance_to_other["method_applicabilities"][1]["substance_id"] = (
             "test-substance-2"
         )
@@ -660,15 +969,25 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                 "method_id": "existing-method",
                 "dataset_id": "rollback-dataset",
                 "method_no": "TEST 0002",
+                "knowledge_depth": "reference_only",
             }
         )
         initial["methods"] = [old_method]
+        initial_document = copy.deepcopy(
+            inspection_dataset()["regulatory_documents"][0]
+        )
+        initial_document["dataset_id"] = "rollback-dataset"
+        initial["regulatory_documents"] = [initial_document]
         self.store.import_inspection_config(self._write(initial, "initial.json"))
 
         failing = inspection_dataset(
             dataset_id="rollback-dataset", include_records=False
         )
         failing["dataset_version"] = "must-rollback"
+        failing["regulatory_documents"] = copy.deepcopy(
+            initial["regulatory_documents"]
+        )
+        failing["regulatory_documents"][0]["dataset_version"] = "must-rollback"
         first_new = copy.deepcopy(old_method)
         first_new.update({"method_id": "new-method", "method_no": "TEST 0001"})
         conflicting = copy.deepcopy(old_method)
@@ -789,7 +1108,7 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                     "candidate_hits",
                 )
             }
-        self.assertEqual(version, 12)
+        self.assertEqual(version, 13)
         self.assertTrue(INSPECTION_TABLES <= tables)
         self.assertEqual(set(preserved.values()), {1})
         self.assertEqual(review, ("recommend_follow_up", "必须保留的人工备注"))
@@ -890,11 +1209,18 @@ class InspectionReferencePersistenceTest(unittest.TestCase):
                 table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 for table in INSPECTION_TABLES
             }
-        self.assertEqual(version, 12)
+        self.assertEqual(version, 13)
         self.assertEqual(applicability_scopes, [(None,), (None,)])
         self.assertEqual(review_note, "v5人工备注")
         self.assertEqual(monitor_name, "旧对象")
-        self.assertTrue(all(count > 0 for count in inspection_counts.values()))
+        self.assertEqual(inspection_counts["substance_group_memberships"], 0)
+        self.assertTrue(
+            all(
+                count > 0
+                for table, count in inspection_counts.items()
+                if table != "substance_group_memberships"
+            )
+        )
 
 
 if __name__ == "__main__":

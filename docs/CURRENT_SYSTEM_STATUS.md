@@ -8,13 +8,13 @@
 > V2-7A audit starting baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6 HealthFunction framework and Claim Consistency workflow, and the completed V2-7A Inspection Knowledge audit/design baseline. V2-7A changes no runtime behavior.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6 HealthFunction framework and Claim Consistency workflow, the completed V2-7A Inspection Knowledge audit/design baseline, and the completed V2-7B1 reference-index infrastructure boundary.
 
 ## Baseline
 
 - Branch: `ux-redesign-v1`
 - V2-3 starting HEAD: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
-- SQLite schema: 12
+- SQLite schema: 13
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
 - Current primary navigation: 商品总览、排查档案、抽检清单
@@ -54,9 +54,10 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Review and Sampling repositories do not mutate each other. Application-level decision transactions coordinate compound business actions.
 - A pending Snapshot may coexist with a Product membership based on another Snapshot.
 - Frozen Sampling Lists and their item indexes preserve historical export facts.
-- V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; the Claim tables introduced in schema 11 remain rebuildable projections in current schema 12. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
+- V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; the Claim tables introduced in schema 11 remain rebuildable projections in current schema 13. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
 - `claim-taxonomy-v2.0` remains the sole governed runtime taxonomy with 5 Claim types and 26 exact expressions. ClaimSignal is not an Official Health Function, RiskSignal, legality conclusion, substance, method, or Recommendation trigger. UGC and `excluded_other_product` Evidence cannot create formal Claims; SearchQuery/task keywords are not Claim input.
-- V2-6B1 implements the Snapshot-scoped, degradable `claim_consistency.json` authority. It compares only a verified HealthFoodIdentity's persisted Registry functions with formal V2 ClaimSignals through exact governed HealthFunction resolution and the four `topic_related` mappings. Schema 12 provides rebuildable assessment/function/per-Claim projections; Snapshot Detail/workspace expose additive status and assessment DTOs. The runtime does not perform a live Registry lookup and does not change Risk, Recommendation, Review eligibility/status, or Sampling.
+- V2-6B1 implements the Snapshot-scoped, degradable `claim_consistency.json` authority. It compares only a verified HealthFoodIdentity's persisted Registry functions with formal V2 ClaimSignals through exact governed HealthFunction resolution and the four `topic_related` mappings. The assessment/function/per-Claim projections introduced in schema 12 remain rebuildable in current schema 13; Snapshot Detail/workspace expose additive status and assessment DTOs. The runtime does not perform a live Registry lookup and does not change Risk, Recommendation, Review eligibility/status, or Sampling.
+- V2-7B1 separates the five-method Wide Reference Index from non-runtime candidates and from the Recommendation-ready subset. `knowledge_depth` is persisted independently of lifecycle, every indexed method links to a normalized RegulatoryDocument, explicit group membership has a governed zero-row contract, and operational resolution is restricted to current `recommendation_ready` methods. The two candidate records are not imported into SQLite or Recommendation.
 
 ## Current product-reading UX
 
@@ -111,6 +112,9 @@ Counts below are computed from the governed configuration at the verified commit
 | Evidence-to-risk Bridge mappings | 3 |
 | Risk-to-substance / Risk-to-group mappings | 5 / 3 |
 | Inspection methods | 5 |
+| Non-runtime inspection-method candidates | 2 |
+| Recommendation-ready inspection methods | 5 / 5 indexed methods |
+| Regulatory documents / linked methods | 5 / 5 |
 | Inspection substances | 117 |
 | Method-substance links | 132 |
 | Method applicability records | 37 |
@@ -118,6 +122,7 @@ Counts below are computed from the governed configuration at the verified commit
 | Recommendation structural reachability | 5 / 5 explicit Risk→Substance mappings |
 | Recommendation end-to-end reachability | 3 / 5 explicit mappings; 2 / 3 Risk categories |
 | Governed group resolution | 0 / 3 group mappings |
+| Governed group-membership records | 0 |
 
 The 106-object Reference is not 106-object operational search coverage. Only a target enabled with at least one enabled `search_validated` Query is operational. V2-4 Wave 1 promoted the standard-name Queries for 山楂、沙棘、罗汉果、黑芝麻、蜂蜜. Wave 2A promoted 山药、赤小豆、枸杞子、莲子. Wave 2B promoted 菊花 and rejected the standard-name 百合 Query after its observed relevance was 50%. The independently reviewed `食用百合` refinement retained `manually_curated` provenance, achieved 90% observed relevance, and is now the only executable strategy for the operational 百合 MonitorTarget; the rejected naked `百合` Query remains disabled. 乌梅 remains disabled `paused_scope_issue` because human review confirmed stable medicinal-material/medicinal-use scope mixing; 当归 remains paused for its earlier recorded scope issue. The separate development seed is not merged into the verified Reference count.
 
@@ -144,12 +149,14 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-6B1 Claim Consistency Runtime Core is **COMPLETE**. The independent runtime validates both governed datasets, resolves Registry strings only by exact current names or exact official transition aliases, preserves unresolved raw strings, enforces the frozen state precedence and conservative partial-resolution relations, and writes a degradable Snapshot sidecar. Schema 11→12 migration, transactional artifact rebuild, invalid-artifact clearing, additive Snapshot API/TypeScript contracts, A–L cases, API states and cross-domain independence are covered offline. Targeted cross-domain regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No visible consistency UI, Attention classification, Claim→Risk/Recommendation bridge, live provider request, Detail or OCR execution was added.
 - V2-6B2 Claim Consistency UX and the V2-6 Exit Gate are **COMPLETE**. Product Detail and Inspection Workspace reuse one Snapshot-scoped presentation component across all operational/domain states and all four per-Claim relations. Page/official source controls reuse existing trace surfaces; unresolved negatives remain protected from false `not recorded` presentation; ClaimExpressionAttention remains an explicit manual-governance gap. Targeted cross-domain regression passed 124/124; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Offline UI acceptance covered 1440px and 1080px with no page-level horizontal overflow. Schema 12, runtime, governed datasets, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
 - V2-7A Inspection Knowledge Inventory & Coverage Contract is **AUDIT / DESIGN BASELINE / COMPLETE**. The deterministic offline audit separates the five-method Wide Reference Index from the Deep Verified Subset, freezes lifecycle/depth and group boundaries, reports versioned denominator-defined reachability, and records two first-party candidate work items without promoting them. The current five methods pass the static deep gate for their explicit relations; three group mappings remain unresolved. Audit/governance tests passed 9/9; Inspection/Risk/Recommendation targeted regression passed 210/210; Claim/Consistency passed 49/49; Review/Sampling passed 30/30; Monitor/Discovery/Task passed 39/39; Python full regression discovered 541 / passed 540 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Schema 12, API, frontend, governed knowledge records, Phase3, D2–D6 and Recommendation output are unchanged.
+- V2-7B1 Inspection Reference Index Infrastructure & Recommendation Boundary is **COMPLETE**. Schema 12→13 adds conservative depth storage, normalized RegulatoryDocument rows and explicit group-membership storage; `inspection-reference@2026.09-b6` declares all five existing methods `recommendation_ready`, while two candidate records stay in a validated non-runtime manifest. The production resolver admits only current `recommendation_ready` methods. Existing method/analyte/applicability and Risk/bridge semantics, API/frontend behavior, Phase3, D2–D6 and Recommendation output remain unchanged.
+- V2-7B1 validation: focused Inspection/Reference/Risk/Recommendation regression passed 193/193; Python full regression discovered 552 / passed 551 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. The audit is deterministic and offline; no official-site retrieval, Taobao, Detail, OCR, historical rewrite or candidate promotion occurred.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-7B Wide Official Method Reference Expansion, subject to a separate phase Gate. V2-7 overall remains **IN PROGRESS**.
+- **NEXT:** V2-7B2 bounded official-method verification and promotion, subject to a separate phase Gate. V2-7C and the Exit Gate remain planned; V2-7 overall remains **IN PROGRESS**.
 - **FUTURE CHANGE:** the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.

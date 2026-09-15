@@ -9,7 +9,7 @@
 
 This document governs official HealthFunction identity and exact official-name normalization for health-food Claim consistency. A HealthFunction is an official function within a named jurisdiction, framework, and version. It is not a page Claim, marketing synonym, RiskSignal, legality result, substance, method, or InspectionRecommendation.
 
-The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A established this design/governance baseline without changing production behavior. V2-6B1 consumes it through a strict production loader while preserving Registry records verbatim; schema 12 adds only a rebuildable consistency projection. V2-6B2 consumes that read contract in the primary Product Detail and Inspection Workspace presentation without changing the governed dataset or comparison semantics.
+The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A established this design/governance baseline without changing production behavior. V2-6B1 consumes it through a strict production loader while preserving Registry records verbatim; the rebuildable consistency projection introduced in schema 12 remains unchanged in current schema 13. V2-6B2 consumes that read contract in the primary Product Detail and Inspection Workspace presentation without changing the governed dataset or comparison semantics.
 
 ## 2. Current-project inventory
 

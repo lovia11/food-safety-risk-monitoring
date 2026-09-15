@@ -90,7 +90,7 @@ class ClaimConsistencyDataStoreTests(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 12)
+        self.assertEqual(version, 13)
         self.assertTrue(
             {"claim_consistency_status", "claim_consistency_path"} <= columns
         )

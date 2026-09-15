@@ -34,6 +34,17 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
 
         self.assertEqual(inventory["governed_dataset_count"], 3)
         self.assertEqual(inventory["methods"], 5)
+        self.assertEqual(inventory["indexed_methods"], 5)
+        self.assertEqual(inventory["candidate_methods"], 2)
+        self.assertEqual(
+            inventory["knowledge_depth_counts"],
+            {
+                "reference_only": 0,
+                "analyte_verified": 0,
+                "applicability_verified": 0,
+                "recommendation_ready": 5,
+            },
+        )
         self.assertEqual(
             inventory["method_type_counts"],
             {
@@ -47,9 +58,16 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["method_substance_relations"], 132)
         self.assertEqual(inventory["method_applicabilities"], 37)
         self.assertEqual(inventory["substance_regulatory_contexts"], 1)
+        self.assertEqual(inventory["regulatory_documents"], 5)
+        self.assertEqual(inventory["method_regulatory_document_links"], 5)
+        self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 1)
         self.assertEqual(inventory["risk_substance_mappings"], 5)
         self.assertEqual(inventory["risk_substance_group_mappings"], 3)
         self.assertEqual(inventory["evidence_risk_bridge_mappings"], 3)
+        self.assertEqual(inventory["group_membership_relations"], 0)
+        self.assertTrue(
+            report["integrity"]["depth_declarations_match_static_gate"]
+        )
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"],
             {

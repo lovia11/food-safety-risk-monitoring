@@ -28,6 +28,20 @@ METHOD_STATUSES = {
     "revoked",
     "verification_pending",
 }
+KNOWLEDGE_DEPTHS = {
+    "reference_only",
+    "analyte_verified",
+    "applicability_verified",
+    "recommendation_ready",
+}
+REGULATORY_DOCUMENT_TYPES = {
+    "official_method_page",
+    "official_announcement",
+    "national_standard_record",
+}
+REGULATORY_DOCUMENT_STATUSES = METHOD_STATUSES
+GROUP_MEMBERSHIP_COMPLETENESS = {"partial", "complete"}
+GROUP_MEMBERSHIP_STATUSES = {"current", "historical", "verification_pending"}
 DETERMINATION_ROLES = {
     "quantitative",
     "qualitative",
@@ -45,11 +59,13 @@ REGULATORY_CONTEXT_STATUSES = {
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _COLLECTION_FIELDS = (
+    "regulatory_documents",
     "methods",
     "substances",
     "method_substances",
     "method_applicabilities",
     "substance_regulatory_contexts",
+    "substance_group_memberships",
 )
 _TOP_LEVEL_FIELDS = (
     "schema_version",
@@ -154,6 +170,17 @@ def _reject_duplicate(value: Any, seen: set[Any], field: str) -> None:
     seen.add(value)
 
 
+def _identifier_array(value: Any, field: str) -> list[str]:
+    values = _array(value, field)
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for position, item in enumerate(values, start=1):
+        identifier = _identifier(item, f"{field}[{position}]")
+        _reject_duplicate(identifier, seen, field)
+        normalized.append(identifier)
+    return normalized
+
+
 def validate_inspection_config(payload: Any) -> dict[str, Any]:
     """Validate and normalize one Inspection Reference JSON payload."""
 
@@ -163,10 +190,8 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
         raise InspectionConfigValidationError(
             f"Inspection数据集缺少字段：{', '.join(missing)}"
         )
-    if root.get("schema_version") != 1 or isinstance(
-        root.get("schema_version"), bool
-    ):
-        raise InspectionConfigValidationError("schema_version必须为1")
+    if root.get("schema_version") != 2 or isinstance(root.get("schema_version"), bool):
+        raise InspectionConfigValidationError("schema_version必须为2")
 
     dataset_id = _identifier(root.get("dataset_id"), "dataset_id")
     dataset_version = _required_text(root.get("dataset_version"), "dataset_version")
@@ -203,11 +228,168 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             "verified_reference数据集必须包含verified_at"
         )
 
+    documents: list[dict[str, Any]] = []
+    document_ids: set[str] = set()
+    document_numbers: set[str] = set()
+    for position, value in enumerate(collections["regulatory_documents"], start=1):
+        item = _object(value, f"regulatory_documents[{position}]")
+        missing_document_fields = [
+            field
+            for field in (
+                "document_id",
+                "document_type",
+                "document_no",
+                "title",
+                "publisher",
+                "published_date",
+                "effective_date",
+                "status",
+                "source_reference",
+                "jurisdiction",
+                "supersedes",
+                "superseded_by",
+                "dataset_id",
+                "dataset_version",
+            )
+            if field not in item
+        ]
+        if missing_document_fields:
+            raise InspectionConfigValidationError(
+                "RegulatoryDocument缺少字段：" + ", ".join(missing_document_fields)
+            )
+        document_id = _identifier(
+            item.get("document_id"),
+            f"regulatory_documents[{position}].document_id",
+        )
+        _reject_duplicate(document_id, document_ids, "document_id")
+        item_dataset_id = _identifier(
+            item.get("dataset_id"), f"RegulatoryDocument {document_id} 的dataset_id"
+        )
+        if item_dataset_id != dataset_id:
+            raise InspectionConfigValidationError(
+                f"RegulatoryDocument {document_id} 的dataset_id必须等于所属数据集 {dataset_id}"
+            )
+        item_dataset_version = _required_text(
+            item.get("dataset_version"),
+            f"RegulatoryDocument {document_id} 的dataset_version",
+        )
+        if item_dataset_version != dataset_version:
+            raise InspectionConfigValidationError(
+                f"RegulatoryDocument {document_id} 的dataset_version必须等于所属数据集版本 {dataset_version}"
+            )
+        document_no = _optional_text(
+            item.get("document_no"), f"RegulatoryDocument {document_id} 的document_no"
+        )
+        if document_no:
+            _reject_duplicate(document_no, document_numbers, "document_no")
+        published_date = _iso_date(
+            item.get("published_date"),
+            f"RegulatoryDocument {document_id} 的published_date",
+        )
+        effective_date = _iso_date(
+            item.get("effective_date"),
+            f"RegulatoryDocument {document_id} 的effective_date",
+        )
+        documents.append(
+            {
+                "document_id": document_id,
+                "document_type": _choice(
+                    item.get("document_type"),
+                    f"RegulatoryDocument {document_id} 的document_type",
+                    REGULATORY_DOCUMENT_TYPES,
+                ),
+                "document_no": document_no,
+                "title": _required_text(
+                    item.get("title"), f"RegulatoryDocument {document_id} 的title"
+                ),
+                "publisher": _required_text(
+                    item.get("publisher"),
+                    f"RegulatoryDocument {document_id} 的publisher",
+                ),
+                "published_date": published_date,
+                "effective_date": effective_date,
+                "status": _choice(
+                    item.get("status"),
+                    f"RegulatoryDocument {document_id} 的status",
+                    REGULATORY_DOCUMENT_STATUSES,
+                ),
+                "source_reference": _required_text(
+                    item.get("source_reference"),
+                    f"RegulatoryDocument {document_id} 的source_reference",
+                ),
+                "jurisdiction": _required_text(
+                    item.get("jurisdiction"),
+                    f"RegulatoryDocument {document_id} 的jurisdiction",
+                ),
+                "supersedes": _identifier_array(
+                    item.get("supersedes"),
+                    f"RegulatoryDocument {document_id} 的supersedes",
+                ),
+                "superseded_by": _identifier_array(
+                    item.get("superseded_by"),
+                    f"RegulatoryDocument {document_id} 的superseded_by",
+                ),
+                "dataset_id": item_dataset_id,
+                "dataset_version": item_dataset_version,
+            }
+        )
+
+    documents_by_id = {item["document_id"]: item for item in documents}
+    for document in documents:
+        document_id = document["document_id"]
+        for superseded_id in document["supersedes"]:
+            target = documents_by_id.get(superseded_id)
+            if target is None:
+                raise InspectionConfigValidationError(
+                    f"RegulatoryDocument {document_id} 的supersedes引用不存在：{superseded_id}"
+                )
+            if document_id not in target["superseded_by"]:
+                raise InspectionConfigValidationError(
+                    f"RegulatoryDocument {document_id}/{superseded_id} 的替代关系必须双向一致"
+                )
+        for successor_id in document["superseded_by"]:
+            successor = documents_by_id.get(successor_id)
+            if successor is None:
+                raise InspectionConfigValidationError(
+                    f"RegulatoryDocument {document_id} 的superseded_by引用不存在：{successor_id}"
+                )
+            if document_id not in successor["supersedes"]:
+                raise InspectionConfigValidationError(
+                    f"RegulatoryDocument {document_id}/{successor_id} 的替代关系必须双向一致"
+                )
+
     methods: list[dict[str, Any]] = []
     method_ids: set[str] = set()
     method_numbers: set[str] = set()
     for position, value in enumerate(collections["methods"], start=1):
         item = _object(value, f"methods[{position}]")
+        missing_method_fields = [
+            field
+            for field in (
+                "method_id",
+                "dataset_id",
+                "method_no",
+                "method_name",
+                "method_type",
+                "method_status",
+                "knowledge_depth",
+                "regulatory_document_id",
+                "publisher",
+                "published_date",
+                "effective_date",
+                "replaces_method_no",
+                "replaced_by_method_no",
+                "source_name",
+                "source_reference",
+                "source_date",
+                "note",
+            )
+            if field not in item
+        ]
+        if missing_method_fields:
+            raise InspectionConfigValidationError(
+                f"Method缺少字段：{', '.join(missing_method_fields)}"
+            )
         method_id = _identifier(item.get("method_id"), f"methods[{position}].method_id")
         _reject_duplicate(method_id, method_ids, "method_id")
         item_dataset_id = _identifier(
@@ -227,6 +409,19 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             f"Method {method_id} 的method_status",
             METHOD_STATUSES,
         )
+        knowledge_depth = _choice(
+            item.get("knowledge_depth"),
+            f"Method {method_id} 的knowledge_depth",
+            KNOWLEDGE_DEPTHS,
+        )
+        regulatory_document_id = _identifier(
+            item.get("regulatory_document_id"),
+            f"Method {method_id} 的regulatory_document_id",
+        )
+        if regulatory_document_id not in document_ids:
+            raise InspectionConfigValidationError(
+                f"Method {method_id} 引用的RegulatoryDocument不存在：{regulatory_document_id}"
+            )
         method_source_name = _required_text(
             item.get("source_name"), f"Method {method_id} 的source_name"
         )
@@ -246,7 +441,9 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
                 ),
                 "method_type": method_type,
                 "method_status": method_status,
-                "publisher": _text_default(
+                "knowledge_depth": knowledge_depth,
+                "regulatory_document_id": regulatory_document_id,
+                "publisher": _required_text(
                     item.get("publisher"), f"Method {method_id} 的publisher"
                 ),
                 "published_date": _iso_date(
@@ -465,6 +662,7 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             item.get("context_id"),
             f"substance_regulatory_contexts[{position}].context_id",
         )
+
         _reject_duplicate(context_id, context_ids, "context_id")
         substance_id = _identifier(
             item.get("substance_id"), f"RegulatoryContext {context_id} 的substance_id"
@@ -526,36 +724,144 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             }
         )
 
-    if dataset_status == "verified_reference":
-        if not methods or not substances:
+    group_memberships: list[dict[str, Any]] = []
+    membership_ids: set[str] = set()
+    membership_keys: set[tuple[str, str]] = set()
+    for position, value in enumerate(
+        collections["substance_group_memberships"], start=1
+    ):
+        item = _object(value, f"substance_group_memberships[{position}]")
+        membership_id = _identifier(
+            item.get("membership_id"),
+            f"substance_group_memberships[{position}].membership_id",
+        )
+        _reject_duplicate(membership_id, membership_ids, "membership_id")
+        group_identity = _identifier(
+            item.get("group_identity"),
+            f"SubstanceGroupMembership {membership_id} 的group_identity",
+        )
+        substance_id = _identifier(
+            item.get("substance_id"),
+            f"SubstanceGroupMembership {membership_id} 的substance_id",
+        )
+        if substance_id not in substance_ids:
             raise InspectionConfigValidationError(
-                "verified_reference数据集必须至少包含一个Method和一个Substance"
+                f"SubstanceGroupMembership {membership_id} 引用的substance_id不存在：{substance_id}"
             )
-        for method in methods:
-            method_id = method["method_id"]
-            if method["method_status"] == "verification_pending":
+        _reject_duplicate(
+            (group_identity, substance_id),
+            membership_keys,
+            "SubstanceGroupMembership group/substance",
+        )
+        item_dataset_id = _identifier(
+            item.get("dataset_id"),
+            f"SubstanceGroupMembership {membership_id} 的dataset_id",
+        )
+        item_dataset_version = _required_text(
+            item.get("dataset_version"),
+            f"SubstanceGroupMembership {membership_id} 的dataset_version",
+        )
+        if item_dataset_id != dataset_id:
+            raise InspectionConfigValidationError(
+                f"SubstanceGroupMembership {membership_id} 的dataset_id必须匹配所属数据集"
+            )
+        if item_dataset_version != dataset_version:
+            raise InspectionConfigValidationError(
+                f"SubstanceGroupMembership {membership_id} 的dataset_version必须匹配所属数据集版本"
+            )
+        group_memberships.append(
+            {
+                "membership_id": membership_id,
+                "group_identity": group_identity,
+                "group_label": _required_text(
+                    item.get("group_label"),
+                    f"SubstanceGroupMembership {membership_id} 的group_label",
+                ),
+                "substance_id": substance_id,
+                "membership_scope": _required_text(
+                    item.get("membership_scope"),
+                    f"SubstanceGroupMembership {membership_id} 的membership_scope",
+                ),
+                "completeness_context": _choice(
+                    item.get("completeness_context"),
+                    f"SubstanceGroupMembership {membership_id} 的completeness_context",
+                    GROUP_MEMBERSHIP_COMPLETENESS,
+                ),
+                "source_basis": _required_text(
+                    item.get("source_basis"),
+                    f"SubstanceGroupMembership {membership_id} 的source_basis",
+                ),
+                "source_reference": _required_text(
+                    item.get("source_reference"),
+                    f"SubstanceGroupMembership {membership_id} 的source_reference",
+                ),
+                "status": _choice(
+                    item.get("status"),
+                    f"SubstanceGroupMembership {membership_id} 的status",
+                    GROUP_MEMBERSHIP_STATUSES,
+                ),
+                "dataset_id": item_dataset_id,
+                "dataset_version": item_dataset_version,
+            }
+        )
+
+    for method in methods:
+        method_id = method["method_id"]
+        relations = [
+            item for item in method_substances if item["method_id"] == method_id
+        ]
+        method_applicabilities = [
+            item for item in applicabilities if item["method_id"] == method_id
+        ]
+        method_level_applicabilities = [
+            item for item in method_applicabilities if item["substance_id"] is None
+        ]
+        depth = method["knowledge_depth"]
+        if depth in {
+            "analyte_verified",
+            "applicability_verified",
+            "recommendation_ready",
+        } and not relations:
+            raise InspectionConfigValidationError(
+                f"{depth} Method {method_id} 缺少MethodSubstance"
+            )
+        if depth in {"applicability_verified", "recommendation_ready"}:
+            if not method_applicabilities:
                 raise InspectionConfigValidationError(
-                    f"verified_reference中的Method {method_id} 不能是verification_pending"
+                    f"{depth} Method {method_id} 缺少MethodApplicability"
+                )
+            if not method_level_applicabilities:
+                raise InspectionConfigValidationError(
+                    f"{depth} Method {method_id} 缺少Method级Applicability"
+                )
+            missing_scope = next(
+                (
+                    item["applicability_id"]
+                    for item in method_applicabilities
+                    if not item["source_scope_text"]
+                ),
+                None,
+            )
+            if missing_scope:
+                raise InspectionConfigValidationError(
+                    "verified_reference中的MethodApplicability "
+                    f"{missing_scope} 必须包含source_scope_text"
+                )
+        if depth == "recommendation_ready":
+            if method["method_status"] != "current":
+                raise InspectionConfigValidationError(
+                    f"recommendation_ready Method {method_id} 的method_status必须为current"
                 )
             if not method["source_date"]:
                 raise InspectionConfigValidationError(
-                    f"verified_reference中的Method {method_id} 必须独立记录source_date"
+                    f"recommendation_ready Method {method_id} 必须独立记录source_date"
                 )
-            if not any(item["method_id"] == method_id for item in method_substances):
-                raise InspectionConfigValidationError(
-                    f"verified_reference中的Method {method_id} 缺少MethodSubstance"
-                )
-            if not any(item["method_id"] == method_id for item in applicabilities):
-                raise InspectionConfigValidationError(
-                    f"verified_reference中的Method {method_id} 缺少MethodApplicability"
-                )
-            if not any(
-                item["method_id"] == method_id and item["substance_id"] is None
-                for item in applicabilities
-            ):
-                raise InspectionConfigValidationError(
-                    f"verified_reference中的Method {method_id} 缺少Method级Applicability"
-                )
+
+    if dataset_status == "verified_reference":
+        if not methods:
+            raise InspectionConfigValidationError(
+                "verified_reference数据集必须至少包含一个Method"
+            )
         for substance in substances:
             substance_id = substance["substance_id"]
             if not any(
@@ -563,12 +869,6 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
             ) and not any(item["substance_id"] == substance_id for item in contexts):
                 raise InspectionConfigValidationError(
                     f"verified_reference中的Substance {substance_id} 是孤立实体"
-                )
-        for applicability in applicabilities:
-            if not applicability["source_scope_text"]:
-                raise InspectionConfigValidationError(
-                    "verified_reference中的MethodApplicability "
-                    f"{applicability['applicability_id']} 必须包含source_scope_text"
                 )
         for context in contexts:
             if context["context_status"] == "verification_pending":
@@ -583,7 +883,7 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
                 )
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset_id": dataset_id,
         "dataset_version": dataset_version,
         "dataset_status": dataset_status,
@@ -593,9 +893,11 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
         "collected_at": collected_at,
         "verified_at": verified_at,
         "description": description,
+        "regulatory_documents": documents,
         "methods": methods,
         "substances": substances,
         "method_substances": method_substances,
         "method_applicabilities": applicabilities,
         "substance_regulatory_contexts": contexts,
+        "substance_group_memberships": group_memberships,
     }

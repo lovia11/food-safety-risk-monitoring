@@ -232,7 +232,7 @@ class SearchQueryPolicyTest(unittest.TestCase):
                 ).fetchone()
             finally:
                 connection.close()
-            self.assertEqual(version, 12)
+            self.assertEqual(version, 13)
             self.assertEqual(row["query_text"], "旧搜索词")
             self.assertEqual(row["query_source"], "manual")
             self.assertEqual(row["validation_status"], "unvalidated")
