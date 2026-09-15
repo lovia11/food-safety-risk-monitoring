@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B1
+> Last verified phase: V2-6B2
 > Owner: Project
 
 This document deliberately separates current implementation from target V2 design. Items under Target Architecture are `FUTURE CHANGE` until implemented and accepted.
@@ -89,7 +89,7 @@ SQLite run-derived data can be re-imported, but the database also contains human
 
 The Local API provides products, filter options, Snapshot workspaces, inspection context, task/archive operations, Review decisions, current/historical Sampling queries, and export/download operations. `GET /api/monitor-targets` defaults to the operational set for compatibility; `scope=reference` exposes all 106 formal Reference objects with `operational`, `query_pending`, or `paused` availability and derived coverage counts. Monitor task creation enforces the same operational predicate server-side. Old contract compatibility retained by the backend does not make an old frontend current.
 
-Workspace DTOs combine Snapshot, Evidence, Claim analysis status/Mentions/Signals, additive Claim consistency status/assessment, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently. V2-5B2 consumes the Claim contract for user-visible presentation; V2-6B1 adds TypeScript consistency contracts but no visible UI.
+Workspace DTOs combine Snapshot, Evidence, Claim analysis status/Mentions/Signals, additive Claim consistency status/assessment, ProductFacts/declared-origin presentation, HealthFoodIdentity presentation, Review, assets, inspection, readiness, and Sampling presentation so React does not read filesystem artifacts or infer eligibility/identity independently. V2-5B2 consumes the Claim contract for user-visible presentation; V2-6B2 consumes the B1 consistency contract in Product Detail and Inspection Workspace without adding list projection/filtering or mutation semantics.
 
 ## 2. Current domain separation
 
@@ -138,7 +138,7 @@ Extracts structured facts only from identifiable Snapshot artifacts. It preserve
 
 Creates clues and registration/filing candidates only from current-product seller-managed DOM and detail-image OCR. UGC and recommendation-area DOM are excluded. Ambiguous OCR characters are retained without correction or lookup. A provider abstraction supports low-frequency cached official lookup and governed imported snapshots. A found record becomes `verified_match` only when an explicit page product name equals the official product name after formatting-only normalization; title-only similarity is insufficient. Candidate, unavailable, not-found, unverified relation, mismatch and conflict states remain distinct. See [HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md](HEALTH_FOOD_REGISTRY_SOURCE_AUDIT.md).
 
-### 3.3 Claim Analyzer and presentation — CURRENT V2-5; consistency assessor — CURRENT V2-6B1
+### 3.3 Claim Analyzer and presentation — CURRENT V2-5; consistency runtime/presentation — CURRENT V2-6
 
 The accepted Claim contract now implements the first four nodes of this pipeline:
 
@@ -157,7 +157,7 @@ V2-5B1 implements runtime extraction, artifact authority, the schema 11 Claim pr
 
 V2-6A governs the HealthFunction framework and Claim-to-HealthFunction `topic_related` mapping datasets; V2-6B1 implements the consistency assessor runtime while every Claim-to-Risk mapping remains future. Legacy Effect/Risk/Recommendation processing remains a separate compatibility path and is not presented as the cause of a V2 Claim. A marketing paraphrase never becomes an Official HealthFunction through the Registry alias resolver, and a ClaimSignal never directly selects an inspection substance or method.
 
-### 3.3.1 HealthFunction normalization and Claim consistency — CURRENT V2-6B1 RUNTIME CORE
+### 3.3.1 HealthFunction normalization and Claim consistency — CURRENT V2-6
 
 ```text
 Verified HealthFoodIdentity
@@ -179,7 +179,7 @@ Only `verified_match` enters formal comparison. Registry normalization accepts e
 
 `claim_consistency.json` is Snapshot-scoped and records the Claim taxonomy, HealthFunction dataset, topic-mapping dataset, Registry record/hash/retrieval time, raw/resolved/unresolved functions, Claim/Mention identities, per-Claim relations, empty governed attention output, and gaps. Schema 12 is a rebuildable projection accepted by the V2-6B1 migration gate.
 
-ClaimConsistencyAssessment does not output RiskSignal, InspectionRecommendation, Substance, Method, legality, compliance, pass/fail, or probability. V2-6B1 creates no visible UI; presentation remains V2-6B2.
+ClaimConsistencyAssessment does not output RiskSignal, InspectionRecommendation, Substance, Method, legality, compliance, pass/fail, or probability. One shared V2-6B2 frontend component renders the B1 assessment in Product Detail and Inspection Workspace, locates existing Claim/Evidence UI for page trace, and reuses the existing Registry modal for official trace. It does not calculate assessment meaning or mutate Review/Sampling.
 
 ### 3.4 Knowledge Resolver
 

@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-6B1
+> Last verified phase: V2-6B2
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -153,7 +153,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-6 — Health-food claim consistency
 
-**Status:** IN PROGRESS — V2-6A design baseline and V2-6B1 runtime core complete; V2-6B2 UX/exit gate is NEXT.
+**Status:** COMPLETE — governed frameworks/mappings, exact normalization, Snapshot runtime/projection, primary detail/workspace presentation, and the V2-6 Exit Gate are accepted.
 
 ### V2-6A — HealthFunction Framework & Claim Consistency Contract
 
@@ -188,7 +188,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-6B2 — Consistency UX and V2-6 Exit Gate
 
-**Status:** NEXT — requires a separate human Gate.
+**Status:** COMPLETE — shared non-adjudicative Product Detail/Inspection Workspace presentation and V2-6 exit regression accepted offline.
 
 - **Goal:** Present the implemented Snapshot assessment without turning topic relations into verdicts, then evaluate the complete V2-6 exit criteria.
 - **Dependencies:** Accepted V2-6B1 runtime/API contracts and explicit UX review.
@@ -196,8 +196,11 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Out of Scope:** ClaimExpressionAttention automatic classification, Claim→Risk, Recommendation changes, legality/compliance, Review automation, Sampling changes, or V2-7.
 - **Schema/API impact:** None expected; consume the additive B1 contract.
 - **Exit criteria:** Every operational/domain state and Knowledge Gap remains explicit, page and official evidence remain separate, and full offline regression passes.
+- **Exit result:** One shared component presents all accepted states and relations without browser-side recomputation or total verdicts. Existing page/official trace surfaces are reused; ClaimExpressionAttention remains an explicit future governance gap; Risk/Recommendation/Review/Sampling and frozen history are unchanged.
 
 ## V2-7 — Inspection knowledge coverage
+
+**Status:** NEXT — requires a separate design/implementation Gate.
 
 - **Goal:** Expand governed inspection knowledge using **wide Reference Index + deep Verified Subset**.
 - **Why:** Broad discoverability is useful, but only deeply parsed, provenance-complete mappings can drive recommendations.

@@ -2,10 +2,10 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B1
+> Last verified phase: V2-6B2
 > Owner: Project
 
-This specification governs the V2 interaction model. V2-1 through V2-5 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
+This specification governs the V2 interaction model. V2-1 through V2-6 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
 
 ## 1. Global UI principles
 
@@ -168,9 +168,9 @@ The detail section distinguishes all backend states: no indicator, indicator onl
 
 `查看页面依据` opens an in-app source trace and reuses the existing OCR Lightbox/source viewer. `查看官方依据` opens a separate in-app official-record modal with identifier, official product name, registration/filing subject, dates, official health-function text and query time; opening the official source is secondary. Page evidence is never merged into Phase3 Evidence, and official evidence is never presented as page content.
 
-## 8.2 Health-function consistency — Future V2-6B2 presentation contract
+## 8.2 Health-function consistency — Current V2-6B2
 
-V2-6B1 provides typed backend data but no visible consistency UI. A future V2-6B2 Product Detail/Inspection Workspace section may be titled **保健功能一致性** and follow this order:
+Product Detail and Inspection Workspace reuse one section titled **保健功能一致性**. It follows 页面宣传线索 and precedes legacy Risk/Recommendation so users read identity facts and page observations before the derived comparison:
 
 ```text
 官方核验功能
@@ -180,9 +180,22 @@ V2-6B1 provides typed backend data but no visible consistency UI. A future V2-6B
 需要关注的具体页面表达
 ```
 
-The section appears only as a comparison aid. It must distinguish `identity_not_verified`, `claim_not_generated`, `claim_analysis_error`, `framework_unresolved`, `official_function_unresolved`, `no_page_claims`, and `assessed`. It must show Registry raw function wording alongside normalized HealthFunction identity and retain links to the existing page and official source viewers.
+The section is only a comparison aid. Operational `not_generated`, `complete`, and `error` remain separate from the complete artifact's `identity_not_verified`, `claim_not_generated`, `claim_analysis_error`, `framework_unresolved`, `official_function_unresolved`, `no_page_claims`, and `assessed`. `not_generated` says 尚未生成保健功能一致性比较; only a true runtime/artifact `error` says 保健功能一致性分析失败 and uses red. Identity, Claim, framework, unresolved-function, and zero-Claim gaps never use error red.
 
-Per-Claim presentation uses 页面宣传主题在官方功能记录中找到对应主题、未在当前核验的官方功能记录中找到对应项, or 当前无已核验的官方功能主题映射. It must never use 合法/违法、合规/不合规、通过/不通过, a risk grade, or probability. A recorded topic does not approve the concrete ClaimMention wording. Mention-level disease/treatment attention remains a separately governed future dimension.
+The official panel preserves Registry raw wording. Exact current names are labeled 当前官方功能名称; official transition aliases show the normalized current name together with 官方记录原文 and 官方新旧功能名称衔接. Unresolved descriptive text remains complete and wrap-safe; no substring is promoted to a function. A resolved framework is named, while an unresolved framework is shown as 暂无法确定.
+
+Per-Claim relations use these frozen presentations:
+
+- `function_topic_recorded`: blue informational; 页面宣传主题在该产品官方功能记录中找到对应主题. It also states that topic correspondence does not approve the concrete page wording.
+- `function_topic_not_recorded`: orange attention; 该页面宣传主题未在当前核验的官方功能记录中找到对应项，建议人工复核. It never says 违法、超范围 or 不允许.
+- `no_governed_function_mapping`: gray neutral; 当前无已治理的官方功能主题映射，需人工研判. It never infers an official scope.
+- `mapping_unresolved`: orange/neutral attention; 当前知识或官方功能解析不足，暂无法确定该宣传主题的对应关系. It must not be compressed into 未找到对应项.
+
+`official_function_unresolved` keeps exact positive relations visible while showing the incomplete-comparison banner. Multiple Claim relations remain independent; descriptive counts may summarize categories, but an overall 一致/不一致, percentage, score, pass/fail, legal/compliance, efficacy, or risk verdict is forbidden. `no_page_claims` explicitly says that no governed comparable expression was found and that this does not mean no other expression or a compliant result.
+
+Each page-source control focuses the existing ClaimSignal disclosure, from which ClaimMention locates existing Evidence; unresolved IDs display 页面依据暂不可用. Official-source controls reuse the HealthFoodIdentity Registry modal; missing trace displays 官方来源信息暂不可用. Page and official evidence are never merged. The controls are keyboard-operable, relation meaning is not color-only, and official raw text remains selectable.
+
+ClaimExpressionAttention remains `dataset_pending_manual_governance`. Empty `mentionAttentions` is presented as an explicit governance gap, never as “没有需关注表达”. The section cannot change Risk/Recommendation output, Review status/eligibility, or Sampling membership and is not added to Product Overview filters, sorting, badges, or frozen exports.
 
 ## 9. Loading, empty and error behavior
 

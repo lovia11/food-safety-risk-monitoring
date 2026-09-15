@@ -81,3 +81,15 @@ export function healthFoodArtifactPath(sourcePath: string | null | undefined) {
   if (!sourcePath) return null;
   return sourcePath.replaceAll("\\", "/").split("#", 1)[0] || null;
 }
+
+function identityAnchorToken(snapshotId: string) {
+  return snapshotId.replace(/[^A-Za-z0-9_-]/g, "-");
+}
+
+export function healthFoodIdentityAnchorId(snapshotId: string) {
+  return `health-food-identity-${identityAnchorToken(snapshotId)}`;
+}
+
+export function healthFoodOfficialSourceControlId(snapshotId: string) {
+  return `health-food-official-source-${identityAnchorToken(snapshotId)}`;
+}

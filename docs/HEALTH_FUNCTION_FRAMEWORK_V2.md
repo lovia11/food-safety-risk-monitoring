@@ -9,7 +9,7 @@
 
 This document governs official HealthFunction identity and exact official-name normalization for health-food Claim consistency. A HealthFunction is an official function within a named jurisdiction, framework, and version. It is not a page Claim, marketing synonym, RiskSignal, legality result, substance, method, or InspectionRecommendation.
 
-The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A established this design/governance baseline without changing production behavior. V2-6B1 now consumes it through a strict production loader while preserving Registry records verbatim; schema 12 adds only a rebuildable consistency projection and the visible frontend remains unchanged.
+The machine-readable authority is [`config/health_functions_v2.json`](../config/health_functions_v2.json), version `health-functions-v2.0`. V2-6A established this design/governance baseline without changing production behavior. V2-6B1 consumes it through a strict production loader while preserving Registry records verbatim; schema 12 adds only a rebuildable consistency projection. V2-6B2 consumes that read contract in the primary Product Detail and Inspection Workspace presentation without changing the governed dataset or comparison semantics.
 
 ## 2. Current-project inventory
 
@@ -169,14 +169,14 @@ The governed dataset status remains `design_baseline`. The V2-6B1 production loa
 
 ## 10. Non-goals
 
-V2-6A/B1 does not:
+V2-6 does not:
 
 - change HealthFoodIdentity or its `verified_match` gate;
 - rewrite `officialHealthFunctions[]` or Registry artifacts;
 - infer a framework from page Claims;
 - classify page wording as an official alias;
-- change visible frontend behavior; V2-6B1 adds runtime, schema 12 and additive read contracts only;
+- turn the V2-6B2 visible topic-comparison presentation into a pass/fail, legality, compliance, efficacy, probability, or risk verdict;
 - create RiskSignal, substance, method, Recommendation, legality, compliance, or probability output;
 - expand the five Claim types or 26 expressions.
 
-See [Claim Consistency V2](CLAIM_CONSISTENCY_V2.md) for the implemented runtime contract and future presentation boundary.
+See [Claim Consistency V2](CLAIM_CONSISTENCY_V2.md) for the implemented runtime and presentation boundary.

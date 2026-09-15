@@ -9,7 +9,9 @@ import type {
 import { evidenceAssetKey } from "../domain/evidence";
 import {
   healthFoodArtifactPath,
+  healthFoodIdentityAnchorId,
   healthFoodIdentityPresentation,
+  healthFoodOfficialSourceControlId,
   healthFoodSourceLabel,
 } from "../domain/healthFoodIdentity";
 import { formatDateTime, runFileUrl, safeHttpUrl } from "../domain/product";
@@ -23,6 +25,7 @@ type Props = {
   assets: ProductAssets;
   runId: string;
   productId: string;
+  snapshotId: string;
 };
 
 function sourceAsset(source: HealthFoodIdentitySource, assets: ProductAssets) {
@@ -34,7 +37,7 @@ function sourceAsset(source: HealthFoodIdentitySource, assets: ProductAssets) {
   )) || null;
 }
 
-export function HealthFoodIdentitySection({ identity, assets, runId, productId }: Props) {
+export function HealthFoodIdentitySection({ identity, assets, runId, productId, snapshotId }: Props) {
   const [pageEvidenceOpen, setPageEvidenceOpen] = useState(false);
   const [officialOpen, setOfficialOpen] = useState(false);
   const [sourceText, setSourceText] = useState<{ url: string; title: string } | null>(null);
@@ -71,7 +74,12 @@ export function HealthFoodIdentitySection({ identity, assets, runId, productId }
   };
 
   return (
-    <section className="detail-section health-food-identity" data-state={identity.state}>
+    <section
+      className="detail-section health-food-identity"
+      data-state={identity.state}
+      id={healthFoodIdentityAnchorId(snapshotId)}
+      tabIndex={-1}
+    >
       <div className="health-food-heading">
         <h3><ShieldCheck size={17} />保健食品身份</h3>
         <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
@@ -104,12 +112,17 @@ export function HealthFoodIdentitySection({ identity, assets, runId, productId }
 
       <div className="health-food-actions">
         {pageSources.length > 0 && (
-          <button type="button" onClick={() => setPageEvidenceOpen(true)}>
+          <button type="button" onClick={() => setPageEvidenceOpen(true)} aria-label="查看保健食品身份的页面依据">
             <FileSearch size={14} /> 查看页面依据
           </button>
         )}
         {record && (
-          <button type="button" onClick={() => setOfficialOpen(true)}>
+          <button
+            type="button"
+            id={healthFoodOfficialSourceControlId(snapshotId)}
+            onClick={() => setOfficialOpen(true)}
+            aria-label="查看保健食品身份的官方登记依据"
+          >
             <ShieldCheck size={14} /> 查看官方依据
           </button>
         )}

@@ -12,6 +12,7 @@ import {
   claimPresentation,
   claimSignalViewModels,
   claimSourceLabel,
+  claimSignalAnchorId,
   evidenceAnchorId,
 } from "../domain/claims";
 import { StatusBadge } from "./StatusBadge";
@@ -66,7 +67,12 @@ export function ClaimAnalysisSection({
       ) : (
         <div className="claim-signal-list">
           {viewModels.map((signal) => (
-            <details className="claim-signal-card" key={signal.claimType}>
+            <details
+              className="claim-signal-card"
+              id={claimSignalAnchorId(signal.claimSignalId)}
+              key={signal.claimSignalId}
+              tabIndex={-1}
+            >
               <summary>
                 <span>
                   <strong>{signal.displayLabel}</strong>

@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B1
+> Last verified phase: V2-6B2
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -184,9 +184,20 @@ Acceptance requires:
 
 V2-6B1 exit validation passed: targeted HealthFunction/Claim consistency/Identity/Claim/pipeline/legacy Risk/Recommendation/Review/Sampling/Monitor regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. Validation used zero Taobao, Detail, OCR, live Registry or other network access.
 
-### 7.6 Future V2-6B2 UX and exit gate
+### 7.6 V2-6B2 consistency UX and V2-6 exit gate — Current
 
-Test state-specific non-adjudicative wording, page/official evidence trace reuse, Knowledge Gaps, keyboard/accessibility behavior, no Risk/Recommendation causality, and the complete V2-6 exit criteria. B2 must consume the B1 API rather than reconstruct consistency in React.
+Acceptance requires:
+
+- Product Detail and Inspection Workspace reuse one presentation mapper/component and consume the B1 API without reconstructing consistency in React;
+- operational `not_generated | complete | error` remains separate from all seven complete-artifact domain states; only an actual consistency error uses red;
+- all four per-Claim relations use explicit non-adjudicative wording and non-score colors; `function_topic_recorded` never approves ClaimMention wording, while `mapping_unresolved` never becomes a false `not recorded` result;
+- partial unresolved output preserves exact positive relations while retaining the unresolved banner, full Registry raw text, and explicit normalization basis;
+- page controls locate the existing ClaimSignal/ClaimMention/Evidence path and official controls reuse the existing HealthFoodIdentity Registry modal; missing trace is explicit and page/official facts remain separate;
+- ClaimExpressionAttention remains `dataset_pending_manual_governance`; empty `mentionAttentions` never means zero disease/treatment/regulatory attention;
+- no consistency column/filter/score/verdict is added, and Risk/Recommendation, Review, Sampling, schema 12, governed config, and frozen history remain unchanged;
+- deterministic state/relation/trace/boundary workflow tests, backend cross-domain regression, full Python, typecheck, build, and offline 1440px/1080px UI acceptance pass.
+
+V2-6B2 exit validation passed: targeted HealthFunction/Claim consistency/Identity/Claim/Recommendation/Review/Sampling regression passed 124/124; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Offline Product Detail and Inspection Workspace acceptance covered identity-not-verified, no-page-claims, assessed multi-Claim relations, official transition alias, long unresolved official text, partial positive plus unresolved negative protection, and 1440px/1080px layouts without page-level horizontal overflow. Validation used zero Taobao, Detail collection, OCR, live Registry, or other network access.
 
 ## 8. Knowledge gate
 

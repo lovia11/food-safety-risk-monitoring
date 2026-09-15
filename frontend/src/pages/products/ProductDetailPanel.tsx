@@ -17,6 +17,7 @@ import {
 } from "../../api/products";
 import { Drawer } from "../../components/Drawer";
 import { ClaimAnalysisSection } from "../../components/ClaimAnalysisSection";
+import { ClaimConsistencySection } from "../../components/ClaimConsistencySection";
 import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EmptyState } from "../../components/EmptyState";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
@@ -32,6 +33,10 @@ import { analysisStatePresentation } from "../../domain/analysis";
 import { groupEvidence, partitionEvidenceGroups } from "../../domain/evidence";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
 import { needsProductContext } from "../../domain/recommendation";
+import {
+  healthFoodIdentityAnchorId,
+  healthFoodOfficialSourceControlId,
+} from "../../domain/healthFoodIdentity";
 import { SnapshotTimeline } from "./SnapshotTimeline";
 
 type ProductDetailPanelProps = {
@@ -236,6 +241,7 @@ export function ProductDetailPanel({
                 assets={workspace.assets}
                 runId={workspace.snapshot.taskId}
                 productId={workspace.snapshot.productId}
+                snapshotId={workspace.snapshot.snapshotId}
               />
               <EvidenceReviewSection
                 evidence={workspace.evidence}
@@ -247,6 +253,19 @@ export function ProductDetailPanel({
                 signals={workspace.claimSignals}
                 mentions={workspace.claimMentions}
                 evidence={workspace.evidence}
+              />
+              <ClaimConsistencySection
+                status={workspace.claimConsistencyStatus}
+                assessment={workspace.claimConsistency}
+                claimSignals={workspace.claimSignals}
+                claimMentions={workspace.claimMentions}
+                evidence={workspace.evidence}
+                identityAnchorId={healthFoodIdentityAnchorId(workspace.snapshot.snapshotId)}
+                officialSourceControlId={healthFoodOfficialSourceControlId(workspace.snapshot.snapshotId)}
+                officialSourceAvailable={Boolean(
+                  workspace.healthFoodIdentity.registryRecord?.sourceReference
+                  || workspace.healthFoodIdentity.registryRecord?.rawArtifactPath,
+                )}
               />
 
               {analysis && <RecommendationPanel inspection={workspace.inspection} analysis={analysis} />}

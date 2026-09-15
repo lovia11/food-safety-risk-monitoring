@@ -1,6 +1,6 @@
 # Claim Consistency V2
 
-> Status: CANONICAL DESIGN BASELINE
+> Status: CANONICAL
 > Applies to: V2-6
 > Design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
@@ -9,7 +9,7 @@
 
 `ClaimConsistencyAssessment` is a Snapshot-scoped, evidence-bearing comparison between the page's V2 Claim records and the verified product's official HealthFunctions. It supplies transparent comparison clues for human review. It does not decide legality, compliance, approval, efficacy, risk probability, substance presence, or an inspection method.
 
-V2-6A froze the domain and governed knowledge contract. V2-6B1 implements the production assessment artifact, schema 12 rebuildable projection and additive Snapshot read contract. It creates no frontend section, Review side effect, RiskSignal, or InspectionRecommendation change.
+V2-6A froze the domain and governed knowledge contract. V2-6B1 implements the production assessment artifact, schema 12 rebuildable projection and additive Snapshot read contract. V2-6B2 presents that read contract in Product Detail and Inspection Workspace without Review side effects or RiskSignal/InspectionRecommendation changes.
 
 ## 2. Inputs and eligibility
 
@@ -179,11 +179,15 @@ unresolvedOfficialFunctionCount
 
 They must not calculate a total risk score, probability, or binary verdict.
 
-## 11. Current runtime/API/storage and future UX
+## 11. Current runtime/API/storage and primary UX
 
 V2-6B1 adds the Snapshot-scoped `claim_consistency.json` derived artifact, `not_generated | complete | error` operational status, schema 12 assessment/raw-function/per-Claim projections, and additive Snapshot Detail/workspace fields: `claimConsistencyStatus`, `claimConsistency`, and `paths.claimConsistency`. `claimConsistency` is returned only for a complete artifact. Missing artifacts remain `not_generated`; invalid artifacts or an error sidecar are `error`, with stale projection removed transactionally. The read model exposes raw/resolved official functions, per-Claim relations, official/page trace IDs and references, versions, and gaps. It does not mutate Review eligibility/status, Sampling Membership, RiskSignal, or Recommendation.
 
-A future V2-6B2 UI section titled 保健功能一致性 may show 官方核验功能、页面宣传主题、对应关系、未找到对应项、知识缺口、需要关注的具体页面表达. It must preserve `identity_not_verified`, unavailable, unresolved, zero, and assessed states and link to the existing page and official Evidence viewers. No visible consistency UI is implemented in V2-6B1.
+V2-6B2 implements one shared UI section titled 保健功能一致性 in Product Detail and Inspection Workspace. It appears after 页面宣传线索 and before legacy Risk/Recommendation, preserves operational `not_generated | complete | error` separately from every complete-artifact domain state, and never generates a total pass/fail, consistency rate, legality, compliance, or efficacy verdict.
+
+The section shows official functions with raw Registry wording, exact current/transition resolution basis, unresolved text, the resolved framework when available, and independent per-Claim relations. `function_topic_recorded` is informational and explicitly does not approve the concrete page wording. `function_topic_not_recorded` requests human review without alleging an out-of-scope or illegal claim. `no_governed_function_mapping` remains neutral, and `mapping_unresolved` protects incomplete official-function resolution from a false negative. Page controls locate the existing ClaimSignal/ClaimMention/Evidence trace; official controls reuse the existing HealthFood Registry modal. Missing traces are stated rather than fabricated.
+
+Blue is reserved for comparison facts, orange for incomplete/manual-attention states, gray for unavailable/no-mapping states, and red only for an actual sidecar/runtime error. Relation meaning is also stated in text, controls are keyboard-operable, and full official raw text remains selectable and wrap-safe.
 
 ## 12. Non-adjudication and gaps
 
@@ -193,8 +197,7 @@ Current explicit gaps are:
 
 - nutrient-supplement Registry function-string normalization below the separate framework root is not governed;
 - `male_function_related` has no governed HealthFunction mapping;
-- ClaimExpressionAttention production entries await manual source governance;
 - existing Registry strings with descriptive wrappers may remain unresolved;
-- ClaimExpressionAttention production entries and visible consistency UI remain unimplemented pending separate gates.
+- ClaimExpressionAttention production entries await a separate manual source-governance gate; the UI presents this as a gap and never translates an empty attention list into “no concerning expression”.
 
 ClaimConsistencyAssessment remains separate from Claim Taxonomy, HealthFunction Framework, RiskSignal, and InspectionRecommendation.

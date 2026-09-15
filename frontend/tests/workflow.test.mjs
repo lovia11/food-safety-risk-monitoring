@@ -5,6 +5,15 @@ import {
   analysisStatePresentation,
 } from "../src/domain/analysis.ts";
 import {
+  claimConsistencyCountSummary,
+  claimConsistencyPresentation,
+  claimConsistencyRelationPresentation,
+  claimConsistencyRelationViewModels,
+  hasClaimAttentionGovernanceGap,
+  healthFunctionFrameworkLabel,
+  officialFunctionViewModels,
+} from "../src/domain/claimConsistency.ts";
+import {
   claimMentionEvidence,
   claimPresentation,
   claimSignalLabels,
@@ -25,7 +34,9 @@ import {
 } from "../src/domain/monitorTargets.ts";
 import {
   healthFoodArtifactPath,
+  healthFoodIdentityAnchorId,
   healthFoodIdentityPresentation,
+  healthFoodOfficialSourceControlId,
   healthFoodSourceLabel,
   isVerifiedHealthFoodIdentity,
 } from "../src/domain/healthFoodIdentity.ts";
@@ -448,6 +459,64 @@ function claimSignal(type, label, mentionIds = ["m1"]) {
   };
 }
 
+function consistencyAssessment(overrides = {}) {
+  const base = {
+    schemaVersion: 1,
+    assessmentVersion: "claim-consistency-v2.0",
+    snapshotId: "snapshot-1",
+    state: "assessed",
+    claimTaxonomyVersion: "claim-taxonomy-v2.0",
+    healthFunctionDatasetVersion: "health-functions-v2.0",
+    claimHealthFunctionMappingVersion: "claim-health-function-mapping-v2.0",
+    healthFoodRegistryIdentifier: "国食健注G00000000",
+    healthFoodRegistryRecordReferenceOrHash: "sha256:test",
+    healthFoodRegistryRetrievedAt: "2026-09-15T10:00:00+08:00",
+    healthFoodRegistrySourceName: "官方登记来源",
+    healthFoodRegistrySourceReference: "https://example.invalid/registry",
+    healthFoodRegistryRawArtifactPath: "official/registry.json",
+    registryFrameworkId: "hf-framework-non-nutrient-cn-2023",
+    registryFrameworkResolutionSource: "resolved_official_functions",
+    rawOfficialFunctions: ["有助于改善睡眠"],
+    resolvedHealthFunctions: [{
+      rawOfficialFunction: "有助于改善睡眠",
+      resolutionStatus: "resolved",
+      resolutionSource: "current_official_name",
+      frameworkId: "hf-framework-non-nutrient-cn-2023",
+      healthFunctionId: "hf-non-nutrient-cn-2023-06",
+      healthFunctionOfficialName: "有助于改善睡眠",
+    }],
+    unresolvedOfficialFunctions: [],
+    claimSignalIds: ["signal-sleep_related"],
+    claimMentionIds: ["m1"],
+    perClaimAssessments: [{
+      claimSignalId: "signal-sleep_related",
+      claimType: "sleep_related",
+      claimMentionIds: ["m1"],
+      evidenceIds: ["e1"],
+      relation: "function_topic_recorded",
+      mappingId: "sleep-map",
+      healthFunctionId: "hf-non-nutrient-cn-2023-06",
+      healthFunctionOfficialName: "有助于改善睡眠",
+      frameworkId: "hf-framework-non-nutrient-cn-2023",
+      supportingResolvedOfficialFunctions: [],
+      gaps: [],
+    }],
+    mentionAttentions: [],
+    summary: {
+      claimSignalCount: 1,
+      functionTopicRecordedCount: 1,
+      functionTopicNotRecordedCount: 0,
+      noMappingCount: 0,
+      mappingUnresolvedCount: 0,
+      unresolvedOfficialFunctionCount: 0,
+      attentionMentionCount: 0,
+    },
+    gaps: ["claim_expression_attention_dataset_pending_manual_governance"],
+    generatedAt: "2026-09-15T10:00:00+08:00",
+  };
+  return { ...base, ...overrides };
+}
+
 test("claim presentation keeps claims, governed zero, not-generated, and error distinct", () => {
   const one = claimPresentation("complete", [claimSignal("sleep_related", "睡眠相关宣传")]);
   const multiple = claimPresentation("complete", [
@@ -468,6 +537,265 @@ test("claim presentation keeps claims, governed zero, not-generated, and error d
   assert.equal(error.tone, "danger");
   assert.equal(one.tone, "info");
   assert.equal(Object.hasOwn(one, "riskLevel"), false);
+});
+
+test("claim consistency keeps operational status separate from domain state", () => {
+  const missing = claimConsistencyPresentation("not_generated", null);
+  const error = claimConsistencyPresentation("error", null);
+  const complete = claimConsistencyPresentation("complete", consistencyAssessment());
+
+  assert.equal(missing.label, "尚未生成保健功能一致性比较");
+  assert.equal(missing.tone, "neutral");
+  assert.equal(error.label, "保健功能一致性分析失败");
+  assert.equal(error.tone, "danger");
+  assert.equal(complete.code, "assessed");
+  assert.equal(complete.tone, "info");
+});
+
+test("claim consistency presents every complete domain state without false failure", () => {
+  const expected = {
+    identity_not_verified: "保健食品身份尚未核验",
+    claim_not_generated: "页面宣传线索尚未生成",
+    claim_analysis_error: "页面宣传线索分析失败",
+    framework_unresolved: "官方功能框架暂无法确定",
+    official_function_unresolved: "当前比较结果不完整",
+    no_page_claims: "未发现可比较的页面宣传表达",
+    assessed: "逐项主题比较已生成",
+  };
+  for (const [state, label] of Object.entries(expected)) {
+    const view = claimConsistencyPresentation(
+      "complete",
+      consistencyAssessment({ state }),
+    );
+    assert.equal(view.label, label);
+    assert.notEqual(view.tone, "danger");
+  }
+  assert.equal(
+    claimConsistencyPresentation(
+      "complete",
+      consistencyAssessment({ state: "identity_not_verified" }),
+    ).showRelations,
+    false,
+  );
+});
+
+test("claim consistency relation wording and colors remain non-adjudicative", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(claimConsistencyRelationPresentation).map(
+      ([relation, item]) => [relation, item.tone],
+    )),
+    {
+      function_topic_recorded: "info",
+      function_topic_not_recorded: "warning",
+      no_governed_function_mapping: "neutral",
+      mapping_unresolved: "warning",
+    },
+  );
+  assert.match(
+    claimConsistencyRelationPresentation.function_topic_recorded.description,
+    /不代表具体页面措辞获得官方认可/,
+  );
+  assert.match(
+    claimConsistencyRelationPresentation.function_topic_not_recorded.description,
+    /建议人工复核/,
+  );
+  assert.match(
+    claimConsistencyRelationPresentation.no_governed_function_mapping.label,
+    /暂无已治理/,
+  );
+  assert.match(
+    claimConsistencyRelationPresentation.mapping_unresolved.description,
+    /不能显示为未找到对应项/,
+  );
+});
+
+test("partial unresolved keeps positive evidence and protects negative comparison", () => {
+  const signal = claimSignal("sleep_related", "睡眠相关宣传");
+  const unresolved = {
+    rawOfficialFunction: "某个无法治理解析的官方原文",
+    resolutionStatus: "unresolved",
+    resolutionSource: null,
+    frameworkId: null,
+    healthFunctionId: null,
+    healthFunctionOfficialName: null,
+  };
+  const partialPositive = consistencyAssessment({
+    state: "official_function_unresolved",
+    rawOfficialFunctions: ["有助于改善睡眠", unresolved.rawOfficialFunction],
+    unresolvedOfficialFunctions: [unresolved],
+    summary: {
+      ...consistencyAssessment().summary,
+      unresolvedOfficialFunctionCount: 1,
+    },
+  });
+  const positiveRows = claimConsistencyRelationViewModels(
+    partialPositive,
+    [signal],
+    [claimMention("m1")],
+    [evidence("e1")],
+  );
+  assert.equal(positiveRows[0].assessment.relation, "function_topic_recorded");
+  assert.equal(
+    claimConsistencyPresentation("complete", partialPositive).label,
+    "当前比较结果不完整",
+  );
+
+  const partialNegative = consistencyAssessment({
+    state: "official_function_unresolved",
+    rawOfficialFunctions: ["有助于增强免疫力", unresolved.rawOfficialFunction],
+    unresolvedOfficialFunctions: [unresolved],
+    perClaimAssessments: [{
+      ...consistencyAssessment().perClaimAssessments[0],
+      relation: "mapping_unresolved",
+      gaps: ["unresolved_official_function_may_affect_comparison"],
+    }],
+    summary: {
+      ...consistencyAssessment().summary,
+      functionTopicRecordedCount: 0,
+      mappingUnresolvedCount: 1,
+      unresolvedOfficialFunctionCount: 1,
+    },
+  });
+  const negativeRows = claimConsistencyRelationViewModels(
+    partialNegative,
+    [signal],
+    [claimMention("m1")],
+    [evidence("e1")],
+  );
+  assert.equal(negativeRows[0].assessment.relation, "mapping_unresolved");
+  assert.doesNotMatch(negativeRows[0].presentation.label, /未找到对应项/);
+  assert.equal(negativeRows[0].pageTraceAvailable, true);
+  assert.equal(
+    claimConsistencyRelationViewModels(partialNegative, [signal], [], [])[0]
+      .pageTraceAvailable,
+    false,
+  );
+});
+
+test("official function presentation retains raw aliases and unresolved descriptive text", () => {
+  const alias = consistencyAssessment({
+    rawOfficialFunctions: ["改善睡眠"],
+    resolvedHealthFunctions: [{
+      ...consistencyAssessment().resolvedHealthFunctions[0],
+      rawOfficialFunction: "改善睡眠",
+      resolutionSource: "official_transition_alias",
+    }],
+  });
+  const aliasView = officialFunctionViewModels(alias)[0];
+  assert.equal(aliasView.currentName, "有助于改善睡眠");
+  assert.equal(aliasView.rawText, "改善睡眠");
+  assert.equal(aliasView.resolutionLabel, "官方新旧功能名称衔接");
+  assert.equal(aliasView.showRawText, true);
+
+  const descriptive = "本品经动物实验评价，具有对化学性肝损伤有辅助保护作用的保健功能";
+  const unresolved = consistencyAssessment({
+    state: "framework_unresolved",
+    registryFrameworkId: null,
+    rawOfficialFunctions: [descriptive],
+    resolvedHealthFunctions: [],
+    unresolvedOfficialFunctions: [{
+      rawOfficialFunction: descriptive,
+      resolutionStatus: "unresolved",
+      resolutionSource: null,
+      frameworkId: null,
+      healthFunctionId: null,
+      healthFunctionOfficialName: null,
+    }],
+  });
+  const unresolvedView = officialFunctionViewModels(unresolved)[0];
+  assert.equal(unresolvedView.rawText, descriptive);
+  assert.equal(unresolvedView.currentName, null);
+  assert.equal(unresolvedView.resolutionLabel, "暂无法通过已治理名称解析");
+});
+
+test("claim consistency counts are descriptive and attention absence stays a gap", () => {
+  const assessment = consistencyAssessment({
+    summary: {
+      claimSignalCount: 4,
+      functionTopicRecordedCount: 2,
+      functionTopicNotRecordedCount: 1,
+      noMappingCount: 1,
+      mappingUnresolvedCount: 0,
+      unresolvedOfficialFunctionCount: 0,
+      attentionMentionCount: 0,
+    },
+  });
+  const summary = claimConsistencyCountSummary(assessment);
+  assert.equal(
+    summary,
+    "4 类页面宣传主题：2 类找到官方功能对应主题，1 类未在当前官方功能记录中找到对应项，1 类暂无治理映射。",
+  );
+  assert.doesNotMatch(summary, /%|通过率|一致率|风险分/);
+  assert.equal(hasClaimAttentionGovernanceGap(assessment), true);
+  assert.equal(assessment.mentionAttentions.length, 0);
+  assert.equal(healthFunctionFrameworkLabel(null), "暂无法确定");
+});
+
+test("claim consistency is shared by detail and workspace with existing trace controls", () => {
+  const files = {
+    section: readFileSync(new URL("../src/components/ClaimConsistencySection.tsx", import.meta.url), "utf8"),
+    detail: readFileSync(new URL("../src/pages/products/ProductDetailPanel.tsx", import.meta.url), "utf8"),
+    workspace: readFileSync(new URL("../src/pages/inspections/InspectionWorkspaceDetail.tsx", import.meta.url), "utf8"),
+    identity: readFileSync(new URL("../src/components/HealthFoodIdentitySection.tsx", import.meta.url), "utf8"),
+    query: readFileSync(new URL("../src/domain/productQuery.ts", import.meta.url), "utf8"),
+  };
+  assert.match(files.detail, /<ClaimConsistencySection/);
+  assert.match(files.workspace, /<ClaimConsistencySection/);
+  assert.match(files.section, /claimSignalAnchorId/);
+  assert.match(files.section, /officialSourceControlId/);
+  assert.match(files.identity, /healthFoodOfficialSourceControlId/);
+  assert.doesNotMatch(files.query, /claimConsistency|consistency_status/);
+  assert.ok(
+    files.detail.indexOf("<ClaimAnalysisSection")
+      < files.detail.indexOf("<ClaimConsistencySection"),
+  );
+  assert.ok(
+    files.detail.indexOf("<ClaimConsistencySection")
+      < files.detail.indexOf("<RecommendationPanel"),
+  );
+  assert.ok(
+    files.workspace.indexOf("<ClaimAnalysisSection")
+      < files.workspace.indexOf("<ClaimConsistencySection"),
+  );
+  assert.equal(
+    healthFoodIdentityAnchorId("snapshot:1"),
+    "health-food-identity-snapshot-1",
+  );
+  assert.equal(
+    healthFoodOfficialSourceControlId("snapshot:1"),
+    "health-food-official-source-snapshot-1",
+  );
+});
+
+test("claim consistency stays selected-Snapshot scoped and read-only", () => {
+  const snapshotA = claimConsistencyPresentation(
+    "complete",
+    consistencyAssessment({ snapshotId: "snapshot-a" }),
+  );
+  const snapshotB = claimConsistencyPresentation("not_generated", null);
+  assert.equal(snapshotA.label, "逐项主题比较已生成");
+  assert.equal(snapshotB.label, "尚未生成保健功能一致性比较");
+
+  const component = readFileSync(
+    new URL("../src/components/ClaimConsistencySection.tsx", import.meta.url),
+    "utf8",
+  );
+  const detail = readFileSync(
+    new URL("../src/pages/products/ProductDetailPanel.tsx", import.meta.url),
+    "utf8",
+  );
+  const workspace = readFileSync(
+    new URL("../src/pages/inspections/InspectionWorkspaceDetail.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(detail, /status=\{workspace\.claimConsistencyStatus\}/);
+  assert.match(detail, /assessment=\{workspace\.claimConsistency\}/);
+  assert.match(workspace, /status=\{workspace\.claimConsistencyStatus\}/);
+  assert.match(workspace, /assessment=\{workspace\.claimConsistency\}/);
+  assert.doesNotMatch(
+    component,
+    /ReviewActions|SamplingStore|RecommendationPanel|fetch\(|axios|updateReview|review-decision/,
+  );
 });
 
 test("legacy effects and UGC text cannot fabricate a V2 claim presentation", () => {

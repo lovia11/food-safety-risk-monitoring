@@ -8,6 +8,7 @@ import type {
 import type { StatusTone } from "./presentation";
 
 export type ClaimSignalViewModel = {
+  claimSignalId: string;
   claimType: string;
   displayLabel: string;
   mentionCount: number;
@@ -104,6 +105,7 @@ export function claimSignalViewModels(
       .map((mentionId) => mentionsById.get(mentionId))
       .filter((mention): mention is ClaimMentionDTO => Boolean(mention));
     return {
+      claimSignalId: signal.claimSignalId,
       claimType: signal.claimType,
       displayLabel: signal.displayLabel,
       mentionCount: signal.mentionIds.length,
@@ -131,4 +133,8 @@ export function claimMentionEvidence(
 
 export function evidenceAnchorId(evidenceId: string) {
   return `evidence-${evidenceId.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+}
+
+export function claimSignalAnchorId(claimSignalId: string) {
+  return `claim-signal-${claimSignalId.replace(/[^A-Za-z0-9_-]/g, "-")}`;
 }

@@ -7,7 +7,7 @@
 > V2-6A design starting baseline: `696bf4178cbc018fca6d257ba156ec6f3a33fc1e`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6A HealthFunction/Claim consistency design baseline, and the completed V2-6B1 Claim Consistency runtime core. Consistency UI remains future V2-6B2 work.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation and the completed V2-6 HealthFunction framework, Claim Consistency runtime, and primary detail/workspace presentation.
 
 ## Baseline
 
@@ -71,6 +71,7 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - Legacy Effect badges/keywords are hidden from the active primary Claim UX. Frozen Sampling history is unchanged and, when shown, is explicitly labeled 旧版冻结分析结果 rather than V2 Claim.
 - Search-page region and product-declared origin are independent keys. Explicit seller-managed DOM parameters and conservatively labeled detail-image OCR may supply `declared_origin`; search region, title wording, UGC, shipping, seller/manufacturer/warehouse addresses and raw-material origin never do.
 - Product Detail and Inspection Workspace expose a separate 保健食品身份 section. Only a valid unambiguous identifier, a found official record, and formatting-normalized exact equality with an explicit page product name can display `保健食品 · 已核验`. Page and official sources remain separate; candidates, unavailable lookup, not-found, mismatch and conflict remain explicit.
+- Product Detail and Inspection Workspace share the same 保健功能一致性 section after 页面宣传线索 and before legacy Risk/Recommendation. Operational and domain states remain separate; raw and normalized official functions are both auditable; per-Claim topic relations use informational, attention, or neutral presentation without a total verdict. Page trace returns to the existing Claim/Evidence section, while official trace reuses the existing Registry source modal.
 - A missing declared origin is `—`. Equal DOM/OCR values retain both sources under one presentation value; different explicit values are displayed as a conflict without automatic arbitration.
 - Origin source trace opens the exact DOM/OCR text and reuses the existing image Lightbox for OCR image provenance.
 
@@ -137,13 +138,14 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-5B2 Claim UX and legacy presentation migration is **COMPLETE**. Primary active-Snapshot surfaces use V2 Claim projections; Product list filtering is exact and same-Snapshot; ClaimMention source drill-down reuses Evidence; current Sampling and frozen legacy history stay distinct. Python full regression discovered 500 / passed 499 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No taxonomy, schema, Risk/Recommendation, Review/Sampling business state, frozen export, Detail/OCR, or external network behavior changed.
 - V2-6A HealthFunction Framework & Claim Consistency Contract is **DESIGN BASELINE / COMPLETE**. `health-functions-v2.0` records two separate official frameworks, the complete 24/24 non-nutrient catalog, and 40 source-backed transition aliases. `claim-health-function-mapping-v2.0` records four `topic_related` mappings and the explicit `male_function_related` gap. Exact Registry normalization and a non-adjudicative A–L assessment contract are covered by 17/17 deterministic governance tests. Python full regression discovered 517 / passed 516 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No production runtime, schema, API, frontend, Claim taxonomy, Risk/Recommendation, Review/Sampling, or frozen-history behavior changed.
 - V2-6B1 Claim Consistency Runtime Core is **COMPLETE**. The independent runtime validates both governed datasets, resolves Registry strings only by exact current names or exact official transition aliases, preserves unresolved raw strings, enforces the frozen state precedence and conservative partial-resolution relations, and writes a degradable Snapshot sidecar. Schema 11→12 migration, transactional artifact rebuild, invalid-artifact clearing, additive Snapshot API/TypeScript contracts, A–L cases, API states and cross-domain independence are covered offline. Targeted cross-domain regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. No visible consistency UI, Attention classification, Claim→Risk/Recommendation bridge, live provider request, Detail or OCR execution was added.
+- V2-6B2 Claim Consistency UX and the V2-6 Exit Gate are **COMPLETE**. Product Detail and Inspection Workspace reuse one Snapshot-scoped presentation component across all operational/domain states and all four per-Claim relations. Page/official source controls reuse existing trace surfaces; unresolved negatives remain protected from false `not recorded` presentation; ClaimExpressionAttention remains an explicit manual-governance gap. Targeted cross-domain regression passed 124/124; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Offline UI acceptance covered 1440px and 1080px with no page-level horizontal overflow. Schema 12, runtime, governed datasets, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-6B2 Consistency UX and V2-6 Exit Gate, subject to a separate human Gate.
-- **FUTURE CHANGE:** visible consistency presentation and the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
+- **NEXT:** V2-7 Inspection Knowledge Coverage, subject to a separate phase Gate.
+- **FUTURE CHANGE:** the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.
 - Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.

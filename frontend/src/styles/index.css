@@ -1509,6 +1509,253 @@ a {
   white-space: pre-wrap;
 }
 
+.claim-signal-card:focus-visible,
+.health-food-identity:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: -2px;
+}
+
+.claim-consistency-section {
+  background: #fcfdff;
+}
+
+.claim-consistency-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.claim-consistency-heading h3 {
+  margin-bottom: 0;
+}
+
+.claim-consistency-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid #dbe6ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #526174;
+}
+
+.claim-consistency-state[data-tone="warning"] {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a4d0f;
+}
+
+.claim-consistency-state[data-tone="danger"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.claim-consistency-state strong {
+  display: block;
+  font-size: 12px;
+}
+
+.claim-consistency-state p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.claim-consistency-state button,
+.claim-consistency-panel header button,
+.claim-consistency-relations article > button {
+  display: inline-flex;
+  min-height: 29px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.claim-consistency-panel {
+  min-width: 0;
+  margin-top: 11px;
+  padding: 12px;
+  border: 1px solid #dfe7ee;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.claim-consistency-panel > header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.claim-consistency-panel h4 {
+  margin: 0;
+  color: #263548;
+  font-size: 13px;
+}
+
+.claim-consistency-panel header p {
+  margin: 3px 0 0;
+  color: #718095;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.official-function-list,
+.claim-consistency-relations {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.official-function-list article,
+.claim-consistency-relations article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #dbe8f0;
+  border-radius: 8px;
+  background: #f9fcfe;
+}
+
+.official-function-list article[data-resolution="unresolved"] {
+  border-color: #fed7aa;
+  background: #fffbeb;
+}
+
+.official-function-list article > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.official-function-list article[data-resolution="unresolved"] > div {
+  color: #9a4d0f;
+}
+
+.official-function-list article > strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: #263548;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.official-function-list article > p {
+  margin: 5px 0 0;
+  color: #718095;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.official-function-list article > p span {
+  color: #394b60;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.claim-relation-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.claim-relation-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.claim-relation-heading strong {
+  color: #263548;
+  font-size: 13px;
+}
+
+.claim-relation-heading small {
+  color: #7b899b;
+  font-size: 11px;
+}
+
+.claim-consistency-relations article > p {
+  margin: 8px 0 0;
+  color: #526174;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.claim-consistency-relations dl {
+  margin: 8px 0 0;
+}
+
+.claim-consistency-relations dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.claim-consistency-relations dt {
+  color: #7b899b;
+  font-size: 11px;
+}
+
+.claim-consistency-relations dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #334155;
+  font-size: 12px;
+}
+
+.claim-consistency-relations article > button,
+.claim-consistency-trace-unavailable {
+  margin-top: 9px;
+}
+
+.claim-consistency-trace-unavailable {
+  display: inline-block;
+  color: #8795a7;
+  font-size: 11px;
+}
+
+.claim-consistency-empty {
+  margin: 10px 0 0;
+  color: #7b899b;
+  font-size: 12px;
+}
+
+.claim-consistency-gap {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 11px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.claim-consistency-gap svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
 .claim-mention-meta {
   display: flex;
   flex-wrap: wrap;
@@ -2528,6 +2775,11 @@ a {
   .sampling-item-card { grid-template-columns: auto minmax(0, 1fr); }
   .sampling-item-card > a, .sampling-item-card > button { grid-column: 2; justify-self: start; }
   .weak-evidence-confirm { grid-template-columns: auto 1fr; }
+  .claim-consistency-state { grid-template-columns: auto minmax(0, 1fr); }
+  .claim-consistency-state button { grid-column: 2; justify-self: start; }
+  .claim-consistency-panel > header,
+  .claim-relation-heading { align-items: stretch; flex-direction: column; }
+  .claim-consistency-panel header button { align-self: flex-start; }
   .weak-evidence-confirm button { grid-column: 2; justify-self: start; }
 
   .snapshot-summary-heading { align-items: flex-start; flex-wrap: wrap; }

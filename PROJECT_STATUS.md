@@ -22,7 +22,7 @@
 - Snapshot-scoped HealthFoodIdentity with seller-managed clue/identifier provenance, degradable official lookup, conservative page-to-registry matching, verbatim official functions and separate page/official source trace
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
 - V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 Claim projection retained by schema 12, same-Snapshot list summaries/filter, and Evidence trace
-- V2-6B1 ClaimConsistency runtime with exact governed Registry normalization, non-adjudicative topic comparison, `claim_consistency.json` authority, schema 12 rebuildable projection, and additive Snapshot API/TypeScript contracts; visible UI remains future
+- V2-6 ClaimConsistency runtime and primary detail/workspace UX with exact governed Registry normalization, non-adjudicative topic comparison, `claim_consistency.json` authority, schema 12 rebuildable projection, explicit gaps, and separate page/official trace
 
 ## Current Coverage
 
@@ -50,9 +50,11 @@ V2-6A HealthFunction Framework & Claim Consistency Contract is complete as a des
 
 V2-6B1 Claim Consistency Runtime Core is complete. The pipeline consumes only persisted identity/Registry and formal Claim artifacts plus the two governed config authorities; it performs no live consistency lookup. Exact resolver, framework isolation, A–L states, conservative partial-unresolved semantics, degradable sidecar failure, schema 11→12 preservation/rebuild, additive Snapshot DTOs, and unchanged Risk/Recommendation/Review/Sampling behavior are covered offline. Targeted cross-domain regression passed 187/187; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 30/30; typecheck and production build passed. The frontend contains additive types only and has no visible consistency UI.
 
+V2-6B2 Claim Consistency presentation and the V2-6 Exit Gate are complete. Product Detail and Inspection Workspace reuse one Snapshot-scoped component for all operational/domain states and per-Claim relations. Official transition/raw/unresolved text and separate page/Registry source trace are auditable; partial unresolved output never creates a false negative; no overall verdict or score is generated. Targeted cross-domain regression passed 124/124; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Offline 1440px/1080px acceptance found no page-level horizontal overflow. Runtime, schema 12, governed mappings, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
+
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, Claim consistency UI, ClaimExpressionAttention governance, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX and the Claim consistency runtime are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
@@ -62,8 +64,12 @@ V2-6A — DESIGN BASELINE / COMPLETE. HealthFunction Framework & Claim Consisten
 
 V2-6B1 — COMPLETE. Claim Consistency runtime/artifact, schema 12 projection, and additive Snapshot API/TypeScript contracts are implemented; visible UI is not.
 
+V2-6B2 — COMPLETE. Shared Product Detail/Inspection Workspace presentation, separate page/official trace, state/relation semantics, and the V2-6 Exit Gate are accepted.
+
+V2-6 — COMPLETE. The HealthFunction framework, exact Registry normalization, governed Claim topic mapping, Snapshot consistency runtime, rebuildable projection, and primary consistency UX are established. ClaimExpressionAttention governance and Claim→Risk remain outside this completion meaning.
+
 ## Next Gate
 
-V2-6B2 Consistency UX and V2-6 Exit Gate is NEXT and requires a separate human Gate. It must consume the B1 contract and must not add ClaimExpressionAttention classification, Claim→Risk, Recommendation, Review, or Sampling side effects.
+V2-7 Inspection Knowledge Coverage is NEXT and requires a separate phase Gate. No V2-7 implementation is authorized by the V2-6 completion.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

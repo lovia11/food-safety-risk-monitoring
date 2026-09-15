@@ -5,6 +5,7 @@ import type { SnapshotWorkspace } from "../../api/contracts";
 import { getSnapshotWorkspace, updateInspectionContext } from "../../api/products";
 import { EmptyState } from "../../components/EmptyState";
 import { ClaimAnalysisSection } from "../../components/ClaimAnalysisSection";
+import { ClaimConsistencySection } from "../../components/ClaimConsistencySection";
 import { DeclaredOriginFact } from "../../components/DeclaredOriginFact";
 import { EvidenceReviewSection } from "../../components/EvidenceReviewSection";
 import { LoadingState } from "../../components/LoadingState";
@@ -18,6 +19,10 @@ import { analysisStatePresentation } from "../../domain/analysis";
 import { groupEvidence, partitionEvidenceGroups } from "../../domain/evidence";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
 import { needsProductContext } from "../../domain/recommendation";
+import {
+  healthFoodIdentityAnchorId,
+  healthFoodOfficialSourceControlId,
+} from "../../domain/healthFoodIdentity";
 
 type ReviewChange = {
   type: "decision" | "membership_removed" | "membership_restored";
@@ -121,6 +126,7 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
         assets={workspace.assets}
         runId={workspace.snapshot.taskId}
         productId={workspace.snapshot.productId}
+        snapshotId={workspace.snapshot.snapshotId}
       />
       <EvidenceReviewSection
         evidence={workspace.evidence}
@@ -132,6 +138,19 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
         signals={workspace.claimSignals}
         mentions={workspace.claimMentions}
         evidence={workspace.evidence}
+      />
+      <ClaimConsistencySection
+        status={workspace.claimConsistencyStatus}
+        assessment={workspace.claimConsistency}
+        claimSignals={workspace.claimSignals}
+        claimMentions={workspace.claimMentions}
+        evidence={workspace.evidence}
+        identityAnchorId={healthFoodIdentityAnchorId(workspace.snapshot.snapshotId)}
+        officialSourceControlId={healthFoodOfficialSourceControlId(workspace.snapshot.snapshotId)}
+        officialSourceAvailable={Boolean(
+          workspace.healthFoodIdentity.registryRecord?.sourceReference
+          || workspace.healthFoodIdentity.registryRecord?.rawArtifactPath,
+        )}
       />
       <RecommendationPanel inspection={workspace.inspection} analysis={analysis} />
       {needsProductContext(workspace.inspection) && <ProductContextForm context={workspace.inspection.context} saving={savingContext} onSave={saveContext} />}
