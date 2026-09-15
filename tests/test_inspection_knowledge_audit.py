@@ -1,0 +1,213 @@
+import copy
+import unittest
+
+from scripts.audit_inspection_knowledge import (
+    DEFAULT_BRIDGE_CONFIG,
+    DEFAULT_INSPECTION_CONFIG,
+    DEFAULT_RISK_CONFIG,
+    InspectionKnowledgeAuditError,
+    build_audit,
+    load_and_build_audit,
+)
+from src.effect_risk_bridge import validate_effect_risk_bridge_config
+from src.inspection_reference import validate_inspection_config
+from src.risk_substance_reference import validate_risk_substance_config
+from src.runtime import read_json
+
+
+class InspectionKnowledgeAuditTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.inspection_raw = read_json(DEFAULT_INSPECTION_CONFIG)
+        cls.risk_raw = read_json(DEFAULT_RISK_CONFIG)
+        cls.bridge_raw = read_json(DEFAULT_BRIDGE_CONFIG)
+        cls.inspection = validate_inspection_config(cls.inspection_raw)
+        cls.risk = validate_risk_substance_config(cls.risk_raw)
+        cls.bridge = validate_effect_risk_bridge_config(
+            cls.bridge_raw,
+            risk_reference_config=cls.risk_raw,
+        )
+
+    def test_current_governed_inventory_and_coverage_are_stable(self):
+        report = load_and_build_audit()
+        inventory = report["inventory"]
+
+        self.assertEqual(inventory["governed_dataset_count"], 3)
+        self.assertEqual(inventory["methods"], 5)
+        self.assertEqual(
+            inventory["method_type_counts"],
+            {
+                "supplementary_bjs": 3,
+                "rapid_kj": 1,
+                "national_standard_gbt": 1,
+            },
+        )
+        self.assertEqual(inventory["method_status_counts"]["current"], 5)
+        self.assertEqual(inventory["substances"], 117)
+        self.assertEqual(inventory["method_substance_relations"], 132)
+        self.assertEqual(inventory["method_applicabilities"], 37)
+        self.assertEqual(inventory["substance_regulatory_contexts"], 1)
+        self.assertEqual(inventory["risk_substance_mappings"], 5)
+        self.assertEqual(inventory["risk_substance_group_mappings"], 3)
+        self.assertEqual(inventory["evidence_risk_bridge_mappings"], 3)
+        self.assertEqual(
+            report["metrics"]["recommendation_end_to_end_reachability"],
+            {
+                "numerator": 3,
+                "denominator": 5,
+                "ratio": 0.6,
+                "denominator_definition": (
+                    "current explicit governed Risk-to-Substance mappings; requires an "
+                    "existing Evidence-to-Risk category bridge and a structurally ready "
+                    "method path"
+                ),
+            },
+        )
+
+    def test_no_dangling_governed_identities(self):
+        report = load_and_build_audit()
+
+        self.assertTrue(
+            all(not values for values in report["integrity"]["dangling_identities"].values())
+        )
+
+    def test_dangling_risk_or_applicability_identity_fails_the_audit(self):
+        risk = copy.deepcopy(self.risk)
+        risk["mappings"][0]["target_type"] = "substance"
+        risk["mappings"][0]["substance_id"] = "substance-missing"
+        risk["mappings"][0]["target_group_label"] = None
+        with self.assertRaisesRegex(
+            InspectionKnowledgeAuditError, "substance-missing"
+        ):
+            build_audit(self.inspection, risk, self.bridge)
+
+        inspection = copy.deepcopy(self.inspection)
+        inspection["method_applicabilities"][0]["method_id"] = "method-missing"
+        with self.assertRaisesRegex(
+            InspectionKnowledgeAuditError, "method-missing"
+        ):
+            build_audit(inspection, self.risk, self.bridge)
+
+    def test_group_mapping_is_not_expanded_from_substance_group_labels(self):
+        inspection = copy.deepcopy(self.inspection)
+        inspection["substances"][0]["substance_group"] = "西布曲明及其系列衍生物"
+
+        report = build_audit(inspection, self.risk, self.bridge)
+        group_rows = [
+            item
+            for item in report["risk_reachability"]
+            if item["target_type"] == "substance_group"
+        ]
+
+        self.assertEqual(len(group_rows), 3)
+        self.assertTrue(all(not item["has_explicit_substance"] for item in group_rows))
+        self.assertTrue(all(item["method_ids"] == [] for item in group_rows))
+        self.assertTrue(all(item["gap_reason"] == "group_not_expanded" for item in group_rows))
+        self.assertFalse(report["integrity"]["groups_expanded"])
+
+    def test_method_relation_never_creates_a_risk_mapping(self):
+        inspection = copy.deepcopy(self.inspection)
+        unrelated = next(
+            item
+            for item in inspection["substances"]
+            if item["substance_id"]
+            not in {
+                mapping["substance_id"]
+                for mapping in self.risk["mappings"]
+                if mapping["target_type"] == "substance"
+            }
+        )
+        inspection["method_substances"].append(
+            {
+                "method_id": "bjs-202209",
+                "substance_id": unrelated["substance_id"],
+                "source_label": unrelated["canonical_name"],
+                "source_cas_no": unrelated["cas_no"],
+                "determination_role": "quantitative",
+                "normalization_note": "test-only relation",
+                "ordinal": 999,
+            }
+        )
+
+        report = build_audit(inspection, self.risk, self.bridge)
+
+        self.assertEqual(report["inventory"]["risk_mappings_total"], 8)
+        self.assertNotIn(
+            unrelated["substance_id"],
+            {item["target"] for item in report["risk_reachability"]},
+        )
+        self.assertFalse(report["integrity"]["risk_mappings_derived_from_methods"])
+
+    def test_missing_applicability_remains_an_explicit_gap(self):
+        inspection = copy.deepcopy(self.inspection)
+        inspection["method_applicabilities"] = [
+            item
+            for item in inspection["method_applicabilities"]
+            if item["method_id"] != "gbt-45443-2025"
+        ]
+
+        report = build_audit(inspection, self.risk, self.bridge)
+        method = next(
+            item
+            for item in report["method_matrix"]
+            if item["method_id"] == "gbt-45443-2025"
+        )
+
+        self.assertFalse(method["applicability_verified"])
+        self.assertEqual(method["knowledge_depth"], "analyte_verified")
+        self.assertIn(
+            {
+                "method_id": "gbt-45443-2025",
+                "substance_id": "substance-cas-73-31-4",
+            },
+            report["applicability_quality"]["missing_relation_paths"],
+        )
+
+    def test_superseded_lifecycle_is_preserved_and_not_recommendation_ready(self):
+        inspection = copy.deepcopy(self.inspection)
+        method = next(
+            item
+            for item in inspection["methods"]
+            if item["method_id"] == "bjs-201701"
+        )
+        method["method_status"] = "superseded"
+        method["replaced_by_method_no"] = "TEST 000001"
+
+        report = build_audit(inspection, self.risk, self.bridge)
+        audited = next(
+            item
+            for item in report["method_matrix"]
+            if item["method_id"] == "bjs-201701"
+        )
+
+        self.assertEqual(audited["method_status"], "superseded")
+        self.assertEqual(audited["knowledge_depth"], "applicability_verified")
+        self.assertFalse(audited["recommendation_ready"])
+
+    def test_all_current_method_and_risk_records_retain_official_provenance(self):
+        report = load_and_build_audit()
+
+        self.assertTrue(
+            all(
+                item["reference_complete"] and item["official_source_reference"]
+                for item in report["method_matrix"]
+            )
+        )
+        for mapping in self.risk["mappings"]:
+            self.assertTrue(mapping["source_name"])
+            self.assertTrue(mapping["source_reference"].startswith("https://www.samr.gov.cn/"))
+            self.assertTrue(mapping["source_date"])
+            self.assertTrue(mapping["source_basis_text"])
+
+    def test_current_runtime_usage_is_computed_from_bridge_categories_only(self):
+        usage = load_and_build_audit()["inventory"]["runtime_recommendation_usage"]
+
+        self.assertEqual(usage["risk_category_ids"], ["male_function", "weight_loss"])
+        self.assertEqual(usage["risk_mapping_rows"], 5)
+        self.assertEqual(usage["explicit_substances"], 3)
+        self.assertEqual(usage["method_ids"], ["bjs-201701", "bjs-201710"])
+        self.assertEqual(usage["applicability_records"], 12)
+
+
+if __name__ == "__main__":
+    unittest.main()

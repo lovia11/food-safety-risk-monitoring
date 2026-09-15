@@ -2,10 +2,10 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B2
+> Last verified phase: V2-7A
 > Owner: Project
 
-This document governs current and future schema/API domain work. ProductFact, HealthFoodIdentity, ClaimMention, ClaimSignal, and the ClaimConsistencyAssessment read projection are current in schema 12. HealthFunction, HealthFunctionAlias, and ClaimHealthFunctionMapping retain the V2-6A governed knowledge baseline and are consumed by the V2-6 runtime and read-only presentation without becoming mutable business entities. Entities explicitly labeled “Future runtime” remain proposals rather than migration authorization.
+This document governs current and future schema/API domain work. ProductFact, HealthFoodIdentity, ClaimMention, ClaimSignal, and the ClaimConsistencyAssessment read projection are current in schema 12. HealthFunction, HealthFunctionAlias, and ClaimHealthFunctionMapping retain the V2-6A governed knowledge baseline and are consumed by the V2-6 runtime and read-only presentation without becoming mutable business entities. V2-7A adds the Inspection knowledge depth and coverage design baseline without migrating schema or changing runtime. Entities explicitly labeled “Future runtime” remain proposals rather than migration authorization.
 
 ## 1. Modeling rules
 
@@ -39,9 +39,9 @@ This document governs current and future schema/API domain work. ProductFact, He
 | RiskSignal | Supported risk direction derived from Evidence through a verified bridge. | Snapshot-scoped; derived and versioned. | Links ClaimSignal/Evidence to RiskCategory; does not assert substance presence. | **Future explicit entity;** current bridge result is embedded in analysis/recommendation projections. |
 | RiskCategory | Governed risk direction, identified by stable category ID. | Knowledge-dataset scope; versioned lifecycle. | Links through verified mappings to Substance or SubstanceGroup. | **Current knowledge concept.** Governed config + SQLite knowledge index. |
 | Substance | Specific analyte/compound, identified by governed `substance_id`. | Knowledge-dataset scope; versioned. | Linked to groups, methods and regulatory context. | **Current.** Governed inspection config + SQLite. |
-| SubstanceGroup | Governed group named by authoritative source. | Knowledge/version scope; must not be expanded by assumption. | Risk mappings may target a group without implying every member. | **Current concept** in risk mappings; future normalized storage may be required. |
-| InspectionMethod | Official or governed method, identified by `method_id`. | Knowledge/version/effective-time scope. | Links to analytes and source documents. | **Current.** Governed config + SQLite. |
-| InspectionApplicability | Contextual rule for whether a method is suitable. | Method + product-context scope; versioned. | Requires explicit method/product-form/category basis and provenance. | **Current.** Governed config + SQLite. |
+| SubstanceGroup | Governed group named by authoritative source. | Knowledge/version scope; must not be expanded by assumption. | Risk mappings may target a group without implying every member; Method analytes are not group membership. | **Current concept** in 3 Risk mappings; 0 governed membership relations. Future normalized storage may be required. |
+| InspectionMethod | Official or governed method, identified by `method_id`. | Knowledge/version/effective-time scope; lifecycle and knowledge depth are independent. | Links to explicit source-backed analytes and source documents. | **Current.** 5 deep-parsed methods in governed config + SQLite. `knowledge_depth` is V2-7 design only and is not persisted in schema 12. |
+| InspectionApplicability | Contextual rule for whether a method is suitable. | Method + optional Substance + Product Context scope; versioned. | Preserves include, conditional and exclude source facts; missing is unknown. | **Current.** 37 governed config records + SQLite. |
 | InspectionRecommendation | Derived method assistance for one Snapshot/context/knowledge version. | Snapshot-scoped derived artifact; regenerable, not adjudicative. | Uses Evidence, context, risk mapping and applicability; records gaps. | **Current.** `inspection_recommendation.json` + SQLite/workspace projection. |
 | Review | Human judgment identified by Snapshot. | Snapshot-scoped; mutable until business workflow freezes it. | May be pending, follow-up, or no-further-action; independent repository from Sampling. | **Current.** SQLite. |
 | SamplingMembership | Membership of one Product in the current working list. | Product/current-list scoped; mutable. | Records source Snapshot; does not own a separate MVP note and does not rewrite Review. | **Current.** SQLite. |
@@ -168,6 +168,14 @@ The initial five Claim types are not a five-class official health-function model
 The current Product Detail and Inspection Workspace presentation reads this Snapshot-scoped assessment without recomputing it in React. It exposes every unavailable/unresolved/zero/assessed state, keeps page Claim evidence separate from official Registry evidence, and provides no total verdict, risk implication, Review decision, or Sampling mutation.
 
 Schema 12 adds `claim_consistency_status`/`claim_consistency_path` to ProductSnapshot plus `claim_consistency_assessments`, `claim_consistency_official_functions`, and `claim_consistency_claims`. These rows are rebuildable from the sidecar and are transactionally cleared when the artifact is invalid. The governed HealthFunction and mapping datasets remain versioned config authorities rather than mutable SQLite knowledge tables.
+
+### 6.3 Inspection knowledge depth and reachability — V2-7A DESIGN BASELINE
+
+The Wide Reference Index and Deep Verified Subset are separate sets. `method_status` records official lifecycle; the independent design dimension `knowledge_depth` progresses through `reference_only`, `analyte_verified`, `applicability_verified`, and `recommendation_ready`. A current method can remain reference-only, while a superseded method can remain deeply parsed for historical trace.
+
+The current five-method corpus passes the static `recommendation_ready` audit for its explicit Method→Substance relations. This does not persist a new field, make every product context applicable, or define nationwide method coverage. Schema 12 and the current verified-dataset validator cannot safely represent a future reference-only row without an additive gate, so V2-7B candidates remain outside runtime import until that boundary exists.
+
+Recommendation reachability requires the independent chain Evidence→Risk, Risk→explicit Substance, deep current Method→Substance, and Product Context applicability. Method→Substance never creates Risk→Substance. Risk→SubstanceGroup never expands from a method analyte list. See [INSPECTION_KNOWLEDGE_COVERAGE_V2.md](INSPECTION_KNOWLEDGE_COVERAGE_V2.md).
 
 ## 7. Review and Sampling invariants
 

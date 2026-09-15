@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-6B2
+> Last verified phase: V2-7A
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -200,7 +200,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-7 — Inspection knowledge coverage
 
-**Status:** NEXT — requires a separate design/implementation Gate.
+**Status:** IN PROGRESS — V2-7A complete; V2-7B is NEXT.
 
 - **Goal:** Expand governed inspection knowledge using **wide Reference Index + deep Verified Subset**.
 - **Why:** Broad discoverability is useful, but only deeply parsed, provenance-complete mappings can drive recommendations.
@@ -214,6 +214,35 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Testing:** Provenance, referential integrity, lifecycle, supersession, negative applicability and no reverse inference.
 - **Real-world validation:** Independently verify a focused set of high-priority methods/mappings.
 - **Exit criteria:** Deep mappings are source-complete; broad index entries cannot drive unsupported recommendations.
+
+### V2-7A — Inspection Knowledge Inventory & Coverage Contract
+
+**Status:** COMPLETE — deterministic audit and canonical design baseline accepted offline.
+
+- **Goal:** Inventory the actual governed chain, separate lifecycle from knowledge depth, define denominator-scoped metrics, and select source-grounded next work.
+- **In Scope:** Offline audit tool, current method/risk/reachability matrices, Wide Reference Index vs Deep Verified Subset, `RegulatoryDocument` design, promotion and Recommendation gates, deterministic governance tests.
+- **Out of Scope:** Knowledge-record expansion, schema/API/frontend changes, Recommendation changes, Claim→Risk, group inference, Knowledge Base UI, or Analytics.
+- **Result:** The current five methods are a small deep-parsed corpus. Five of eight Risk target mappings are explicit Substances; three are unresolved Groups. Three of five explicit mappings are end-to-end reachable through the current legacy bridge, covering two of three governed Risk categories. Candidates remain outside runtime import.
+- **Exit criteria:** Inventory is reproducible from governed configs; every metric has a denominator/version; group and reverse-inference boundaries are tested; existing Recommendation output is unchanged.
+
+### V2-7B — Wide Official Method Reference Expansion
+
+**Status:** NEXT — requires its own implementation Gate.
+
+- **Goal:** Expand first-party official method identity/lifecycle coverage without making shallow records Recommendation-capable.
+- **Dependencies:** V2-7A coverage contract and an approved additive depth/candidate boundary.
+- **Initial candidates:** BJS 202405 exact identity/full text from its current SAMR discovery source; GB/T 5009.170-2003 predecessor identity/lifecycle from first-party standards evidence.
+- **Required boundary:** Reference-only records cannot enter D5 resolution. Exact titles, lifecycle and documents must be verified before promotion; candidate status is not `verified_reference`.
+- **Out of Scope:** Bulk third-party imports, Risk inference from analytes, Claim→Risk, and deep promotion without source scope.
+
+### V2-7C — Deep Verified Subset & V2-7 Exit Gate
+
+**Status:** PLANNED — not authorized until V2-7B is accepted.
+
+- **Goal:** Deep-verify priority analyte/scope/applicability paths and close V2-7 with context-corpus reachability evidence.
+- **Dependencies:** Versioned V2-7B index, depth-aware resolver, RegulatoryDocument/lifecycle handling, and accepted priority set.
+- **In Scope:** Full-text analyte parsing, positive/conditional/negative applicability, explicit unknowns, method/document supersession, context-defined Recommendation reachability and complete regression.
+- **Out of Scope:** Risk probability, laboratory claims, automatic group expansion, new Claim/Risk causality, UI navigation, or Analytics.
 
 ## V2-8 — Knowledge Base UI
 

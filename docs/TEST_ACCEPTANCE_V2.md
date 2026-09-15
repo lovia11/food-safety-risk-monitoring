@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B2
+> Last verified phase: V2-7A
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -233,6 +233,23 @@ Every governed dataset change tests:
 - The standard-name `百合` Query retains its Batch 02B 50% result as disabled `rejected_low_relevance`; promotion of the refined strategy never rehabilitates or executes it.
 - Batch 02C skips ambiguous Rank 8, uses Rank 11 as the tenth assessable item, and calculates 10 assessable / 9 relevant / 1 raw-scope / 90% from explicit human labels.
 - Reference remains 106 while actual operational coverage is 16/106. Coverage presentation and API keep these denominators distinct.
+
+### 8.2 Inspection knowledge coverage gate — V2-7A accepted design baseline
+
+- the audit loads all three governed configs through the production validators and performs no network access;
+- current inventory is derived rather than hardcoded by the tool: 5 methods, 117 Substances, 132 Method→Substance relations, 37 applicability records, 1 regulatory context, 5 Risk→Substance mappings, 3 Risk→Group mappings, and 3 bridge mappings;
+- every Method→Substance, applicability, Risk→Substance, and bridge reference identity is non-dangling;
+- lifecycle status and audit `knowledge_depth` are independent; a superseded deep method remains traceable but is not Recommendation-ready;
+- all five current methods retain official reference provenance and pass the static deep gate only for their explicit relations;
+- group mappings remain unexpanded even if a Substance or Method record has a similar group label;
+- adding a Method→Substance relation cannot create a Risk mapping;
+- a missing applicability path remains an explicit unknown/gap and never becomes `not_applicable` or a positive Recommendation;
+- include, conditional and exclude source facts remain distinct, and product-level applicability still requires explicit context;
+- Method Reference, Deep Verification, Substance→Method, Applicability, Risk→Substance, Group Resolution, and Recommendation Reachability metrics each record numerator, denominator and dataset versions;
+- Recommendation fixtures remain byte-for-byte semantically compatible; no schema, API, frontend, config record, Phase3, D2–D6, Review, Sampling, frozen history or runtime business output changes;
+- V2-7B candidate records remain planning-only until an approved depth-aware storage/resolver gate exists.
+
+V2-7A exit validation passed offline: audit/governance tests 9/9; Inspection config/Risk/bridge/knowledge/applicability/Recommendation/runtime targeted regression 210/210; Claim/Consistency 49/49; Review/Sampling 30/30; Monitor/Discovery/Task 39/39; Python full regression discovered 541 / passed 540 / skipped 1; frontend workflow 38/38; typecheck and production build passed. No external network, collection, schema/API/frontend runtime change, knowledge-record promotion, or historical rewrite occurred.
 
 ## 9. Pipeline and Review gate
 

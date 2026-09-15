@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6A
+> Last verified phase: V2-7A
 > Owner: Project
 
 This document is the hard constraint for creating, changing, loading, presenting, and measuring regulated knowledge.
@@ -16,7 +16,7 @@ Each layer has separate identity, provenance, lifecycle, and coverage:
 3. **Claim Taxonomy** — normalized page-marketing topics and provenance-bearing extraction expressions; it does not contain official functions, RiskSignals, or inspection mappings.
 4. **HealthFunction Framework** — official functions and transition aliases under a named jurisdiction/framework/version.
 5. **Claim-to-Official-Function Mapping** — explicit project-governed `topic_related` mapping between page ClaimSignal and HealthFunction; never official equivalence.
-6. **ClaimConsistencyAssessment** — future Snapshot-scoped derived comparison under recorded identity, Registry, Claim, framework, and mapping versions.
+6. **ClaimConsistencyAssessment** — current Snapshot-scoped derived comparison under recorded identity, Registry, Claim, framework, and mapping versions.
 7. **Evidence-to-Risk Bridge** — verified link from observed Evidence/ClaimSignal to a RiskCategory.
 8. **Risk-to-Substance** — explicit mapping from RiskCategory to a Substance or authoritative SubstanceGroup.
 9. **Substance-to-Method** — declared analyte coverage in an InspectionMethod.
@@ -115,8 +115,14 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 ### 4.4 Methods and applicability
 
 - A method record states its official number/name, publisher, source, dates, status, and analyte facts.
+- The Wide Reference Index is distinct from the Deep Verified Subset. `method_status` describes official lifecycle; `knowledge_depth` describes project verification depth. Neither substitutes for the other.
+- The depth progression is `reference_only` → `analyte_verified` → `applicability_verified` → `recommendation_ready`. V2-7A uses it as an audit/design projection only; schema 12 does not persist it.
+- Deep promotion requires official identity/source, explicit source-backed analyte relations, parsed scope, lifecycle, applicability handling and dataset/version provenance.
 - Substance-to-Method means a method covers an analyte; it does not create a Risk mapping.
-- Applicability requires explicit product context and basis. Unknown context stays “needs context,” not silently suitable.
+- Applicability requires explicit product context and basis. Include, conditional and exclude facts stay distinct. Unknown context or a missing applicability record stays “needs context”/unknown, not silently suitable or not applicable.
+- Risk-to-Substance plus Substance-to-Method is still insufficient for a Recommendation until method depth, current lifecycle and product-context applicability pass.
+- A Risk-to-SubstanceGroup mapping is not expanded from MethodSubstance, a matching name, CAS data, pharmacology or model knowledge.
+- The current five methods are a small deep-parsed corpus, not a wide or nationally complete method index. Future reference-only candidates must remain outside Recommendation runtime until an explicit depth-aware storage/resolver gate exists.
 
 ### 4.5 Health-food registry
 
@@ -158,17 +164,20 @@ When a required link is absent, the output is `unknown`, `insufficient`, `unmapp
 Report independently:
 
 ```text
-Reference Coverage
+Method Reference Coverage
+Method Deep-Verification Coverage
 Operational Query Coverage
 Claim Coverage
 Bridge Coverage
 Risk→Substance Coverage
 Substance→Method Coverage
 Applicability Coverage
+Recommendation Structural Reachability
+Recommendation End-to-End Reachability
 Official Identity Verification Coverage
 ```
 
-Every metric defines numerator, denominator, dataset version, lifecycle inclusion, and observation period. A single blended “知识库覆盖率” is prohibited.
+Every metric defines numerator, denominator, dataset version, lifecycle inclusion, and observation period. The method Reference denominator is the committed project index unless an external official corpus has itself been governed; it is never an unstated universe of all methods. Context-applicable coverage requires a defined Product/Snapshot context corpus. A single blended “知识库覆盖率” is prohibited. The canonical Inspection formulas and V2-7A values are defined in [INSPECTION_KNOWLEDGE_COVERAGE_V2.md](INSPECTION_KNOWLEDGE_COVERAGE_V2.md).
 
 ## 8. Runtime and UI alignment
 

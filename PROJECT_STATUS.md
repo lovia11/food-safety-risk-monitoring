@@ -23,6 +23,7 @@
 - Full 106-object Monitor Reference picker with operational/query-pending/paused presentation, server-side execution guard, governed Query lifecycle, validation ledger and search-only batch tooling
 - V2 Claim domain, runtime, and primary 页面宣传线索 UX with deterministic seller-managed ClaimMentions/ClaimSignals, `claim_analysis.json` authority, schema 11 Claim projection retained by schema 12, same-Snapshot list summaries/filter, and Evidence trace
 - V2-6 ClaimConsistency runtime and primary detail/workspace UX with exact governed Registry normalization, non-adjudicative topic comparison, `claim_consistency.json` authority, schema 12 rebuildable projection, explicit gaps, and separate page/official trace
+- V2-7A deterministic Inspection Knowledge inventory and denominator-defined coverage contract; runtime remains unchanged
 
 ## Current Coverage
 
@@ -33,8 +34,9 @@
 - V2 Claim design baseline: 5 marketing-topic Claim types / 26 provenance-bearing exact expressions
 - V2-6A HealthFunction design baseline: 2 frameworks / 24 of 24 non-nutrient functions / 40 official transition aliases
 - Claim→HealthFunction design mappings: 4 `topic_related` / 1 explicit no-mapping Claim gap
-- 3 Evidence-to-risk Bridge mappings; 8 Risk-to-substance/group mappings
+- 3 Evidence-to-risk Bridge mappings; 5 Risk-to-substance and 3 Risk-to-group mappings
 - 5 Inspection methods, 117 substances, 132 method-substance links, 37 applicability records
+- Static Recommendation reachability: 5/5 explicit mappings structurally ready; 3/5 end-to-end through the current bridge; 0/3 group mappings resolved
 
 ## Current Validation
 
@@ -52,6 +54,8 @@ V2-6B1 Claim Consistency Runtime Core is complete. The pipeline consumes only pe
 
 V2-6B2 Claim Consistency presentation and the V2-6 Exit Gate are complete. Product Detail and Inspection Workspace reuse one Snapshot-scoped component for all operational/domain states and per-Claim relations. Official transition/raw/unresolved text and separate page/Registry source trace are auditable; partial unresolved output never creates a false negative; no overall verdict or score is generated. Targeted cross-domain regression passed 124/124; Python full regression discovered 532 / passed 531 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Offline 1440px/1080px acceptance found no page-level horizontal overflow. Runtime, schema 12, governed mappings, Risk/Recommendation, Review/Sampling, and frozen history are unchanged.
 
+V2-7A Inspection Knowledge Inventory & Coverage Contract is complete. An offline deterministic audit computes the actual method, analyte, applicability, Risk mapping, bridge and Recommendation reachability matrices from the three governed configs. Lifecycle and knowledge depth are independent; the current five methods form a small deep-parsed corpus, not national coverage. Reference-only candidates cannot enter runtime until a depth-aware gate exists. Audit/governance tests passed 9/9; targeted domain packs passed 210/210 Inspection, 49/49 Claim/Consistency, 30/30 Review/Sampling, and 39/39 Monitor/Discovery/Task; Python full regression discovered 541 / passed 540 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. No schema, API, frontend, knowledge record or Recommendation behavior changed.
+
 ## Known Limitations
 
 Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
@@ -68,8 +72,12 @@ V2-6B2 — COMPLETE. Shared Product Detail/Inspection Workspace presentation, se
 
 V2-6 — COMPLETE. The HealthFunction framework, exact Registry normalization, governed Claim topic mapping, Snapshot consistency runtime, rebuildable projection, and primary consistency UX are established. ClaimExpressionAttention governance and Claim→Risk remain outside this completion meaning.
 
+V2-7A — AUDIT / DESIGN BASELINE / COMPLETE. Current inventory, depth model, RegulatoryDocument contract, group boundary, coverage denominators, reachability and candidate plan are frozen.
+
+V2-7 — IN PROGRESS. No knowledge expansion has occurred yet.
+
 ## Next Gate
 
-V2-7 Inspection Knowledge Coverage is NEXT and requires a separate phase Gate. No V2-7 implementation is authorized by the V2-6 completion.
+V2-7B Wide Official Method Reference Expansion is NEXT and requires a separate phase Gate. V2-7C and the V2-7 Exit Gate remain planned; V2-8 is not started.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).
