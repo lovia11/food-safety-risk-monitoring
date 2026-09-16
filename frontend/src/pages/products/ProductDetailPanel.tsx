@@ -150,7 +150,11 @@ export function ProductDetailPanel({
 
   const productUrl = safeHttpUrl(workspace?.snapshot.productUrl);
   const pageRegionClues = workspace
-    ? pageRegionClueValues(workspace.productFacts, workspace.snapshot.productName)
+    ? pageRegionClueValues(
+        workspace.productFacts,
+        workspace.snapshot.productName,
+        workspace.snapshot.targetName || "",
+      )
     : [];
 
   return (
