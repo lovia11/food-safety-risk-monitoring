@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.discovery import DiscoveryCoordinator
+from src.discovery import DiscoveryCoordinator, select_detail_candidates
 from src.runtime import read_json
 
 
@@ -21,10 +21,10 @@ class FakeCollector:
         return self.__class__.responses[keyword]
 
 
-def candidate(product_id, rank):
+def candidate(product_id, rank, product_name=None):
     return {
         "product_id": product_id,
-        "product_name": f"商品{product_id}",
+        "product_name": product_name or f"商品{product_id}",
         "product_url": f"https://item.taobao.com/item.htm?id={product_id}",
         "rank": rank,
     }
@@ -56,6 +56,7 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
                 run_root=run_root,
                 logger=logging.getLogger("test.discovery"),
                 collector_factory=FakeCollector,
+                clue_keywords=("助眠",),
             ).discover(
                 target={"target_id": "target-1", "standard_name": "酸枣仁"},
                 queries=[
@@ -85,6 +86,11 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
             self.assertEqual([item["product_id"] for item in result["candidates"]], ["A", "B", "C"])
             self.assertEqual([item["rank"] for item in result["candidates"]], [1, 2, 3])
             self.assertEqual(result["selected_for_detail"], 2)
+            self.assertEqual(result["selection_strategy"]["name"], "balanced_exposure_clue_exploration_v1")
+            self.assertEqual(
+                [item["product_id"] for item in result["candidates"] if item["selected_for_detail"]],
+                ["A", "B"],
+            )
             self.assertEqual(result["target_id"], "target-1")
             self.assertEqual(result["target_name"], "酸枣仁")
             self.assertEqual(len(result["candidate_hits"]), 4)
@@ -99,6 +105,35 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
             self.assertEqual(saved["deduplicated_count"], 3)
             self.assertEqual(saved["query_results"][0]["raw_card_count"], 4)
 
+    def test_balanced_selection_uses_exposure_visible_clues_and_exploration(self):
+        source = [
+            candidate("A", 1, "普通酸枣仁A"),
+            candidate("B", 2, "普通酸枣仁B"),
+            candidate("C", 3, "普通酸枣仁C"),
+            candidate("D", 4, "酸枣仁助眠茶"),
+            candidate("E", 5, "酸枣仁深睡膏"),
+        ]
+        selected, strategy = select_detail_candidates(
+            source,
+            detail_limit=5,
+            target_id="target-sleep",
+            clue_keywords=("助眠", "深睡"),
+        )
+
+        selected_items = [item for item in selected if item["selected_for_detail"]]
+        self.assertEqual(len(selected_items), 5)
+        self.assertEqual(strategy["exposure_target"], 2)
+        self.assertEqual(strategy["clue_target"], 2)
+        self.assertEqual(strategy["exploration_target"], 1)
+        by_id = {item["product_id"]: item for item in selected_items}
+        self.assertEqual(by_id["A"]["selection_group"], "exposure")
+        self.assertEqual(by_id["B"]["selection_group"], "exposure")
+        self.assertEqual(by_id["D"]["selection_group"], "visible_clue")
+        self.assertEqual(by_id["E"]["selection_group"], "visible_clue")
+        self.assertEqual(by_id["C"]["selection_group"], "exploration")
+        self.assertIn("助眠", by_id["D"]["title_clue_terms"])
+        self.assertIn("深睡", by_id["E"]["title_clue_terms"])
+
     def test_disabled_query_is_not_run(self):
         with tempfile.TemporaryDirectory() as temporary:
             result = DiscoveryCoordinator(
@@ -106,6 +141,7 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
                 run_root=Path(temporary) / "run",
                 logger=logging.getLogger("test.discovery.disabled"),
                 collector_factory=FakeCollector,
+                clue_keywords=(),
             ).discover(
                 target={"target_id": "target-1", "standard_name": "酸枣仁"},
                 queries=[
