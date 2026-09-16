@@ -2,6 +2,7 @@ import { AlertCircle, ExternalLink, Info } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { SnapshotWorkspace } from "../../api/contracts";
+import type { CandidateSelection } from "../../api/tasks";
 import { getSnapshotWorkspace, updateInspectionContext } from "../../api/products";
 import { EmptyState } from "../../components/EmptyState";
 import { ClaimAnalysisSection } from "../../components/ClaimAnalysisSection";
@@ -31,10 +32,11 @@ type ReviewChange = {
 
 type Props = {
   snapshotId: string;
+  selection?: CandidateSelection;
   onChanged: (change?: ReviewChange) => Promise<void>;
 };
 
-export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
+export function InspectionWorkspaceDetail({ snapshotId, selection, onChanged }: Props) {
   const [workspace, setWorkspace] = useState<SnapshotWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -95,6 +97,15 @@ export function InspectionWorkspaceDetail({ snapshotId, onChanged }: Props) {
         <h2>{workspace.snapshot.productName || workspace.snapshot.productId}</h2>
         <span>{workspace.snapshot.shopName || "店铺未记录"}</span>
       </header>
+      {selection?.reasons.length ? (
+        <div className="inline-message" data-tone="info">
+          <Info size={17} />
+          <span>
+            <strong>进入详情原因：</strong>{selection.reasons.join("；")}。
+            该信息仅解释采集优先级，不代表商品风险高低。
+          </span>
+        </div>
+      ) : null}
       <ProductSnapshotSummary
         workspace={workspace}
         analysis={analysis}
