@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-7C
+> Last verified phase: V2-8A
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -263,7 +263,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-8 — Knowledge Base UI
 
-**Status:** NEXT — requires a separate phase Gate; not implemented in V2-7C.
+**Status:** IN PROGRESS — V2-8A complete; V2-8B is NEXT.
 
 - **Goal:** Make governed runtime knowledge inspectable without creating a second static knowledge copy.
 - **Why:** Analysts need to understand sources, coverage, versions, and gaps behind results.
@@ -277,6 +277,23 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Testing:** API/UI consistency, empty/version/superseded states, links, pagination and accessibility.
 - **Real-world validation:** Analysts trace sample recommendations back through displayed knowledge.
 - **Exit criteria:** Every displayed record maps to governed runtime data; no mock or divergent copies exist.
+
+### V2-8A — Knowledge Read API & UX Contract
+
+**Status:** COMPLETE — read model, API/DTO contract and canonical UX baseline accepted offline.
+
+- **Goal:** Expose the six governed domains through one consistent read-only contract before implementing visible navigation or pages.
+- **Result:** Seven GET-only endpoints provide separate denominator-defined summary counts and paginated/filterable MonitorTarget, HealthFunction, Substance, RiskMapping, InspectionMethod and RegulatoryDocument records. Source/version trace, lifecycle, depth and Knowledge Gaps remain explicit. Schema-13 projections are reused for Monitor/Inspection/Risk; the existing strict governed loader is reused for HealthFunction.
+- **Frontend result:** TypeScript DTOs, GET clients and stable depth/gap/source presentation mappings exist. No Sidebar, route, page, tab or CSS was added.
+- **Boundary:** No POST/PUT/DELETE knowledge operation, mock catalog, browser inference, schema change or business-state mutation exists.
+- **Validation:** targeted backend/domain/API regression 168/168 and frontend typecheck pass offline.
+
+### V2-8B — Knowledge Base UI Implementation
+
+**Status:** NEXT — requires a separate phase Gate; not implemented in V2-8A.
+
+- **Goal:** Implement the 知识库 navigation, six tabs, list/detail/filter/empty/gap/source states using only the V2-8A DTOs.
+- **Boundary:** No browser editing, duplicated static knowledge, inferred relations, Analytics or V2-9 work.
 
 ## V2-9 — Analytics
 

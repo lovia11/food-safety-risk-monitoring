@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7C
+> Last verified phase: V2-8A
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -294,6 +294,24 @@ V2-7B2 targeted validation passed offline: Inspection/Reference/candidate/audit/
 - focused and full offline regression pass, and no Taobao or other live collection is performed.
 
 V2-7C exit validation passed offline: focused Inspection/Reference/candidate/audit/knowledge/applicability/Recommendation/runtime/Risk/bridge regression 195/195; Python full regression discovered 555 / passed 554 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. V2-7 is COMPLETE; V2-8 remains a separate NEXT gate.
+
+### 8.6 Knowledge read API and UX contract — V2-8A
+
+- the seven Knowledge endpoints are GET-only and have no knowledge mutation path;
+- the summary reports separate explicit counts rather than a blended completeness score;
+- collection endpoints apply deterministic server-side query/filter before offset/limit pagination, reject invalid bounded values and return `items/count/total/limit/offset/hasMore`;
+- all 106 governed Reference MonitorTargets are visible with operational, query-pending or paused state; Reference membership is not presented as Operational Search readiness;
+- all 25 governed HealthFunction records are loaded through the existing strict runtime validator, preserve framework separation and expose exact transition aliases only as detail provenance;
+- all 201 Inspection Substances expose method counts and explicit recorded/not-recorded regulatory-context/group metadata without implying product content;
+- all 8 Risk mappings are traceable; all 3 group mappings remain unresolved with zero automatic member expansion, and Method analytes create no Risk mapping;
+- all 7 InspectionMethods are queryable with lifecycle and knowledge depth as independent fields; the revoked `reference_only` predecessor remains visible but excluded from operational Recommendation;
+- all 7 RegulatoryDocuments preserve official governed source links and supersession identity;
+- source dataset/version/status and record-level provenance remain available to future detail views;
+- Knowledge GET requests do not change Task, Review or Sampling business rows;
+- frontend DTO/client/mapper contracts typecheck without a Sidebar, route or page implementation;
+- schema 13, governed configs and all existing business semantics remain unchanged.
+
+V2-8A validation passed offline: Knowledge read API/domain tests 9/9; targeted Knowledge/Inspection/Recommendation/Risk/HealthFunction/Monitor/local-API regression 168/168; frontend typecheck passed. Full Python regression, frontend workflow and production build were not required by this contract-only Gate. V2-8 remains IN PROGRESS; V2-8B is NEXT.
 
 ## 9. Pipeline and Review gate
 

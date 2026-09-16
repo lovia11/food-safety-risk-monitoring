@@ -28,6 +28,8 @@ from src.inspection_runtime import (
     InspectionRuntime,
     database_path_for_output_root,
 )
+from src.claim_consistency import DEFAULT_HEALTH_FUNCTIONS_PATH
+from src.knowledge_read import KnowledgeQueryValidationError, KnowledgeReadService
 from src.runtime import read_json
 from src.review_decision import (
     ReviewDecisionService,
@@ -199,6 +201,7 @@ def create_handler(
     monitor_config: Path | tuple[Path, ...] | list[Path] | None = DEFAULT_MONITOR_CONFIG_PATHS,
     inspection_config: Path | None = DEFAULT_INSPECTION_CONFIG_PATH,
     risk_substance_config: Path | None = DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
+    health_functions_config: Path = DEFAULT_HEALTH_FUNCTIONS_PATH,
 ) -> type[BaseHTTPRequestHandler]:
     resolved_output = output_root.resolve()
     resolved_web = web_root.resolve()
@@ -227,6 +230,7 @@ def create_handler(
     for config_path in monitor_configs:
         if config_path.is_file():
             store.import_monitor_config(config_path)
+    knowledge_read = KnowledgeReadService(store, health_functions_config)
     store.import_all_runs()
     sampling_store = SamplingStore(store.database_path)
     sampling_export = SamplingExportService(store, sampling_store, resolved_output)
@@ -325,6 +329,72 @@ def create_handler(
                 return
             if path == "/api/health":
                 self._json(200, {"status": "ok", "service": "taobao-risk-mvp"})
+                return
+            if path.startswith("/api/knowledge/"):
+                query_values = parse_qs(parsed.query)
+
+                def value(name: str) -> str:
+                    return str((query_values.get(name) or [""])[0]).strip()
+
+                try:
+                    limit = int(value("limit") or "50")
+                    offset = int(value("offset") or "0")
+                    if path == "/api/knowledge/summary":
+                        payload = knowledge_read.summary()
+                    elif path == "/api/knowledge/monitor-targets":
+                        payload = knowledge_read.monitor_targets(
+                            query=value("query"),
+                            availability=value("availability"),
+                            limit=limit,
+                            offset=offset,
+                        )
+                    elif path == "/api/knowledge/health-functions":
+                        payload = knowledge_read.health_functions(
+                            query=value("query"),
+                            framework=value("framework"),
+                            status=value("status"),
+                            limit=limit,
+                            offset=offset,
+                        )
+                    elif path == "/api/knowledge/substances":
+                        payload = knowledge_read.substances(
+                            query=value("query"), limit=limit, offset=offset
+                        )
+                    elif path == "/api/knowledge/risk-mappings":
+                        payload = knowledge_read.risk_mappings(
+                            query=value("query"),
+                            target_type=value("target_type"),
+                            status=value("status"),
+                            limit=limit,
+                            offset=offset,
+                        )
+                    elif path == "/api/knowledge/inspection-methods":
+                        payload = knowledge_read.inspection_methods(
+                            query=value("query"),
+                            status=value("status"),
+                            knowledge_depth=value("knowledge_depth"),
+                            limit=limit,
+                            offset=offset,
+                        )
+                    elif path == "/api/knowledge/regulatory-documents":
+                        payload = knowledge_read.regulatory_documents(
+                            query=value("query"),
+                            status=value("status"),
+                            document_type=value("document_type"),
+                            limit=limit,
+                            offset=offset,
+                        )
+                    else:
+                        self._error(
+                            404,
+                            "knowledge_endpoint_not_found",
+                            "Knowledge read endpoint does not exist",
+                        )
+                        return
+                except (KnowledgeQueryValidationError, TypeError, ValueError) as exc:
+                    self._error(400, "invalid_knowledge_query", str(exc))
+                    return
+                self._json(200, payload)
                 return
             if path == "/api/runs":
                 self._json(200, {"runs": list_run_snapshots(resolved_output)})

@@ -2199,6 +2199,208 @@ class DataStore:
             None,
         )
 
+    def list_knowledge_substances(self) -> list[dict[str, Any]]:
+        """Return the governed Substance read projection without inferring Risk.
+
+        Contexts and group memberships are loaded in bounded companion queries,
+        not once per Substance.  An empty list means that no fact is recorded in
+        the current dataset; it does not prove that no context or membership
+        exists outside the governed project knowledge.
+        """
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT s.substance_id, s.dataset_id, s.canonical_name,
+                       s.english_name, s.cas_no, s.substance_group, s.note,
+                       d.dataset_version, d.dataset_status,
+                       d.source_name AS dataset_source_name,
+                       d.source_reference AS dataset_source_reference,
+                       d.source_date AS dataset_source_date,
+                       COUNT(DISTINCT ms.method_id) AS method_coverage_count,
+                       COUNT(DISTINCT CASE
+                           WHEN m.knowledge_depth = 'recommendation_ready'
+                           THEN ms.method_id END
+                       ) AS recommendation_ready_method_count
+                FROM inspection_substances s
+                JOIN inspection_datasets d ON d.dataset_id = s.dataset_id
+                LEFT JOIN inspection_method_substances ms
+                       ON ms.substance_id = s.substance_id
+                LEFT JOIN inspection_methods m ON m.method_id = ms.method_id
+                WHERE d.dataset_status = 'verified_reference'
+                GROUP BY s.substance_id
+                ORDER BY s.canonical_name, s.substance_id
+                """
+            ).fetchall()
+            context_rows = connection.execute(
+                """
+                SELECT c.context_id, c.substance_id, c.context_status,
+                       c.product_scope, c.jurisdiction, c.valid_from, c.valid_to,
+                       c.source_label, c.source_name, c.source_reference,
+                       c.source_date, c.note
+                FROM substance_regulatory_contexts c
+                JOIN inspection_substances s ON s.substance_id = c.substance_id
+                JOIN inspection_datasets d ON d.dataset_id = s.dataset_id
+                WHERE d.dataset_status = 'verified_reference'
+                ORDER BY c.substance_id, c.context_id
+                """
+            ).fetchall()
+            membership_rows = connection.execute(
+                """
+                SELECT membership_id, group_identity, group_label, substance_id,
+                       membership_scope, completeness_context, source_basis,
+                       source_reference, status, dataset_id, dataset_version
+                FROM substance_group_memberships
+                ORDER BY substance_id, group_identity, membership_id
+                """
+            ).fetchall()
+
+        contexts_by_substance: dict[str, list[dict[str, Any]]] = {}
+        for row in context_rows:
+            contexts_by_substance.setdefault(str(row["substance_id"]), []).append(
+                dict(row)
+            )
+        memberships_by_substance: dict[str, list[dict[str, Any]]] = {}
+        for row in membership_rows:
+            memberships_by_substance.setdefault(str(row["substance_id"]), []).append(
+                dict(row)
+            )
+        return [
+            {
+                **dict(row),
+                "regulatory_contexts": contexts_by_substance.get(
+                    str(row["substance_id"]), []
+                ),
+                "group_memberships": memberships_by_substance.get(
+                    str(row["substance_id"]), []
+                ),
+            }
+            for row in rows
+        ]
+
+    def list_knowledge_risk_mappings(self) -> list[dict[str, Any]]:
+        """Return every governed Risk mapping with its exact target identity."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.mapping_id, m.dataset_id, m.risk_category, m.risk_label,
+                       m.target_type, m.substance_id, m.target_group_label,
+                       m.evidence_grade, m.basis_type, m.temporal_status,
+                       m.product_scope, m.source_name, m.source_reference,
+                       m.source_date, m.source_basis_text, m.note,
+                       d.dataset_version, d.dataset_status,
+                       d.source_name AS dataset_source_name,
+                       d.source_reference AS dataset_source_reference,
+                       d.source_date AS dataset_source_date,
+                       s.canonical_name AS substance_name,
+                       s.cas_no AS substance_cas_no
+                FROM risk_substance_mappings m
+                JOIN risk_mapping_datasets d ON d.dataset_id = m.dataset_id
+                LEFT JOIN inspection_substances s
+                       ON s.substance_id = m.substance_id
+                WHERE d.dataset_status = 'verified_reference'
+                ORDER BY m.risk_category, m.target_type, m.mapping_id
+                """
+            ).fetchall()
+            membership_rows = connection.execute(
+                """
+                SELECT membership_id, group_identity, group_label, substance_id,
+                       membership_scope, completeness_context, source_basis,
+                       source_reference, status, dataset_id, dataset_version
+                FROM substance_group_memberships
+                ORDER BY group_label, membership_id
+                """
+            ).fetchall()
+
+        memberships_by_label: dict[str, list[dict[str, Any]]] = {}
+        for row in membership_rows:
+            memberships_by_label.setdefault(str(row["group_label"]), []).append(
+                dict(row)
+            )
+        return [
+            {
+                **dict(row),
+                "group_memberships": memberships_by_label.get(
+                    str(row["target_group_label"] or ""), []
+                ),
+            }
+            for row in rows
+        ]
+
+    def list_knowledge_inspection_methods(self) -> list[dict[str, Any]]:
+        """Return indexed Methods with independent lifecycle/depth and counts."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.method_id, m.dataset_id, m.method_no, m.method_name,
+                       m.method_type, m.method_status, m.knowledge_depth,
+                       m.regulatory_document_id, m.publisher, m.published_date,
+                       m.effective_date, m.replaces_method_no,
+                       m.replaced_by_method_no, m.source_name,
+                       m.source_reference, m.source_date, m.note,
+                       d.dataset_version, d.dataset_status,
+                       d.source_name AS dataset_source_name,
+                       d.source_reference AS dataset_source_reference,
+                       d.source_date AS dataset_source_date,
+                       doc.document_type, doc.document_no, doc.title AS document_title,
+                       doc.publisher AS document_publisher,
+                       doc.published_date AS document_published_date,
+                       doc.effective_date AS document_effective_date,
+                       doc.status AS document_status,
+                       doc.source_reference AS document_source_reference,
+                       doc.jurisdiction AS document_jurisdiction,
+                       doc.supersedes_json, doc.superseded_by_json,
+                       COUNT(DISTINCT ms.substance_id) AS analyte_count,
+                       COUNT(DISTINCT a.applicability_id) AS applicability_count,
+                       COUNT(DISTINCT CASE WHEN a.scope_type = 'include'
+                                          THEN a.applicability_id END) AS include_count,
+                       COUNT(DISTINCT CASE WHEN a.scope_type = 'conditional'
+                                          THEN a.applicability_id END) AS conditional_count,
+                       COUNT(DISTINCT CASE WHEN a.scope_type = 'exclude'
+                                          THEN a.applicability_id END) AS exclude_count
+                FROM inspection_methods m
+                JOIN inspection_datasets d ON d.dataset_id = m.dataset_id
+                LEFT JOIN inspection_regulatory_documents doc
+                       ON doc.document_id = m.regulatory_document_id
+                LEFT JOIN inspection_method_substances ms
+                       ON ms.method_id = m.method_id
+                LEFT JOIN inspection_method_applicabilities a
+                       ON a.method_id = m.method_id
+                WHERE d.dataset_status = 'verified_reference'
+                GROUP BY m.method_id
+                ORDER BY m.method_no, m.method_id
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_knowledge_regulatory_documents(self) -> list[dict[str, Any]]:
+        """Return normalized official-document facts from the read index."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT doc.document_id, doc.dataset_id, doc.dataset_version,
+                       doc.document_type, doc.document_no, doc.title,
+                       doc.publisher, doc.published_date, doc.effective_date,
+                       doc.status, doc.source_reference, doc.jurisdiction,
+                       doc.supersedes_json, doc.superseded_by_json,
+                       d.dataset_status, d.source_name AS dataset_source_name,
+                       d.source_reference AS dataset_source_reference,
+                       d.source_date AS dataset_source_date,
+                       COUNT(DISTINCT m.method_id) AS linked_method_count
+                FROM inspection_regulatory_documents doc
+                JOIN inspection_datasets d ON d.dataset_id = doc.dataset_id
+                LEFT JOIN inspection_methods m
+                       ON m.regulatory_document_id = doc.document_id
+                WHERE d.dataset_status = 'verified_reference'
+                GROUP BY doc.document_id
+                ORDER BY COALESCE(doc.document_no, ''), doc.document_id
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def import_all_runs(self) -> dict[str, int]:
         result = {"discovered": 0, "imported": 0, "skipped": 0}
         if not self.output_root.is_dir():

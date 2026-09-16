@@ -733,3 +733,216 @@ export type MonitorTargetList = {
   scope: "operational" | "reference";
   coverage: MonitorCoverage;
 };
+
+export type KnowledgeSourceTrace = {
+  datasetId: string;
+  datasetVersion: string;
+  datasetStatus: string;
+  sourceName: string | null;
+  sourceReference: string | null;
+  sourceDate: string | null;
+};
+
+export type KnowledgePage<T> = {
+  items: T[];
+  count: number;
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export type KnowledgeSummary = {
+  counts: {
+    referenceMonitorTargets: number;
+    operationalMonitorTargets: number;
+    queryPendingMonitorTargets: number;
+    pausedMonitorTargets: number;
+    healthFunctions: number;
+    inspectionMethods: number;
+    recommendationReadyMethods: number;
+    referenceOnlyMethods: number;
+    substances: number;
+    riskMappings: number;
+    groupMappings: number;
+    regulatoryDocuments: number;
+  };
+  authorities: {
+    monitorReferences: KnowledgeSourceTrace[];
+    healthFunctions: Pick<
+      KnowledgeSourceTrace,
+      "datasetId" | "datasetVersion" | "datasetStatus"
+    >;
+    inspection: KnowledgeSourceTrace | null;
+    riskMappings: KnowledgeSourceTrace | null;
+  };
+  metricBoundary: string;
+};
+
+export type KnowledgeMonitorTarget = {
+  targetId: string;
+  standardName: string;
+  targetType: string;
+  availability: "operational" | "query_pending" | "paused";
+  availabilityReason: string | null;
+  validatedSearchQueryCount: number;
+  hasValidatedSearchQuery: boolean;
+  searchQueries: MonitorQuery[];
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+  interpretation: string;
+};
+
+export type HealthFunctionAlias = {
+  aliasId: string;
+  aliasText: string;
+  aliasType: "official_transition_name";
+  status: string;
+  sourceName: string;
+  sourceReference: string;
+  sourceDate: string;
+};
+
+export type KnowledgeHealthFunction = {
+  functionId: string;
+  frameworkId: string;
+  frameworkType: "non_nutrient" | "nutrient_supplement";
+  frameworkName: string;
+  frameworkCoverageStatus: string;
+  officialName: string;
+  ordinal: number;
+  status: string;
+  jurisdiction: string;
+  frameworkVersion: string;
+  effectiveDate: string | null;
+  transitionAliases: HealthFunctionAlias[];
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+  interpretation: string;
+};
+
+export type KnowledgeSubstanceGroupMembership = {
+  membershipId: string;
+  groupIdentity: string;
+  groupLabel: string;
+  membershipScope: string;
+  completenessContext: "partial" | "complete";
+  sourceBasis: string;
+  sourceReference: string;
+  status: string;
+  datasetId: string;
+  datasetVersion: string;
+};
+
+export type KnowledgeSubstance = {
+  substanceId: string;
+  canonicalName: string;
+  englishName: string | null;
+  casNo: string | null;
+  groupMetadata: {
+    state: "recorded" | "not_recorded";
+    memberships: KnowledgeSubstanceGroupMembership[];
+  };
+  regulatoryContext: {
+    availability: "recorded" | "not_recorded";
+    count: number;
+    contexts: Array<{
+      contextId: string;
+      status: string;
+      productScope: string;
+      jurisdiction: string;
+      validFrom: string | null;
+      validTo: string | null;
+      sourceName: string;
+      sourceReference: string;
+      sourceDate: string | null;
+      note: string;
+    }>;
+  };
+  methodCoverageCount: number;
+  recommendationReadyMethodCount: number;
+  note: string;
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+  interpretation: string;
+};
+
+export type KnowledgeRiskMapping = {
+  mappingId: string;
+  riskCategory: string;
+  riskLabel: string;
+  targetType: "substance" | "substance_group";
+  target: {
+    substanceId: string | null;
+    label: string;
+    casNo: string | null;
+    groupLabel: string | null;
+  };
+  evidenceGrade: "A" | "B" | "C";
+  basisType: string;
+  productScope: string;
+  temporalStatus: "current" | "historical";
+  sourceBasisText: string;
+  note: string;
+  groupResolution: {
+    status: "unresolved" | "partial" | "complete";
+    memberCount: number;
+  } | null;
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+  interpretation: string;
+};
+
+export type MethodKnowledgeDepth =
+  | "reference_only"
+  | "analyte_verified"
+  | "applicability_verified"
+  | "recommendation_ready";
+
+export type KnowledgeRegulatoryDocumentSummary = {
+  documentId: string;
+  documentType: string;
+  documentNo: string | null;
+  title: string;
+  publisher: string;
+  publishedDate: string | null;
+  effectiveDate: string | null;
+  status: string;
+  sourceReference: string;
+  jurisdiction: string;
+  supersedes: string[];
+  supersededBy: string[];
+};
+
+export type KnowledgeInspectionMethod = {
+  methodId: string;
+  methodNo: string;
+  methodName: string;
+  methodType: string;
+  methodStatus: "current" | "superseded" | "revoked" | "verification_pending";
+  knowledgeDepth: MethodKnowledgeDepth;
+  publisher: string;
+  publishedDate: string | null;
+  effectiveDate: string | null;
+  replacesMethodNo: string | null;
+  replacedByMethodNo: string | null;
+  analyteCount: number;
+  applicability: {
+    availability: "recorded" | "not_recorded";
+    count: number;
+    includeCount: number;
+    conditionalCount: number;
+    excludeCount: number;
+  };
+  regulatoryDocument: KnowledgeRegulatoryDocumentSummary | null;
+  note: string;
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+  interpretation: string;
+};
+
+export type KnowledgeRegulatoryDocument = KnowledgeRegulatoryDocumentSummary & {
+  linkedMethodCount: number;
+  source: KnowledgeSourceTrace;
+  knowledgeGaps: string[];
+};
