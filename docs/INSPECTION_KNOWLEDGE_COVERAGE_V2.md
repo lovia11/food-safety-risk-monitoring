@@ -2,14 +2,14 @@
 
 > Status: CANONICAL DESIGN BASELINE
 > Applies to: V2-7
-> Baseline datasets: `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
+> Baseline datasets: `inspection-reference@2026.09-b7`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
 > Owner: Project
 
 ## 1. Purpose
 
 This contract separates the size of the project's official-method index from the depth required to drive an Inspection Recommendation. It defines auditable denominators and promotion gates without claiming coverage of every official Chinese inspection method.
 
-V2-7A changed no runtime output. V2-7B1 implements the additive schema/validation/resolver boundary required by this contract while preserving API/frontend behavior, Recommendation output, Risk mapping, Claim mapping, and every existing method/analyte/applicability fact. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
+V2-7A changed no runtime output. V2-7B1 implemented the additive schema/validation/resolver boundary. V2-7B2 adds exactly two first-party-verified Method identities at `reference_only` while preserving API/frontend behavior, Recommendation output, Risk mapping, Claim mapping, group membership and every existing analyte/applicability fact. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
 
 ## 2. Two knowledge sets
 
@@ -50,7 +50,7 @@ These dimensions must never be collapsed. In particular:
 - `verified_reference` at dataset level does not prove that a future reference-only row is Recommendation-capable.
 - `recommendation_ready` is a static knowledge classification, not a product-level recommendation result.
 
-Schema 13 persists `knowledge_depth` independently from `method_status`. The production validator applies conditional gates by depth, and the Recommendation resolver explicitly requests only `recommendation_ready` methods while lifecycle remains a separate check. Schema 12→13 migration assigns pre-existing rows the conservative `reference_only` default. The non-runtime candidate manifest remains outside DataStore and Recommendation.
+Schema 13 persists `knowledge_depth` independently from `method_status`. The production validator applies conditional gates by depth, and the Recommendation resolver explicitly requests only `recommendation_ready` methods while lifecycle remains a separate check. Schema 12→13 migration assigns pre-existing rows the conservative `reference_only` default. The non-runtime candidate manifest remains outside DataStore and Recommendation; completed promotion traces point to the formal Method records without importing or counting them a second time.
 
 ## 4. Promotion gate
 
@@ -146,7 +146,7 @@ Normalized `RegulatoryDocument` records include at least:
 | `supersedes` / `superseded_by` | Directed document lifecycle links. |
 | dataset/version provenance | Governing dataset identity and version. |
 
-InspectionMethod references the document/database entry that defines it rather than relying only on a URL string. V2-7B1 normalizes five existing source records and links all five indexed methods; it does not invent the missing GB/T predecessor document.
+InspectionMethod references the document/database entry that defines it rather than relying only on a URL string. The current index normalizes seven source records and links all seven indexed methods. GB/T 5009.170-2003 and GB/T 45443-2025 retain distinct titles, lifecycle states and bidirectional predecessor/successor links.
 
 ## 10. Coverage metrics
 
@@ -166,14 +166,14 @@ Every metric is version-scoped and keeps its denominator. Percentages describe o
 
 Context-applicable coverage is evaluated only over a defined Product/Snapshot context corpus. It must not be reported from static knowledge alone.
 
-## 11. Current V2-7B1 baseline
+## 11. Current V2-7B2 baseline
 
-For `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, and `phase3-effect-risk-bridge@2026.09-d2`:
+For `inspection-reference@2026.09-b7`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, and `phase3-effect-risk-bridge@2026.09-d2`:
 
 | Metric | Result |
 |---|---:|
-| Method Reference Coverage | 5 / 5 (100%) |
-| Method Deep-Verification Coverage | 5 / 5 (100%) |
+| Method Reference Coverage | 7 / 7 (100%) |
+| Method Deep-Verification Coverage | 5 / 7 (71.4%) |
 | Substance→Method Coverage | 117 / 117 (100%) |
 | Applicability Coverage | 132 / 132 (100%) |
 | Risk→Substance Coverage | 5 / 8 (62.5%) |
@@ -182,16 +182,16 @@ For `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-
 | Recommendation End-to-End Reachability | 3 / 5 explicit mappings (60%) |
 | Risk-category End-to-End Reachability | 2 / 3 categories (66.7%) |
 
-The first four high percentages describe a deliberately small, already deep-parsed five-method corpus. They are not national coverage claims. The operational bottlenecks are group resolution and the independently governed Evidence→Risk boundary, not the raw number of existing analyte links.
+The reference percentage describes a deliberately bounded seven-method project index, not national coverage. Five methods form the Deep Verified Subset; BJS 202405 and revoked GB/T 5009.170-2003 intentionally remain `reference_only`. The operational bottlenecks remain group resolution and the independently governed Evidence→Risk boundary, not the raw number of identities or analyte links.
 
 ## 12. Versioning and reproducibility
 
 - Each report records the audit contract and all three input versions.
 - Changing a denominator requires a versioned dataset or contract change.
-- The two candidate methods are excluded from every indexed-method denominator until separately verified and promoted into the governed index.
+- Candidate-manifest records are always excluded from indexed-method denominators. After promotion, their formal Method records participate exactly once through the versioned Inspection Reference Index at their verified depth.
 - Historical derived output retains its recorded knowledge version; no audit rewrites Evidence, Recommendation or frozen Sampling history.
 - The offline audit validates configs through the production validators before calculating counts.
 
 ## 13. Non-goals
 
-This contract does not add methods, group members, Risk mappings, Claim→Risk mappings, Product Context inference, method ranking, a Knowledge Base UI, Analytics, legality judgments, laboratory findings, or risk probabilities. It does not alter D2–D6 or existing Recommendation output.
+This contract does not add group members, analyte/applicability facts, Risk mappings, Claim→Risk mappings, Product Context inference, method ranking, a Knowledge Base UI, Analytics, legality judgments, laboratory findings, or risk probabilities. V2-7B2 adds two bounded reference identities but does not alter D2–D6 or existing Recommendation output.

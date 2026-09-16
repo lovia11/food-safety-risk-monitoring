@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-7B1
+> Last verified phase: V2-7B2
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -200,7 +200,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-7 — Inspection knowledge coverage
 
-**Status:** IN PROGRESS — V2-7A and V2-7B1 complete; V2-7B2 is NEXT.
+**Status:** IN PROGRESS — V2-7A, V2-7B1 and V2-7B2 complete; V2-7C is NEXT.
 
 - **Goal:** Expand governed inspection knowledge using **wide Reference Index + deep Verified Subset**.
 - **Why:** Broad discoverability is useful, but only deeply parsed, provenance-complete mappings can drive recommendations.
@@ -227,7 +227,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-7B — Wide Official Method Reference Expansion
 
-**Status:** IN PROGRESS — B1 infrastructure is complete; B2 knowledge verification/promotion is NEXT.
+**Status:** COMPLETE — B1 infrastructure and B2 bounded official verification/promotion are complete.
 
 - **Goal:** Expand first-party official method identity/lifecycle coverage without making shallow records Recommendation-capable.
 - **Dependencies:** V2-7A coverage contract and the completed V2-7B1 depth/candidate boundary.
@@ -244,14 +244,15 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 #### V2-7B2 — Bounded Official Method Verification & Promotion
 
-**Status:** NEXT — requires a separate phase Gate and first-party source verification.
+**Status:** COMPLETE — accepted first-party verification and bounded `reference_only` promotion.
 
 - **Goal:** Resolve the approved candidate identities/documents and promote only the records whose verified depth is supported by evidence.
 - **Boundary:** Candidate count is not index coverage. Lower-depth records remain excluded from Recommendation by construction.
+- **Result:** BJS 202405 is indexed as current with its exact official title; GB/T 5009.170-2003 is indexed as a revoked predecessor with its distinct exact title and bidirectional lifecycle link to GB/T 45443-2025. Both remain `reference_only`. The old BJS `weight_loss`/sibutramine planning association is explicitly corrected; no analyte, applicability, Risk/group mapping or runtime Recommendation path was added.
 
 ### V2-7C — Deep Verified Subset & V2-7 Exit Gate
 
-**Status:** PLANNED — not authorized until V2-7B2 is accepted.
+**Status:** NEXT — requires a separate phase Gate; not implemented in V2-7B2.
 
 - **Goal:** Deep-verify priority analyte/scope/applicability paths and close V2-7 with context-corpus reachability evidence.
 - **Dependencies:** Versioned V2-7B index, depth-aware resolver, RegulatoryDocument/lifecycle handling, and accepted priority set.

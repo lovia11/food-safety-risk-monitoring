@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7B1
+> Last verified phase: V2-7B2
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -265,6 +265,20 @@ V2-7A exit validation passed offline: audit/governance tests 9/9; Inspection con
 - full offline Python and frontend regression passes without collection or network access.
 
 V2-7B1 exit validation passed offline: focused Inspection/Reference/Risk/Recommendation regression 193/193; Python full regression discovered 552 / passed 551 / skipped 1; frontend workflow 38/38; typecheck and production build passed. The deterministic audit reports 5 indexed methods, 2 non-runtime candidates, 5 `recommendation_ready` methods, 5 RegulatoryDocuments/links, 1 unresolved lifecycle/document edge and 0 group memberships. No external retrieval, collection, candidate promotion, historical rewrite or visible UI behavior change occurred.
+
+### 8.4 Bounded official-method promotion — V2-7B2
+
+- exactly the two approved candidates have first-party verification traces and formal promoted Method identities; no additional method is added;
+- BJS 202405 uses the official title `食品中西地那非、他达拉非等化合物的测定`, is current, remains `reference_only`, and has no MethodSubstance/applicability/Risk relation;
+- the former BJS `weight_loss`/sibutramine planning rationale is explicitly invalidated and cannot become a runtime fact;
+- GB/T 5009.170-2003 uses its own title `保健食品中褪黑素含量的测定`, remains distinct from GB/T 45443-2025, is revoked, and has bidirectional method/document lifecycle links to the current successor;
+- both lower-depth records remain visible to reference queries but cannot appear in Recommendation; the operational method set remains BJS 201701 and BJS 201710 for the currently bridged paths;
+- the candidate manifest remains non-runtime, records completed promotion trace, contributes no duplicate method count and has zero pending candidates;
+- the deterministic audit reports 7/7 Method Reference Coverage, 5/7 Method Deep-Verification Coverage, 0 unresolved lifecycle/document edges and 0 group memberships;
+- substances, MethodSubstance relations, applicability, Risk mappings, group mappings, group memberships, bridge mappings and Recommendation reachability remain unchanged;
+- schema 13, API, frontend, Phase3, D2–D6, Review/Sampling and frozen history remain unchanged.
+
+V2-7B2 targeted validation passed offline: Inspection/Reference/candidate/audit/knowledge/applicability/Recommendation/runtime/signal-trace/Risk/bridge regression 223/223. Per the bounded phase Gate, no full Python or frontend suite and no live collection were run.
 
 ## 9. Pipeline and Review gate
 

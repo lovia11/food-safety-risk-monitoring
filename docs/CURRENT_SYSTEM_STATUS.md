@@ -8,7 +8,7 @@
 > V2-7A audit starting baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6 HealthFunction framework and Claim Consistency workflow, the completed V2-7A Inspection Knowledge audit/design baseline, and the completed V2-7B1 reference-index infrastructure boundary.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6 HealthFunction framework and Claim Consistency workflow, the completed V2-7A Inspection Knowledge audit/design baseline, and the completed V2-7B1/B2 bounded reference-index expansion.
 
 ## Baseline
 
@@ -57,7 +57,7 @@ Task flow states are `future`, `active`, `done`, `partial`, and `failed`, derive
 - V2-5 implements Snapshot-scoped ClaimMention and ClaimSignal records from seller-managed Evidence only. `claim_analysis.json` is the derived authority; the Claim tables introduced in schema 11 remain rebuildable projections in current schema 13. Snapshot Detail exposes full Mentions/Signals; Product/Queue list DTOs expose batched same-Snapshot summaries and an exact governed Claim filter.
 - `claim-taxonomy-v2.0` remains the sole governed runtime taxonomy with 5 Claim types and 26 exact expressions. ClaimSignal is not an Official Health Function, RiskSignal, legality conclusion, substance, method, or Recommendation trigger. UGC and `excluded_other_product` Evidence cannot create formal Claims; SearchQuery/task keywords are not Claim input.
 - V2-6B1 implements the Snapshot-scoped, degradable `claim_consistency.json` authority. It compares only a verified HealthFoodIdentity's persisted Registry functions with formal V2 ClaimSignals through exact governed HealthFunction resolution and the four `topic_related` mappings. The assessment/function/per-Claim projections introduced in schema 12 remain rebuildable in current schema 13; Snapshot Detail/workspace expose additive status and assessment DTOs. The runtime does not perform a live Registry lookup and does not change Risk, Recommendation, Review eligibility/status, or Sampling.
-- V2-7B1 separates the five-method Wide Reference Index from non-runtime candidates and from the Recommendation-ready subset. `knowledge_depth` is persisted independently of lifecycle, every indexed method links to a normalized RegulatoryDocument, explicit group membership has a governed zero-row contract, and operational resolution is restricted to current `recommendation_ready` methods. The two candidate records are not imported into SQLite or Recommendation.
+- V2-7B separates the seven-method Wide Reference Index from its five-method Recommendation-ready subset. `knowledge_depth` is persisted independently of lifecycle, every indexed method links to a normalized RegulatoryDocument, explicit group membership has a governed zero-row contract, and operational resolution is restricted to current `recommendation_ready` methods. The non-runtime candidate manifest now records two completed promotion traces; the promoted Methods enter SQLite only through `inspection-reference@2026.09-b7` and are counted once.
 
 ## Current product-reading UX
 
@@ -111,10 +111,10 @@ Counts below are computed from the governed configuration at the verified commit
 | Claim→HealthFunction topic mappings / explicit Claim gaps | 4 / 1 |
 | Evidence-to-risk Bridge mappings | 3 |
 | Risk-to-substance / Risk-to-group mappings | 5 / 3 |
-| Inspection methods | 5 |
-| Non-runtime inspection-method candidates | 2 |
-| Recommendation-ready inspection methods | 5 / 5 indexed methods |
-| Regulatory documents / linked methods | 5 / 5 |
+| Inspection methods | 7 |
+| Pending / promoted inspection-method candidate traces | 0 / 2 |
+| Recommendation-ready inspection methods | 5 / 7 indexed methods |
+| Regulatory documents / linked methods | 7 / 7 |
 | Inspection substances | 117 |
 | Method-substance links | 132 |
 | Method applicability records | 37 |
@@ -151,12 +151,13 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-7A Inspection Knowledge Inventory & Coverage Contract is **AUDIT / DESIGN BASELINE / COMPLETE**. The deterministic offline audit separates the five-method Wide Reference Index from the Deep Verified Subset, freezes lifecycle/depth and group boundaries, reports versioned denominator-defined reachability, and records two first-party candidate work items without promoting them. The current five methods pass the static deep gate for their explicit relations; three group mappings remain unresolved. Audit/governance tests passed 9/9; Inspection/Risk/Recommendation targeted regression passed 210/210; Claim/Consistency passed 49/49; Review/Sampling passed 30/30; Monitor/Discovery/Task passed 39/39; Python full regression discovered 541 / passed 540 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. Schema 12, API, frontend, governed knowledge records, Phase3, D2–D6 and Recommendation output are unchanged.
 - V2-7B1 Inspection Reference Index Infrastructure & Recommendation Boundary is **COMPLETE**. Schema 12→13 adds conservative depth storage, normalized RegulatoryDocument rows and explicit group-membership storage; `inspection-reference@2026.09-b6` declares all five existing methods `recommendation_ready`, while two candidate records stay in a validated non-runtime manifest. The production resolver admits only current `recommendation_ready` methods. Existing method/analyte/applicability and Risk/bridge semantics, API/frontend behavior, Phase3, D2–D6 and Recommendation output remain unchanged.
 - V2-7B1 validation: focused Inspection/Reference/Risk/Recommendation regression passed 193/193; Python full regression discovered 552 / passed 551 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. The audit is deterministic and offline; no official-site retrieval, Taobao, Detail, OCR, historical rewrite or candidate promotion occurred.
+- V2-7B2 Bounded Official Method Verification & Promotion is **COMPLETE**. First-party records verify BJS 202405 as current `食品中西地那非、他达拉非等化合物的测定` and GB/T 5009.170-2003 as the revoked predecessor `保健食品中褪黑素含量的测定`, fully replaced by GB/T 45443-2025. Both are indexed only at `reference_only`; the former BJS `weight_loss`/sibutramine planning association is explicitly invalidated. The index is 7/7 reference-complete and 5/7 deep; the predecessor lifecycle edge is closed. Analytes, applicability, Risk/group mappings, group membership, bridge, Phase3, D2–D6, Recommendation output, schema/API/frontend and frozen history are unchanged. Targeted Inspection/Reference/Risk/Recommendation regression passed 223/223 offline.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-7B2 bounded official-method verification and promotion, subject to a separate phase Gate. V2-7C and the Exit Gate remain planned; V2-7 overall remains **IN PROGRESS**.
+- **NEXT:** V2-7C Deep Verified Subset & V2-7 Exit Gate, subject to a separate phase Gate. V2-7 overall remains **IN PROGRESS**; V2-8 is not started.
 - **FUTURE CHANGE:** the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
 - **FUTURE CHANGE:** Analytics pages and governed metric read models.
 - **FUTURE CHANGE:** Knowledge Base UI and its public read APIs.

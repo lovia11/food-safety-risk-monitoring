@@ -36,7 +36,7 @@ NAFEI_LAFEI_SOURCE = (
     "art_b066d669285e4494bbee7c988b6dfb2e.html"
 )
 INSPECTION_COUNTS = {
-    "inspection_methods": 5,
+    "inspection_methods": 7,
     "inspection_substances": 117,
     "inspection_method_substances": 132,
     "inspection_method_applicabilities": 37,

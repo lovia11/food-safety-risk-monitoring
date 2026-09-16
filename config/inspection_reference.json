@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
   "dataset_id": "inspection-reference",
-  "dataset_version": "2026.09-b6",
+  "dataset_version": "2026.09-b7",
   "dataset_status": "verified_reference",
   "source_name": "国家市场监督管理总局官方公开来源（各Method和RegulatoryContext保留独立provenance）",
   "source_reference": "https://www.samr.gov.cn/",
   "source_date": null,
   "collected_at": "2026-09-04T17:07:24+08:00",
-  "verified_at": "2026-09-04T17:07:24+08:00",
-  "description": "当前已纳入逐项核验的BJS 202209、BJS 201701、BJS 201710、KJ201903和GB/T 45443-2025，并首次纳入褪黑素的保健食品原料监管语境；V2-7B1增加知识深度与现有一手来源文档身份，不新增方法、分析物或风险映射；数据通过版本化方式逐批扩充，不代表全部现行检验方法或全部监管知识。",
+  "verified_at": "2026-09-15T22:57:45+08:00",
+  "description": "当前索引包含5个recommendation_ready方法，以及V2-7B2从一手官方来源核验后新增的2个reference_only方法：BJS 202405和已废止的GB/T 5009.170-2003。新增记录只补充方法身份与生命周期，不新增分析物、适用性、Risk映射或Recommendation路径；数据通过版本化方式逐批扩充，不代表全部现行检验方法或全部监管知识。",
   "regulatory_documents": [
     {
       "document_id": "regdoc-bjs-202209",
@@ -24,7 +24,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b6"
+      "dataset_version": "2026.09-b7"
     },
     {
       "document_id": "regdoc-bjs-201701",
@@ -40,7 +40,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b6"
+      "dataset_version": "2026.09-b7"
     },
     {
       "document_id": "regdoc-bjs-201710",
@@ -56,7 +56,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b6"
+      "dataset_version": "2026.09-b7"
     },
     {
       "document_id": "regdoc-kj-201903",
@@ -72,7 +72,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b6"
+      "dataset_version": "2026.09-b7"
     },
     {
       "document_id": "regdoc-gbt-45443-2025",
@@ -85,10 +85,42 @@
       "status": "current",
       "source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=647D466911910DA6D8ADAEB957E2E9CD",
       "jurisdiction": "CN",
+      "supersedes": ["regdoc-gbt-5009-170-2003"],
+      "superseded_by": [],
+      "dataset_id": "inspection-reference",
+      "dataset_version": "2026.09-b7"
+    },
+    {
+      "document_id": "regdoc-bjs-202405",
+      "document_type": "official_method_page",
+      "document_no": "BJS 202405",
+      "title": "食品中西地那非、他达拉非等化合物的测定",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2024-12-22",
+      "effective_date": null,
+      "status": "current",
+      "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/art_6f2901cf3f95499f8726e3420f3708a7.html",
+      "jurisdiction": "CN",
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b6"
+      "dataset_version": "2026.09-b7"
+    },
+    {
+      "document_id": "regdoc-gbt-5009-170-2003",
+      "document_type": "national_standard_record",
+      "document_no": "GB/T 5009.170-2003",
+      "title": "保健食品中褪黑素含量的测定",
+      "publisher": "中华人民共和国卫生部、中国国家标准化管理委员会",
+      "published_date": "2003-08-11",
+      "effective_date": "2004-01-01",
+      "status": "revoked",
+      "source_reference": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A",
+      "jurisdiction": "CN",
+      "supersedes": [],
+      "superseded_by": ["regdoc-gbt-45443-2025"],
+      "dataset_id": "inspection-reference",
+      "dataset_version": "2026.09-b7"
     }
   ],
   "methods": [
@@ -186,6 +218,44 @@
       "source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=647D466911910DA6D8ADAEB957E2E9CD",
       "source_date": "2025-03-28",
       "note": "推荐性国家标准，现行，自2025-10-01实施，全部代替GB/T 5009.170-2003；用于保健食品中褪黑素的定量测定，不是食品非法添加补充检验方法。"
+    },
+    {
+      "method_id": "bjs-202405",
+      "dataset_id": "inspection-reference",
+      "method_no": "BJS 202405",
+      "method_name": "食品中西地那非、他达拉非等化合物的测定",
+      "method_type": "supplementary_bjs",
+      "method_status": "current",
+      "knowledge_depth": "reference_only",
+      "regulatory_document_id": "regdoc-bjs-202405",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2024-12-22",
+      "effective_date": null,
+      "replaces_method_no": null,
+      "replaced_by_method_no": null,
+      "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+      "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/art_6f2901cf3f95499f8726e3420f3708a7.html",
+      "source_date": "2024-12-22",
+      "note": "市场监管总局2024年第51号公告及官方食品补充检验方法数据库确认方法编号和正式名称；本次未从正式全文录入分析物或适用范围，因此保持reference_only，不参与Recommendation。"
+    },
+    {
+      "method_id": "gbt-5009-170-2003",
+      "dataset_id": "inspection-reference",
+      "method_no": "GB/T 5009.170-2003",
+      "method_name": "保健食品中褪黑素含量的测定",
+      "method_type": "national_standard_gbt",
+      "method_status": "revoked",
+      "knowledge_depth": "reference_only",
+      "regulatory_document_id": "regdoc-gbt-5009-170-2003",
+      "publisher": "中华人民共和国卫生部、中国国家标准化管理委员会",
+      "published_date": "2003-08-11",
+      "effective_date": "2004-01-01",
+      "replaces_method_no": null,
+      "replaced_by_method_no": "GB/T 45443-2025",
+      "source_name": "全国标准信息公共服务平台",
+      "source_reference": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A",
+      "source_date": "2025-10-01",
+      "note": "推荐性国家标准，已于2025-10-01废止，并由GB/T 45443-2025全部代替。仅保留历史方法身份与生命周期；未从全文录入分析物或适用范围，保持reference_only且不得参与Recommendation。"
     }
   ],
   "substances": [

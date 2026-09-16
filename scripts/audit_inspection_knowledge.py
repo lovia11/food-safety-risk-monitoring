@@ -27,7 +27,7 @@ from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
 
 
-AUDIT_CONTRACT_VERSION = "v2.7b1-1"
+AUDIT_CONTRACT_VERSION = "v2.7b2-1"
 DEFAULT_INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 DEFAULT_RISK_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
@@ -178,6 +178,7 @@ def build_audit(
     candidate_methods = list((candidates or {}).get("candidates", []))
 
     method_ids = {item["method_id"] for item in methods}
+    methods_by_id = {item["method_id"]: item for item in methods}
     substance_ids = {item["substance_id"] for item in substances}
     dangling_method_relations = sorted(
         {
@@ -286,16 +287,46 @@ def build_audit(
     ]
     method_audit_by_id = {item["method_id"]: item for item in method_matrix}
     governed_method_numbers = {item["method_no"] for item in methods}
-    candidate_collisions = sorted(
+    pending_candidates = [
+        item for item in candidate_methods if item["status"] != "promoted"
+    ]
+    promoted_candidates = [
+        item for item in candidate_methods if item["status"] == "promoted"
+    ]
+    pending_collisions = sorted(
         item["method_no"]
-        for item in candidate_methods
+        for item in pending_candidates
         if item["method_no"] in governed_method_numbers
     )
-    if candidate_collisions:
+    if pending_collisions:
         raise InspectionKnowledgeAuditError(
-            "Candidate manifest overlaps the governed index: "
-            + ", ".join(candidate_collisions)
+            "Pending candidate overlaps the governed index: "
+            + ", ".join(pending_collisions)
         )
+    promoted_method_ids: set[str] = set()
+    for candidate in promoted_candidates:
+        promoted_method_id = candidate["promoted_method_id"]
+        if promoted_method_id in promoted_method_ids:
+            raise InspectionKnowledgeAuditError(
+                f"Multiple candidate records point to promoted method {promoted_method_id}"
+            )
+        promoted_method_ids.add(promoted_method_id)
+        method = methods_by_id.get(promoted_method_id)
+        if method is None:
+            raise InspectionKnowledgeAuditError(
+                f"Promoted candidate {candidate['candidate_id']} references missing Method "
+                f"{promoted_method_id}"
+            )
+        if method["method_no"] != candidate["method_no"]:
+            raise InspectionKnowledgeAuditError(
+                f"Promoted candidate {candidate['candidate_id']} method_no does not match "
+                f"Method {promoted_method_id}"
+            )
+        if candidate["promoted_dataset_version"] != inspection["dataset_version"]:
+            raise InspectionKnowledgeAuditError(
+                f"Promoted candidate {candidate['candidate_id']} dataset version does not "
+                "match the Inspection Reference release"
+            )
 
     relation_paths_with_applicability = 0
     missing_applicability_paths: list[dict[str, str]] = []
@@ -550,9 +581,14 @@ def build_audit(
             "governed_dataset_count": 3,
             "methods": len(methods),
             "indexed_methods": len(methods),
-            "candidate_methods": len(candidate_methods),
+            "candidate_records": len(candidate_methods),
+            "candidate_methods": len(pending_candidates),
+            "promoted_candidate_methods": len(promoted_candidates),
             "candidate_method_ids": sorted(
-                item["candidate_id"] for item in candidate_methods
+                item["candidate_id"] for item in pending_candidates
+            ),
+            "promoted_candidate_ids": sorted(
+                item["candidate_id"] for item in promoted_candidates
             ),
             "knowledge_depth_counts": depth_counts,
             "method_type_counts": {
@@ -610,8 +646,20 @@ def build_audit(
             "manifest_id": (candidates or {}).get("manifest_id"),
             "manifest_version": (candidates or {}).get("manifest_version"),
             "runtime_consumed": (candidates or {}).get("runtime_consumed"),
-            "candidate_ids": sorted(
-                item["candidate_id"] for item in candidate_methods
+            "pending_candidate_ids": sorted(
+                item["candidate_id"] for item in pending_candidates
+            ),
+            "promoted_candidates": sorted(
+                (
+                    {
+                        "candidate_id": item["candidate_id"],
+                        "method_id": item["promoted_method_id"],
+                        "method_no": item["method_no"],
+                        "dataset_version": item["promoted_dataset_version"],
+                    }
+                    for item in promoted_candidates
+                ),
+                key=lambda item: item["candidate_id"],
             ),
             "excluded_from_coverage_denominator": True,
         },
@@ -691,7 +739,8 @@ def render_markdown(report: Mapping[str, Any]) -> str:
         "| Fact | Count |",
         "|---|---:|",
         f"| Methods | {inventory['methods']} |",
-        f"| Non-runtime candidates | {inventory['candidate_methods']} |",
+        f"| Pending candidates | {inventory['candidate_methods']} |",
+        f"| Promoted candidate traces | {inventory['promoted_candidate_methods']} |",
         f"| Regulatory documents | {inventory['regulatory_documents']} |",
         f"| Substances | {inventory['substances']} |",
         f"| Method→Substance | {inventory['method_substance_relations']} |",

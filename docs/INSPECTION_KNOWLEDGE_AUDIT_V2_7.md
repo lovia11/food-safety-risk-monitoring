@@ -1,16 +1,16 @@
 # Inspection Knowledge Audit V2-7
 
-> Status: V2-7A AUDIT BASELINE + V2-7B1 INFRASTRUCTURE UPDATE
+> Status: V2-7A AUDIT BASELINE + V2-7B2 BOUNDED PROMOTION UPDATE
 > Repository baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
-> Audit contract: `v2.7b1-1`
-> Inputs: `inspection-reference@2026.09-b6`, `inspection-method-candidates-v2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
+> Audit contract: `v2.7b2-1`
+> Inputs: `inspection-reference@2026.09-b7`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
 > Audit mode: deterministic and offline
 
 ## 1. Scope and result
 
-V2-7A inventories the current governed inspection knowledge and freezes the coverage contract. V2-7B1 implements only the infrastructure boundary: schema 13 persists knowledge depth, RegulatoryDocument links and explicit group-membership records; a separate non-runtime manifest records two candidates. It does not promote either candidate, alter existing analyte/applicability/Risk knowledge, change API/frontend behavior, or change Recommendation semantics.
+V2-7A inventories the governed inspection knowledge and freezes the coverage contract. V2-7B1 established the depth/lifecycle/runtime boundary. V2-7B2 verifies exactly the two approved candidates from first-party records and promotes them as lower-depth Method identities: current BJS 202405 and revoked GB/T 5009.170-2003 are both `reference_only`. It adds no analyte, applicability, Risk/group mapping or group member and changes no API/frontend or Recommendation semantics.
 
-The current five methods form a small, deep-parsed corpus rather than a wide national index. All five pass the current static Recommendation-depth gate for their explicitly recorded analyte relations, but only two are used by the present operational bridge path. Group mappings remain unresolved and are not expanded from method analytes.
+The Wide Reference Index now contains seven methods: five `recommendation_ready` methods in the Deep Verified Subset and two `reference_only` identities. Only two methods are used by the present operational bridge path. This remains a bounded project index, not national coverage. Group mappings remain unresolved and are not expanded from method analytes.
 
 Reproduce the facts with:
 
@@ -26,11 +26,11 @@ python scripts/audit_inspection_knowledge.py --format markdown
 | Inspection datasets | 1 |
 | Risk-mapping datasets | 1 |
 | Effect/Risk bridge datasets | 1 |
-| Inspection methods | 5 |
-| Non-runtime candidate methods | 2 |
-| Regulatory documents / linked methods | 5 / 5 |
-| `supplementary_bjs` / `rapid_kj` / `national_standard_gbt` | 3 / 1 / 1 |
-| `current` / `superseded` / `revoked` / `verification_pending` | 5 / 0 / 0 / 0 |
+| Inspection methods | 7 |
+| Pending candidate methods / promoted trace records | 0 / 2 |
+| Regulatory documents / linked methods | 7 / 7 |
+| `supplementary_bjs` / `rapid_kj` / `national_standard_gbt` | 4 / 1 / 2 |
+| `current` / `superseded` / `revoked` / `verification_pending` | 6 / 0 / 1 / 0 |
 | Deprecated methods | 0; `deprecated` is not a current enum value |
 | Unique Substances | 117 |
 | Substances with a populated `substance_group` | 0 |
@@ -49,12 +49,12 @@ These values match the approximate canonical status. The audit makes the previou
 
 | Dataset | Status | Version | Authority retained | Role |
 |---|---|---|---|---|
-| `inspection-reference` | `verified_reference` | `2026.09-b6` | SAMR method pages / National Standards public system | Method, RegulatoryDocument, Substance, MethodSubstance, applicability, explicit group membership and one context. |
-| `inspection-method-candidates-v2` | `non_runtime_candidate_manifest` | `v2-7b1` | Existing first-party discovery locators only | Two isolated candidate work items; never imported by DataStore or Recommendation. |
+| `inspection-reference` | `verified_reference` | `2026.09-b7` | SAMR method pages / National Standards public system | Seven Method/RegulatoryDocument identities, plus unchanged Substance, MethodSubstance, applicability, explicit group membership and one context. |
+| `inspection-method-candidates-v2` | `non_runtime_candidate_manifest` | `2026.09-b2` | First-party discovery and verification locators | Two completed promotion traces; the manifest itself is never imported by DataStore or Recommendation. |
 | `risk-substance-reference` | `verified_reference` | `2026.09-c3` | SAMR current official guidance | Independent Risk→Substance/Group facts. |
 | `phase3-effect-risk-bridge` | governed bridge | `2026.09-d2` | References exact current Risk mapping IDs | Three exact legacy Effect/keyword pairs; no Claim input. |
 
-All five methods retain a first-party HTTPS locator, publisher, publication/source date and method identity. All eight Risk mappings retain source name, first-party locator, source date and basis text. The audit does not dereference these URLs or claim that the repo contains downloaded official documents.
+All seven methods retain a first-party HTTPS locator, publisher, publication/source date and method identity. All eight Risk mappings retain source name, first-party locator, source date and basis text. The audit does not claim that the repo contains downloaded official documents.
 
 ## 4. Method-by-method audit
 
@@ -66,22 +66,24 @@ The `knowledge_depth` column is now an explicit governed field and schema 13 pro
 | BJS 201701 | `current`; published 2017-02-28; effective date not separately recorded | SAMR method-database page and source scope | 33 source-backed qualitative target relations | 4 method-level scopes plus 3 substance-scoped rules: 2 `exclude`, 1 `conditional` | No supersession edge or separate context record; negative facts are correctly retained | `recommendation_ready` for the 33 explicit relations |
 | BJS 201710 | `current`; published 2017-11-17; effective date not separately recorded | SAMR method-database page; official appendix recorded item by item | 75/75 qualitative target relations with normalization notes where needed | 8 method-level `include` category/form scopes | No supersession edge; only melatonin has a separate regulatory context | `recommendation_ready` for the 75 explicit relations |
 | KJ201903 | `current`; published 2019-09-27; effective date not separately recorded | SAMR 2019 No. 41 announcement | 4 explicit rapid-screen reference/performance substances | 6 method-level `include` product forms | The four relations are not an exhaustive claim about every barbiturate response; positive screening requires confirmation; no context records | `recommendation_ready` only for the four explicit relations, never for an inferred class |
-| GB/T 45443-2025 | `current`; published 2025-03-28; effective 2025-10-01 | National Standards public system entry | 1 quantitative melatonin relation | 7 method-level `include` forms | Replaces GB/T 5009.170-2003, but the predecessor has no normalized Method/Document record; one melatonin context exists | `recommendation_ready` for the explicit melatonin relation |
+| GB/T 45443-2025 | `current`; published 2025-03-28; effective 2025-10-01 | National Standards public system entry | 1 quantitative melatonin relation | 7 method-level `include` forms | Fully replaces the separately indexed GB/T 5009.170-2003; one melatonin context exists | `recommendation_ready` for the explicit melatonin relation |
+| BJS 202405 | `current`; published 2024-12-22 | SAMR 2024 No. 51 announcement and official method database | Not parsed in this release | Not parsed in this release | Official identity is verified; no Risk relevance is inferred from the title | `reference_only`; excluded from Recommendation |
+| GB/T 5009.170-2003 | `revoked` on 2025-10-01; published 2003-08-11; effective 2004-01-01 | National Standards public/open system entries | Not parsed in this release | Not parsed in this release | Fully replaced by GB/T 45443-2025; predecessor and successor retain distinct official titles | `reference_only`; excluded from Recommendation by depth and lifecycle |
 
-Why all five reach the static top depth: each explicitly declares `recommendation_ready` and passes its conditional gate: official identity/source/date, current lifecycle, a linked RegulatoryDocument, at least one MethodSubstance relation, method-level applicability, and source scope text. That is a property of this small curated corpus, not evidence of broad external coverage.
+The existing five deep methods still reach the static top depth because each passes its conditional gate: official identity/source/date, current lifecycle, a linked RegulatoryDocument, at least one MethodSubstance relation, method-level applicability, and source scope text. The two B2 methods deliberately stop at `reference_only`; identity verification is not analyte/scope verification.
 
 ## 5. Schema, importer and runtime audit
 
 Schema 13 retains the existing inspection/risk tables and adds normalized `inspection_regulatory_documents`, explicit `knowledge_depth` and `regulatory_document_id` on methods, plus `substance_group_memberships`. SQLite remains a rebuildable read index for committed JSON authorities.
 
-The V2-7B1 boundary is enforced at four independent points:
+The V2-7B boundary is enforced at four independent points:
 
 1. `validate_inspection_config()` applies conditional facts by declared depth rather than requiring every indexed method to be deep.
 2. Schema 12→13 migration defaults pre-existing rows to `reference_only`; it never silently declares historical methods Recommendation-ready.
 3. Reference queries can return every indexed depth, while the operational Recommendation resolver explicitly requests only `recommendation_ready` methods and still applies lifecycle separately.
-4. `config/inspection_method_candidates_v2.json` is validated by a non-runtime loader and has no DataStore importer or Recommendation call path.
+4. `config/inspection_method_candidates_v2.json` is validated by a non-runtime loader, records pending/promotion lifecycle and has no DataStore importer or Recommendation call path. A promoted Method enters SQLite only from `inspection_reference.json` and is counted once.
 
-Five normalized RegulatoryDocument rows retain the existing method provenance and all five indexed methods link to one. The only unresolved lifecycle/document edge is the recorded GB/T 5009.170-2003 predecessor, which remains a candidate rather than a fabricated current document. The group-membership schema/validator contract exists, but the governed membership count remains zero.
+Seven normalized RegulatoryDocument rows retain method provenance and all seven indexed methods link to one. The GB/T predecessor/successor documents and methods now have bidirectional lifecycle references, leaving zero unresolved lifecycle/document edges. The group-membership schema/validator contract exists, but the governed membership count remains zero.
 
 ## 6. Substance→Method and applicability quality
 
@@ -138,8 +140,8 @@ The Recommendation runtime's currently reachable governed universe uses:
 
 | Metric | Numerator | Denominator | Result | Interpretation |
 |---|---:|---:|---:|---|
-| Method Reference Coverage | 5 | 5 indexed methods | 100% | Reference completeness inside this repository index only. |
-| Method Deep-Verification Coverage | 5 | 5 indexed methods | 100% | The current index is small and already deep parsed. |
+| Method Reference Coverage | 7 | 7 indexed methods | 100% | Reference completeness inside this repository index only. |
+| Method Deep-Verification Coverage | 5 | 7 indexed methods | 71.4% | Two B2 identities intentionally remain `reference_only`. |
 | Substance→Method Coverage | 117 | 117 indexed Substances | 100% | At least one explicit relation; not presence or universal applicability. |
 | Applicability Coverage | 132 | 132 relation paths | 100% | At least one relevant scope record; product context still required. |
 | Risk→Substance Coverage | 5 | 8 current Risk target mappings | 62.5% | Three rows remain group-only. |
@@ -158,31 +160,29 @@ Priority is knowledge-engineering order, not product risk probability.
 |---|---|---|---|
 | Resolved in B1 | Wide index could not safely represent `reference_only` separately from runtime-ready methods | Schema 13 depth, conditional validation, non-runtime candidates and an explicit operational resolver filter now enforce the boundary | Keep these gates mandatory during B2 expansion. |
 | Resolved contract / data gap remains | Group mappings had no governed membership contract | Schema 13 and config validation now support explicit source-backed membership; actual membership count remains 0 | Add no member without source evidence; all three group mappings remain unresolved. |
-| Resolved baseline / lifecycle gap remains | RegulatoryDocument was not first-class | Five current source records are normalized and linked; the GB/T predecessor itself is still absent | Verify the predecessor in B2 before adding its document/method record. |
-| P1 | BJS 202405 is source-discovered but not verified in Inspection Reference | Current official weight-loss guidance mentions the method; repo has no verified method/analyte/scope record | V2-7B must retrieve and verify the official method page/full text before any promotion or Risk shortcut. |
-| P1 | GB/T 5009.170-2003 predecessor is not indexed | GB/T 45443-2025 declares full replacement | Add a superseded reference record/document only after first-party identity and lifecycle verification; never recommend it as current. |
+| Resolved in B2 | BJS 202405 identity and title were unverified; the B1 planning rationale incorrectly associated it with `weight_loss`/sibutramine | SAMR announcement and method database confirm `食品中西地那非、他达拉非等化合物的测定` | The old association is explicitly invalidated; keep the method `reference_only` until official analyte/scope facts are separately parsed. |
+| Resolved in B2 | GB/T 5009.170-2003 predecessor identity/lifecycle was absent | First-party standards records confirm title, dates, revoked status and full replacement by GB/T 45443-2025 | Keep predecessor and successor as distinct identities; the revoked predecessor never enters Recommendation. |
 | P1 | `anti_fatigue` has structural knowledge but no Evidence→Risk bridge | Two explicit Substance paths are ready; bridge count is zero | Treat as a separate future Risk-bridge governance decision, not as an Inspection-method expansion or automatic Claim mapping. |
 | P1 | Regulatory context coverage is sparse and nonabsence cannot be inferred | 1 record across 117 Substances | Expand only from authoritative context sources when operationally needed; keep missing as unknown. |
 
-## 11. V2-7B candidate official-method list
+## 11. V2-7B candidate promotion trace
 
-Candidates are governed planning records in `config/inspection_method_candidates_v2.json` only. They are not added to `config/inspection_reference.json`, SQLite or Recommendation runtime, and they are excluded from every indexed-method coverage denominator.
+The candidate manifest remains a non-runtime provenance ledger. Both approved records are now `promoted` traces. Their corresponding formal Methods exist only in `config/inspection_reference.json`; the manifest does not double-import or enlarge coverage denominators.
 
 | Candidate ID | Method number / title | Official discovery source | Source type | Existing governed direction | Why prioritized | Expected depth | Verification status |
 |---|---|---|---|---|---|---|---|
-| `candidate-bjs-202405` | BJS 202405 / **official title not yet verified** | Current SAMR notice retained by `weight-loss-sibutramine-group-cn-2025` | First-party official notice; method full text still required | `weight_loss` / 西布曲明及其系列衍生物 | Directly named by the current operational gap; may clarify the 2025 method and analyte/scope facts | Target `recommendation_ready` only after all gates | `candidate` |
-| `candidate-gbt-5009-170-2003` | GB/T 5009.170-2003 / 保健食品中褪黑素的测定 | Current National Standards entry for GB/T 45443-2025 records replacement | First-party national-standard lifecycle entry; predecessor record/full text still required | Existing melatonin Method/Substance lifecycle | Completes the explicit predecessor edge and historical derivation trace | `reference_only` or `applicability_verified`; never current Recommendation | `candidate` |
+| `candidate-bjs-202405` | BJS 202405 / 食品中西地那非、他达拉非等化合物的测定 | SAMR 2024 No. 51 announcement and official method database | Identity, title, issuer and publication identity verified; analyte/scope not parsed | None inferred | Corrects and invalidates the B1 `weight_loss`/sibutramine rationale | `reference_only` | `promoted` → `bjs-202405` |
+| `candidate-gbt-5009-170-2003` | GB/T 5009.170-2003 / 保健食品中褪黑素含量的测定 | National Standards public and open-system records | Identity, distinct predecessor title, dates, revoked status and full-replacement edge verified | Historical melatonin-method lifecycle only | Closes the normalized predecessor/document edge without making it current | `reference_only`; never Recommendation | `promoted` → `gbt-5009-170-2003` |
 
-The audit deliberately does not invent further titles from third-party lists. V2-7B2 may promote or widen the candidate corpus only through SAMR, the National Standards public system, NHC or another first-party authority, recording rejected and pending candidates separately.
+No other method was searched for or promoted. The audit deliberately does not invent titles, analytes, scope or Risk relevance from third-party lists or method names.
 
 ## 12. V2-7B plan — Wide Official Method Reference Expansion
 
 1. **B1 complete:** non-runtime candidate manifest, explicit depth field/validator, schema 13 projection, RegulatoryDocument baseline, group-membership contract and Recommendation-ready resolver gate.
-2. **B2 next:** re-verify candidate identity, exact title, publisher, dates, status, official locator and document relationship.
-3. Import a reference-only record only after it passes the appropriate gate; D5 will still exclude it by construction.
-4. Start with BJS 202405 and the GB/T predecessor lifecycle record because both arise from existing governed paths.
-5. Record candidates rejected, superseded or unavailable; do not force them into `verified_reference` or `recommendation_ready`.
-6. Recompute the same denominator-defined audit after each versioned release.
+2. **B2 complete:** the two approved identities/documents were verified from first-party sources and promoted only as `reference_only`; BJS 202405 remains current, while GB/T 5009.170-2003 is revoked and linked to its current successor.
+3. D5 excludes both promoted records by construction; existing Recommendation reachability and output semantics are unchanged.
+4. The BJS planning-association error and the predecessor-title error are retained as explicit corrections rather than silently rewritten history.
+5. Recompute the same denominator-defined audit after each versioned release.
 
 ## 13. V2-7C plan — Deep Verified Subset and exit gate
 
@@ -196,11 +196,11 @@ The audit deliberately does not invent further titles from third-party lists. V2
 
 ## 14. Explicitly unchanged
 
-- the five existing methods, their analytes/applicability, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` knowledge semantics;
+- the five existing deep methods and their analytes/applicability, `config/risk_substance_reference.json`, and `config/effect_risk_bridge.json` knowledge semantics;
 - Phase3, D2–D6 and Recommendation output;
 - ClaimSignal, Claim consistency, Review and Sampling semantics;
 - API and frontend behavior;
 - historical Evidence and frozen Sampling exports;
 - live collection and network behavior.
 
-V2-7B1 changes only additive inspection-reference metadata/contracts and SQLite schema 12→13. It adds no method, analyte, applicability, Risk/group mapping, or group member.
+V2-7B2 adds exactly two official Method/RegulatoryDocument identities at `reference_only`, closes one lifecycle edge, and upgrades the candidate manifest/audit trace. It adds no analyte, applicability, Risk/group mapping, group member, schema, API, frontend or runtime business behavior.

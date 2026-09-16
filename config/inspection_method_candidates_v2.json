@@ -1,34 +1,66 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b1",
+  "manifest_version": "2026.09-b2",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-7A批准的官方方法发现候选。候选不属于Inspection Reference Index，不导入SQLite，不参与Recommendation或coverage denominator。",
+  "description": "V2-7A批准的两个官方方法发现候选及其V2-7B2核验、promotion追溯。manifest本身不被runtime消费；promoted Method只通过inspection-reference进入SQLite，且每个Method仅按其正式knowledge_depth参与业务。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
       "method_no": "BJS 202405",
-      "title": null,
-      "status": "candidate",
-      "expected_depth": "recommendation_ready",
-      "discovery_source_name": "市场监管总局办公厅关于发布西布曲明及其系列衍生物有毒有害认定意见及执法检验方法的通知",
-      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/art_935c1a68c87445729ad2e6c1d88607c6.html",
-      "discovery_source_date": "2025-10-18",
-      "discovery_source_record_id": "weight-loss-sibutramine-group-cn-2025",
-      "reason": "当前治理的减重方向官方来源提及该方法；正式标题、全文、分析物和适用范围仍需V2-7B2一手来源核验。"
+      "title": "食品中西地那非、他达拉非等化合物的测定",
+      "status": "promoted",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中动物源性成分定性检测》等13项食品补充检验方法和2项修改单的公告（2024年第51号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
+      "discovery_source_date": "2024-12-22",
+      "discovery_source_record_id": "samr-announcement-2024-51",
+      "reason": "一手公告和官方食品补充检验方法数据库已核验方法编号、正式名称及当前发布身份；未从正式全文录入分析物和适用范围，因此仅promotion为reference_only。",
+      "correction_note": "V2-7A/B1 planning rationale曾错误地将BJS 202405与weight_loss/西布曲明来源关联。V2-7B2一手核验确认该方法为食品中西地那非、他达拉非等化合物的测定，旧关联作废且不得作为当前事实。",
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局2024年第51号公告",
+          "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
+          "verified_facts": ["method_no", "official_title", "issuer", "announcement_date"]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/art_6f2901cf3f95499f8726e3420f3708a7.html",
+          "verified_facts": ["official_title", "current_database_identity"]
+        }
+      ],
+      "verified_at": "2026-09-15T22:57:45+08:00",
+      "promoted_method_id": "bjs-202405",
+      "promoted_dataset_version": "2026.09-b7"
     },
     {
       "candidate_id": "candidate-gbt-5009-170-2003",
       "method_no": "GB/T 5009.170-2003",
-      "title": "保健食品中褪黑素的测定",
-      "status": "candidate",
+      "title": "保健食品中褪黑素含量的测定",
+      "status": "promoted",
       "expected_depth": "reference_only",
-      "discovery_source_name": "国家标准全文公开系统中的GB/T 45443-2025现行标准记录",
-      "discovery_source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=647D466911910DA6D8ADAEB957E2E9CD",
-      "discovery_source_date": "2025-03-28",
-      "discovery_source_record_id": "gbt-45443-2025",
-      "reason": "现行标准记录声明全部代替该前代标准；前代标准自身身份、全文和生命周期尚未独立核验，不得直接提升为正式Method。"
+      "discovery_source_name": "全国标准信息公共服务平台GB/T 5009.170-2003标准记录",
+      "discovery_source_reference": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A",
+      "discovery_source_date": "2003-08-11",
+      "discovery_source_record_id": "gbt-5009-170-2003",
+      "reason": "一手标准记录已核验正式名称、发布/实施/废止日期、发布单位以及由GB/T 45443-2025全部代替的关系；仅promotion为revoked reference_only历史方法。",
+      "correction_note": "V2-7B1 candidate title误写为现行标准GB/T 45443-2025的标题《保健食品中褪黑素的测定》。V2-7B2已修正为前代标准自身标题《保健食品中褪黑素含量的测定》，两者保持独立身份。",
+      "verification_sources": [
+        {
+          "source_name": "全国标准信息公共服务平台GB/T 5009.170-2003标准记录",
+          "source_reference": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A",
+          "verified_facts": ["standard_no", "official_title", "published_date", "effective_date", "revoked_date", "superseded_by"]
+        },
+        {
+          "source_name": "国家标准全文公开系统GB/T 5009.170-2003标准记录",
+          "source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=64B68E1EB5FDCD1920AD9521E1520408",
+          "verified_facts": ["standard_no", "official_title", "status", "publisher"]
+        }
+      ],
+      "verified_at": "2026-09-15T22:57:45+08:00",
+      "promoted_method_id": "gbt-5009-170-2003",
+      "promoted_dataset_version": "2026.09-b7"
     }
   ]
 }

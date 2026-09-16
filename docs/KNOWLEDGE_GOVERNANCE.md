@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7B1
+> Last verified phase: V2-7B2
 > Owner: Project
 
 This document is the hard constraint for creating, changing, loading, presenting, and measuring regulated knowledge.
@@ -122,8 +122,9 @@ The refined `食用百合` Query records `derived_from_validation_batch=v2-4b-ba
 - Applicability requires explicit product context and basis. Include, conditional and exclude facts stay distinct. Unknown context or a missing applicability record stays “needs context”/unknown, not silently suitable or not applicable.
 - Risk-to-Substance plus Substance-to-Method is still insufficient for a Recommendation until method depth, current lifecycle and product-context applicability pass.
 - A Risk-to-SubstanceGroup mapping is not expanded from MethodSubstance, a matching name, CAS data, pharmacology or model knowledge.
-- The current five methods are a small deep-parsed corpus, not a wide or nationally complete method index. The Recommendation resolver admits only current `recommendation_ready` methods. The two B1 candidates remain in a separately validated non-runtime manifest and are not imported into SQLite.
-- RegulatoryDocument identity/lifecycle is normalized separately from InspectionMethod; a missing predecessor remains an explicit unresolved edge.
+- The current Wide Reference Index has seven methods and is not a nationally complete method index. Five form the Deep Verified Subset; BJS 202405 and revoked GB/T 5009.170-2003 remain `reference_only`. The Recommendation resolver admits only current `recommendation_ready` methods.
+- The candidate manifest remains non-runtime and now stores two completed promotion traces. Formal promoted Methods are imported only from the Inspection Reference dataset and counted once.
+- RegulatoryDocument identity/lifecycle is normalized separately from InspectionMethod. GB/T 5009.170-2003 and GB/T 45443-2025 retain distinct official titles and bidirectional predecessor/successor links.
 - SubstanceGroup membership requires an explicit governed membership record with source provenance and completeness. It is never inferred from MethodSubstance, naming, CAS data or model knowledge; the current governed membership count is zero.
 
 ### 4.5 Health-food registry
