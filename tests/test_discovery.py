@@ -21,11 +21,12 @@ class FakeCollector:
         return self.__class__.responses[keyword]
 
 
-def candidate(product_id, rank, product_name=None):
+def candidate(product_id, rank, product_name=None, shop_name=""):
     return {
         "product_id": product_id,
         "product_name": product_name or f"商品{product_id}",
         "product_url": f"https://item.taobao.com/item.htm?id={product_id}",
+        "shop_name": shop_name,
         "rank": rank,
     }
 
@@ -86,7 +87,7 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
             self.assertEqual([item["product_id"] for item in result["candidates"]], ["A", "B", "C"])
             self.assertEqual([item["rank"] for item in result["candidates"]], [1, 2, 3])
             self.assertEqual(result["selected_for_detail"], 2)
-            self.assertEqual(result["selection_strategy"]["name"], "balanced_exposure_clue_exploration_v1")
+            self.assertEqual(result["selection_strategy"]["name"], "balanced_exposure_clue_exploration_v2")
             self.assertEqual(
                 [item["product_id"] for item in result["candidates"] if item["selected_for_detail"]],
                 ["A", "B"],
@@ -133,6 +134,60 @@ class DiscoveryCoordinatorTest(unittest.TestCase):
         self.assertEqual(by_id["C"]["selection_group"], "exploration")
         self.assertIn("助眠", by_id["D"]["title_clue_terms"])
         self.assertIn("深睡", by_id["E"]["title_clue_terms"])
+
+    def test_diversity_skips_near_duplicate_shop_variants_when_alternatives_exist(self):
+        source = [
+            candidate("A", 1, "酸枣仁茶500g家庭装", "同一店铺"),
+            candidate("B", 2, "酸枣仁茶1000g家庭装", "同一店铺"),
+            candidate("C", 3, "酸枣仁膏传统风味", "另一店铺"),
+            candidate("D", 4, "酸枣仁粉冲饮装", "第三店铺"),
+            candidate("E", 5, "酸枣仁颗粒食品", "第四店铺"),
+            candidate("F", 6, "酸枣仁饮品", "第五店铺"),
+        ]
+        selected, strategy = select_detail_candidates(
+            source,
+            detail_limit=4,
+            target_id="target-diversity",
+            clue_keywords=(),
+        )
+
+        selected_items = [item for item in selected if item["selected_for_detail"]]
+        selected_ids = [item["product_id"] for item in selected_items]
+        exposure_ids = [
+            item["product_id"]
+            for item in selected_items
+            if item["selection_group"] == "exposure"
+        ]
+        self.assertIn("A", exposure_ids)
+        self.assertIn("C", exposure_ids)
+        self.assertNotIn("B", exposure_ids)
+        self.assertEqual(len(selected_ids), 4)
+        self.assertEqual(strategy["diversity"]["max_per_shop"], 2)
+        self.assertEqual(strategy["diversity"]["relaxed_fill_count"], 0)
+
+    def test_diversity_relaxes_only_when_needed_to_reach_detail_limit(self):
+        source = [
+            candidate("A", 1, "酸枣仁茶500g家庭装", "同一店铺"),
+            candidate("B", 2, "酸枣仁茶1000g家庭装", "同一店铺"),
+            candidate("C", 3, "酸枣仁茶1500g家庭装", "同一店铺"),
+        ]
+        selected, strategy = select_detail_candidates(
+            source,
+            detail_limit=3,
+            target_id="target-narrow",
+            clue_keywords=(),
+        )
+
+        selected_items = [item for item in selected if item["selected_for_detail"]]
+        self.assertEqual(len(selected_items), 3)
+        self.assertGreater(strategy["diversity"]["relaxed_fill_count"], 0)
+        self.assertTrue(
+            any(
+                "放宽多样性限制" in reason
+                for item in selected_items
+                for reason in item["selection_reasons"]
+            )
+        )
 
     def test_disabled_query_is_not_run(self):
         with tempfile.TemporaryDirectory() as temporary:
