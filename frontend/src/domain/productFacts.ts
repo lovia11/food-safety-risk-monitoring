@@ -25,8 +25,9 @@ export function declaredOriginText(origin: DeclaredOrigin) {
   return origin.values[0];
 }
 
-function titleRegionClues(productName: string) {
+function titleRegionClues(productName: string, targetName = "") {
   const title = productName.replace(/\s+/g, "");
+  const target = targetName.replace(/\s+/g, "");
   const values: string[] = [];
   for (const province of PROVINCE_TOKENS) {
     const index = title.indexOf(province);
@@ -34,7 +35,14 @@ function titleRegionClues(productName: string) {
     values.push(province);
     const rest = title.slice(index + province.length);
     const locality = rest.match(/^([\u3400-\u9fff]{2})/)?.[1] || "";
-    if (locality && !TITLE_LOCALITY_STOP_WORDS.has(locality)) {
+    const looksLikeTarget = Boolean(
+      locality && target && (target.includes(locality) || locality.includes(target)),
+    );
+    if (
+      locality
+      && !TITLE_LOCALITY_STOP_WORDS.has(locality)
+      && !looksLikeTarget
+    ) {
       values.push(locality);
     }
     break;
@@ -46,9 +54,15 @@ export function pageRegionClueFacts(facts: ProductFact[]) {
   return facts.filter((fact) => (fact.factType as string) === "page_region_clue");
 }
 
-export function pageRegionClueValues(facts: ProductFact[], productName = "") {
+export function pageRegionClueValues(
+  facts: ProductFact[],
+  productName = "",
+  targetName = "",
+) {
   const stored = pageRegionClueFacts(facts).map((fact) => fact.normalizedValue);
-  return [...new Set([...stored, ...titleRegionClues(productName)].filter(Boolean))];
+  return [
+    ...new Set([...stored, ...titleRegionClues(productName, targetName)].filter(Boolean)),
+  ];
 }
 
 export function productFactArtifactPath(source: ProductFact) {
