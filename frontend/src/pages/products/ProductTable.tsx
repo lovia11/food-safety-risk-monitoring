@@ -9,6 +9,7 @@ import {
   isProductRowActivationKey,
   productAnalysisPresentation,
 } from "../../domain/product";
+import { pageRegionClueValues } from "../../domain/productFacts";
 import { reviewPresentation } from "../../domain/presentation";
 
 type ProductTableProps = {
@@ -76,6 +77,14 @@ export function ProductTable({
             );
             const claimLabels = claimSignalLabels(product.claimSignalSummaries);
             const selected = selectedProductId === product.productId;
+            const pageRegionClues = pageRegionClueValues(
+              [],
+              product.productName,
+              product.targetName || "",
+            );
+            const productRegionText = pageRegionClues.length > 0
+              ? pageRegionClues.join("、")
+              : "—";
             return (
               <tr
                 key={product.productId}
@@ -111,7 +120,10 @@ export function ProductTable({
                 <td>
                   <div className="region-cell">
                     <span><small>搜索页地区</small><strong>{product.region || "—"}</strong></span>
-                    <span><small>商品标称产地</small><strong>—</strong></span>
+                    <span title={pageRegionClues.length > 0 ? "来自商品标题的页面地区线索，详情页可查看完整说明" : undefined}>
+                      <small>产地/地区线索</small>
+                      <strong>{productRegionText}</strong>
+                    </span>
                   </div>
                 </td>
                 <td>
