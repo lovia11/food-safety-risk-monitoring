@@ -222,9 +222,9 @@ export function ProductDetailPanel({
                   <div>
                     <dt>页面地区线索</dt>
                     <dd>
-                      {pageRegionClues.length > 0 ? pageRegionClues.join("、") : "—"}
+                      <div>{pageRegionClues.length > 0 ? pageRegionClues.join("、") : "—"}</div>
                       {pageRegionClues.length > 0 && (
-                        <small className="fact-note">来自商品标题或详情参数，仅供抽样参考，不等同于商品标称产地。</small>
+                        <div className="muted-cell">来自商品标题或详情参数，仅供抽样参考，不等同于商品标称产地。</div>
                       )}
                     </dd>
                   </div>
