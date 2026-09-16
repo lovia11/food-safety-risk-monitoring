@@ -33,8 +33,8 @@ function titleRegionClues(productName: string) {
     if (index < 0) continue;
     values.push(province);
     const rest = title.slice(index + province.length);
-    const locality = rest.match(/^([\u3400-\u9fff]{2,3})/)?.[1] || "";
-    if (locality && !TITLE_LOCALITY_STOP_WORDS.has(locality.slice(0, 2))) {
+    const locality = rest.match(/^([\u3400-\u9fff]{2})/)?.[1] || "";
+    if (locality && !TITLE_LOCALITY_STOP_WORDS.has(locality)) {
       values.push(locality);
     }
     break;
