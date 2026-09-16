@@ -42,6 +42,14 @@ type DashboardData = {
 };
 
 type GeographyMode = "search" | "origin";
+type Position = [number, number];
+type PolygonGeometry = { type: "Polygon"; coordinates: Position[][] };
+type MultiPolygonGeometry = { type: "MultiPolygon"; coordinates: Position[][][] };
+type ChinaFeature = {
+  properties?: { name?: string };
+  geometry?: PolygonGeometry | MultiPolygonGeometry;
+};
+type ChinaGeoJson = { features?: ChinaFeature[] };
 
 const CLAIM_LABELS: Record<string, string> = {
   sleep_related: "睡眠相关",
@@ -55,43 +63,6 @@ const REVIEW_LABELS: Record<string, string> = {
   pending: "待复核",
   recommend_follow_up: "建议跟进",
   no_further_action: "暂不纳入",
-};
-
-const PROVINCE_POINTS: Record<string, [number, number]> = {
-  北京: [554, 190],
-  天津: [574, 205],
-  河北: [540, 216],
-  山西: [506, 221],
-  内蒙古: [465, 155],
-  辽宁: [610, 165],
-  吉林: [640, 134],
-  黑龙江: [666, 94],
-  上海: [623, 302],
-  江苏: [597, 281],
-  浙江: [610, 327],
-  安徽: [562, 293],
-  福建: [582, 361],
-  江西: [543, 338],
-  山东: [582, 246],
-  河南: [520, 268],
-  湖北: [495, 304],
-  湖南: [482, 348],
-  广东: [507, 398],
-  广西: [452, 397],
-  海南: [486, 447],
-  重庆: [432, 320],
-  四川: [383, 314],
-  贵州: [421, 363],
-  云南: [348, 395],
-  西藏: [220, 333],
-  陕西: [452, 263],
-  甘肃: [370, 230],
-  青海: [301, 264],
-  宁夏: [413, 226],
-  新疆: [168, 194],
-  台湾: [644, 375],
-  香港: [526, 408],
-  澳门: [516, 412],
 };
 
 function parseFilters(search: string): AnalyticsFilters {
@@ -183,11 +154,7 @@ function ClaimBars({ metric }: { metric: AnalyticsMetric | null }) {
   const max = Math.max(1, ...sorted.map((bucket) => bucket.count));
 
   if (!metric || metric.denominator === 0 || sorted.length === 0) {
-    return (
-      <div className="analytics-friendly-empty">
-        当前范围内还没有可展示的页面宣传线索分类数据。
-      </div>
-    );
+    return <div className="analytics-friendly-empty">当前范围内还没有可展示的页面宣传线索分类数据。</div>;
   }
 
   return (
@@ -206,10 +173,9 @@ function ClaimBars({ metric }: { metric: AnalyticsMetric | null }) {
 }
 
 function ReviewSummary({ metric }: { metric: AnalyticsMetric | null }) {
-  const buckets = REVIEW_LABELS;
   return (
     <div className="analytics-review-grid">
-      {Object.entries(buckets).map(([key, label]) => {
+      {Object.entries(REVIEW_LABELS).map(([key, label]) => {
         const bucket = findBucket(metric, key);
         return (
           <div className="analytics-review-item" key={key} data-status={key}>
@@ -222,15 +188,75 @@ function ReviewSummary({ metric }: { metric: AnalyticsMetric | null }) {
   );
 }
 
+function geometryPath(geometry: PolygonGeometry | MultiPolygonGeometry | undefined) {
+  if (!geometry) return "";
+  const width = 520;
+  const height = 300;
+  const minLon = 73;
+  const maxLon = 135;
+  const minLat = 18;
+  const maxLat = 54;
+  const longitudeFactor = Math.cos((35 * Math.PI) / 180);
+  const scale = Math.min(
+    (width - 22) / ((maxLon - minLon) * longitudeFactor),
+    (height - 18) / (maxLat - minLat),
+  );
+  const mapWidth = (maxLon - minLon) * longitudeFactor * scale;
+  const mapHeight = (maxLat - minLat) * scale;
+  const offsetX = (width - mapWidth) / 2;
+  const offsetY = (height - mapHeight) / 2;
+  const project = (coordinate: Position) => [
+    offsetX + (coordinate[0] - minLon) * longitudeFactor * scale,
+    offsetY + (maxLat - coordinate[1]) * scale,
+  ];
+  const ringPath = (ring: Position[]) => {
+    const points = ring.filter((point) => point[0] >= 72 && point[0] <= 136 && point[1] >= 17 && point[1] <= 55);
+    if (points.length < 3) return "";
+    return `${points.map((point, index) => {
+      const [x, y] = project(point);
+      return `${index ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(" ")} Z`;
+  };
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.flatMap((polygon) => polygon.map(ringPath)).filter(Boolean).join(" ");
+}
+
+function provinceFill(value: number, max: number) {
+  if (value <= 0) return "#edf5ff";
+  const ratio = max > 0 ? value / max : 0;
+  if (ratio >= 0.75) return "#2563eb";
+  if (ratio >= 0.5) return "#5a9bf2";
+  if (ratio >= 0.25) return "#8dbcf6";
+  return "#bdd8fa";
+}
+
 function RegionHeatMap({ metric, mode }: { metric: AnalyticsMetric | null; mode: GeographyMode }) {
+  const [geoJson, setGeoJson] = useState<ChinaGeoJson | null>(null);
+  const [mapError, setMapError] = useState(false);
   const buckets = metric?.buckets ?? [];
   const ordinary = buckets.filter((bucket) => !isSpecialRegionBucket(bucket) && bucket.count > 0);
   const ranked = [...ordinary].sort((a, b) => b.count - a.count);
   const max = Math.max(1, ...ranked.map((bucket) => bucket.count));
-  const plotted = ranked
-    .map((bucket) => ({ bucket, point: PROVINCE_POINTS[normalizeProvince(bucket.label || bucket.key)] }))
-    .filter((item): item is { bucket: AnalyticsMetricBucket; point: [number, number] } => Boolean(item.point));
   const special = buckets.filter((bucket) => isSpecialRegionBucket(bucket) && bucket.count > 0);
+  const counts = useMemo(
+    () => new Map(ordinary.map((bucket) => [normalizeProvince(bucket.label || bucket.key), bucket.count])),
+    [ordinary],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setMapError(false);
+    fetch("/data/china-provinces.geojson", { signal: controller.signal, cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`地图数据请求失败：${response.status}`);
+        return response.json() as Promise<ChinaGeoJson>;
+      })
+      .then(setGeoJson)
+      .catch(() => {
+        if (!controller.signal.aborted) setMapError(true);
+      });
+    return () => controller.abort();
+  }, []);
 
   if (!metric || metric.denominator === 0) {
     return <div className="analytics-friendly-empty">当前范围内还没有地区分布数据。</div>;
@@ -239,33 +265,39 @@ function RegionHeatMap({ metric, mode }: { metric: AnalyticsMetric | null; mode:
   return (
     <div className="analytics-map-layout">
       <div className="analytics-map-panel">
-        <svg
-          className="analytics-china-map"
-          viewBox="0 0 760 500"
-          role="img"
-          aria-label={mode === "search" ? "已采集商品搜索地区分布图" : "商品标称产地分布图"}
-        >
-          <path
-            className="analytics-china-outline"
-            d="M70 175 L100 132 L155 105 L225 90 L298 102 L360 88 L430 103 L493 78 L565 70 L635 92 L690 130 L705 174 L683 204 L710 235 L686 267 L699 300 L660 326 L642 364 L602 381 L572 417 L527 425 L500 454 L456 438 L421 456 L374 426 L329 443 L292 409 L245 399 L207 371 L166 355 L139 322 L111 305 L104 269 L78 244 L94 214 Z"
-          />
-          <ellipse className="analytics-island-outline" cx="488" cy="452" rx="11" ry="8" />
-          <ellipse className="analytics-island-outline" cx="647" cy="379" rx="7" ry="15" />
-          {plotted.map(({ bucket, point }) => {
-            const intensity = bucket.count / max;
-            const radius = 10 + intensity * 13;
-            const name = normalizeProvince(bucket.label || bucket.key);
-            return (
-              <g key={bucket.key} className="analytics-map-point">
-                <circle cx={point[0]} cy={point[1]} r={radius} style={{ opacity: 0.28 + intensity * 0.62 }}>
-                  <title>{`${displayRegion(bucket)}：${bucket.count}`}</title>
-                </circle>
-                <text x={point[0]} y={point[1] + 4} textAnchor="middle">{name}</text>
-              </g>
-            );
-          })}
-        </svg>
-        <p className="analytics-map-caption">颜色深浅和圆点大小仅表示当前数据中的商品数量，不表示地区风险高低。</p>
+        {mapError ? (
+          <div className="analytics-friendly-empty">中国地图数据暂时无法加载。</div>
+        ) : !geoJson ? (
+          <div className="analytics-friendly-empty">正在加载中国地图…</div>
+        ) : (
+          <svg
+            className="analytics-china-map"
+            viewBox="0 0 520 300"
+            role="img"
+            aria-label={mode === "search" ? "已采集商品搜索地区分布图" : "商品标称产地分布图"}
+          >
+            {(geoJson.features ?? []).map((feature, index) => {
+              const rawName = feature.properties?.name ?? "";
+              const name = normalizeProvince(rawName);
+              const value = counts.get(name) ?? 0;
+              const path = geometryPath(feature.geometry);
+              if (!path) return null;
+              return (
+                <path
+                  key={`${name}-${index}`}
+                  d={path}
+                  fill={provinceFill(value, max)}
+                  fillRule="evenodd"
+                  stroke="#ffffff"
+                  strokeWidth="0.8"
+                >
+                  <title>{`${name || rawName}：${value} 件`}</title>
+                </path>
+              );
+            })}
+          </svg>
+        )}
+        <p className="analytics-map-caption">省份颜色深浅仅表示当前数据中的商品数量，不表示地区风险高低。</p>
       </div>
 
       <aside className="analytics-region-ranking" aria-label="地区数量排行">
@@ -347,7 +379,6 @@ export function AnalyticsPage({ search }: AnalyticsPageProps) {
   };
 
   const hasFilters = Boolean(filters.from || filters.to || filters.region);
-
   const uniqueProducts = findMetric(data?.pipeline ?? null, "unique_product_count")?.value ?? 0;
   const claimStatus = findMetric(data?.claims ?? null, "claim_analysis_status_distribution");
   const claimRecords = findBucket(claimStatus, "complete_with_claims")?.count ?? 0;
@@ -363,7 +394,7 @@ export function AnalyticsPage({ search }: AnalyticsPageProps) {
     <div className="page-frame analytics-page analytics-product-dashboard">
       <PageHeader
         eyebrow="数据概览"
-        title="统计分析"
+        title="数据统计"
         description="快速查看当前已采集商品中的页面宣传线索、地区分布与人工复核结果。"
       />
 
@@ -456,7 +487,7 @@ export function AnalyticsPage({ search }: AnalyticsPageProps) {
             <ul>
               <li>页面宣传线索表示商品页面出现了值得关注的宣传主题，不代表违法、功效真实或已检出某种物质。</li>
               <li>“建议跟进 / 暂不纳入 / 待复核”来自人工复核流程，不是自动风险等级。</li>
-              <li>地区图中的深浅和数量只表示当前已采集数据的多少，不代表某个地区风险更高。</li>
+              <li>地区图中的颜色深浅和数量只表示当前已采集数据的多少，不代表某个地区风险更高。</li>
             </ul>
           </details>
         </>
