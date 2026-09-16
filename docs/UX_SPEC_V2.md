@@ -2,10 +2,10 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-6B2
+> Last verified phase: V2-8B
 > Owner: Project
 
-This specification governs the V2 interaction model. V2-1 through V2-6 sections marked current describe implemented behavior; later Future sections remain requirements rather than implementation claims.
+This specification governs the V2 interaction model. Sections marked current through V2-8 describe implemented behavior; later Future sections remain requirements rather than implementation claims.
 
 ## 1. Global UI principles
 
@@ -20,7 +20,7 @@ This specification governs the V2 interaction model. V2-1 through V2-6 sections 
 
 ## 2. Navigation and shell
 
-Current navigation is 商品总览、排查档案、抽检清单. Future V2 navigation adds 统计分析 and 知识库 after their domain and API gates.
+Current navigation is 商品总览、排查档案、抽检清单、知识库. Future V2 navigation adds 统计分析 only after its domain and API gate.
 
 The sidebar expands for the product list, automatically collapses when a Product Detail is opened, and respects the user's session choice. Collapsed navigation keeps icons, tooltip, active state, and Sampling badge support. It never expands on hover. Motion is approximately 180–220ms and respects `prefers-reduced-motion`.
 
@@ -215,6 +215,27 @@ Operational rows show only enabled, validated SearchQuery chips. Query-pending a
 
 Paused rows show the governed short reason. The Quick Task flow is unchanged and never writes its free text back into formal SearchQuery governance.
 
+## 9.2 Knowledge Base — Current V2-8B
+
+知识库 is a first-level, read-only route at `#/knowledge`. Its header explains that it displays the governed knowledge, sources, versions and gaps currently used by the system. Four compact summary facts show only API-provided counts for food-medicine directory records, HealthFunctions, Substances and InspectionMethods; they are not an Analytics dashboard and never imply completeness, national coverage, recognition rate or accuracy.
+
+Exactly six tabs share one interaction model: 食药物质目录、保健功能、风险物质、风险映射、检验方法、官方文件. Each uses explicit-submit search, relevant server filters, offset pagination, a table, keyboard-operable row detail action and the shared focus-managed Drawer. Tab, query, filter and offset state persist in the hash URL. Loading, filtered-empty, API-error and content states are distinct.
+
+The UI keeps these dimensions independent:
+
+- Monitor Reference membership vs Operational Search availability;
+- HealthFunction vs page ClaimSignal;
+- Substance method coverage vs product presence/detection;
+- Risk group mapping vs governed member resolution;
+- InspectionMethod official lifecycle vs project knowledge depth;
+- recorded facts vs `not_recorded`, unresolved, partial or paused gaps.
+
+The Method list and Drawer always present lifecycle and depth side by side. A revoked `reference_only` Method remains inspectable and explicitly states that it only indexes official identity/lifecycle and cannot participate in Method Recommendation. Official-source controls use only governed API URLs, open in a new tab with `noopener noreferrer`, and fall back to 官方来源尚未记录 without fabricating a link.
+
+Blue is informational, orange is unresolved/attention, gray is missing/reference-only/paused, green is limited to explicit completed or verified facts, and red is reserved for API/runtime errors. Color is never the only status carrier. The page is entirely read-only and contains no create, edit, delete, upload or governance-approval action.
+
 ## 10. Responsive acceptance
 
 The primary acceptance widths are 1440px and 1080px. Both must cover list-only and split detail modes, expanded/collapsed sidebar, long title, missing image, zero Evidence, unmapped Evidence, recommendation error, all four Claim states, historical Snapshot, loading, empty, and API-error states.
+
+V2-8 exit acceptance additionally covers all six Knowledge tabs, long Method/official-document/source text, 201-Substance pagination, filtered empty, API error and an open detail Drawer. The 1440px and 1080px local checks pass without page-level horizontal overflow; wide knowledge tables scroll only inside their card.

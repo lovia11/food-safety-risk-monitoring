@@ -33,6 +33,17 @@ import {
   monitorAvailabilityMessage,
 } from "../src/domain/monitorTargets.ts";
 import {
+  DEFAULT_KNOWLEDGE_ROUTE,
+  METHOD_KNOWLEDGE_DEPTH_LABELS,
+  knowledgeAvailabilityPresentation,
+  knowledgeDepthTone,
+  knowledgeGapLabel,
+  knowledgeLifecyclePresentation,
+  knowledgeRouteHash,
+  parseKnowledgeRoute,
+  safeKnowledgeSourceUrl,
+} from "../src/domain/knowledge.ts";
+import {
   healthFoodArtifactPath,
   healthFoodIdentityAnchorId,
   healthFoodIdentityPresentation,
@@ -1047,4 +1058,112 @@ test("sampling evidence qualification is presented in user language", () => {
     "用户生成内容辅助线索",
   );
   assert.equal(evidenceQualificationLabel("not_recorded"), "未记录");
+});
+
+test("knowledge route preserves tab, server filters, query, and pagination", () => {
+  const state = {
+    ...DEFAULT_KNOWLEDGE_ROUTE,
+    tab: "inspection-methods",
+    query: "BJS 202405",
+    offset: 25,
+    status: "current",
+    knowledgeDepth: "recommendation_ready",
+  };
+  const hash = knowledgeRouteHash(state);
+  assert.match(hash, /^#\/knowledge\?/);
+  assert.deepEqual(parseKnowledgeRoute(hash.split("?")[1]), state);
+  assert.equal(parseKnowledgeRoute("tab=unknown&offset=-1").tab, "monitor-targets");
+  assert.equal(parseKnowledgeRoute("tab=unknown&offset=-1").offset, 0);
+});
+
+test("knowledge presentation keeps availability, lifecycle, depth, and gaps independent", () => {
+  assert.deepEqual(knowledgeAvailabilityPresentation("query_pending"), {
+    label: "搜索策略待验证",
+    tone: "warning",
+  });
+  assert.deepEqual(knowledgeAvailabilityPresentation("paused"), {
+    label: "已暂停",
+    tone: "neutral",
+  });
+  assert.deepEqual(knowledgeLifecyclePresentation("revoked"), {
+    label: "废止",
+    tone: "neutral",
+  });
+  assert.equal(METHOD_KNOWLEDGE_DEPTH_LABELS.reference_only, "仅供参考");
+  assert.equal(knowledgeDepthTone("reference_only"), "neutral");
+  assert.equal(knowledgeDepthTone("recommendation_ready"), "success");
+  assert.equal(
+    knowledgeGapLabel("substance_group_membership_unresolved"),
+    "物质组成员尚未解析",
+  );
+});
+
+test("knowledge source links allow only governed http or https URLs", () => {
+  assert.equal(
+    safeKnowledgeSourceUrl("https://example.gov.cn/source"),
+    "https://example.gov.cn/source",
+  );
+  assert.equal(safeKnowledgeSourceUrl("javascript:alert(1)"), null);
+  assert.equal(safeKnowledgeSourceUrl("/guessed-source"), null);
+  assert.equal(safeKnowledgeSourceUrl(null), null);
+});
+
+test("knowledge navigation and six tabs consume every V2-8A API without a static catalog", () => {
+  const files = {
+    router: readFileSync(new URL("../src/app/AppRouter.tsx", import.meta.url), "utf8"),
+    sidebar: readFileSync(new URL("../src/layout/Sidebar.tsx", import.meta.url), "utf8"),
+    page: readFileSync(new URL("../src/pages/knowledge/KnowledgeBasePage.tsx", import.meta.url), "utf8"),
+    api: readFileSync(new URL("../src/api/knowledge.ts", import.meta.url), "utf8"),
+  };
+  assert.match(files.router, /section: "knowledge"/);
+  assert.match(files.router, /<KnowledgeBasePage/);
+  assert.match(files.sidebar, /label: "知识库"/);
+  assert.match(files.sidebar, /href: "#\/knowledge"/);
+  for (const call of [
+    "getKnowledgeMonitorTargets",
+    "getKnowledgeHealthFunctions",
+    "getKnowledgeSubstances",
+    "getKnowledgeRiskMappings",
+    "getKnowledgeInspectionMethods",
+    "getKnowledgeRegulatoryDocuments",
+  ]) {
+    assert.match(files.page, new RegExp(`${call}\\(`));
+  }
+  assert.match(files.page, /role="tablist"/);
+  assert.match(files.page, /PAGE_SIZE/);
+  assert.match(files.page, /visiblePage\.hasMore/);
+  assert.match(files.page, /offset: 0/);
+  assert.doesNotMatch(files.page, /config\/|\.json["']/);
+  assert.doesNotMatch(files.api, /method:\s*["'](?:POST|PUT|DELETE)/);
+});
+
+test("knowledge workflow separates empty and error and preserves governed boundaries", () => {
+  const page = readFileSync(
+    new URL("../src/pages/knowledge/KnowledgeBasePage.tsx", import.meta.url),
+    "utf8",
+  );
+  const detail = readFileSync(
+    new URL("../src/pages/knowledge/KnowledgeDetailDrawer.tsx", import.meta.url),
+    "utf8",
+  );
+  const table = readFileSync(
+    new URL("../src/pages/knowledge/KnowledgeTable.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(page, /知识记录加载失败/);
+  assert.match(page, /KNOWLEDGE_EMPTY_TITLES/);
+  assert.match(page, /setSelectedRecord\(null\)/);
+  assert.match(detail, /rel="noopener noreferrer"/);
+  assert.match(detail, /官方来源尚未记录/);
+  assert.match(detail, /仅索引官方身份\/生命周期，不参与检验方法推荐/);
+  assert.match(detail, /本页不会自动展开组成员/);
+  assert.match(detail, /尚未记录监管语境/);
+  assert.match(detail, /保健功能 ≠ 页面宣传线索/);
+  assert.match(detail, /不表示任何商品含有或检出该物质/);
+  assert.match(table, /knowledgeDepth/);
+  assert.match(table, /methodStatus/);
+  assert.doesNotMatch(
+    detail,
+    /createKnowledge|updateKnowledge|deleteKnowledge|method=["']post["']/i,
+  );
 });

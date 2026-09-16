@@ -1,4 +1,5 @@
 import {
+  BookOpenText,
   ClipboardList,
   FlaskConical,
   PackageSearch,
@@ -11,7 +12,7 @@ import { useEffect, useState } from "react";
 const SIDEBAR_STORAGE_KEY = "food-risk.sidebar-state";
 
 type SidebarProps = {
-  activeSection: "products" | "inspections" | "sampling";
+  activeSection: "products" | "inspections" | "sampling" | "knowledge";
   autoExpanded: boolean;
   samplingCount: number | null;
 };
@@ -25,6 +26,7 @@ const navigation = [
     icon: ClipboardList,
   },
   { id: "sampling", label: "抽检清单", href: "#/sampling", icon: FlaskConical },
+  { id: "knowledge", label: "知识库", href: "#/knowledge", icon: BookOpenText },
 ] as const;
 
 function storedPreference(): boolean | null {

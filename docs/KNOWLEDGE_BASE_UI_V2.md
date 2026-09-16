@@ -2,14 +2,14 @@
 
 > Status: CANONICAL DESIGN BASELINE
 > Applies to: V2-8
-> Last verified phase: V2-8A
+> Last verified phase: V2-8B
 > Owner: Project
 
 ## 1. Purpose and boundary
 
 The Knowledge Base is a read-only view over the same governed knowledge used by runtime analysis. It is not a new source of truth, an editing console, a compliance engine, or a place to reconstruct relationships in the browser.
 
-V2-8A implements the read model, GET API, TypeScript DTOs and presentation-mapper contract. It does **not** add a Sidebar item, page, tab implementation or knowledge mutation. Those visible surfaces require V2-8B.
+V2-8A implements the read model, GET API, TypeScript DTOs and presentation-mapper contract. V2-8B implements the visible Sidebar route, six tabs, server-driven list controls and read-only detail Drawer. Neither phase adds a knowledge mutation path.
 
 The future page has exactly six tabs:
 
@@ -104,7 +104,7 @@ No endpoint implements fuzzy, semantic or full-text inference.
 
 It also returns the governing dataset identities/versions. It never emits a blended “知识库完整度”, accuracy, national coverage or risk-recognition percentage.
 
-At the V2-8A baseline the separate facts are 106 Reference MonitorTargets, 16 operational targets, 88 query-pending targets, 2 paused targets, 25 HealthFunction records (24 non-nutrient current functions plus one separately governed nutrient-supplement catalog root), 7 InspectionMethods, 6 `recommendation_ready`, 1 `reference_only`, 201 Substances, 8 Risk mappings, 3 group mappings and 7 RegulatoryDocuments.
+At the V2-8 baseline the separate facts are 106 Reference MonitorTargets, 16 operational targets, 88 query-pending targets, 2 paused targets, 25 HealthFunction records (24 non-nutrient current functions plus one separately governed nutrient-supplement catalog root), 7 InspectionMethods, 6 `recommendation_ready`, 1 `reference_only`, 201 Substances, 8 Risk mappings, 3 group mappings and 7 RegulatoryDocuments.
 
 ## 5. Tab contracts
 
@@ -182,18 +182,22 @@ The future page must visually separate:
 
 Color alone cannot carry these meanings. Source links require accessible labels and must use the governed URL.
 
-## 7. Frontend contract for V2-8A
+## 7. Frontend implementation
 
-V2-8A adds only:
+V2-8A established:
 
 - typed DTOs in `frontend/src/api/contracts.ts`;
 - GET client functions in `frontend/src/api/knowledge.ts`;
 - stable depth/gap/source presentation mappings in `frontend/src/domain/knowledge.ts`.
 
-It does not modify `Sidebar.tsx`, routing, pages or CSS. V2-8B must consume these DTOs rather than parsing raw config or constructing relations in React.
+V2-8B consumes only those DTOs and adds `#/knowledge`, a first-level 知识库 Sidebar item, the six governed tabs, explicit-submit search, relevant server filters, offset pagination and a shared accessible Drawer. Query, active tab, filters and offset are encoded in the hash URL. The page never imports governed config JSON or constructs a Risk, group-member, Claim or HealthFunction relation.
 
-## 8. Acceptance boundary
+Every tab shares loading, filtered-empty, API-error and content states. Tables scroll within their card at constrained widths; the page itself does not gain horizontal overflow. Source links accept only governed HTTP(S) references and open with `noopener noreferrer`. The Drawer traps focus through the existing shared component, opens from keyboard-operable row actions and restores focus when closed.
+
+## 8. Acceptance result
 
 V2-8A passes when all seven GET endpoints are deterministic and traceable, all seven indexed Methods including the revoked `reference_only` Method are visible, shallow/non-current Methods remain excluded from operational Recommendation, groups remain unexpanded, server-side filters/pagination work, TypeScript contracts typecheck, and requests leave business state unchanged.
 
-V2-8A completion does not complete V2-8. V2-8B Knowledge Base UI is the next independent Gate.
+V2-8B passes with the six API-backed tabs, independent lifecycle/depth/availability/gap states, governed source links, URL-stable filters/pagination, keyboard-operable tabs/actions/Drawer, and explicit no-inference boundaries. Offline validation passed targeted Knowledge regression 168/168, Python full regression discovered 564 / passed 563 / skipped 1, frontend workflow 43/43, typecheck and production build. Local 1440px and 1080px acceptance found no page-level horizontal overflow and covered long titles, 201-Substance pagination, filtered empty, API error, Drawer, revoked/reference-only Method, unresolved group mapping and missing regulatory context.
+
+V2-8 is **COMPLETE**. V2-9 Analytics is the next planned independent Gate.

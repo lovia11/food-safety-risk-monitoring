@@ -26,7 +26,7 @@
 - V2-7A deterministic Inspection Knowledge inventory and denominator-defined coverage contract
 - V2-7B1/B2 schema 13 Inspection Reference boundary with independent depth/lifecycle, seven normalized RegulatoryDocuments, zero-row governed group membership, two promoted non-runtime trace records, and a Recommendation-ready resolver gate
 - V2-7C official-full-text deep verification of BJS 202405 plus a deterministic six-case Product Context corpus and completed V2-7 Exit Gate
-- V2-8A read-only Knowledge API/DTO foundation and canonical six-tab UX contract; no visible Knowledge page yet
+- V2-8 read-only Knowledge Base with seven read endpoints, denominator-defined summary, six API-backed tabs and traceable detail Drawer
 
 ## Current Coverage
 
@@ -70,9 +70,11 @@ V2-7C Deep Verified Subset & Exit Gate is complete. Only BJS 202405 was deepened
 
 V2-8A Knowledge Read API & UX Contract is complete. Seven GET-only endpoints expose the same governed Monitor, HealthFunction, Substance, RiskMapping, InspectionMethod and RegulatoryDocument authorities used by runtime, with separate summary denominators, deterministic server-side filtering/pagination, source/version trace and explicit gaps. Frontend DTO/client/mapper contracts are ready, while Sidebar/routing/page/tabs remain untouched. Knowledge read API/domain tests passed 9/9; the broader targeted pack passed 168/168; frontend typecheck passed. Schema 13, knowledge facts and every existing business workflow remain unchanged.
 
+V2-8B Knowledge Base UI and the V2-8 Exit Gate are complete. The first-level `#/knowledge` route implements exactly six canonical tabs using only the V2-8A API clients, with server search/filter/pagination, hash URL state, factual summary cards, accessible detail Drawer, governed source links and explicit Knowledge Gaps. Method lifecycle remains independent from knowledge depth; Monitor Reference remains independent from operational readiness; HealthFunction remains independent from Claim; group mappings remain unexpanded. Targeted Knowledge regression passed 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow passed 43/43; typecheck/build and 1440px/1080px local acceptance passed. No schema, config or business runtime changed.
+
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, the visible Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. The Knowledge read API/UX contract exists, but no Knowledge navigation or page is implemented. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, and further separately governed Operational Search expansion are Future V2 work. The Knowledge Base is implemented as a read-only surface and does not provide governance editing. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
@@ -96,12 +98,14 @@ V2-7C — COMPLETE. BJS 202405 is deep-verified, the deterministic context corpu
 
 V2-7 — COMPLETE. The bounded Wide Reference Index/Deep Verified Subset contract is implemented and validated.
 
-V2-8A — COMPLETE. The read-only Knowledge contract, seven endpoints, TypeScript DTO/client layer and canonical six-tab UX baseline are implemented; visible UI is not.
+V2-8A — COMPLETE. The read-only Knowledge contract, seven endpoints, TypeScript DTO/client layer and canonical six-tab UX baseline are implemented.
 
-V2-8 — IN PROGRESS. V2-8B remains outstanding.
+V2-8B — COMPLETE. First-level navigation, six governed tabs, server-driven list interaction, read-only Drawer and source/gap presentation are accepted.
+
+V2-8 — COMPLETE. The governed Knowledge read model and inspectable UI are implemented without an editing or inference path.
 
 ## Next Gate
 
-V2-8B Knowledge Base UI implementation is NEXT and requires a separate phase Gate.
+V2-9 Analytics is NEXT and requires a separate phase Gate.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

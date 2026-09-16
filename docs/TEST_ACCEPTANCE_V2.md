@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-8A
+> Last verified phase: V2-8B
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -312,6 +312,25 @@ V2-7C exit validation passed offline: focused Inspection/Reference/candidate/aud
 - schema 13, governed configs and all existing business semantics remain unchanged.
 
 V2-8A validation passed offline: Knowledge read API/domain tests 9/9; targeted Knowledge/Inspection/Recommendation/Risk/HealthFunction/Monitor/local-API regression 168/168; frontend typecheck passed. Full Python regression, frontend workflow and production build were not required by this contract-only Gate. V2-8 remains IN PROGRESS; V2-8B is NEXT.
+
+### 8.7 Knowledge Base UI and V2-8 Exit Gate — V2-8B
+
+- the first-level 知识库 route contains exactly the six canonical domains and consumes only the V2-8A API client;
+- summary cards render API counts and keep denominators separate, with no completeness, coverage, accuracy or risk score;
+- every tab uses server-side query/filter/offset pagination and keeps state in the hash URL;
+- loading, filtered-empty, API-error and content states remain distinct;
+- Reference membership and Operational Search readiness remain separate;
+- HealthFunction remains explicitly separate from ClaimSignal, including the nutrient-supplement framework boundary;
+- Substance method coverage is described only as a knowledge relation, never product presence or detection;
+- group-level Risk mappings remain unresolved/partial/complete facts and are never expanded from Method analytes;
+- Method lifecycle and project knowledge depth render independently; revoked `reference_only` GB/T 5009.170-2003 remains visible and states that it cannot drive Recommendation;
+- RegulatoryDocument source links use only governed HTTP(S) references and preserve supersession identity;
+- `not_recorded`, paused, unresolved, partial and depth gaps use distinct non-error presentations; red is reserved for API/runtime error;
+- tabs, labeled filters, row actions, source links and focus-managed Drawer remain keyboard accessible;
+- local acceptance at 1440px and 1080px covers long titles, 201-Substance pagination and Drawer without page-level horizontal overflow;
+- no knowledge mutation, static catalog, browser relation inference, schema/config change or Discovery/Claim/Risk/Recommendation/Review/Sampling behavior change exists.
+
+V2-8B exit validation passed offline: targeted Knowledge/API/domain regression 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow 43/43; typecheck and production build passed. V2-8 is COMPLETE; V2-9 Analytics is NEXT.
 
 ## 9. Pipeline and Review gate
 

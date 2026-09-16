@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-8A
+> Last verified phase: V2-8B
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -263,7 +263,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-8 — Knowledge Base UI
 
-**Status:** IN PROGRESS — V2-8A complete; V2-8B is NEXT.
+**Status:** COMPLETE — V2-8A read contract and V2-8B visible UI accepted offline.
 
 - **Goal:** Make governed runtime knowledge inspectable without creating a second static knowledge copy.
 - **Why:** Analysts need to understand sources, coverage, versions, and gaps behind results.
@@ -290,12 +290,16 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-8B — Knowledge Base UI Implementation
 
-**Status:** NEXT — requires a separate phase Gate; not implemented in V2-8A.
+**Status:** COMPLETE — first-level navigation, six governed tabs and V2-8 Exit Gate accepted offline.
 
 - **Goal:** Implement the 知识库 navigation, six tabs, list/detail/filter/empty/gap/source states using only the V2-8A DTOs.
 - **Boundary:** No browser editing, duplicated static knowledge, inferred relations, Analytics or V2-9 work.
+- **Result:** `#/knowledge` provides API-backed summary facts, common search/filter/offset-pagination interaction, accessible row actions and a focus-managed read-only detail Drawer. Availability, lifecycle, knowledge depth, Knowledge Gap and source/version provenance remain separate.
+- **Validation:** targeted Knowledge regression 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow 43/43; typecheck and production build pass. Local 1440px/1080px checks show no page-level horizontal overflow.
 
 ## V2-9 — Analytics
+
+**Status:** NEXT — requires a separate phase Gate; not implemented in V2-8.
 
 - **Goal:** Provide denominator-defined operational, clue, geography, and knowledge-quality metrics.
 - **Why:** Counts without population, stage, source, and coverage definitions are misleading.

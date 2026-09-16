@@ -4,6 +4,7 @@ import { AppShell } from "../layout/AppShell";
 import { InspectionArchivePage } from "../pages/inspections/InspectionArchivePage";
 import { InspectionWorkspacePage } from "../pages/inspections/InspectionWorkspacePage";
 import { NewInspectionPage } from "../pages/inspections/NewInspectionPage";
+import { KnowledgeBasePage } from "../pages/knowledge/KnowledgeBasePage";
 import { ProductOverviewPage } from "../pages/products/ProductOverviewPage";
 import { SamplingListPage } from "../pages/sampling/SamplingListPage";
 
@@ -14,10 +15,12 @@ export type AppRoute =
       section: "sampling";
       view: "current" | "history";
       listId?: string;
-    };
+    }
+  | { section: "knowledge"; search: string };
 
 function parseHash(hash: string): AppRoute {
-  const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  const [path, search = ""] = hash.replace(/^#\/?/, "").split("?", 2);
+  const parts = path.split("/").filter(Boolean);
   const decode = (value: string | undefined) => {
     if (!value) return undefined;
     try {
@@ -35,6 +38,9 @@ function parseHash(hash: string): AppRoute {
       view: parts[1] === "history" ? "history" : "current",
       listId: parts[1] === "history" ? decode(parts[2]) : undefined,
     };
+  }
+  if (parts[0] === "knowledge") {
+    return { section: "knowledge", search };
   }
   return { section: "products", productId: decode(parts[1]) };
 }
@@ -64,8 +70,10 @@ export function AppRouter() {
         <ProductOverviewPage productId={route.productId} />
       ) : route.section === "inspections" ? (
         route.taskId === "new" ? <NewInspectionPage /> : route.taskId ? <InspectionWorkspacePage taskId={route.taskId} /> : <InspectionArchivePage />
-      ) : (
+      ) : route.section === "sampling" ? (
         <SamplingListPage view={route.view} listId={route.listId} />
+      ) : (
+        <KnowledgeBasePage search={route.search} />
       )}
     </AppShell>
   );

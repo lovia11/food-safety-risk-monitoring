@@ -8,7 +8,7 @@
 > V2-7A audit starting baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, the completed V2-6 HealthFunction framework and Claim Consistency workflow, and the completed V2-7 Inspection Knowledge coverage program.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, V2-6 HealthFunction framework and Claim Consistency workflow, V2-7 Inspection Knowledge coverage program, and V2-8 Knowledge Base UI.
 
 ## Baseline
 
@@ -17,7 +17,7 @@ This document describes implemented behavior through the completed V2-5 Claim do
 - SQLite schema: 13
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
-- Current primary navigation: 商品总览、排查档案、抽检清单
+- Current primary navigation: 商品总览、排查档案、抽检清单、知识库
 - Retired V1 `web/` frontend: absent from the active workspace
 
 ## Current runtime
@@ -155,15 +155,16 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-7C Deep Verified Subset & Exit Gate is **COMPLETE**. `inspection-reference@2026.09-b8` promotes only BJS 202405 to `recommendation_ready` using the official SAMR full text: 95 Appendix A compounds, seven product categories, and retained qualitative/quantitative and sample-preparation context. Eleven Substance identities are reused by CAS and 84 are added. A versioned six-case Product Context corpus passes all expectations and reports context-corpus Recommendation reachability as 3/6; the metric is fixture-scoped, not population coverage. Risk/Claim/group mappings, group membership, existing five deep methods, the Recommendation algorithm, schema/API/frontend, Phase3, D2–D6, Review/Sampling and frozen history are unchanged. Focused regression passed 195/195; Python full regression discovered 555 / passed 554 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed offline.
 - V2-7 is **COMPLETE**. The final bounded index is 7/7 reference-complete and 6/7 deep, with 201 Substances, 227 MethodSubstance relations, 44 applicability facts and 0/3 resolved group mappings. Only revoked GB/T 5009.170-2003 remains `reference_only`.
 - V2-8A Knowledge Read API & UX Contract is **COMPLETE**. Seven GET-only endpoints expose separate summary, Monitor Reference, HealthFunction, Substance, Risk mapping, InspectionMethod and RegulatoryDocument read models with deterministic query/filter/offset/limit handling, source/version trace and explicit Knowledge Gaps. Monitor/Inspection/Risk records read the same schema-13 projections used by runtime; HealthFunction reads the same strictly validated governed JSON used by Claim Consistency. Frontend DTO/client/domain-mapper contracts exist, but Sidebar, routing, page and tabs do not. Targeted backend/domain/API regression passed 168/168 and frontend typecheck passed. Schema 13, governed knowledge, Discovery, Claim, identity/consistency, Risk, Recommendation, Review, Sampling and frozen history are unchanged.
+- V2-8B Knowledge Base UI & V2-8 Exit Gate is **COMPLETE**. `#/knowledge` is a first-level read-only route with the six canonical API-backed tabs, separate summary facts, server search/filter/offset pagination, URL state, explicit loading/empty/error/content states and a focus-managed detail Drawer. Availability, lifecycle, project knowledge depth, Knowledge Gaps and source/version provenance remain separate. Targeted Knowledge regression passed 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow passed 43/43; typecheck and production build passed. Offline 1440px/1080px checks found no page-level horizontal overflow. Schema 13, governed knowledge and every existing business workflow remain unchanged.
+- V2-8 is **COMPLETE**.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-8B Knowledge Base UI implementation, subject to a separate phase Gate. V2-8 remains **IN PROGRESS**.
+- **NEXT:** V2-9 Analytics, subject to a separate definition and implementation Gate.
 - **FUTURE CHANGE:** the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
-- **FUTURE CHANGE:** Analytics pages and governed metric read models.
-- **FUTURE CHANGE:** the visible Knowledge Base navigation/page/tabs. The read API and UX contract are implemented by V2-8A.
+- **FUTURE CHANGE:** Analytics pages and governed metric read models. No V2-9 work is implemented at this baseline.
 - Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.
 - The existing recorded HealthFood Registry positive uses a descriptive official-function sentence that is not an exact current name or transition alias; future normalization must preserve it as unresolved unless a separate source-backed mapping is governed.
 
@@ -178,4 +179,5 @@ The five existing Effect categories are an operational Phase3 clue vocabulary, n
 - Claim consistency contract: [CLAIM_CONSISTENCY_V2.md](CLAIM_CONSISTENCY_V2.md)
 - Inspection knowledge audit: [INSPECTION_KNOWLEDGE_AUDIT_V2_7.md](INSPECTION_KNOWLEDGE_AUDIT_V2_7.md)
 - Inspection coverage contract: [INSPECTION_KNOWLEDGE_COVERAGE_V2.md](INSPECTION_KNOWLEDGE_COVERAGE_V2.md)
+- Knowledge Base UI contract: [KNOWLEDGE_BASE_UI_V2.md](KNOWLEDGE_BASE_UI_V2.md)
 - Roadmap: [IMPLEMENTATION_ROADMAP_V2.md](IMPLEMENTATION_ROADMAP_V2.md)
