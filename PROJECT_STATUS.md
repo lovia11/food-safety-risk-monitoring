@@ -27,6 +27,7 @@
 - V2-7B1/B2 schema 13 Inspection Reference boundary with independent depth/lifecycle, seven normalized RegulatoryDocuments, zero-row governed group membership, two promoted non-runtime trace records, and a Recommendation-ready resolver gate
 - V2-7C official-full-text deep verification of BJS 202405 plus a deterministic six-case Product Context corpus and completed V2-7 Exit Gate
 - V2-8 read-only Knowledge Base with seven read endpoints, denominator-defined summary, six API-backed tabs and traceable detail Drawer
+- V2-9A governed 32-metric Analytics Dictionary, deterministic GET-only read model and TypeScript DTO/client contract
 
 ## Current Coverage
 
@@ -72,9 +73,11 @@ V2-8A Knowledge Read API & UX Contract is complete. Seven GET-only endpoints exp
 
 V2-8B Knowledge Base UI and the V2-8 Exit Gate are complete. The first-level `#/knowledge` route implements exactly six canonical tabs using only the V2-8A API clients, with server search/filter/pagination, hash URL state, factual summary cards, accessible detail Drawer, governed source links and explicit Knowledge Gaps. Method lifecycle remains independent from knowledge depth; Monitor Reference remains independent from operational readiness; HealthFunction remains independent from Claim; group mappings remain unexpanded. Targeted Knowledge regression passed 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow passed 43/43; typecheck/build and 1440px/1080px local acceptance passed. No schema, config or business runtime changed.
 
+V2-9A Analytics Metric Dictionary & Read Model is complete. `analytics-metrics-v2.0` defines 32 implemented count/ratio/distribution/coverage metrics and four explicit unavailable/future metrics. Runtime metrics share Task-created cohorts, preserve Product/Snapshot grains and zero denominators; formal Claim excludes legacy Effect/UGC; search region and evidence-backed declared origin remain separate; Knowledge coverage reuses V2-7 audit and V2-8 summary. Six GET-only endpoints and frontend DTO/client contracts are implemented without visible navigation, charts, materialization or schema change. Targeted Analytics tests passed 9/9 and typecheck passed; the current local baseline repeated identically.
+
 ## Known Limitations
 
-Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, and further separately governed Operational Search expansion are Future V2 work. The Knowledge Base is implemented as a read-only surface and does not provide governance editing. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
+Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, the visible Analytics UI, and further separately governed Operational Search expansion are Future V2 work. The Analytics dictionary/read API exists, but no Analytics navigation, page or chart is implemented. The Knowledge Base is implemented as a read-only surface and does not provide governance editing. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
 
 ## Current Development Phase
 
@@ -104,8 +107,12 @@ V2-8B — COMPLETE. First-level navigation, six governed tabs, server-driven lis
 
 V2-8 — COMPLETE. The governed Knowledge read model and inspectable UI are implemented without an editing or inference path.
 
+V2-9A — COMPLETE. The governed metric dictionary, deterministic read-only metric projections, explicit unavailable metrics, six GET endpoints and frontend DTO/client contract are accepted.
+
+V2-9 — IN PROGRESS. The visible Analytics UI and Exit Gate remain outstanding.
+
 ## Next Gate
 
-V2-9 Analytics is NEXT and requires a separate phase Gate.
+V2-9B Analytics UI & V2-9 Exit Gate is NEXT and requires a separate phase Gate.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

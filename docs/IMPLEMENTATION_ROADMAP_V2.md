@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-8B
+> Last verified phase: V2-9A
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -299,7 +299,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-9 — Analytics
 
-**Status:** NEXT — requires a separate phase Gate; not implemented in V2-8.
+**Status:** IN PROGRESS — V2-9A metric/read contract complete; V2-9B is NEXT.
 
 - **Goal:** Provide denominator-defined operational, clue, geography, and knowledge-quality metrics.
 - **Why:** Counts without population, stage, source, and coverage definitions are misleading.
@@ -309,10 +309,26 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 - **Domain impact:** Adds Analytics Read Model and metric definitions, not new source facts.
 - **Schema impact:** Read-model/materialization changes only after definition review.
 - **Data requirements:** Metric name, numerator, denominator, time basis, dataset version, filters, missing-data rule and provenance.
-- **UX impact:** 统计分析 page with titles such as 已采集商品地区分布、页面线索商品地区分布、商品标称产地分布.
+- **UX impact:** 统计分析 page with the separate titles 已采集商品搜索地区分布、页面宣传线索商品搜索地区分布、商品标称产地分布.
 - **Testing:** Metric fixtures, zero denominators, missing facts, deduplication, snapshot/product scope and geographic non-conflation.
 - **Real-world validation:** Reconcile dashboard samples against raw artifacts and database queries.
 - **Exit criteria:** Every metric is reproducible from its dictionary and cannot be misread as representative national risk.
+
+### V2-9A — Analytics Metric Dictionary & Read Model
+
+**Status:** COMPLETE — governed metric semantics, deterministic GET contract and TypeScript DTO/client accepted offline.
+
+- **Goal:** Establish only metrics with reliable current facts, explicit grain/time/dedup/missing rules and defensible numerator/denominator semantics.
+- **Result:** `analytics-metrics-v2.0` defines 32 implemented metrics across pipeline, formal Claim, geography and knowledge plus four explicit unavailable/future metrics. Six GET-only endpoints return rich metric DTOs with zero-denominator nulls and dataset-version trace. Runtime filters use parent Task `created_at`; search region and `declared_origin` remain distinct; V2-7/V2-8 knowledge calculations are reused.
+- **Boundary:** No Sidebar, Analytics page, chart dependency, CSS, schema/materialization/cache/ETL, Risk score or business-state mutation.
+- **Validation:** targeted Analytics tests 9/9 and frontend typecheck pass; one current-DB baseline repeated identically.
+
+### V2-9B — Analytics UI & V2-9 Exit Gate
+
+**Status:** NEXT — requires a separate phase Gate; not implemented in V2-9A.
+
+- **Goal:** Add the visible 统计分析 route using only V2-9A dictionary/DTO/API semantics.
+- **Boundary:** No denominator reinterpretation, search-region/origin conflation, risk heatmap, national coverage or unsupported score.
 
 ## V2-10 — Evaluation and thesis
 

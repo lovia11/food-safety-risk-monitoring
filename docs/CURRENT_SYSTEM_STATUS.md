@@ -8,7 +8,7 @@
 > V2-7A audit starting baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, V2-6 HealthFunction framework and Claim Consistency workflow, V2-7 Inspection Knowledge coverage program, and V2-8 Knowledge Base UI.
+This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, V2-6 HealthFunction framework and Claim Consistency workflow, V2-7 Inspection Knowledge coverage program, V2-8 Knowledge Base UI, and V2-9A Analytics metric/read contract.
 
 ## Baseline
 
@@ -157,14 +157,16 @@ The 106-object Reference is not 106-object operational search coverage. Only a t
 - V2-8A Knowledge Read API & UX Contract is **COMPLETE**. Seven GET-only endpoints expose separate summary, Monitor Reference, HealthFunction, Substance, Risk mapping, InspectionMethod and RegulatoryDocument read models with deterministic query/filter/offset/limit handling, source/version trace and explicit Knowledge Gaps. Monitor/Inspection/Risk records read the same schema-13 projections used by runtime; HealthFunction reads the same strictly validated governed JSON used by Claim Consistency. Frontend DTO/client/domain-mapper contracts exist, but Sidebar, routing, page and tabs do not. Targeted backend/domain/API regression passed 168/168 and frontend typecheck passed. Schema 13, governed knowledge, Discovery, Claim, identity/consistency, Risk, Recommendation, Review, Sampling and frozen history are unchanged.
 - V2-8B Knowledge Base UI & V2-8 Exit Gate is **COMPLETE**. `#/knowledge` is a first-level read-only route with the six canonical API-backed tabs, separate summary facts, server search/filter/offset pagination, URL state, explicit loading/empty/error/content states and a focus-managed detail Drawer. Availability, lifecycle, project knowledge depth, Knowledge Gaps and source/version provenance remain separate. Targeted Knowledge regression passed 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow passed 43/43; typecheck and production build passed. Offline 1440px/1080px checks found no page-level horizontal overflow. Schema 13, governed knowledge and every existing business workflow remain unchanged.
 - V2-8 is **COMPLETE**.
+- V2-9A Analytics Metric Dictionary & Read Model is **COMPLETE**. `analytics-metrics-v2.0` governs 32 count/ratio/distribution/coverage metrics across pipeline, formal Claim, geography and knowledge domains plus four explicit unavailable/future metrics. Six GET-only endpoints expose denominator-defined values, zero-denominator nulls, grain/time/dedup/missing rules, applied filters and dataset versions. Runtime metrics use Task-created cohorts; V2 formal Claim never falls back to legacy Effect/UGC; search region and declared origin remain separate; Knowledge metrics reuse V2-7 audit and V2-8 summary calculations. The current local baseline is byte-for-byte deterministic across two reads. Targeted Analytics tests passed 9/9 and frontend typecheck passed. Schema 13, business facts, configs other than the new metric authority, runtime workflows and visible navigation are unchanged.
+- V2-9 is **IN PROGRESS**; V2-9B visible Analytics UI and Exit Gate are not implemented.
 
 ## Known limitations and future changes
 
 The following are **not implemented** at this baseline:
 
-- **NEXT:** V2-9 Analytics, subject to a separate definition and implementation Gate.
+- **NEXT:** V2-9B Analytics UI & V2-9 Exit Gate, subject to its own Gate.
 - **FUTURE CHANGE:** the separately governed ClaimExpressionAttention dataset. Claim→Risk mapping remains outside V2-6 and is not implied by the implemented topic comparison.
-- **FUTURE CHANGE:** Analytics pages and governed metric read models. No V2-9 work is implemented at this baseline.
+- **FUTURE CHANGE:** the visible Analytics navigation/page/charts. The governed Metric Dictionary, deterministic read model and GET contract are implemented by V2-9A.
 - Current Phase3 and Recommendation compatibility paths still use `config/effect_keywords.json`, legacy `detectedEffects`/`effect` fields, and the separately governed three-record Effect/Risk bridge. UGC may therefore still influence the legacy Effect path and downstream auxiliary legacy interpretation. The V2 Claim runtime does not consume those Effect conclusions, blocks UGC formally, and does not rewrite legacy Evidence or frozen exports.
 - The existing recorded HealthFood Registry positive uses a descriptive official-function sentence that is not an exact current name or transition alias; future normalization must preserve it as unresolved unless a separate source-backed mapping is governed.
 
@@ -180,4 +182,5 @@ The five existing Effect categories are an operational Phase3 clue vocabulary, n
 - Inspection knowledge audit: [INSPECTION_KNOWLEDGE_AUDIT_V2_7.md](INSPECTION_KNOWLEDGE_AUDIT_V2_7.md)
 - Inspection coverage contract: [INSPECTION_KNOWLEDGE_COVERAGE_V2.md](INSPECTION_KNOWLEDGE_COVERAGE_V2.md)
 - Knowledge Base UI contract: [KNOWLEDGE_BASE_UI_V2.md](KNOWLEDGE_BASE_UI_V2.md)
+- Analytics metric/read contract: [ANALYTICS_V2.md](ANALYTICS_V2.md)
 - Roadmap: [IMPLEMENTATION_ROADMAP_V2.md](IMPLEMENTATION_ROADMAP_V2.md)

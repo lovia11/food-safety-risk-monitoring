@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-8B
+> Last verified phase: V2-9A
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -331,6 +331,27 @@ V2-8A validation passed offline: Knowledge read API/domain tests 9/9; targeted K
 - no knowledge mutation, static catalog, browser relation inference, schema/config change or Discovery/Claim/Risk/Recommendation/Review/Sampling behavior change exists.
 
 V2-8B exit validation passed offline: targeted Knowledge/API/domain regression 168/168; Python full regression discovered 564 / passed 563 / skipped 1; frontend workflow 43/43; typecheck and production build passed. V2-8 is COMPLETE; V2-9 Analytics is NEXT.
+
+### 8.8 Analytics metric dictionary and read model — V2-9A
+
+- the machine-readable dictionary validates unique identity, domain/type, complete numerator/denominator/time/grain/dedup/missing/source/filter/interpretation contracts and explicit unavailable metrics;
+- Product and ProductSnapshot counts remain distinct;
+- Detail success denominator contains only actual Detail attempts, OCR success denominator only OCR-input-ready Snapshots, and Analysis denominator only OCR-ready Snapshots;
+- zero denominator returns `rate=null` and `reason=zero_denominator`;
+- bounded runtime metrics consistently use parent Task `created_at`; missing Task time is explicit under bounded filters;
+- Review distribution excludes ineligible internal pending rows and does not produce an approval rate;
+- current Sampling Membership remains a workflow count and non-membership is not interpreted as low risk;
+- Claim state distinguishes complete-with-claims, complete-zero, not-generated and error;
+- formal Claim metrics read only V2 ClaimSignal; legacy Effect, UGC, SearchQuery and Evidence keywords cannot fabricate Claim;
+- UGC remains an Evidence source-scope bucket only;
+- search-page region distributions remain Snapshot/task-observation facts and never become Product origin;
+- declared-origin distribution uses evidence-backed ProductFact, keeps unknown, and retains conflict without arbitration;
+- Knowledge coverage reuses V2-7 audit and V2-8 summary numerator/denominator/version facts rather than reimplementing reachability;
+- Analytics endpoints are GET-only and leave Review, Sampling, Claim, ProductFact and Knowledge business rows unchanged;
+- repeated reads over an unchanged DB/config produce identical canonical JSON;
+- TypeScript DTO/client contracts typecheck without adding navigation, page, chart library or CSS.
+
+V2-9A validation passed offline: targeted Analytics dictionary/read/API tests 9/9 and frontend typecheck passed. V2-9 remains IN PROGRESS; V2-9B Analytics UI & V2-9 Exit Gate is NEXT.
 
 ## 9. Pipeline and Review gate
 

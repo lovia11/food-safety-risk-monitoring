@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
+from src.analytics_read import AnalyticsQueryValidationError, AnalyticsReadService
 from src.data_store import (
     DEFAULT_MONITOR_CONFIG_PATHS,
     DataStore,
@@ -232,6 +233,7 @@ def create_handler(
             store.import_monitor_config(config_path)
     knowledge_read = KnowledgeReadService(store, health_functions_config)
     store.import_all_runs()
+    analytics_read = AnalyticsReadService(store, knowledge_read=knowledge_read)
     sampling_store = SamplingStore(store.database_path)
     sampling_export = SamplingExportService(store, sampling_store, resolved_output)
     sampling_export.recover_preparing()
@@ -329,6 +331,55 @@ def create_handler(
                 return
             if path == "/api/health":
                 self._json(200, {"status": "ok", "service": "taobao-risk-mvp"})
+                return
+            if path.startswith("/api/analytics/"):
+                query_values = parse_qs(parsed.query)
+
+                def analytics_value(name: str) -> str:
+                    return str((query_values.get(name) or [""])[0]).strip()
+
+                common_filters = {
+                    "from_value": analytics_value("from"),
+                    "to_value": analytics_value("to"),
+                    "region": analytics_value("region"),
+                }
+                try:
+                    if path == "/api/analytics/metrics":
+                        payload = analytics_read.metric_dictionary()
+                    elif path == "/api/analytics/summary":
+                        payload = analytics_read.summary(**common_filters)
+                    elif path == "/api/analytics/pipeline":
+                        payload = analytics_read.pipeline(
+                            **common_filters,
+                            stage=analytics_value("stage"),
+                        )
+                    elif path == "/api/analytics/claims":
+                        payload = analytics_read.claims(
+                            **common_filters,
+                            claim_type=analytics_value("claim_type"),
+                        )
+                    elif path == "/api/analytics/geography":
+                        payload = analytics_read.geography(
+                            **common_filters,
+                            claim_type=analytics_value("claim_type"),
+                        )
+                    elif path == "/api/analytics/knowledge":
+                        if any(common_filters.values()):
+                            raise AnalyticsQueryValidationError(
+                                "Knowledge metrics are dataset-version scoped and do not accept time or region filters"
+                            )
+                        payload = analytics_read.knowledge()
+                    else:
+                        self._error(
+                            404,
+                            "analytics_endpoint_not_found",
+                            "Analytics read endpoint does not exist",
+                        )
+                        return
+                except (AnalyticsQueryValidationError, TypeError, ValueError) as exc:
+                    self._error(400, "invalid_analytics_query", str(exc))
+                    return
+                self._json(200, payload)
                 return
             if path.startswith("/api/knowledge/"):
                 query_values = parse_qs(parsed.query)

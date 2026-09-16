@@ -946,3 +946,80 @@ export type KnowledgeRegulatoryDocument = KnowledgeRegulatoryDocumentSummary & {
   source: KnowledgeSourceTrace;
   knowledgeGaps: string[];
 };
+
+export type AnalyticsMetricType =
+  | "count"
+  | "ratio"
+  | "distribution"
+  | "coverage";
+
+export type AnalyticsMetricBucket = {
+  key: string;
+  label: string;
+  count: number;
+  denominator: number;
+  rate: number | null;
+  reason: "zero_denominator" | null;
+};
+
+export type AnalyticsMetric = {
+  metricId: string;
+  title: string;
+  domain: "pipeline" | "claims" | "geography" | "knowledge";
+  metricType: AnalyticsMetricType;
+  value: number | null;
+  unit: string;
+  grain: string;
+  timeBasis: string;
+  datasetVersion: string;
+  filters: Record<string, string>;
+  missingRule: string;
+  interpretation: string;
+  forbiddenInterpretation: string;
+  numerator?: number;
+  denominator?: number;
+  rate?: number | null;
+  reason?: "zero_denominator" | null;
+  buckets?: AnalyticsMetricBucket[];
+};
+
+export type AnalyticsResponse = {
+  dictionaryVersion: string;
+  filters: Record<string, string>;
+  scopeNote: string;
+  metrics: AnalyticsMetric[];
+};
+
+export type AnalyticsMetricDefinition = {
+  metric_id: string;
+  title_zh: string;
+  domain: "pipeline" | "claims" | "geography" | "knowledge";
+  metric_type: AnalyticsMetricType;
+  grain: string;
+  unit: string;
+  numerator_definition: string;
+  denominator_definition: string | null;
+  time_basis: string;
+  dedup_rule: string;
+  missing_data_rule: string;
+  source_entities: string[];
+  allowed_filters: string[];
+  interpretation: string;
+  forbidden_interpretation: string;
+  version: string;
+  status: "available";
+};
+
+export type AnalyticsMetricDictionary = {
+  schema_version: 1;
+  dictionary_id: string;
+  version: string;
+  status: "design_baseline";
+  metric_types: AnalyticsMetricType[];
+  metrics: AnalyticsMetricDefinition[];
+  unavailable_metrics: Array<{
+    metric_id: string;
+    status: "not_available" | "future_metric";
+    reason: string;
+  }>;
+};
