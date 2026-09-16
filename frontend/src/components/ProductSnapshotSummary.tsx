@@ -17,6 +17,7 @@ import type { EvidencePartitions } from "../domain/evidence";
 import { healthFoodIdentityPresentation } from "../domain/healthFoodIdentity";
 import { reviewPresentation } from "../domain/presentation";
 import { formatDateTime, safeHttpUrl } from "../domain/product";
+import { pageRegionClueValues } from "../domain/productFacts";
 import { ProductThumbnail } from "./ProductThumbnail";
 import { StatusBadge } from "./StatusBadge";
 
@@ -52,12 +53,18 @@ export function ProductSnapshotSummary({
   const claimLabels = claimSignalLabels(workspace.claimSignals, 3);
   const productUrl = safeHttpUrl(workspace.snapshot.productUrl);
   const showHealthFoodStatus = workspace.healthFoodIdentity.state !== "no_indicator";
+  const pageRegionClues = pageRegionClueValues(
+    workspace.productFacts,
+    workspace.snapshot.productName,
+  );
 
   const originSummary = workspace.declaredOrigin.state === "single"
-    ? workspace.declaredOrigin.values.join("、")
+    ? `标称产地：${workspace.declaredOrigin.values.join("、")}`
     : workspace.declaredOrigin.state === "conflict"
       ? "标称产地信息存在冲突"
-      : "标称产地未明确";
+      : pageRegionClues.length > 0
+        ? `页面地区线索：${pageRegionClues.join("、")}`
+        : "标称产地未明确";
 
   const claimSummary = claims.code === "with_claims"
     ? `${claimLabels.labels.join("、")}${claimLabels.remaining ? ` 等 ${workspace.claimSignals.length} 类` : ""} · 共 ${claims.mentionCount} 处表达`
