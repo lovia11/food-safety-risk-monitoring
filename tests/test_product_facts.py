@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.product_facts import (
     DECLARED_ORIGIN_LABELS,
+    PAGE_REGION_CLUE,
     extract_product_facts,
     load_product_facts,
     normalize_fact_value,
@@ -173,6 +174,24 @@ class ProductFactExtractionTest(unittest.TestCase):
             )[0]["normalizedValue"],
             "安徽省",
         )
+
+    def test_m_province_and_city_parameters_are_region_clues_not_declared_origin(self):
+        self._dom(
+            "参数信息\n河南省\n省份\n焦作市\n城市\n张宝山\n品牌\n图文详情"
+        )
+        payload = self._extract()
+        clues = [item for item in payload["facts"] if item["factType"] == PAGE_REGION_CLUE]
+        self.assertEqual({item["normalizedValue"] for item in clues}, {"河南省", "焦作市"})
+        self.assertTrue(all(item["verificationState"] == "clue" for item in clues))
+        self.assertEqual(
+            present_declared_origin(payload["facts"]),
+            {"state": "none", "values": [], "sources": []},
+        )
+        loaded = load_product_facts(
+            self.root / "product_facts.json",
+            expected_snapshot_id=self.snapshot_id,
+        )
+        self.assertEqual({item["factType"] for item in loaded}, {PAGE_REGION_CLUE})
 
 
 if __name__ == "__main__":
