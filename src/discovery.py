@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -13,6 +14,11 @@ from src.taobao_live import LiveSearchCollector
 
 
 DEFAULT_CLUE_CONFIG = Path("config/effect_keywords.json")
+_TITLE_VARIANT_RE = re.compile(
+    r"(?i)(?:\d+(?:\.\d+)?\s*(?:kg|g|ml|l|克|千克|公斤|斤|毫升|升|袋|包|盒|瓶|罐|粒|片|支|个|枚|件|份))"
+    r"(?:\s*[x×*]\s*\d+)?"
+)
+_TITLE_NOISE_RE = re.compile(r"[\s\-_/|·•,，。；;:：!！?？（）()【】\[\]{}<>《》'\"“”‘’]+")
 
 
 def _safe_segment(value: str) -> str:
@@ -57,6 +63,58 @@ def _stable_exploration_key(target_id: str, candidate: dict[str, Any]) -> str:
     return hashlib.sha256(f"{target_id}\0{product_id}".encode("utf-8")).hexdigest()
 
 
+def _normalized_title(value: Any) -> str:
+    """Remove packaging differences before comparing candidate titles.
+
+    This is only a diversity heuristic.  It never merges Product identities and
+    never changes the evidence or regulatory interpretation of a product.
+    """
+
+    text = str(value or "").strip().lower()
+    text = _TITLE_VARIANT_RE.sub("", text)
+    text = re.sub(r"\d+", "", text)
+    return _TITLE_NOISE_RE.sub("", text)
+
+
+def _title_too_similar(
+    candidate: dict[str, Any],
+    selected: list[dict[str, Any]],
+    *,
+    threshold: float,
+) -> bool:
+    title = _normalized_title(candidate.get("product_name"))
+    if len(title) < 6:
+        return False
+    for item in selected:
+        other = _normalized_title(item.get("product_name"))
+        if len(other) < 6:
+            continue
+        if title == other or SequenceMatcher(None, title, other).ratio() >= threshold:
+            return True
+    return False
+
+
+def _passes_diversity(
+    candidate: dict[str, Any],
+    selected: list[dict[str, Any]],
+    *,
+    max_per_shop: int,
+    title_similarity_threshold: float,
+) -> bool:
+    shop = str(candidate.get("shop_name") or "").strip()
+    if shop:
+        same_shop = sum(
+            str(item.get("shop_name") or "").strip() == shop for item in selected
+        )
+        if same_shop >= max_per_shop:
+            return False
+    return not _title_too_similar(
+        candidate,
+        selected,
+        threshold=title_similarity_threshold,
+    )
+
+
 def select_detail_candidates(
     candidates: list[dict[str, Any]],
     *,
@@ -70,6 +128,11 @@ def select_detail_candidates(
     list is reordered only so the existing detail collector processes the
     selected candidates first.  Selection never means the product is risky; it
     only explains why limited detail-collection capacity was allocated to it.
+
+    A soft diversity guard prevents one shop or near-identical packaging variant
+    from consuming most of the detail budget.  If the available candidate pool
+    is too narrow, the guard is relaxed only at the final fill step so the task
+    still reaches its requested detail count.
     """
 
     if detail_limit < 1:
@@ -89,12 +152,17 @@ def select_detail_candidates(
 
     if total == 0:
         return prepared, {
-            "name": "balanced_exposure_clue_exploration_v1",
+            "name": "balanced_exposure_clue_exploration_v2",
             "detail_limit": detail_limit,
             "selected_count": 0,
             "exposure_target": 0,
             "clue_target": 0,
             "exploration_target": 0,
+            "diversity": {
+                "max_per_shop": 2,
+                "title_similarity_threshold": 0.9,
+                "relaxed_fill_count": 0,
+            },
         }
 
     exploration_target = 1 if total >= 3 else 0
@@ -104,12 +172,28 @@ def select_detail_candidates(
     clue_target = remaining_budget // 2
     exposure_target = remaining_budget - clue_target
 
+    max_per_shop = 2
+    title_similarity_threshold = 0.9
     selected: list[dict[str, Any]] = []
     selected_ids: set[str] = set()
+    relaxed_fill_count = 0
 
-    def add(item: dict[str, Any], group: str, reason: str) -> bool:
+    def add(
+        item: dict[str, Any],
+        group: str,
+        reason: str,
+        *,
+        enforce_diversity: bool = True,
+    ) -> bool:
         product_id = str(item.get("product_id") or "")
         if not product_id or product_id in selected_ids or len(selected) >= total:
+            return False
+        if enforce_diversity and not _passes_diversity(
+            item,
+            selected,
+            max_per_shop=max_per_shop,
+            title_similarity_threshold=title_similarity_threshold,
+        ):
             return False
         selected_ids.add(product_id)
         item["selected_for_detail"] = True
@@ -118,8 +202,17 @@ def select_detail_candidates(
         selected.append(item)
         return True
 
-    for item in prepared[:exposure_target]:
-        add(item, "exposure", "搜索结果靠前")
+    exposure_pool_size = min(
+        len(prepared),
+        max(exposure_target * 3, exposure_target),
+    )
+    exposure_added = 0
+    for item in prepared[:exposure_pool_size]:
+        if exposure_added >= exposure_target:
+            break
+        rank = item.get("rank") or item.get("discovery_order")
+        if add(item, "exposure", f"搜索结果靠前（第 {rank} 位）"):
+            exposure_added += 1
 
     clue_added = 0
     for item in prepared:
@@ -149,10 +242,25 @@ def select_detail_candidates(
         if add(item, "exploration", "探索样本"):
             exploration_added += 1
 
+    # Prefer a diverse fill before relaxing the guard.  This also compensates
+    # when one of the target groups did not have enough eligible candidates.
     for item in prepared:
         if len(selected) >= total:
             break
         add(item, "fill", "补足详情样本")
+
+    # A narrow Taobao result set may genuinely contain only one seller or many
+    # packaging variants.  Do not silently reduce the user's requested sample.
+    for item in prepared:
+        if len(selected) >= total:
+            break
+        if add(
+            item,
+            "fill",
+            "补足详情样本（候选较集中，已放宽多样性限制）",
+            enforce_diversity=False,
+        ):
+            relaxed_fill_count += 1
 
     for order, item in enumerate(selected, start=1):
         item["selection_order"] = order
@@ -169,7 +277,7 @@ def select_detail_candidates(
     ]
     ordered = selected + unselected
     strategy = {
-        "name": "balanced_exposure_clue_exploration_v1",
+        "name": "balanced_exposure_clue_exploration_v2",
         "detail_limit": detail_limit,
         "selected_count": len(selected),
         "exposure_target": exposure_target,
@@ -181,6 +289,11 @@ def select_detail_candidates(
             "visible_clue": sum(item["selection_group"] == "visible_clue" for item in selected),
             "exploration": sum(item["selection_group"] == "exploration" for item in selected),
             "fill": sum(item["selection_group"] == "fill" for item in selected),
+        },
+        "diversity": {
+            "max_per_shop": max_per_shop,
+            "title_similarity_threshold": title_similarity_threshold,
+            "relaxed_fill_count": relaxed_fill_count,
         },
     }
     return ordered, strategy
