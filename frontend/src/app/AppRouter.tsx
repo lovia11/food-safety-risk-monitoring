@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { AppShell } from "../layout/AppShell";
+import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
 import { InspectionArchivePage } from "../pages/inspections/InspectionArchivePage";
 import { InspectionWorkspacePage } from "../pages/inspections/InspectionWorkspacePage";
 import { NewInspectionPage } from "../pages/inspections/NewInspectionPage";
@@ -16,7 +17,8 @@ export type AppRoute =
       view: "current" | "history";
       listId?: string;
     }
-  | { section: "knowledge"; search: string };
+  | { section: "knowledge"; search: string }
+  | { section: "analytics"; search: string };
 
 function parseHash(hash: string): AppRoute {
   const [path, search = ""] = hash.replace(/^#\/?/, "").split("?", 2);
@@ -41,6 +43,9 @@ function parseHash(hash: string): AppRoute {
   }
   if (parts[0] === "knowledge") {
     return { section: "knowledge", search };
+  }
+  if (parts[0] === "analytics") {
+    return { section: "analytics", search };
   }
   return { section: "products", productId: decode(parts[1]) };
 }
@@ -72,8 +77,10 @@ export function AppRouter() {
         route.taskId === "new" ? <NewInspectionPage /> : route.taskId ? <InspectionWorkspacePage taskId={route.taskId} /> : <InspectionArchivePage />
       ) : route.section === "sampling" ? (
         <SamplingListPage view={route.view} listId={route.listId} />
-      ) : (
+      ) : route.section === "knowledge" ? (
         <KnowledgeBasePage search={route.search} />
+      ) : (
+        <AnalyticsPage search={route.search} />
       )}
     </AppShell>
   );
