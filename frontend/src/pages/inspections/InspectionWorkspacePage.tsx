@@ -3,7 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ProductPage, SnapshotSummary, TaskDetail } from "../../api/contracts";
 import { getProducts } from "../../api/products";
-import { getTask } from "../../api/tasks";
+import {
+  getTask,
+  getTaskCandidateSelections,
+  type CandidateSelection,
+} from "../../api/tasks";
 import { EmptyState } from "../../components/EmptyState";
 import { LoadingState } from "../../components/LoadingState";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -41,6 +45,7 @@ function FlowStrip({ task }: { task: TaskDetail }) {
 export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [products, setProducts] = useState<SnapshotSummary[]>([]);
+  const [candidateSelections, setCandidateSelections] = useState<Record<string, CandidateSelection>>({});
   const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
   const [filter, setFilter] = useState<QueueFilter>("all");
   const [pendingCompleted, setPendingCompleted] = useState(false);
@@ -60,10 +65,28 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
     return result.products;
   }, [taskId]);
 
+  const loadCandidateSelections = useCallback(async () => {
+    try {
+      const result = await getTaskCandidateSelections(taskId);
+      setCandidateSelections(result);
+      return result;
+    } catch {
+      // Old/quick tasks and tasks that have not finished discovery may not have
+      // selection metadata.  This context is explanatory only and must never
+      // block the review workspace.
+      setCandidateSelections({});
+      return {};
+    }
+  }, [taskId]);
+
   const load = useCallback(async () => {
     setError("");
     try {
-      const [, items] = await Promise.all([loadTask(), loadProducts()]);
+      const [, items] = await Promise.all([
+        loadTask(),
+        loadProducts(),
+        loadCandidateSelections(),
+      ]);
       const reviewable = items.filter((item) => item.readiness.reviewEligible);
       if (!initialized.current) {
         const pending = reviewable.find((item) => item.sampling.decisionStatus === "pending");
@@ -82,7 +105,7 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [loadProducts, loadTask]);
+  }, [loadCandidateSelections, loadProducts, loadTask]);
 
   useEffect(() => {
     initialized.current = false;
@@ -93,10 +116,14 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
   useEffect(() => {
     if (!task?.active) return;
     const interval = window.setInterval(() => {
-      void Promise.all([loadTask(), loadProducts()]).catch(() => undefined);
+      void Promise.all([
+        loadTask(),
+        loadProducts(),
+        loadCandidateSelections(),
+      ]).catch(() => undefined);
     }, 3000);
     return () => window.clearInterval(interval);
-  }, [loadProducts, loadTask, task?.active]);
+  }, [loadCandidateSelections, loadProducts, loadTask, task?.active]);
 
   const handleChanged = async (change?: ReviewChange) => {
     const previous = products;
@@ -117,6 +144,7 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
 
   const status = task ? taskStatusPresentation[task.businessStatus] : null;
   const selected = useMemo(() => products.find((item) => item.snapshotId === selectedSnapshotId), [products, selectedSnapshotId]);
+  const selectedCandidate = selected ? candidateSelections[selected.productId] : undefined;
 
   if (loading) return <div className="page-frame inspection-workspace-page"><LoadingState label="正在打开排查工作区" /></div>;
   if (error || !task) return <div className="page-frame"><EmptyState icon={AlertCircle} title="排查工作区加载失败" description={error || "任务不存在"} action={<button type="button" className="primary-button" onClick={() => { setLoading(true); void load(); }}><RefreshCw size={15} />重试</button>} /></div>;
@@ -134,9 +162,24 @@ export function InspectionWorkspacePage({ taskId }: { taskId: string }) {
       <ManualActionBanner task={task} onAcknowledged={async () => { await loadTask(); }} />
       <FlowStrip task={task} />
       <div className="inspection-split">
-        <ReviewQueue products={products} selectedSnapshotId={selectedSnapshotId} filter={filter} onFilterChange={(next) => { setFilter(next); setPendingCompleted(false); }} onSelect={(id) => { setSelectedSnapshotId(id); setPendingCompleted(false); }} pendingCompleted={pendingCompleted} />
+        <ReviewQueue
+          products={products}
+          candidateSelections={candidateSelections}
+          selectedSnapshotId={selectedSnapshotId}
+          filter={filter}
+          onFilterChange={(next) => { setFilter(next); setPendingCompleted(false); }}
+          onSelect={(id) => { setSelectedSnapshotId(id); setPendingCompleted(false); }}
+          pendingCompleted={pendingCompleted}
+        />
         <main className="workspace-detail-pane">
-          {selected ? <InspectionWorkspaceDetail key={selected.snapshotId} snapshotId={selected.snapshotId} onChanged={handleChanged} /> : <EmptyState icon={ClipboardCheck} title="尚无可研判商品" description="采集到商品快照后，将在左侧队列中显示。" />}
+          {selected ? (
+            <InspectionWorkspaceDetail
+              key={selected.snapshotId}
+              snapshotId={selected.snapshotId}
+              selection={selectedCandidate}
+              onChanged={handleChanged}
+            />
+          ) : <EmptyState icon={ClipboardCheck} title="尚无可研判商品" description="采集到商品快照后，将在左侧队列中显示。" />}
         </main>
       </div>
     </div>
