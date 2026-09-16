@@ -1,6 +1,13 @@
-import { CheckCircle2, FileText, ListChecks, MessageSquareText } from "lucide-react";
+import {
+  CheckCircle2,
+  FileText,
+  ListChecks,
+  MessageSquareText,
+  ScanSearch,
+} from "lucide-react";
 
 import type { SnapshotSummary } from "../../api/contracts";
+import type { CandidateSelection } from "../../api/tasks";
 import { StatusBadge } from "../../components/StatusBadge";
 import { claimPresentation, claimSignalLabels } from "../../domain/claims";
 import { queueFilters, queueMatches, type QueueFilter } from "../../domain/reviewQueue";
@@ -17,6 +24,7 @@ const queuePresentation = {
 
 type ReviewQueueProps = {
   products: SnapshotSummary[];
+  candidateSelections: Record<string, CandidateSelection>;
   selectedSnapshotId: string;
   filter: QueueFilter;
   onFilterChange: (filter: QueueFilter) => void;
@@ -26,6 +34,7 @@ type ReviewQueueProps = {
 
 export function ReviewQueue({
   products,
+  candidateSelections,
   selectedSnapshotId,
   filter,
   onFilterChange,
@@ -58,6 +67,7 @@ export function ReviewQueue({
         {filtered.length ? filtered.map((item) => {
           const state = queuePresentation[item.sampling.decisionStatus];
           const evidence = item.representativeEvidence;
+          const selection = candidateSelections[item.productId];
           const claims = claimPresentation(
             item.claimAnalysisStatus,
             item.claimSignalSummaries,
@@ -78,6 +88,11 @@ export function ReviewQueue({
                 <strong title={item.productName}>{item.productName || item.productId}</strong>
                 <StatusBadge tone={state.tone}>{state.label}</StatusBadge>
               </span>
+              {selection?.reasons.length ? (
+                <span className="queue-source-counts">
+                  <ScanSearch size={13} /> 入选：{selection.reasons.join("；")}
+                </span>
+              ) : null}
               {claims.code === "error" ? (
                 <StatusBadge tone="danger">{claimText}</StatusBadge>
               ) : (
