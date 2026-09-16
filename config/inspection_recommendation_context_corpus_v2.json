@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "corpus_id": "inspection-recommendation-context-v2",
+  "corpus_version": "2026.09-c1",
+  "status": "deterministic_validation_corpus",
+  "description": "用于验证既有Risk→显式Substance→Recommendation-ready Method→Product Context链路的六例离线语料。它不是全国代表性样本，不评价风险识别准确率，也不证明商品实际含有任何物质。",
+  "knowledge_versions": {
+    "inspection_reference": "2026.09-b8",
+    "risk_substance_reference": "2026.09-c3",
+    "effect_risk_bridge": "2026.09-d2"
+  },
+  "reachability_denominator_definition": "本文件cases数组中的6个预定义Product Context案例；仅actual applicability为applicable或conditional且方法进入suggested_methods的案例计入分子",
+  "cases": [
+    {
+      "case_id": "male-function-sildenafil-alcohol-applicable",
+      "input_risk": "male_function",
+      "target_type": "substance",
+      "substance_id": "substance-cas-139755-83-2",
+      "target_group_label": null,
+      "product_context": {
+        "product_category": "酒类",
+        "product_form": null,
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "applicable",
+      "expected_method_outcome": {
+        "method_id": "bjs-202405",
+        "bucket": "suggested_methods"
+      }
+    },
+    {
+      "case_id": "male-function-tadalafil-coffee-applicable",
+      "input_risk": "male_function",
+      "target_type": "substance",
+      "substance_id": "substance-cas-171596-29-5",
+      "target_group_label": null,
+      "product_context": {
+        "product_category": "咖啡",
+        "product_form": null,
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "applicable",
+      "expected_method_outcome": {
+        "method_id": "bjs-202405",
+        "bucket": "suggested_methods"
+      }
+    },
+    {
+      "case_id": "male-function-sildenafil-preserved-fruit-not-applicable",
+      "input_risk": "male_function",
+      "target_type": "substance",
+      "substance_id": "substance-cas-139755-83-2",
+      "target_group_label": null,
+      "product_context": {
+        "product_category": "蜜饯",
+        "product_form": null,
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "not_applicable",
+      "expected_method_outcome": {
+        "method_id": "bjs-202405",
+        "bucket": "other_known_methods"
+      }
+    },
+    {
+      "case_id": "male-function-tadalafil-insufficient-context",
+      "input_risk": "male_function",
+      "target_type": "substance",
+      "substance_id": "substance-cas-171596-29-5",
+      "target_group_label": null,
+      "product_context": {
+        "product_category": null,
+        "product_form": null,
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "insufficient_context",
+      "expected_method_outcome": {
+        "method_id": "bjs-202405",
+        "bucket": "methods_needing_context"
+      }
+    },
+    {
+      "case_id": "weight-loss-sibutramine-biscuit-regression",
+      "input_risk": "weight_loss",
+      "target_type": "substance",
+      "substance_id": "substance-cas-106650-56-0",
+      "target_group_label": null,
+      "product_context": {
+        "product_category": "饼干",
+        "product_form": "饼干",
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "applicable",
+      "expected_method_outcome": {
+        "method_id": "bjs-201701",
+        "bucket": "suggested_methods"
+      }
+    },
+    {
+      "case_id": "male-function-group-remains-unresolved",
+      "input_risk": "male_function",
+      "target_type": "substance_group",
+      "substance_id": null,
+      "target_group_label": "那非类、拉非类物质",
+      "product_context": {
+        "product_category": "酒类",
+        "product_form": null,
+        "confirmed_ingredient_contexts": []
+      },
+      "expected_applicability": "unresolved_group",
+      "expected_method_outcome": {
+        "method_id": null,
+        "bucket": "no_group_expansion"
+      }
+    }
+  ]
+}

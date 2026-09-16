@@ -3,7 +3,7 @@
 > Status: CANONICAL
 > Applies to: V2
 > V2-1 implementation baseline: `a5be2ed9ff07ddc9b347812f281d9d9e638fc6c6`
-> Last verified phase: V2-7B2
+> Last verified phase: V2-7C
 > Owner: Project
 
 Each phase is an independent gate. Completing one phase does not authorize the next. “Schema impact” describes expected design work, not a migration approved by this document.
@@ -200,7 +200,7 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ## V2-7 — Inspection knowledge coverage
 
-**Status:** IN PROGRESS — V2-7A, V2-7B1 and V2-7B2 complete; V2-7C is NEXT.
+**Status:** COMPLETE — V2-7A, V2-7B1, V2-7B2 and V2-7C accepted.
 
 - **Goal:** Expand governed inspection knowledge using **wide Reference Index + deep Verified Subset**.
 - **Why:** Broad discoverability is useful, but only deeply parsed, provenance-complete mappings can drive recommendations.
@@ -252,14 +252,18 @@ Each phase is an independent gate. Completing one phase does not authorize the n
 
 ### V2-7C — Deep Verified Subset & V2-7 Exit Gate
 
-**Status:** NEXT — requires a separate phase Gate; not implemented in V2-7B2.
+**Status:** COMPLETE — priority deep verification and the V2-7 Exit Gate passed offline.
 
 - **Goal:** Deep-verify priority analyte/scope/applicability paths and close V2-7 with context-corpus reachability evidence.
 - **Dependencies:** Versioned V2-7B index, depth-aware resolver, RegulatoryDocument/lifecycle handling, and accepted priority set.
 - **In Scope:** Full-text analyte parsing, positive/conditional/negative applicability, explicit unknowns, method/document supersession, context-defined Recommendation reachability and complete regression.
 - **Out of Scope:** Risk probability, laboratory claims, automatic group expansion, new Claim/Risk causality, UI navigation, or Analytics.
+- **Result:** BJS 202405 alone is deepened from official full text to 95 explicit analyte relations and seven method-level product scopes. The six-case deterministic Product Context corpus passes all expected applicable, not-applicable, insufficient-context, regression and unresolved-group outcomes; context-corpus Recommendation reachability is 3/6 under its fixed denominator. The index is 7/7 reference-complete and 6/7 deep. Revoked GB/T 5009.170-2003 remains `reference_only`; no Risk/Claim/group relation or Recommendation algorithm changes.
+- **Validation:** Focused Inspection/Reference/Recommendation regression 195/195; Python full suite discovered 555 / passed 554 / skipped 1; frontend workflow 38/38; typecheck and production build passed offline.
 
 ## V2-8 — Knowledge Base UI
+
+**Status:** NEXT — requires a separate phase Gate; not implemented in V2-7C.
 
 - **Goal:** Make governed runtime knowledge inspectable without creating a second static knowledge copy.
 - **Why:** Analysts need to understand sources, coverage, versions, and gaps behind results.

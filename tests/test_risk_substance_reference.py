@@ -550,9 +550,9 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
             inspection_counts,
             {
                 "methods": 7,
-                "substances": 117,
-                "method_substances": 132,
-                "applicabilities": 37,
+                "substances": 201,
+                "method_substances": 227,
+                "applicabilities": 44,
                 "contexts": 1,
             },
         )

@@ -41,10 +41,10 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(
             inventory["knowledge_depth_counts"],
             {
-                "reference_only": 2,
+                "reference_only": 1,
                 "analyte_verified": 0,
                 "applicability_verified": 0,
-                "recommendation_ready": 5,
+                "recommendation_ready": 6,
             },
         )
         self.assertEqual(
@@ -57,9 +57,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         )
         self.assertEqual(inventory["method_status_counts"]["current"], 6)
         self.assertEqual(inventory["method_status_counts"]["revoked"], 1)
-        self.assertEqual(inventory["substances"], 117)
-        self.assertEqual(inventory["method_substance_relations"], 132)
-        self.assertEqual(inventory["method_applicabilities"], 37)
+        self.assertEqual(inventory["substances"], 201)
+        self.assertEqual(inventory["method_substance_relations"], 227)
+        self.assertEqual(inventory["method_applicabilities"], 44)
         self.assertEqual(inventory["substance_regulatory_contexts"], 1)
         self.assertEqual(inventory["regulatory_documents"], 7)
         self.assertEqual(inventory["method_regulatory_document_links"], 7)
@@ -84,7 +84,7 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["numerator"],
-            5,
+            6,
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["denominator"],
@@ -245,16 +245,23 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(usage["risk_category_ids"], ["male_function", "weight_loss"])
         self.assertEqual(usage["risk_mapping_rows"], 5)
         self.assertEqual(usage["explicit_substances"], 3)
-        self.assertEqual(usage["method_ids"], ["bjs-201701", "bjs-201710"])
-        self.assertEqual(usage["applicability_records"], 12)
+        self.assertEqual(
+            usage["method_ids"],
+            ["bjs-201701", "bjs-201710", "bjs-202405"],
+        )
+        self.assertEqual(usage["applicability_records"], 19)
 
-    def test_promoted_reference_only_methods_do_not_change_recommendation_paths(self):
+    def test_bjs_202405_enters_deep_subset_while_old_gbt_stays_reference_only(self):
         report = load_and_build_audit()
         methods = {item["method_id"]: item for item in report["method_matrix"]}
 
-        self.assertEqual(methods["bjs-202405"]["knowledge_depth"], "reference_only")
+        self.assertEqual(
+            methods["bjs-202405"]["knowledge_depth"], "recommendation_ready"
+        )
         self.assertEqual(methods["bjs-202405"]["method_status"], "current")
-        self.assertFalse(methods["bjs-202405"]["recommendation_ready"])
+        self.assertTrue(methods["bjs-202405"]["recommendation_ready"])
+        self.assertEqual(methods["bjs-202405"]["analyte_relation_count"], 95)
+        self.assertEqual(methods["bjs-202405"]["applicability_count"], 7)
         self.assertEqual(
             methods["gbt-5009-170-2003"]["knowledge_depth"],
             "reference_only",
@@ -263,7 +270,44 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertFalse(methods["gbt-5009-170-2003"]["recommendation_ready"])
         self.assertEqual(
             report["inventory"]["runtime_recommendation_usage"]["method_ids"],
-            ["bjs-201701", "bjs-201710"],
+            ["bjs-201701", "bjs-201710", "bjs-202405"],
+        )
+
+    def test_context_corpus_is_reproducible_and_denominator_defined(self):
+        report = load_and_build_audit()
+        corpus = report["context_corpus"]
+
+        self.assertTrue(corpus["all_expectations_match"])
+        self.assertEqual(len(corpus["case_results"]), 6)
+        self.assertEqual(
+            report["metrics"]["context_corpus_recommendation_reachability"],
+            {
+                "numerator": 3,
+                "denominator": 6,
+                "ratio": 0.5,
+                "denominator_definition": (
+                    "本文件cases数组中的6个预定义Product Context案例；仅actual "
+                    "applicability为applicable或conditional且方法进入suggested_methods"
+                    "的案例计入分子"
+                ),
+            },
+        )
+        by_id = {item["case_id"]: item for item in corpus["case_results"]}
+        self.assertEqual(
+            by_id["male-function-sildenafil-alcohol-applicable"][
+                "actual_method_id"
+            ],
+            "bjs-202405",
+        )
+        self.assertEqual(
+            by_id["male-function-tadalafil-insufficient-context"][
+                "actual_applicability"
+            ],
+            "insufficient_context",
+        )
+        self.assertEqual(
+            by_id["male-function-group-remains-unresolved"]["actual_bucket"],
+            "no_group_expansion",
         )
 
 

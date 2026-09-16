@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping
@@ -21,18 +22,24 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.effect_risk_bridge import validate_effect_risk_bridge_config
+from src.data_store import DataStore
+from src.inspection_applicability import ProductInspectionContext
 from src.inspection_method_candidates import validate_inspection_candidate_manifest
+from src.inspection_recommendation import InspectionRecommendationBuilder
 from src.inspection_reference import validate_inspection_config
 from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
 
 
-AUDIT_CONTRACT_VERSION = "v2.7b2-1"
+AUDIT_CONTRACT_VERSION = "v2.7c-1"
 DEFAULT_INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 DEFAULT_RISK_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
 DEFAULT_CANDIDATE_CONFIG = (
     PROJECT_ROOT / "config" / "inspection_method_candidates_v2.json"
+)
+DEFAULT_CONTEXT_CORPUS = (
+    PROJECT_ROOT / "config" / "inspection_recommendation_context_corpus_v2.json"
 )
 
 _METHOD_STATUSES = ("current", "superseded", "revoked", "verification_pending")
@@ -41,6 +48,233 @@ _METHOD_TYPES = ("supplementary_bjs", "rapid_kj", "national_standard_gbt")
 
 class InspectionKnowledgeAuditError(ValueError):
     """Governed inputs cannot produce a safe coverage report."""
+
+
+_CORPUS_TRIGGER_BY_RISK = {
+    "male_function": ("男性相关", "壮阳"),
+    "weight_loss": ("减脂", "减肥"),
+}
+
+
+def _validate_context_corpus(
+    payload: Any,
+    *,
+    inspection_version: str,
+    risk_version: str,
+    bridge_version: str,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise InspectionKnowledgeAuditError(
+            "Recommendation Context Corpus must be a schema_version 1 object"
+        )
+    versions = payload.get("knowledge_versions")
+    expected_versions = {
+        "inspection_reference": inspection_version,
+        "risk_substance_reference": risk_version,
+        "effect_risk_bridge": bridge_version,
+    }
+    if versions != expected_versions:
+        raise InspectionKnowledgeAuditError(
+            "Recommendation Context Corpus knowledge_versions do not match governed inputs"
+        )
+    cases = payload.get("cases")
+    if not isinstance(cases, list) or not cases:
+        raise InspectionKnowledgeAuditError(
+            "Recommendation Context Corpus must contain cases"
+        )
+    case_ids: set[str] = set()
+    for case in cases:
+        if not isinstance(case, dict):
+            raise InspectionKnowledgeAuditError("Context Corpus case must be an object")
+        case_id = case.get("case_id")
+        if not isinstance(case_id, str) or not case_id or case_id in case_ids:
+            raise InspectionKnowledgeAuditError(
+                "Context Corpus case_id must be unique and non-empty"
+            )
+        case_ids.add(case_id)
+        risk_category = case.get("input_risk")
+        if risk_category not in _CORPUS_TRIGGER_BY_RISK:
+            raise InspectionKnowledgeAuditError(
+                f"Context Corpus case {case_id} has unsupported input_risk"
+            )
+        target_type = case.get("target_type")
+        if target_type not in {"substance", "substance_group"}:
+            raise InspectionKnowledgeAuditError(
+                f"Context Corpus case {case_id} has unsupported target_type"
+            )
+        context = case.get("product_context")
+        if not isinstance(context, dict):
+            raise InspectionKnowledgeAuditError(
+                f"Context Corpus case {case_id} has no product_context"
+            )
+        outcome = case.get("expected_method_outcome")
+        if not isinstance(outcome, dict):
+            raise InspectionKnowledgeAuditError(
+                f"Context Corpus case {case_id} has no expected_method_outcome"
+            )
+    return payload
+
+
+def _corpus_analysis(case_id: str, risk_category: str) -> dict[str, Any]:
+    effect, keyword = _CORPUS_TRIGGER_BY_RISK[risk_category]
+    return {
+        "product_id": case_id,
+        "product_name": f"Context Corpus {case_id}",
+        "product_url": "",
+        "detected_effects": [effect],
+        "evidence_details": [
+            {
+                "effect": effect,
+                "text": f"离线治理语料：{keyword}",
+                "matched_keywords": [keyword],
+                "source_type": "dom_product",
+                "source_label": "Context Corpus seller-managed evidence",
+                "content_origin": "seller_managed",
+                "source_path": "context-corpus.json",
+                "line_number": 1,
+            }
+        ],
+    }
+
+
+def evaluate_context_corpus(
+    store: DataStore,
+    corpus: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Run the committed corpus through the existing resolver/evaluator chain."""
+
+    builder = InspectionRecommendationBuilder(store)
+    results: list[dict[str, Any]] = []
+    for case in corpus["cases"]:
+        case_id = str(case["case_id"])
+        context_payload = case["product_context"]
+        context = ProductInspectionContext(
+            product_category=context_payload.get("product_category"),
+            product_form=context_payload.get("product_form"),
+            confirmed_ingredient_contexts=list(
+                context_payload.get("confirmed_ingredient_contexts", [])
+            ),
+            context_evidence=[
+                {
+                    "source_type": "deterministic_validation_corpus",
+                    "source_path": "config/inspection_recommendation_context_corpus_v2.json",
+                    "case_id": case_id,
+                }
+            ],
+        )
+        result = builder.build(
+            _corpus_analysis(case_id, str(case["input_risk"])),
+            context,
+        ).to_dict()
+        finding = next(
+            item
+            for item in result["risk_findings"]
+            if item["risk_category"] == case["input_risk"]
+        )
+        if case["target_type"] == "substance_group":
+            group = next(
+                item
+                for item in finding["group_targets"]
+                if item["target_group_label"] == case["target_group_label"]
+            )
+            actual_applicability = "unresolved_group"
+            actual_bucket = "no_group_expansion"
+            actual_method_id = None
+            trace = {
+                "group_resolution_status": group["resolution_status"],
+                "mapping_ids": [
+                    item["mapping_id"] for item in group["mapping_evidence"]
+                ],
+            }
+        else:
+            follow_up = next(
+                item
+                for item in finding["substance_follow_ups"]
+                if item["substance_id"] == case["substance_id"]
+            )
+            expected_method_id = case["expected_method_outcome"]["method_id"]
+            located: tuple[str, Mapping[str, Any]] | None = None
+            for bucket in (
+                "suggested_methods",
+                "methods_needing_context",
+                "other_known_methods",
+            ):
+                for method in follow_up[bucket]:
+                    if method["method_id"] == expected_method_id:
+                        located = (bucket, method)
+                        break
+                if located is not None:
+                    break
+            if located is None:
+                actual_bucket = "absent"
+                actual_method_id = None
+                actual_applicability = "unavailable"
+                trace = {"follow_up_status": follow_up["follow_up_status"]}
+            else:
+                actual_bucket, method = located
+                actual_method_id = method["method_id"]
+                actual_applicability = method["applicability_status"]
+                trace = {
+                    "follow_up_status": follow_up["follow_up_status"],
+                    "matched_applicability_ids": method[
+                        "matched_applicability_ids"
+                    ],
+                    "conditional_applicability_ids": method[
+                        "conditional_applicability_ids"
+                    ],
+                    "blocking_applicability_ids": method[
+                        "blocking_applicability_ids"
+                    ],
+                    "unresolved_applicability_ids": method[
+                        "unresolved_applicability_ids"
+                    ],
+                }
+        expected = case["expected_method_outcome"]
+        matches = (
+            actual_applicability == case["expected_applicability"]
+            and actual_bucket == expected["bucket"]
+            and actual_method_id == expected["method_id"]
+        )
+        results.append(
+            {
+                "case_id": case_id,
+                "input_risk": case["input_risk"],
+                "target_type": case["target_type"],
+                "substance_id": case["substance_id"],
+                "target_group_label": case["target_group_label"],
+                "product_context": context.to_dict(),
+                "expected_applicability": case["expected_applicability"],
+                "actual_applicability": actual_applicability,
+                "expected_method_id": expected["method_id"],
+                "actual_method_id": actual_method_id,
+                "expected_bucket": expected["bucket"],
+                "actual_bucket": actual_bucket,
+                "matches_expectation": matches,
+                "trace": trace,
+            }
+        )
+
+    numerator = sum(
+        item["actual_applicability"] in {"applicable", "conditional"}
+        and item["actual_bucket"] == "suggested_methods"
+        for item in results
+    )
+    denominator = len(results)
+    return {
+        "corpus_id": corpus["corpus_id"],
+        "corpus_version": corpus["corpus_version"],
+        "knowledge_versions": corpus["knowledge_versions"],
+        "case_results": results,
+        "all_expectations_match": all(
+            item["matches_expectation"] for item in results
+        ),
+        "reachability": {
+            **_ratio(numerator, denominator),
+            "denominator_definition": corpus[
+                "reachability_denominator_definition"
+            ],
+        },
+    }
 
 
 def _official_source_reference(value: Any) -> bool:
@@ -322,10 +556,12 @@ def build_audit(
                 f"Promoted candidate {candidate['candidate_id']} method_no does not match "
                 f"Method {promoted_method_id}"
             )
-        if candidate["promoted_dataset_version"] != inspection["dataset_version"]:
+        # This field identifies the immutable release in which promotion first
+        # happened.  A later Inspection Reference release may deepen that same
+        # Method without rewriting the historical promotion trace.
+        if not candidate["promoted_dataset_version"]:
             raise InspectionKnowledgeAuditError(
-                f"Promoted candidate {candidate['candidate_id']} dataset version does not "
-                "match the Inspection Reference release"
+                f"Promoted candidate {candidate['candidate_id']} has no promotion release"
             )
 
     relation_paths_with_applicability = 0
@@ -708,6 +944,7 @@ def load_and_build_audit(
     risk_path: Path = DEFAULT_RISK_CONFIG,
     bridge_path: Path = DEFAULT_BRIDGE_CONFIG,
     candidate_path: Path = DEFAULT_CANDIDATE_CONFIG,
+    context_corpus_path: Path = DEFAULT_CONTEXT_CORPUS,
 ) -> dict[str, Any]:
     """Validate governed files and build an offline audit."""
 
@@ -715,6 +952,7 @@ def load_and_build_audit(
     risk_raw = read_json(risk_path)
     bridge_raw = read_json(bridge_path)
     candidate_raw = read_json(candidate_path)
+    context_corpus_raw = read_json(context_corpus_path)
     inspection = validate_inspection_config(inspection_raw)
     risk = validate_risk_substance_config(risk_raw)
     bridge = validate_effect_risk_bridge_config(
@@ -722,7 +960,35 @@ def load_and_build_audit(
         risk_reference_config=risk_raw,
     )
     candidates = validate_inspection_candidate_manifest(candidate_raw)
-    return build_audit(inspection, risk, bridge, candidates)
+    context_corpus = _validate_context_corpus(
+        context_corpus_raw,
+        inspection_version=inspection["dataset_version"],
+        risk_version=risk["dataset_version"],
+        bridge_version=bridge["bridge_version"],
+    )
+    report = build_audit(inspection, risk, bridge, candidates)
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        store = DataStore(root / "data" / "app.db", root / "output")
+        store.initialize()
+        store.import_inspection_config(inspection_path)
+        store.import_risk_substance_config(risk_path)
+        corpus_report = evaluate_context_corpus(store, context_corpus)
+    if not corpus_report["all_expectations_match"]:
+        failed = [
+            item["case_id"]
+            for item in corpus_report["case_results"]
+            if not item["matches_expectation"]
+        ]
+        raise InspectionKnowledgeAuditError(
+            "Recommendation Context Corpus expectations failed: "
+            + ", ".join(failed)
+        )
+    report["context_corpus"] = corpus_report
+    report["metrics"]["context_corpus_recommendation_reachability"] = (
+        corpus_report["reachability"]
+    )
+    return report
 
 
 def render_markdown(report: Mapping[str, Any]) -> str:
@@ -785,6 +1051,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--risk", type=Path, default=DEFAULT_RISK_CONFIG)
     parser.add_argument("--bridge", type=Path, default=DEFAULT_BRIDGE_CONFIG)
     parser.add_argument("--candidates", type=Path, default=DEFAULT_CANDIDATE_CONFIG)
+    parser.add_argument(
+        "--context-corpus", type=Path, default=DEFAULT_CONTEXT_CORPUS
+    )
     parser.add_argument("--format", choices=("json", "markdown"), default="json")
     args = parser.parse_args(argv)
 
@@ -793,6 +1062,7 @@ def main(argv: list[str] | None = None) -> int:
         args.risk,
         args.bridge,
         args.candidates,
+        args.context_corpus,
     )
     if args.format == "markdown":
         sys.stdout.write(render_markdown(report))

@@ -25,6 +25,7 @@
 - V2-6 ClaimConsistency runtime and primary detail/workspace UX with exact governed Registry normalization, non-adjudicative topic comparison, `claim_consistency.json` authority, schema 12 projection retained by current schema 13, explicit gaps, and separate page/official trace
 - V2-7A deterministic Inspection Knowledge inventory and denominator-defined coverage contract
 - V2-7B1/B2 schema 13 Inspection Reference boundary with independent depth/lifecycle, seven normalized RegulatoryDocuments, zero-row governed group membership, two promoted non-runtime trace records, and a Recommendation-ready resolver gate
+- V2-7C official-full-text deep verification of BJS 202405 plus a deterministic six-case Product Context corpus and completed V2-7 Exit Gate
 
 ## Current Coverage
 
@@ -36,8 +37,9 @@
 - V2-6A HealthFunction design baseline: 2 frameworks / 24 of 24 non-nutrient functions / 40 official transition aliases
 - Claim→HealthFunction design mappings: 4 `topic_related` / 1 explicit no-mapping Claim gap
 - 3 Evidence-to-risk Bridge mappings; 5 Risk-to-substance and 3 Risk-to-group mappings
-- 7 indexed / 5 Recommendation-ready Inspection methods, 0 pending / 2 promoted non-runtime candidate traces, 7 RegulatoryDocuments, 117 substances, 132 method-substance links, 37 applicability records
+- 7 indexed / 6 Recommendation-ready Inspection methods, 0 pending / 2 promoted non-runtime candidate traces, 7 RegulatoryDocuments, 201 substances, 227 method-substance links, 44 applicability records
 - Static Recommendation reachability: 5/5 explicit mappings structurally ready; 3/5 end-to-end through the current bridge; 0/3 group mappings resolved
+- Deterministic Product Context corpus: 6/6 expected outcomes match; 3/6 cases reach `suggested_methods` under the fixture-scoped denominator
 
 ## Current Validation
 
@@ -63,6 +65,8 @@ V2-7B1 validation passed fully offline: focused Inspection/Reference/Risk/Recomm
 
 V2-7B2 Bounded Official Method Verification & Promotion is complete. First-party records promote exactly BJS 202405 (current) and GB/T 5009.170-2003 (revoked predecessor) as `reference_only`, close the predecessor lifecycle edge, and explicitly correct the former BJS `weight_loss`/sibutramine planning association. Coverage is now 7/7 reference-complete and 5/7 deep. No analyte/applicability/Risk/group/bridge facts or Recommendation path changed. Targeted offline regression passed 223/223; no full suite, frontend suite or live collection was required by this bounded Gate.
 
+V2-7C Deep Verified Subset & Exit Gate is complete. Only BJS 202405 was deepened from the official SAMR full text, adding 95 explicit analyte relations and seven method-level source scopes while reusing 11 existing CAS identities and adding 84. The six-case context corpus passes every expectation; 3/6 cases enter `suggested_methods` under its fixed denominator. The existing Recommendation algorithm naturally consumes the new governed facts, while Risk/Claim/group mappings, schema/API/frontend, Phase3, D2–D6, Review/Sampling and frozen history remain unchanged. Focused regression passed 195/195; Python full regression discovered 555 / passed 554 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed offline.
+
 ## Known Limitations
 
 Additional ProductFact types, human fact editing, ClaimExpressionAttention governance, Analytics, Knowledge Base UI, and further separately governed Operational Search expansion are Future V2 work. V2 Claim primary UX and the Claim consistency runtime/presentation are implemented, while Phase3 still emits the unchanged legacy Effect compatibility contract; UGC may still influence that legacy path. Official registry lookup remains a low-frequency, cached, best-effort integration because the public site exposes no API stability or availability contract. The system does not make legality, efficacy, laboratory-detection, enforcement, geographic-verification, or risk-probability conclusions.
@@ -85,10 +89,12 @@ V2-7B1 — COMPLETE. The index/deep-subset boundary is enforced; no knowledge ex
 
 V2-7B2 — COMPLETE. Exactly two first-party-verified identities are promoted at `reference_only`; no deep/runtime expansion occurred.
 
-V2-7 — IN PROGRESS. V2-7C deep verification and the Exit Gate remain outstanding.
+V2-7C — COMPLETE. BJS 202405 is deep-verified, the deterministic context corpus is governed, and the Exit Gate passes.
+
+V2-7 — COMPLETE. The bounded Wide Reference Index/Deep Verified Subset contract is implemented and validated.
 
 ## Next Gate
 
-V2-7C Deep Verified Subset and the V2-7 Exit Gate are NEXT and require a separate phase Gate. V2-8 is not started.
+V2-8 Knowledge Base UI is NEXT and requires a separate phase Gate. It is not started.
 
 See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).

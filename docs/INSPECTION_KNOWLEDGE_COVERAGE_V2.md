@@ -1,15 +1,15 @@
 # Inspection Knowledge Coverage V2
 
-> Status: CANONICAL DESIGN BASELINE
+> Status: CANONICAL — V2-7 COMPLETE
 > Applies to: V2-7
-> Baseline datasets: `inspection-reference@2026.09-b7`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`
+> Baseline datasets: `inspection-reference@2026.09-b8`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`, `inspection-recommendation-context-v2@2026.09-c1`
 > Owner: Project
 
 ## 1. Purpose
 
 This contract separates the size of the project's official-method index from the depth required to drive an Inspection Recommendation. It defines auditable denominators and promotion gates without claiming coverage of every official Chinese inspection method.
 
-V2-7A changed no runtime output. V2-7B1 implemented the additive schema/validation/resolver boundary. V2-7B2 adds exactly two first-party-verified Method identities at `reference_only` while preserving API/frontend behavior, Recommendation output, Risk mapping, Claim mapping, group membership and every existing analyte/applicability fact. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
+V2-7A defined the audit contract. V2-7B1 implemented the schema/validation/resolver boundary. V2-7B2 added exactly two first-party-verified Method identities at `reference_only`. V2-7C deep-verifies only BJS 202405 from its official full text and adds a deterministic six-case context corpus. Risk mapping, Claim mapping, group membership, API/frontend behavior and the Recommendation algorithm remain unchanged. The committed baseline is calculated offline by `scripts/audit_inspection_knowledge.py`.
 
 ## 2. Two knowledge sets
 
@@ -163,30 +163,32 @@ Every metric is version-scoped and keeps its denominator. Percentages describe o
 | Recommendation Structural Reachability | Explicit current Risk→Substance mappings having a current deep method and applicability facts | Current explicit governed Risk→Substance mappings |
 | Recommendation End-to-End Reachability | Structurally reachable explicit mappings whose Risk category also has a current Evidence→Risk bridge | Current explicit governed Risk→Substance mappings |
 | Risk-category End-to-End Reachability | Governed Risk categories with at least one end-to-end explicit path | Risk categories in the current Risk mapping dataset |
+| Context-corpus Recommendation Reachability | Committed cases whose actual applicability is `applicable`/`conditional` and whose method is in `suggested_methods` | All six committed cases in the versioned context corpus |
 
 Context-applicable coverage is evaluated only over a defined Product/Snapshot context corpus. It must not be reported from static knowledge alone.
 
-## 11. Current V2-7B2 baseline
+## 11. Current V2-7C baseline
 
-For `inspection-reference@2026.09-b7`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, and `phase3-effect-risk-bridge@2026.09-d2`:
+For `inspection-reference@2026.09-b8`, `inspection-method-candidates-v2@2026.09-b2`, `risk-substance-reference@2026.09-c3`, `phase3-effect-risk-bridge@2026.09-d2`, and `inspection-recommendation-context-v2@2026.09-c1`:
 
 | Metric | Result |
 |---|---:|
 | Method Reference Coverage | 7 / 7 (100%) |
-| Method Deep-Verification Coverage | 5 / 7 (71.4%) |
-| Substance→Method Coverage | 117 / 117 (100%) |
-| Applicability Coverage | 132 / 132 (100%) |
+| Method Deep-Verification Coverage | 6 / 7 (85.7%) |
+| Substance→Method Coverage | 201 / 201 (100%) |
+| Applicability Coverage | 227 / 227 (100%) |
 | Risk→Substance Coverage | 5 / 8 (62.5%) |
 | Group Resolution Coverage | 0 / 3 (0%) |
 | Recommendation Structural Reachability | 5 / 5 explicit mappings (100%) |
 | Recommendation End-to-End Reachability | 3 / 5 explicit mappings (60%) |
 | Risk-category End-to-End Reachability | 2 / 3 categories (66.7%) |
+| Context-corpus Recommendation Reachability | 3 / 6 cases (50%) |
 
-The reference percentage describes a deliberately bounded seven-method project index, not national coverage. Five methods form the Deep Verified Subset; BJS 202405 and revoked GB/T 5009.170-2003 intentionally remain `reference_only`. The operational bottlenecks remain group resolution and the independently governed Evidence→Risk boundary, not the raw number of identities or analyte links.
+The reference percentage describes a deliberately bounded seven-method project index, not national coverage. Six current methods form the Deep Verified Subset; only revoked GB/T 5009.170-2003 remains `reference_only`. The operational bottlenecks remain group resolution and the independently governed Evidence→Risk boundary, not the raw number of identities or analyte links. The 3/6 context result describes only the fixed corpus and is not a population estimate.
 
 ## 12. Versioning and reproducibility
 
-- Each report records the audit contract and all three input versions.
+- Each report records the audit contract and every input/corpus version.
 - Changing a denominator requires a versioned dataset or contract change.
 - Candidate-manifest records are always excluded from indexed-method denominators. After promotion, their formal Method records participate exactly once through the versioned Inspection Reference Index at their verified depth.
 - Historical derived output retains its recorded knowledge version; no audit rewrites Evidence, Recommendation or frozen Sampling history.
@@ -194,4 +196,4 @@ The reference percentage describes a deliberately bounded seven-method project i
 
 ## 13. Non-goals
 
-This contract does not add group members, analyte/applicability facts, Risk mappings, Claim→Risk mappings, Product Context inference, method ranking, a Knowledge Base UI, Analytics, legality judgments, laboratory findings, or risk probabilities. V2-7B2 adds two bounded reference identities but does not alter D2–D6 or existing Recommendation output.
+V2-7C adds only the 95 official BJS 202405 analyte facts, seven source-backed method scopes and the six-case validation corpus. It does not add group members, Risk mappings, Claim→Risk mappings, Product Context inference, method ranking, a Knowledge Base UI, Analytics, legality judgments, laboratory findings or risk probabilities. It does not alter Phase3, D2–D6 or the Recommendation algorithm.

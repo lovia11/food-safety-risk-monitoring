@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified phase: V2-7B2
+> Last verified phase: V2-7C
 > Owner: Project
 
 Testing is proportional to changed risk. A phase must pass targeted checks before broad regression. Real-world validation supplements deterministic tests; it never replaces them.
@@ -279,6 +279,21 @@ V2-7B1 exit validation passed offline: focused Inspection/Reference/Risk/Recomme
 - schema 13, API, frontend, Phase3, D2–D6, Review/Sampling and frozen history remain unchanged.
 
 V2-7B2 targeted validation passed offline: Inspection/Reference/candidate/audit/knowledge/applicability/Recommendation/runtime/signal-trace/Risk/bridge regression 223/223. Per the bounded phase Gate, no full Python or frontend suite and no live collection were run.
+
+### 8.5 Deep Verified Subset and V2-7 Exit Gate — V2-7C
+
+- exactly BJS 202405 is deepened; no additional Method identity, Risk mapping, Claim mapping, group mapping or group member is added;
+- the official full text supports 95 explicit Appendix A compound relations and seven method-level product-category scopes, with source labels/CAS and qualitative/quantitative intent retained;
+- 11 existing Substance identities are reused by CAS and 84 new identities are added without reverse-inference into Risk or SubstanceGroup membership;
+- BJS 202405 passes `recommendation_ready`; revoked GB/T 5009.170-2003 remains `reference_only` and cannot enter Recommendation;
+- the deterministic audit reports 7/7 Method Reference Coverage, 6/7 Method Deep-Verification Coverage, 201/201 Substance→Method Coverage, 227/227 Applicability Coverage, 0/3 Group Resolution Coverage and 3/6 context-corpus Recommendation reachability;
+- the six context cases cover BJS 202405 applicable, not-applicable and insufficient-context outcomes, existing BJS 201701 regression behavior, and a group target that remains unresolved without expansion;
+- candidate b7 promotion metadata remains an immutable historical trace while b8 is the current Inspection Reference authority;
+- production validators, SQLite rebuild projection and the existing Recommendation builder consume the same governed facts;
+- schema 13, API, frontend, Phase3, D2–D6, Risk/Claim/bridge semantics, Review/Sampling and frozen historical artifacts remain unchanged;
+- focused and full offline regression pass, and no Taobao or other live collection is performed.
+
+V2-7C exit validation passed offline: focused Inspection/Reference/candidate/audit/knowledge/applicability/Recommendation/runtime/Risk/bridge regression 195/195; Python full regression discovered 555 / passed 554 / skipped 1; frontend workflow passed 38/38; typecheck and production build passed. V2-7 is COMPLETE; V2-8 remains a separate NEXT gate.
 
 ## 9. Pipeline and Review gate
 

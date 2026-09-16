@@ -37,9 +37,9 @@ NAFEI_LAFEI_SOURCE = (
 )
 INSPECTION_COUNTS = {
     "inspection_methods": 7,
-    "inspection_substances": 117,
-    "inspection_method_substances": 132,
-    "inspection_method_applicabilities": 37,
+    "inspection_substances": 201,
+    "inspection_method_substances": 227,
+    "inspection_method_applicabilities": 44,
     "substance_regulatory_contexts": 1,
 }
 EXPECTED_SUBSTANCE_IDENTITIES = {
