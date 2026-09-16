@@ -1,29 +1,23 @@
 import {
   AlertCircle,
-  BarChart3,
-  Info,
+  ClipboardCheck,
+  FlaskConical,
+  MapPinned,
+  PackageSearch,
   RefreshCw,
+  SearchCheck,
+  SlidersHorizontal,
 } from "lucide-react";
-import {
-  type FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import type {
   AnalyticsMetric,
   AnalyticsMetricBucket,
-  AnalyticsMetricDefinition,
-  AnalyticsMetricDictionary,
   AnalyticsResponse,
 } from "../../api/contracts";
 import {
   getAnalyticsClaims,
   getAnalyticsGeography,
-  getAnalyticsKnowledge,
-  getAnalyticsMetricDictionary,
   getAnalyticsPipeline,
 } from "../../api/analytics";
 import { EmptyState } from "../../components/EmptyState";
@@ -32,349 +26,442 @@ import { PageHeader } from "../../layout/PageHeader";
 
 import "./AnalyticsPage.css";
 
-type AnalyticsSection = "pipeline" | "claims" | "geography" | "knowledge";
-
-type AnalyticsRouteState = {
-  section: AnalyticsSection;
-  from: string;
-  to: string;
-  region: string;
-  stage: string;
-  claimType: string;
-};
-
 type AnalyticsPageProps = {
   search: string;
 };
 
-const SECTION_LABELS: Record<AnalyticsSection, string> = {
-  pipeline: "运营流程",
-  claims: "页面宣传线索",
-  geography: "地区分布",
-  knowledge: "知识覆盖",
+type AnalyticsFilters = {
+  from: string;
+  to: string;
+  region: string;
 };
 
-const SECTION_DESCRIPTIONS: Record<AnalyticsSection, string> = {
-  pipeline: "按真实处理分母查看采集、OCR、分析、人工复核与当前抽检清单状态。",
-  claims: "仅统计 V2 formal ClaimSignal，并区分完成零线索、未生成与错误状态。",
-  geography: "搜索地区反映采集上下文；商品标称产地来自页面明确声明，两者不可互相替代。",
-  knowledge: "覆盖率仅针对项目当前治理数据集和既定分母，不代表全国覆盖情况。",
+type DashboardData = {
+  pipeline: AnalyticsResponse;
+  claims: AnalyticsResponse;
+  geography: AnalyticsResponse;
 };
 
-const DEFAULT_ROUTE: AnalyticsRouteState = {
-  section: "pipeline",
-  from: "",
-  to: "",
-  region: "",
-  stage: "",
-  claimType: "",
+type GeographyMode = "search" | "origin";
+
+const CLAIM_LABELS: Record<string, string> = {
+  sleep_related: "睡眠相关",
+  weight_management: "体重管理",
+  male_function_related: "男性功能相关",
+  blood_lipid_related: "血脂相关",
+  blood_pressure_related: "血压相关",
 };
 
-function parseRoute(search: string): AnalyticsRouteState {
+const REVIEW_LABELS: Record<string, string> = {
+  pending: "待复核",
+  recommend_follow_up: "建议跟进",
+  no_further_action: "暂不纳入",
+};
+
+const PROVINCE_POINTS: Record<string, [number, number]> = {
+  北京: [554, 190],
+  天津: [574, 205],
+  河北: [540, 216],
+  山西: [506, 221],
+  内蒙古: [465, 155],
+  辽宁: [610, 165],
+  吉林: [640, 134],
+  黑龙江: [666, 94],
+  上海: [623, 302],
+  江苏: [597, 281],
+  浙江: [610, 327],
+  安徽: [562, 293],
+  福建: [582, 361],
+  江西: [543, 338],
+  山东: [582, 246],
+  河南: [520, 268],
+  湖北: [495, 304],
+  湖南: [482, 348],
+  广东: [507, 398],
+  广西: [452, 397],
+  海南: [486, 447],
+  重庆: [432, 320],
+  四川: [383, 314],
+  贵州: [421, 363],
+  云南: [348, 395],
+  西藏: [220, 333],
+  陕西: [452, 263],
+  甘肃: [370, 230],
+  青海: [301, 264],
+  宁夏: [413, 226],
+  新疆: [168, 194],
+  台湾: [644, 375],
+  香港: [526, 408],
+  澳门: [516, 412],
+};
+
+function parseFilters(search: string): AnalyticsFilters {
   const params = new URLSearchParams(search);
-  const section = params.get("section");
   return {
-    section:
-      section === "claims" || section === "geography" || section === "knowledge"
-        ? section
-        : "pipeline",
     from: params.get("from") ?? "",
     to: params.get("to") ?? "",
     region: params.get("region") ?? "",
-    stage: params.get("stage") ?? "",
-    claimType: params.get("claim_type") ?? "",
   };
 }
 
-function routeHash(state: AnalyticsRouteState) {
+function analyticsHash(filters: AnalyticsFilters) {
   const params = new URLSearchParams();
-  if (state.section !== "pipeline") params.set("section", state.section);
-  if (state.section !== "knowledge") {
-    if (state.from) params.set("from", state.from);
-    if (state.to) params.set("to", state.to);
-    if (state.region) params.set("region", state.region);
-    if (state.section === "pipeline" && state.stage) params.set("stage", state.stage);
-    if ((state.section === "claims" || state.section === "geography") && state.claimType) {
-      params.set("claim_type", state.claimType);
-    }
-  }
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.region) params.set("region", filters.region);
   const query = params.toString();
   return `#/analytics${query ? `?${query}` : ""}`;
 }
 
-function loadSection(state: AnalyticsRouteState, signal: AbortSignal): Promise<AnalyticsResponse> {
-  const common = {
-    from: state.from || undefined,
-    to: state.to || undefined,
-    region: state.region || undefined,
-  };
-  switch (state.section) {
-    case "pipeline":
-      return getAnalyticsPipeline({ ...common, stage: state.stage || undefined }, signal);
-    case "claims":
-      return getAnalyticsClaims({ ...common, claimType: state.claimType || undefined }, signal);
-    case "geography":
-      return getAnalyticsGeography({ ...common, claimType: state.claimType || undefined }, signal);
-    case "knowledge":
-      return getAnalyticsKnowledge(signal);
-  }
+function findMetric(response: AnalyticsResponse | null, metricId: string) {
+  return response?.metrics.find((metric) => metric.metricId === metricId) ?? null;
 }
 
-function formatPercent(value: number | null | undefined) {
-  if (value === null || value === undefined) return "—";
-  return `${(value * 100).toFixed(value === 0 || value === 1 ? 0 : 1)}%`;
+function findBucket(metric: AnalyticsMetric | null, key: string) {
+  return metric?.buckets?.find((bucket) => bucket.key === key) ?? null;
 }
 
-function metricDefinitionMap(dictionary: AnalyticsMetricDictionary | null) {
-  return new Map((dictionary?.metrics ?? []).map((definition) => [definition.metric_id, definition]));
+function claimLabel(bucket: AnalyticsMetricBucket) {
+  return CLAIM_LABELS[bucket.key] ?? bucket.label ?? bucket.key;
 }
 
-function MetricDetails({ metric, definition }: { metric: AnalyticsMetric; definition?: AnalyticsMetricDefinition }) {
+function normalizeProvince(value: string) {
+  return value
+    .replace(/壮族自治区$|回族自治区$|维吾尔自治区$|自治区$|特别行政区$/g, "")
+    .replace(/[省市]$/, "")
+    .trim();
+}
+
+function isSpecialRegionBucket(bucket: AnalyticsMetricBucket) {
+  return ["unknown", "not_recorded", "conflict"].includes(bucket.key);
+}
+
+function displayRegion(bucket: AnalyticsMetricBucket) {
+  if (bucket.key === "unknown" || bucket.key === "not_recorded") return "未明确";
+  if (bucket.key === "conflict") return "存在多个页面产地";
+  return bucket.label || bucket.key;
+}
+
+function SummaryCard({
+  icon: Icon,
+  label,
+  value,
+  note,
+}: {
+  icon: typeof PackageSearch;
+  label: string;
+  value: number;
+  note: string;
+}) {
   return (
-    <details className="analytics-metric-details">
-      <summary><Info size={14} aria-hidden="true" />指标口径</summary>
-      <dl>
-        <div><dt>统计粒度</dt><dd>{metric.grain}</dd></div>
-        <div><dt>时间口径</dt><dd>{metric.timeBasis}</dd></div>
-        {definition?.numerator_definition ? <div><dt>分子</dt><dd>{definition.numerator_definition}</dd></div> : null}
-        {definition?.denominator_definition ? <div><dt>分母</dt><dd>{definition.denominator_definition}</dd></div> : null}
-        <div><dt>缺失规则</dt><dd>{metric.missingRule}</dd></div>
-        <div><dt>可解释为</dt><dd>{metric.interpretation}</dd></div>
-        <div><dt>不可解释为</dt><dd>{metric.forbiddenInterpretation}</dd></div>
-        <div><dt>数据版本</dt><dd>{metric.datasetVersion || "未提供"}</dd></div>
-      </dl>
-    </details>
-  );
-}
-
-function CountMetricCard({ metric, definition }: { metric: AnalyticsMetric; definition?: AnalyticsMetricDefinition }) {
-  return (
-    <article className="analytics-metric-card">
-      <div className="analytics-metric-heading"><span>{metric.title}</span><small>{metric.grain}</small></div>
-      <strong className="analytics-metric-value">{metric.value ?? 0}</strong>
-      <p>{metric.interpretation}</p>
-      <MetricDetails metric={metric} definition={definition} />
-    </article>
-  );
-}
-
-function RatioMetricCard({ metric, definition }: { metric: AnalyticsMetric; definition?: AnalyticsMetricDefinition }) {
-  const noDenominator = metric.reason === "zero_denominator" || metric.denominator === 0 || metric.rate === null;
-  return (
-    <article className="analytics-metric-card">
-      <div className="analytics-metric-heading"><span>{metric.title}</span><small>{metric.grain}</small></div>
-      {noDenominator ? (
-        <div className="analytics-zero-denominator">暂无可计算分母</div>
-      ) : (
-        <>
-          <strong className="analytics-metric-value">{formatPercent(metric.rate)}</strong>
-          <div className="analytics-ratio-caption">{metric.numerator} / {metric.denominator}</div>
-          <div className="analytics-progress" role="img" aria-label={`${metric.title} ${metric.numerator}/${metric.denominator}，${formatPercent(metric.rate)}`}>
-            <span style={{ width: `${Math.max(0, Math.min(100, (metric.rate ?? 0) * 100))}%` }} />
-          </div>
-        </>
-      )}
-      <p>{metric.interpretation}</p>
-      <MetricDetails metric={metric} definition={definition} />
-    </article>
-  );
-}
-
-function bucketLabel(bucket: AnalyticsMetricBucket) {
-  const labels: Record<string, string> = {
-    pending: "待复核",
-    recommend_follow_up: "建议跟进",
-    no_further_action: "暂不纳入",
-    complete_with_claims: "已完成且存在页面宣传线索",
-    complete_zero: "已完成且零正式线索",
-    not_generated: "尚未生成",
-    error: "生成失败",
-    seller_managed: "页面经营者内容",
-    user_generated: "用户生成内容",
-    excluded_other_product: "排除的其他商品内容",
-    unknown: "未记录 / 未知",
-    not_recorded: "尚未记录",
-    conflict: "存在多个明确页面产地事实",
-  };
-  return labels[bucket.key] ?? bucket.label ?? bucket.key;
-}
-
-function DistributionMetric({ metric, definition }: { metric: AnalyticsMetric; definition?: AnalyticsMetricDefinition }) {
-  const buckets = metric.buckets ?? [];
-  const noDenominator = metric.denominator === 0;
-  return (
-    <article className="analytics-distribution-card">
-      <div className="analytics-distribution-heading">
-        <div><h3>{metric.title}</h3><p>{metric.interpretation}</p></div>
-        <span className="analytics-denominator">分母：{metric.denominator ?? 0}</span>
+    <article className="analytics-summary-card">
+      <span className="analytics-summary-icon" aria-hidden="true">
+        <Icon size={20} />
+      </span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{note}</small>
       </div>
-      {noDenominator ? (
-        <div className="analytics-zero-denominator">暂无可计算分母</div>
-      ) : buckets.length === 0 ? (
-        <p className="analytics-empty-inline">当前筛选下暂无分布记录。</p>
-      ) : (
-        <div className="analytics-bars" role="list" aria-label={metric.title}>
-          {buckets.map((bucket) => (
-            <div className="analytics-bar-row" role="listitem" key={bucket.key}>
-              <div className="analytics-bar-meta">
-                <span>{bucketLabel(bucket)}</span>
-                <strong>{bucket.count} / {bucket.denominator}{bucket.rate !== null ? ` · ${formatPercent(bucket.rate)}` : ""}</strong>
-              </div>
-              <div className="analytics-bar-track" role="img" aria-label={`${bucketLabel(bucket)} ${bucket.count}/${bucket.denominator}${bucket.rate !== null ? `，${formatPercent(bucket.rate)}` : ""}`}>
-                <span style={{ width: `${Math.max(0, Math.min(100, (bucket.rate ?? 0) * 100))}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {metric.metricId === "claim_type_snapshot_distribution" ? (
-        <div className="analytics-inline-note">同一采集记录可包含多个宣传主题，因此各类别占比之和可能超过 100%。</div>
-      ) : null}
-      <MetricDetails metric={metric} definition={definition} />
     </article>
   );
 }
 
-function renderMetric(metric: AnalyticsMetric, definitions: Map<string, AnalyticsMetricDefinition>) {
-  const definition = definitions.get(metric.metricId);
-  if (metric.metricType === "distribution") return <DistributionMetric key={metric.metricId} metric={metric} definition={definition} />;
-  if (metric.metricType === "ratio" || metric.metricType === "coverage") return <RatioMetricCard key={metric.metricId} metric={metric} definition={definition} />;
-  return <CountMetricCard key={metric.metricId} metric={metric} definition={definition} />;
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="analytics-product-section-heading">
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function ClaimBars({ metric }: { metric: AnalyticsMetric | null }) {
+  const buckets = metric?.buckets ?? [];
+  const sorted = [...buckets].sort((a, b) => b.count - a.count);
+  const max = Math.max(1, ...sorted.map((bucket) => bucket.count));
+
+  if (!metric || metric.denominator === 0 || sorted.length === 0) {
+    return (
+      <div className="analytics-friendly-empty">
+        当前范围内还没有可展示的页面宣传线索分类数据。
+      </div>
+    );
+  }
+
+  return (
+    <div className="analytics-claim-chart" role="list" aria-label="页面宣传线索类型分布">
+      {sorted.map((bucket) => (
+        <div className="analytics-claim-row" role="listitem" key={bucket.key}>
+          <span className="analytics-claim-label">{claimLabel(bucket)}</span>
+          <div className="analytics-claim-track" aria-hidden="true">
+            <span style={{ width: `${(bucket.count / max) * 100}%` }} />
+          </div>
+          <strong>{bucket.count}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewSummary({ metric }: { metric: AnalyticsMetric | null }) {
+  const buckets = REVIEW_LABELS;
+  return (
+    <div className="analytics-review-grid">
+      {Object.entries(buckets).map(([key, label]) => {
+        const bucket = findBucket(metric, key);
+        return (
+          <div className="analytics-review-item" key={key} data-status={key}>
+            <span>{label}</span>
+            <strong>{bucket?.count ?? 0}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RegionHeatMap({ metric, mode }: { metric: AnalyticsMetric | null; mode: GeographyMode }) {
+  const buckets = metric?.buckets ?? [];
+  const ordinary = buckets.filter((bucket) => !isSpecialRegionBucket(bucket) && bucket.count > 0);
+  const ranked = [...ordinary].sort((a, b) => b.count - a.count);
+  const max = Math.max(1, ...ranked.map((bucket) => bucket.count));
+  const plotted = ranked
+    .map((bucket) => ({ bucket, point: PROVINCE_POINTS[normalizeProvince(bucket.label || bucket.key)] }))
+    .filter((item): item is { bucket: AnalyticsMetricBucket; point: [number, number] } => Boolean(item.point));
+  const special = buckets.filter((bucket) => isSpecialRegionBucket(bucket) && bucket.count > 0);
+
+  if (!metric || metric.denominator === 0) {
+    return <div className="analytics-friendly-empty">当前范围内还没有地区分布数据。</div>;
+  }
+
+  return (
+    <div className="analytics-map-layout">
+      <div className="analytics-map-panel">
+        <svg
+          className="analytics-china-map"
+          viewBox="0 0 760 500"
+          role="img"
+          aria-label={mode === "search" ? "已采集商品搜索地区分布图" : "商品标称产地分布图"}
+        >
+          <path
+            className="analytics-china-outline"
+            d="M70 175 L100 132 L155 105 L225 90 L298 102 L360 88 L430 103 L493 78 L565 70 L635 92 L690 130 L705 174 L683 204 L710 235 L686 267 L699 300 L660 326 L642 364 L602 381 L572 417 L527 425 L500 454 L456 438 L421 456 L374 426 L329 443 L292 409 L245 399 L207 371 L166 355 L139 322 L111 305 L104 269 L78 244 L94 214 Z"
+          />
+          <ellipse className="analytics-island-outline" cx="488" cy="452" rx="11" ry="8" />
+          <ellipse className="analytics-island-outline" cx="647" cy="379" rx="7" ry="15" />
+          {plotted.map(({ bucket, point }) => {
+            const intensity = bucket.count / max;
+            const radius = 10 + intensity * 13;
+            const name = normalizeProvince(bucket.label || bucket.key);
+            return (
+              <g key={bucket.key} className="analytics-map-point">
+                <circle cx={point[0]} cy={point[1]} r={radius} style={{ opacity: 0.28 + intensity * 0.62 }}>
+                  <title>{`${displayRegion(bucket)}：${bucket.count}`}</title>
+                </circle>
+                <text x={point[0]} y={point[1] + 4} textAnchor="middle">{name}</text>
+              </g>
+            );
+          })}
+        </svg>
+        <p className="analytics-map-caption">颜色深浅和圆点大小仅表示当前数据中的商品数量，不表示地区风险高低。</p>
+      </div>
+
+      <aside className="analytics-region-ranking" aria-label="地区数量排行">
+        <h3>{mode === "search" ? "采集商品较多的地区" : "标称产地较多的地区"}</h3>
+        {ranked.length ? (
+          <ol>
+            {ranked.slice(0, 6).map((bucket) => (
+              <li key={bucket.key}>
+                <span>{displayRegion(bucket)}</span>
+                <strong>{bucket.count}</strong>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>暂无可排行地区。</p>
+        )}
+        {special.length ? (
+          <div className="analytics-region-special">
+            {special.map((bucket) => (
+              <span key={bucket.key}>{displayRegion(bucket)}：{bucket.count}</span>
+            ))}
+          </div>
+        ) : null}
+      </aside>
+    </div>
+  );
 }
 
 export function AnalyticsPage({ search }: AnalyticsPageProps) {
-  const routeState = useMemo(() => parseRoute(search), [search]);
-  const [dictionary, setDictionary] = useState<AnalyticsMetricDictionary | null>(null);
-  const [dictionaryError, setDictionaryError] = useState("");
-  const [response, setResponse] = useState<AnalyticsResponse | null>(null);
+  const filters = useMemo(() => parseFilters(search), [search]);
+  const [draft, setDraft] = useState(filters);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
-  const [draft, setDraft] = useState(routeState);
-  const definitions = useMemo(() => metricDefinitionMap(dictionary), [dictionary]);
+  const [geographyMode, setGeographyMode] = useState<GeographyMode>("search");
 
-  useEffect(() => setDraft(routeState), [routeState]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    getAnalyticsMetricDictionary(controller.signal).then(setDictionary).catch((reason: unknown) => {
-      if (!controller.signal.aborted) setDictionaryError(reason instanceof Error ? reason.message : "指标字典加载失败");
-    });
-    return () => controller.abort();
-  }, []);
+  useEffect(() => setDraft(filters), [filters]);
 
   useEffect(() => {
     const controller = new AbortController();
+    const common = {
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      region: filters.region || undefined,
+    };
     setLoading(true);
     setError("");
-    loadSection(routeState, controller.signal).then(setResponse).catch((reason: unknown) => {
-      if (!controller.signal.aborted) {
-        setResponse(null);
-        setError(reason instanceof Error ? reason.message : "统计指标加载失败");
-      }
-    }).finally(() => {
-      if (!controller.signal.aborted) setLoading(false);
-    });
+    Promise.all([
+      getAnalyticsPipeline(common, controller.signal),
+      getAnalyticsClaims(common, controller.signal),
+      getAnalyticsGeography(common, controller.signal),
+    ])
+      .then(([pipeline, claims, geography]) => setData({ pipeline, claims, geography }))
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) {
+          setData(null);
+          setError(reason instanceof Error ? reason.message : "统计数据加载失败");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
-  }, [routeState, reloadToken]);
-
-  const navigate = useCallback((next: AnalyticsRouteState) => {
-    window.location.hash = routeHash(next);
-  }, []);
-
-  const changeSection = (section: AnalyticsSection) => {
-    navigate({
-      ...routeState,
-      section,
-      stage: section === "pipeline" ? routeState.stage : "",
-      claimType: section === "claims" || section === "geography" ? routeState.claimType : "",
-    });
-  };
+  }, [filters, reloadToken]);
 
   const applyFilters = (event: FormEvent) => {
     event.preventDefault();
-    navigate({
-      ...routeState,
+    window.location.hash = analyticsHash({
       from: draft.from.trim(),
       to: draft.to.trim(),
       region: draft.region.trim(),
-      stage: routeState.section === "pipeline" ? draft.stage.trim() : "",
-      claimType: routeState.section === "claims" || routeState.section === "geography" ? draft.claimType.trim() : "",
     });
   };
 
-  const clearFilters = () => navigate({ ...DEFAULT_ROUTE, section: routeState.section });
-  const hasRuntimeFilters = routeState.section !== "knowledge" && Boolean(routeState.from || routeState.to || routeState.region || routeState.stage || routeState.claimType);
-  const metrics = response?.metrics ?? [];
-  const countMetrics = metrics.filter((metric) => metric.metricType === "count");
-  const ratioMetrics = metrics.filter((metric) => metric.metricType === "ratio" || metric.metricType === "coverage");
-  const distributionMetrics = metrics.filter((metric) => metric.metricType === "distribution");
+  const clearFilters = () => {
+    setDraft({ from: "", to: "", region: "" });
+    window.location.hash = "#/analytics";
+  };
+
+  const hasFilters = Boolean(filters.from || filters.to || filters.region);
+
+  const uniqueProducts = findMetric(data?.pipeline ?? null, "unique_product_count")?.value ?? 0;
+  const claimStatus = findMetric(data?.claims ?? null, "claim_analysis_status_distribution");
+  const claimRecords = findBucket(claimStatus, "complete_with_claims")?.count ?? 0;
+  const reviewStatus = findMetric(data?.pipeline ?? null, "review_status_distribution");
+  const followUpCount = findBucket(reviewStatus, "recommend_follow_up")?.count ?? 0;
+  const samplingCount = findMetric(data?.pipeline ?? null, "current_sampling_membership_count")?.value ?? 0;
+  const claimTypes = findMetric(data?.claims ?? null, "claim_type_snapshot_distribution");
+  const searchRegions = findMetric(data?.geography ?? null, "collected_product_search_region_distribution");
+  const declaredOrigins = findMetric(data?.geography ?? null, "declared_origin_distribution");
+  const activeGeographyMetric = geographyMode === "search" ? searchRegions : declaredOrigins;
 
   return (
-    <div className="page-frame analytics-page">
-      <PageHeader eyebrow="可复现统计" title="统计分析" description="基于当前采集数据和治理知识展示可复现的统计事实；结果不代表市场总体风险或全国覆盖情况。" />
+    <div className="page-frame analytics-page analytics-product-dashboard">
+      <PageHeader
+        eyebrow="数据概览"
+        title="统计分析"
+        description="快速查看当前已采集商品中的页面宣传线索、地区分布与人工复核结果。"
+      />
 
-      <div className="analytics-scope-note">
-        <BarChart3 size={17} aria-hidden="true" />
-        <span>统计结果仅反映当前系统数据范围，不代表市场总体情况。所有比例均保留各自真实分母。</span>
+      <div className="analytics-product-scope-note">
+        统计结果仅反映当前系统已采集的数据，不代表市场总体情况或地区风险水平。
       </div>
 
-      <nav className="analytics-tabs" role="tablist" aria-label="统计分析域">
-        {(Object.keys(SECTION_LABELS) as AnalyticsSection[]).map((section) => (
-          <button key={section} type="button" role="tab" aria-selected={routeState.section === section} data-active={routeState.section === section} onClick={() => changeSection(section)}>
-            {SECTION_LABELS[section]}
-          </button>
-        ))}
-      </nav>
-
-      <section className="analytics-panel" role="tabpanel">
-        <div className="analytics-section-heading">
-          <div><h2>{SECTION_LABELS[routeState.section]}</h2><p>{SECTION_DESCRIPTIONS[routeState.section]}</p></div>
-          {response?.dictionaryVersion ? <span className="analytics-version">{response.dictionaryVersion}</span> : null}
-        </div>
-
-        {routeState.section === "knowledge" ? (
-          <div className="analytics-filter-note">知识覆盖按治理数据版本统计，不按运行时间筛选。</div>
-        ) : (
-          <form className="analytics-filters" onSubmit={applyFilters}>
-            <label>开始日期<input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} /></label>
-            <label>结束日期<input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} /></label>
-            <label>搜索地区<input value={draft.region} onChange={(event) => setDraft((current) => ({ ...current, region: event.target.value }))} placeholder="按搜索上下文筛选" /></label>
-            {routeState.section === "pipeline" ? <label>处理阶段<input value={draft.stage} onChange={(event) => setDraft((current) => ({ ...current, stage: event.target.value }))} placeholder="可选，使用后端 stage 值" /></label> : null}
-            {routeState.section === "claims" || routeState.section === "geography" ? <label>Claim Type<input value={draft.claimType} onChange={(event) => setDraft((current) => ({ ...current, claimType: event.target.value }))} placeholder="可选，使用治理 Claim Type" /></label> : null}
-            <div className="analytics-filter-actions">
-              <button type="submit" className="primary-button">应用筛选</button>
-              <button type="button" className="secondary-button" onClick={clearFilters} disabled={!hasRuntimeFilters}>清除筛选</button>
-            </div>
-            <small className="analytics-time-note">运行指标按所属任务创建时间统计。</small>
-          </form>
-        )}
-
-        {routeState.section === "geography" ? <div className="analytics-boundary-note">搜索地区反映商品在哪个搜索任务/地区上下文中被发现；商品标称产地仅来自页面明确声明的 declared_origin 事实，两者不可互相替代。</div> : null}
-        {routeState.section === "knowledge" ? <div className="analytics-boundary-note">这里的覆盖率只针对项目当前 Reference、治理映射与固定 Context Corpus；不是全国方法覆盖率、生产准确率或市场风险覆盖率。</div> : null}
-        {dictionaryError ? <div className="analytics-dictionary-warning" role="status"><AlertCircle size={15} />指标口径说明暂时不可用：{dictionaryError}</div> : null}
-
-        {loading && !response ? (
-          <LoadingState label={`正在读取${SECTION_LABELS[routeState.section]}指标`} />
-        ) : error ? (
-          <EmptyState icon={AlertCircle} title="统计指标加载失败" description={error} action={<button type="button" className="primary-button" onClick={() => setReloadToken((value) => value + 1)}><RefreshCw size={15} />重试</button>} />
-        ) : response && metrics.length === 0 ? (
-          <EmptyState icon={BarChart3} title="当前范围暂无可展示指标" description="请调整筛选条件后重试；合法的零值不会被视为系统错误。" />
-        ) : response ? (
-          <div className="analytics-content">
-            {countMetrics.length > 0 ? <div className="analytics-metric-grid">{countMetrics.map((metric) => renderMetric(metric, definitions))}</div> : null}
-            {ratioMetrics.length > 0 ? <div className="analytics-metric-grid analytics-coverage-grid">{ratioMetrics.map((metric) => renderMetric(metric, definitions))}</div> : null}
-            {distributionMetrics.length > 0 ? <div className="analytics-distribution-grid">{distributionMetrics.map((metric) => renderMetric(metric, definitions))}</div> : null}
+      <details className="analytics-filter-panel">
+        <summary>
+          <SlidersHorizontal size={16} aria-hidden="true" />
+          筛选统计范围
+          {hasFilters ? <span>已筛选</span> : null}
+        </summary>
+        <form className="analytics-simple-filters" onSubmit={applyFilters}>
+          <label>
+            开始日期
+            <input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} />
+          </label>
+          <label>
+            结束日期
+            <input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} />
+          </label>
+          <label>
+            搜索地区
+            <input value={draft.region} onChange={(event) => setDraft((current) => ({ ...current, region: event.target.value }))} placeholder="全部地区" />
+          </label>
+          <div className="analytics-filter-actions">
+            <button type="submit" className="primary-button">应用</button>
+            <button type="button" className="secondary-button" onClick={clearFilters} disabled={!hasFilters && !draft.from && !draft.to && !draft.region}>清除</button>
           </div>
-        ) : null}
+        </form>
+      </details>
 
-        {dictionary?.unavailable_metrics?.length ? (
-          <details className="analytics-unavailable">
-            <summary>当前不可计算 / 未来指标</summary>
-            <ul>{dictionary.unavailable_metrics.map((metric) => <li key={metric.metric_id}><strong>{metric.metric_id}</strong><span>{metric.reason}</span></li>)}</ul>
+      {loading && !data ? (
+        <LoadingState label="正在读取统计数据" />
+      ) : error ? (
+        <div className="analytics-load-error">
+          <EmptyState
+            icon={AlertCircle}
+            title="统计数据加载失败"
+            description={error}
+            action={<button type="button" className="primary-button" onClick={() => setReloadToken((value) => value + 1)}><RefreshCw size={15} />重试</button>}
+          />
+        </div>
+      ) : data ? (
+        <>
+          <section className="analytics-summary-grid" aria-label="总体概览">
+            <SummaryCard icon={PackageSearch} label="已采集商品" value={uniqueProducts} note="当前范围内去重商品数" />
+            <SummaryCard icon={SearchCheck} label="发现宣传线索" value={claimRecords} note="出现页面宣传线索的采集记录" />
+            <SummaryCard icon={ClipboardCheck} label="建议跟进" value={followUpCount} note="人工复核后建议进一步关注" />
+            <SummaryCard icon={FlaskConical} label="当前抽检清单" value={samplingCount} note="当前已纳入的商品" />
+          </section>
+
+          <section className="analytics-product-section">
+            <SectionHeading title="页面宣传线索" description="看看当前采集商品主要出现了哪些宣传主题。" />
+            <div className="analytics-product-card analytics-claim-card">
+              <ClaimBars metric={claimTypes} />
+              <p className="analytics-friendly-note">一个采集记录可能同时包含多个宣传主题，因此类别数量可以重复计算。</p>
+            </div>
+          </section>
+
+          <section className="analytics-product-section">
+            <SectionHeading title="地区分布" description="从采集上下文或商品页面标称产地两个角度查看商品分布。" />
+            <div className="analytics-geo-switch" role="group" aria-label="地区分布类型">
+              <button type="button" data-active={geographyMode === "search"} onClick={() => setGeographyMode("search")}>搜索地区</button>
+              <button type="button" data-active={geographyMode === "origin"} onClick={() => setGeographyMode("origin")}>标称产地</button>
+            </div>
+            <div className="analytics-product-card">
+              <RegionHeatMap metric={activeGeographyMetric} mode={geographyMode} />
+              <p className="analytics-friendly-note">搜索地区表示商品在哪个采集任务地区被发现；标称产地来自商品页面明确声明，两者不能互相替代。</p>
+            </div>
+          </section>
+
+          <section className="analytics-product-section">
+            <SectionHeading title="人工复核与抽检" description="查看线索经过人工判断后的当前处理情况。" />
+            <div className="analytics-product-card analytics-review-card">
+              <ReviewSummary metric={reviewStatus} />
+              <div className="analytics-sampling-callout">
+                <div>
+                  <span>当前抽检清单</span>
+                  <strong>{samplingCount} 个商品</strong>
+                </div>
+                <a className="primary-button" href="#/sampling">查看抽检清单</a>
+              </div>
+            </div>
+          </section>
+
+          <details className="analytics-friendly-explanation">
+            <summary>统计说明</summary>
+            <ul>
+              <li>页面宣传线索表示商品页面出现了值得关注的宣传主题，不代表违法、功效真实或已检出某种物质。</li>
+              <li>“建议跟进 / 暂不纳入 / 待复核”来自人工复核流程，不是自动风险等级。</li>
+              <li>地区图中的深浅和数量只表示当前已采集数据的多少，不代表某个地区风险更高。</li>
+            </ul>
           </details>
-        ) : null}
-      </section>
+        </>
+      ) : null}
     </div>
   );
 }
