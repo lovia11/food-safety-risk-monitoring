@@ -2,7 +2,6 @@ import {
   AlertCircle,
   ClipboardCheck,
   FlaskConical,
-  MapPinned,
   PackageSearch,
   RefreshCw,
   SearchCheck,
