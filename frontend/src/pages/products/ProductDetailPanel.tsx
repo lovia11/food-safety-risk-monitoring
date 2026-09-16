@@ -32,6 +32,7 @@ import { useToast } from "../../components/ToastProvider";
 import { analysisStatePresentation } from "../../domain/analysis";
 import { groupEvidence, partitionEvidenceGroups } from "../../domain/evidence";
 import { formatDateTime, safeHttpUrl } from "../../domain/product";
+import { pageRegionClueValues } from "../../domain/productFacts";
 import { needsProductContext } from "../../domain/recommendation";
 import {
   healthFoodIdentityAnchorId,
@@ -147,15 +148,14 @@ export function ProductDetailPanel({
     }
   };
 
-  const selectedSummary = snapshots.find(
-    (item) => item.snapshotId === selectedSnapshotId,
-  );
-  const title = workspace?.snapshot.productName || selectedSummary?.productName || productId;
   const productUrl = safeHttpUrl(workspace?.snapshot.productUrl);
+  const pageRegionClues = workspace
+    ? pageRegionClueValues(workspace.productFacts, workspace.snapshot.productName)
+    : [];
 
   return (
     <Drawer
-      title={title}
+      title="商品详情"
       subtitle={workspace ? `${workspace.snapshot.shopName || "店铺未记录"} · ${workspace.snapshot.snapshotCount} 次快照` : undefined}
       onClose={onClose}
     >
@@ -213,6 +213,15 @@ export function ProductDetailPanel({
                         runId={workspace.snapshot.taskId}
                         productId={workspace.snapshot.productId}
                       />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>页面地区线索</dt>
+                    <dd>
+                      {pageRegionClues.length > 0 ? pageRegionClues.join("、") : "—"}
+                      {pageRegionClues.length > 0 && (
+                        <small className="fact-note">来自商品标题或详情参数，仅供抽样参考，不等同于商品标称产地。</small>
+                      )}
                     </dd>
                   </div>
                   <div>
