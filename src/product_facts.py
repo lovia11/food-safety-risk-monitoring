@@ -1,8 +1,12 @@
 """Snapshot-scoped ProductFact extraction from existing local artifacts.
 
 This module is deliberately independent from collection, OCR, Phase 3 and
-human Review.  It only reads artifacts that already exist below one product
+human Review. It reads artifacts that already exist below one product
 directory and writes the derived ``product_facts.json`` authority file.
+
+Declared product origin remains a strict fact. Province/city fields that appear
+in the seller-managed parameter section are retained separately as page region
+clues so they can support sampling without being mislabeled as product origin.
 """
 
 from __future__ import annotations
@@ -18,9 +22,10 @@ from src.runtime import iso_now, read_json, write_json
 
 
 PRODUCT_FACTS_SCHEMA_VERSION = 1
-PRODUCT_FACTS_EXTRACTOR_VERSION = "product-facts-declared-origin-v1"
+PRODUCT_FACTS_EXTRACTOR_VERSION = "product-facts-origin-region-clues-v2"
 PRODUCT_FACTS_FILE = "product_facts.json"
 DECLARED_ORIGIN = "declared_origin"
+PAGE_REGION_CLUE = "page_region_clue"
 
 DECLARED_ORIGIN_LABELS = (
     "原产国家/地区",
@@ -29,6 +34,11 @@ DECLARED_ORIGIN_LABELS = (
     "产品产地",
     "原产地",
     "产地",
+)
+
+REGION_CLUE_LABELS = (
+    "省份",
+    "城市",
 )
 
 # These are exclusion boundaries, not aliases for declared origin.
@@ -56,27 +66,65 @@ EXCLUDED_ORIGIN_LABELS = (
     "制造商地址",
 )
 
-# Used only to determine the local key/value orientation inside Taobao's
-# explicit parameter section.  No value from these fields is turned into a
-# ProductFact.
+# Used only to determine local key/value orientation inside Taobao's explicit
+# parameter section. Values from these labels are not automatically declared
+# origin; province/city are retained only as page-region clues.
 _PARAMETER_LABEL_HINTS = frozenset(
-    (*DECLARED_ORIGIN_LABELS, *EXCLUDED_ORIGIN_LABELS,
-     "品牌", "是否为有机食品", "成分原料", "适用对象", "储存条件",
-     "包装方式", "生产日期", "系列", "规格", "省份", "城市", "净含量",
-     "厂名", "厂家联系方式", "储藏方法", "保质期", "特产品类", "品名",
-     "口味", "是否进口", "单件净含量", "糕点种类", "包装种类",
-     "包装规格", "生产许可证编号", "产品标准号", "规格类型", "套餐类型",
-     "石斛工艺种类", "颜色分类", "脂肪含量", "蛋白质", "-膳食纤维")
+    (
+        *DECLARED_ORIGIN_LABELS,
+        *REGION_CLUE_LABELS,
+        *EXCLUDED_ORIGIN_LABELS,
+        "品牌",
+        "是否为有机食品",
+        "成分原料",
+        "适用对象",
+        "储存条件",
+        "包装方式",
+        "生产日期",
+        "系列",
+        "规格",
+        "净含量",
+        "厂名",
+        "厂家联系方式",
+        "储藏方法",
+        "保质期",
+        "特产品类",
+        "品名",
+        "口味",
+        "是否进口",
+        "单件净含量",
+        "糕点种类",
+        "包装种类",
+        "包装规格",
+        "生产许可证编号",
+        "产品标准号",
+        "规格类型",
+        "套餐类型",
+        "石斛工艺种类",
+        "颜色分类",
+        "脂肪含量",
+        "蛋白质",
+        "-膳食纤维",
+    )
 )
 
 _VALUE_TRIM = " \t\r\n:：=,，;；。|｜、"
-_ORIGIN_MENTION_RE = re.compile(r"(?:原产国家/地区|原产国/地区|商品产地|产品产地|原产地|产地)")
+_ORIGIN_MENTION_RE = re.compile(
+    r"(?:原产国家/地区|原产国/地区|商品产地|产品产地|原产地|产地)"
+)
 _SAME_LINE_RE = re.compile(
-    r"^(?P<label>" + "|".join(map(re.escape, DECLARED_ORIGIN_LABELS))
+    r"^(?P<label>"
+    + "|".join(map(re.escape, DECLARED_ORIGIN_LABELS))
+    + r")(?:(?:\s*[:：=]\s*)|(?:\s*为\s*)|(?:\s+))(?P<value>.+)$"
+)
+_REGION_SAME_LINE_RE = re.compile(
+    r"^(?P<label>"
+    + "|".join(map(re.escape, REGION_CLUE_LABELS))
     + r")(?:(?:\s*[:：=]\s*)|(?:\s*为\s*)|(?:\s+))(?P<value>.+)$"
 )
 _EXCLUDED_LINE_RE = re.compile(
-    r"^(?P<label>" + "|".join(map(re.escape, EXCLUDED_ORIGIN_LABELS))
+    r"^(?P<label>"
+    + "|".join(map(re.escape, EXCLUDED_ORIGIN_LABELS))
     + r")\s*(?:[:：=]|为|\s)\s*(?P<value>.*)$"
 )
 
@@ -124,6 +172,7 @@ def _diagnostic(
 
 def _fact_id(
     snapshot_id: str,
+    fact_type: str,
     normalized_value: str,
     source_type: str,
     source_path: str,
@@ -132,7 +181,7 @@ def _fact_id(
     identity = "\0".join(
         (
             snapshot_id,
-            DECLARED_ORIGIN,
+            fact_type,
             normalized_value,
             source_type,
             source_path,
@@ -151,16 +200,22 @@ def _make_fact(
     source_text: str,
     extraction_method: str,
     created_at: str,
+    fact_type: str = DECLARED_ORIGIN,
 ) -> dict[str, Any] | None:
     normalized = normalize_fact_value(raw_value)
     if not _valid_value(normalized):
         return None
     return {
         "factId": _fact_id(
-            snapshot_id, normalized, source_type, source_path, source_text
+            snapshot_id,
+            fact_type,
+            normalized,
+            source_type,
+            source_path,
+            source_text,
         ),
         "snapshotId": snapshot_id,
-        "factType": DECLARED_ORIGIN,
+        "factType": fact_type,
         "normalizedValue": normalized,
         "rawValue": str(raw_value).strip(),
         "sourceType": source_type,
@@ -168,7 +223,7 @@ def _make_fact(
         "sourcePath": source_path,
         "sourceText": source_text,
         "extractionMethod": extraction_method,
-        "verificationState": "extracted",
+        "verificationState": "extracted" if fact_type == DECLARED_ORIGIN else "clue",
         "createdAt": created_at,
     }
 
@@ -196,7 +251,10 @@ def _parameter_section(lines: list[_SourceLine]) -> tuple[list[_SourceLine], set
         )
         section = lines[start + 1 : end]
         if any(
-            item.text in DECLARED_ORIGIN_LABELS or _SAME_LINE_RE.match(item.text)
+            item.text in DECLARED_ORIGIN_LABELS
+            or item.text in REGION_CLUE_LABELS
+            or _SAME_LINE_RE.match(item.text)
+            or _REGION_SAME_LINE_RE.match(item.text)
             for item in section
         ):
             candidates.append(section)
@@ -217,7 +275,7 @@ def _dom_adjacent_value(
     previous_valid = bool(previous and _valid_value(previous_value))
     following_valid = bool(following and _valid_value(following_value))
 
-    # Taobao has used both value/key and key/value layouts.  Resolve only when
+    # Taobao has used both value/key and key/value layouts. Resolve only when
     # a neighbouring known parameter label proves the local alternating order.
     if previous_valid and following_two and following_two.text in _PARAMETER_LABEL_HINTS:
         return previous, "dom_parameter_value_before_label"
@@ -234,6 +292,44 @@ def _dom_adjacent_value(
     return None
 
 
+def _make_dom_adjacent_fact(
+    *,
+    section: list[_SourceLine],
+    index: int,
+    snapshot_id: str,
+    created_at: str,
+    fact_type: str,
+) -> tuple[dict[str, Any] | None, set[int], dict[str, Any] | None]:
+    line = section[index]
+    adjacent = _dom_adjacent_value(section, index)
+    if adjacent is None:
+        return (
+            None,
+            {line.number},
+            _diagnostic(
+                "ambiguous_adjacent_value",
+                "DOM parameter reading order does not prove one adjacent value",
+                f"dom_text.txt#L{line.number}",
+                line.text,
+            ),
+        )
+    value_line, method = adjacent
+    source_lines = sorted((line, value_line), key=lambda item: item.number)
+    source_text = "\n".join(item.text for item in source_lines)
+    source_path = f"dom_text.txt#L{source_lines[0].number}-L{source_lines[-1].number}"
+    fact = _make_fact(
+        snapshot_id=snapshot_id,
+        raw_value=value_line.text,
+        source_type="dom_parameter",
+        source_path=source_path,
+        source_text=source_text,
+        extraction_method=method,
+        created_at=created_at,
+        fact_type=fact_type,
+    )
+    return fact, {line.number, value_line.number}, None
+
+
 def _extract_dom(
     product_root: Path, snapshot_id: str, created_at: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -246,7 +342,7 @@ def _extract_dom(
         return [], [_diagnostic("source_read_error", str(exc), "dom_text.txt")]
 
     all_lines = _nonempty_lines(text)
-    section, section_numbers = _parameter_section(all_lines)
+    section, _ = _parameter_section(all_lines)
     facts: list[dict[str, Any]] = []
     diagnostics: list[dict[str, Any]] = []
     handled_numbers: set[int] = set()
@@ -263,6 +359,7 @@ def _extract_dom(
                 )
             )
             continue
+
         same_line = _SAME_LINE_RE.match(line.text)
         if same_line:
             fact = _make_fact(
@@ -287,38 +384,53 @@ def _extract_dom(
                 )
             handled_numbers.add(line.number)
             continue
-        if line.text not in DECLARED_ORIGIN_LABELS:
-            continue
-        adjacent = _dom_adjacent_value(section, index)
-        if adjacent is None:
-            diagnostics.append(
-                _diagnostic(
-                    "ambiguous_adjacent_value",
-                    "DOM parameter reading order does not prove one adjacent value",
-                    f"dom_text.txt#L{line.number}",
-                    line.text,
-                )
+
+        region_same_line = _REGION_SAME_LINE_RE.match(line.text)
+        if region_same_line:
+            fact = _make_fact(
+                snapshot_id=snapshot_id,
+                raw_value=region_same_line.group("value"),
+                source_type="dom_parameter",
+                source_path=f"dom_text.txt#L{line.number}",
+                source_text=line.text,
+                extraction_method=f"dom_parameter_{region_same_line.group('label')}_same_line",
+                created_at=created_at,
+                fact_type=PAGE_REGION_CLUE,
             )
+            if fact:
+                facts.append(fact)
             handled_numbers.add(line.number)
             continue
-        value_line, method = adjacent
-        source_lines = sorted((line, value_line), key=lambda item: item.number)
-        source_text = "\n".join(item.text for item in source_lines)
-        source_path = (
-            f"dom_text.txt#L{source_lines[0].number}-L{source_lines[-1].number}"
-        )
-        fact = _make_fact(
-            snapshot_id=snapshot_id,
-            raw_value=value_line.text,
-            source_type="dom_parameter",
-            source_path=source_path,
-            source_text=source_text,
-            extraction_method=method,
-            created_at=created_at,
-        )
-        if fact:
-            facts.append(fact)
-        handled_numbers.update((line.number, value_line.number))
+
+        if line.text in DECLARED_ORIGIN_LABELS:
+            fact, handled, diagnostic = _make_dom_adjacent_fact(
+                section=section,
+                index=index,
+                snapshot_id=snapshot_id,
+                created_at=created_at,
+                fact_type=DECLARED_ORIGIN,
+            )
+            handled_numbers.update(handled)
+            if fact:
+                facts.append(fact)
+            if diagnostic:
+                diagnostics.append(diagnostic)
+            continue
+
+        if line.text in REGION_CLUE_LABELS:
+            fact, handled, diagnostic = _make_dom_adjacent_fact(
+                section=section,
+                index=index,
+                snapshot_id=snapshot_id,
+                created_at=created_at,
+                fact_type=PAGE_REGION_CLUE,
+            )
+            handled_numbers.update(handled)
+            if fact:
+                fact["extractionMethod"] = f"{fact['extractionMethod']}_{line.text}"
+                facts.append(fact)
+            if diagnostic:
+                diagnostics.append(diagnostic)
 
     for line in all_lines:
         if line.number in handled_numbers:
@@ -396,8 +508,6 @@ def _ocr_reading_order_proven(
             method = "ocr_labeled_adjacent_next_row"
     if method is None:
         return None
-    # Multiple neighbouring OCR tokens on the same row are not a provable
-    # one-to-one key/value pair (for example table headers followed by cities).
     if index + 2 < len(lines) and _same_row(value, lines[index + 2]):
         return None
     return value, method
@@ -461,10 +571,9 @@ def _extract_ocr(
         try:
             lines = _ocr_lines(json_path)
         except (OSError, ValueError, TypeError) as exc:
-            diagnostics.append(
-                _diagnostic("source_read_error", str(exc), raw_json_path)
-            )
+            diagnostics.append(_diagnostic("source_read_error", str(exc), raw_json_path))
             continue
+
         for index, line in enumerate(lines):
             excluded = _EXCLUDED_LINE_RE.match(line.text)
             if excluded:
@@ -477,6 +586,7 @@ def _extract_ocr(
                     )
                 )
                 continue
+
             same_line = _SAME_LINE_RE.match(line.text)
             if same_line:
                 fact = _make_fact(
@@ -491,7 +601,31 @@ def _extract_ocr(
                 if fact:
                     facts.append(fact)
                 continue
-            if line.text in DECLARED_ORIGIN_LABELS:
+
+            region_same_line = _REGION_SAME_LINE_RE.match(line.text)
+            if region_same_line:
+                fact = _make_fact(
+                    snapshot_id=snapshot_id,
+                    raw_value=region_same_line.group("value"),
+                    source_type="ocr_detail_image",
+                    source_path=f"{raw_text_path}#L{line.number}",
+                    source_text=line.text,
+                    extraction_method=f"ocr_{region_same_line.group('label')}_same_line",
+                    created_at=created_at,
+                    fact_type=PAGE_REGION_CLUE,
+                )
+                if fact:
+                    facts.append(fact)
+                continue
+
+            fact_type = (
+                DECLARED_ORIGIN
+                if line.text in DECLARED_ORIGIN_LABELS
+                else PAGE_REGION_CLUE
+                if line.text in REGION_CLUE_LABELS
+                else None
+            )
+            if fact_type is not None:
                 adjacent = _ocr_reading_order_proven(lines, index)
                 if adjacent is None:
                     diagnostics.append(
@@ -510,8 +644,13 @@ def _extract_ocr(
                     source_type="ocr_detail_image",
                     source_path=f"{raw_text_path}#L{line.number}-L{value_line.number}",
                     source_text=f"{line.text}\n{value_line.text}",
-                    extraction_method=method,
+                    extraction_method=(
+                        method
+                        if fact_type == DECLARED_ORIGIN
+                        else f"{method}_{line.text}"
+                    ),
                     created_at=created_at,
+                    fact_type=fact_type,
                 )
                 if fact:
                     facts.append(fact)
@@ -533,7 +672,7 @@ def extract_product_facts(
     *,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    """Extract declared-origin facts and persist one auditable artifact."""
+    """Extract declared origin plus non-authoritative page-region clues."""
 
     product_root = product_root.resolve()
     created_at = generated_at or iso_now()
@@ -559,9 +698,7 @@ def extract_product_facts(
 
     for extractor in (_extract_dom, _extract_ocr):
         try:
-            extracted, source_diagnostics = extractor(
-                product_root, snapshot_id, created_at
-            )
+            extracted, source_diagnostics = extractor(product_root, snapshot_id, created_at)
             facts.extend(extracted)
             diagnostics.extend(source_diagnostics)
         except Exception as exc:  # one source must not block the other or Phase 3
@@ -627,13 +764,14 @@ def load_product_facts(
         ("verificationState", "verification_state"),
         ("createdAt", "created_at"),
     )
+    supported_fact_types = {DECLARED_ORIGIN, PAGE_REGION_CLUE}
     for raw in payload["facts"]:
         if not isinstance(raw, dict):
             continue
         item = {camel: _field(raw, camel, snake) for camel, snake in required}
         if any(item[key] is None for key, _ in required):
             continue
-        if str(item["factType"]) != DECLARED_ORIGIN:
+        if str(item["factType"]) not in supported_fact_types:
             continue
         if expected_snapshot_id and str(item["snapshotId"]) != expected_snapshot_id:
             continue
