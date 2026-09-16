@@ -56,6 +56,7 @@ export function ProductSnapshotSummary({
   const pageRegionClues = pageRegionClueValues(
     workspace.productFacts,
     workspace.snapshot.productName,
+    workspace.snapshot.targetName || "",
   );
 
   const originSummary = workspace.declaredOrigin.state === "single"
