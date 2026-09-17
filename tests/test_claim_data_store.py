@@ -268,11 +268,25 @@ class ClaimDataStoreTest(unittest.TestCase):
         self.store.import_run(run_root)
         options = self.store.list_product_filter_options()
         self.assertIn({"value": "助眠", "label": "助眠"}, options["effects"])
+        taxonomy = read_json(PROJECT_ROOT / "config" / "claim_taxonomy_v2.json")
+        expected_claim_types = [
+            {"value": item["id"], "label": item["label_zh"]}
+            for item in taxonomy["claim_types"]
+            if item["status"] == "active"
+        ]
+        self.assertEqual(options["claimTypes"], expected_claim_types)
         self.assertIn(
             {"value": "sleep_related", "label": "睡眠相关宣传"},
             options["claimTypes"],
         )
-        self.assertEqual(len(options["claimTypes"]), 5)
+        self.assertIn(
+            {"value": "blood_glucose_related", "label": "血糖相关宣传"},
+            options["claimTypes"],
+        )
+        self.assertIn(
+            {"value": "anti_fatigue_related", "label": "抗疲劳相关宣传"},
+            options["claimTypes"],
+        )
 
 
 if __name__ == "__main__":
