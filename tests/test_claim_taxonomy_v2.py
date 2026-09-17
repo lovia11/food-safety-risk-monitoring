@@ -36,6 +36,29 @@ EXPECTED_EFFECT_MIGRATION = {
     "男性相关": "male_function_related",
 }
 
+EXPECTED_V2_B2_TYPES = {
+    "blood_glucose_related",
+    "anti_fatigue_related",
+}
+EXPECTED_V2_B2_EXPRESSIONS = {
+    "改善睡眠",
+    "有助于改善睡眠",
+    "辅助降血压",
+    "调节血压",
+    "有助于维持血压健康水平",
+    "辅助降血脂",
+    "调节血脂",
+    "有助于维持血脂健康水平",
+    "有助于维持血脂（胆固醇/甘油三酯）健康水平",
+    "有助于控制体内脂肪",
+    "降糖",
+    "辅助降血糖",
+    "调节血糖",
+    "有助于维持血糖健康水平",
+    "抗疲劳",
+    "缓解体力疲劳",
+}
+
 CLAIM_TYPE_FIELDS = {"id", "label_zh", "description", "status"}
 EXPRESSION_FIELDS = {
     "expression_id",
@@ -108,8 +131,9 @@ class ClaimTaxonomySchemaTest(unittest.TestCase):
     def test_claim_type_ids_are_unique_and_schema_is_bounded(self):
         claim_types = self.taxonomy["claim_types"]
         ids = [item["id"] for item in claim_types]
-        self.assertEqual(len(ids), 5)
+        self.assertEqual(len(ids), 7)
         self.assertEqual(len(ids), len(set(ids)))
+        self.assertTrue(EXPECTED_V2_B2_TYPES.issubset(ids))
         for item in claim_types:
             self.assertEqual(set(item), CLAIM_TYPE_FIELDS)
             self.assertRegex(item["id"], IDENTIFIER)
@@ -128,7 +152,21 @@ class ClaimTaxonomySchemaTest(unittest.TestCase):
             self.assertEqual(item["match_mode"], "exact")
             self.assertEqual(item["status"], "active")
 
-    def test_all_active_expressions_have_explicit_non_official_provenance(self):
+    def test_v2_b2_expansion_is_explicit_and_source_bounded(self):
+        expressions = self.taxonomy["expressions"]
+        added = [item for item in expressions if item["legacy_reference"] is None]
+        self.assertEqual({item["text"] for item in added}, EXPECTED_V2_B2_EXPRESSIONS)
+        self.assertEqual(len(added), 16)
+        self.assertEqual(
+            self.taxonomy["metadata"]["v2_b2_expansion"]["added_claim_types"],
+            ["blood_glucose_related", "anti_fatigue_related"],
+        )
+        self.assertEqual(
+            self.taxonomy["metadata"]["v2_b2_expansion"]["source_basis"],
+            "docs/V2_B_REGULATORY_DIRECTION_AUDIT.md",
+        )
+
+    def test_all_active_expressions_have_explicit_governed_provenance(self):
         allowed_sources = {
             "legacy_system",
             "manual_curated",
@@ -139,8 +177,10 @@ class ClaimTaxonomySchemaTest(unittest.TestCase):
             if item["status"] != "active":
                 continue
             self.assertIn(item["source"], allowed_sources)
-            self.assertEqual(item["source"], "legacy_system")
-            self.assertNotEqual(item["source"], "official_source")
+            if item["source"] == "legacy_system":
+                self.assertIsInstance(item["legacy_reference"], dict)
+            else:
+                self.assertIsNone(item["legacy_reference"])
 
     def test_taxonomy_contains_no_risk_health_function_or_inspection_mapping(self):
         present = set(all_keys(self.taxonomy))
@@ -151,15 +191,21 @@ class ClaimTaxonomyLegacyCoverageTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.taxonomy = read_json(TAXONOMY_PATH)
+        cls.legacy_expressions = [
+            item
+            for item in cls.taxonomy["expressions"]
+            if item["source"] == "legacy_system"
+        ]
 
     def test_repo_legacy_inventory_is_five_effects_and_twenty_six_keywords(self):
         self.assertEqual(len(LEGACY_EFFECT_CATEGORIES), 5)
         self.assertEqual(len(EXPECTED_LEGACY_KEYWORDS), 26)
         self.assertEqual(sum(map(len, LEGACY_EFFECT_CATEGORIES.values())), 26)
+        self.assertEqual(len(self.legacy_expressions), 26)
 
     def test_every_legacy_keyword_appears_exactly_once_without_silent_loss(self):
         references = [
-            item["legacy_reference"] for item in self.taxonomy["expressions"]
+            item["legacy_reference"] for item in self.legacy_expressions
         ]
         covered_pairs = [
             (reference["effect"], reference["keyword"])
@@ -176,7 +222,7 @@ class ClaimTaxonomyLegacyCoverageTest(unittest.TestCase):
         )
 
     def test_expression_text_and_claim_type_match_audited_legacy_migration(self):
-        for item in self.taxonomy["expressions"]:
+        for item in self.legacy_expressions:
             legacy = item["legacy_reference"]
             self.assertEqual(legacy["config"], "config/effect_keywords.json")
             self.assertEqual(item["text"], legacy["keyword"])
