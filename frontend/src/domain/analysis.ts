@@ -27,6 +27,7 @@ type AnalysisStateInput = {
   evidence: Evidence[];
   inspection: InspectionView;
 };
+
 function hasKnownMethod(inspection: InspectionView) {
   return inspection.riskFindings.some((finding) =>
     finding.substance_follow_ups.some(
@@ -36,6 +37,13 @@ function hasKnownMethod(inspection: InspectionView) {
         || substance.other_known_methods.length > 0,
     ),
   );
+}
+
+function unmappedClaimLabels(inspection: InspectionView) {
+  const labels = inspection.unmappedEvidence
+    .map((item) => item.claimDisplayLabel)
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
+  return [...new Set(labels)];
 }
 
 export function analysisStatePresentation(
@@ -87,11 +95,15 @@ export function analysisStatePresentation(
     };
   }
   if (input.inspection.available) {
+    const claimLabels = unmappedClaimLabels(input.inspection);
+    const subject = claimLabels.length > 0
+      ? `“${claimLabels.join("、")}”`
+      : "页面宣传线索";
     return {
       code: "EVIDENCE_UNMAPPED",
       label: "发现宣传线索 · 检测知识待补充",
       summary: "已发现宣传线索，暂无检测关注方向",
-      message: "已发现并保留页面宣传线索，但当前知识库尚未建立页面宣传与检测关注方向之间的可靠关系（旧版界面称为“映射”）。建议结合原始页面证据人工复核。",
+      message: `已发现并保留${subject}，但当前知识库尚未建立该宣传与检测关注方向之间的可靠关系（旧版界面称为“映射”）。建议结合原始页面证据人工复核。`,
       tone: "info",
     };
   }
