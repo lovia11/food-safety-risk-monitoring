@@ -133,6 +133,12 @@ class KnowledgeTrace(Mapping[str, Any]):
         return len(self.__dataclass_fields__)
 
 
+def _mapping_evidence_order(item: MappingEvidence) -> tuple[int, str]:
+    """Present current evidence before selectively admitted historical evidence."""
+
+    return (0 if item["temporal_status"] == "current" else 1, item["mapping_id"])
+
+
 class InspectionKnowledgeResolver:
     """Compose deterministic traces from verified persisted Reference rows."""
 
@@ -181,19 +187,56 @@ class InspectionKnowledgeResolver:
         return methods
 
     def resolve(
-        self, risk_category: str, *, include_historical: bool = False
+        self,
+        risk_category: str,
+        *,
+        include_historical: bool = False,
+        allowed_historical_mapping_ids: set[str] | None = None,
     ) -> KnowledgeTrace:
-        """Resolve one risk category without product-level inference."""
+        """Resolve one risk category without product-level inference.
+
+        ``include_historical`` is retained for explicit legacy/debug use.  V2 Claim
+        production must instead pass ``allowed_historical_mapping_ids`` so only
+        Bridge-authorized historical Risk mappings can enter the trace.
+        """
 
         if not isinstance(risk_category, str):
             raise TypeError("risk_category must be a string")
         if not isinstance(include_historical, bool):
             raise TypeError("include_historical must be a boolean")
+        if allowed_historical_mapping_ids is not None and not isinstance(
+            allowed_historical_mapping_ids, set
+        ):
+            raise TypeError("allowed_historical_mapping_ids must be a set or None")
+        if include_historical and allowed_historical_mapping_ids:
+            raise ValueError(
+                "include_historical cannot be combined with selective historical mapping IDs"
+            )
 
         category = risk_category.strip()
-        mappings = self.data_store.list_risk_mappings(
-            category, include_historical=include_historical
-        )
+        if include_historical:
+            mappings = self.data_store.list_risk_mappings(
+                category, include_historical=True
+            )
+        elif allowed_historical_mapping_ids:
+            all_mappings = self.data_store.list_risk_mappings(
+                category, include_historical=True
+            )
+            allowed = {str(value) for value in allowed_historical_mapping_ids}
+            mappings = [
+                row
+                for row in all_mappings
+                if row["temporal_status"] == "current"
+                or (
+                    row["temporal_status"] == "historical"
+                    and str(row["mapping_id"]) in allowed
+                )
+            ]
+        else:
+            mappings = self.data_store.list_risk_mappings(
+                category, include_historical=False
+            )
+
         risk_labels = sorted({str(row["risk_label"]) for row in mappings})
         group_evidence: dict[str, list[MappingEvidence]] = {}
         substance_evidence: dict[str, list[MappingEvidence]] = {}
@@ -212,7 +255,7 @@ class InspectionKnowledgeResolver:
         knowledge_gaps: list[KnowledgeGap] = []
         for group_label in sorted(group_evidence):
             evidence_rows = sorted(
-                group_evidence[group_label], key=lambda item: item["mapping_id"]
+                group_evidence[group_label], key=_mapping_evidence_order
             )
             mapping_ids = [item["mapping_id"] for item in evidence_rows]
             group_targets.append(
@@ -243,7 +286,7 @@ class InspectionKnowledgeResolver:
         for substance_id in sorted(substance_evidence):
             evidence_rows = sorted(
                 substance_evidence[substance_id],
-                key=lambda item: item["mapping_id"],
+                key=_mapping_evidence_order,
             )
             substance = self.data_store.get_inspection_substance(substance_id)
             if substance is None:
