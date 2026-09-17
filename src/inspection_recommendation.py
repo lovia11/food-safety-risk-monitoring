@@ -1,8 +1,10 @@
-"""Product-level regulatory screening recommendations from D3 and D4 outputs.
+"""Product-level regulatory screening recommendations.
 
-The builder composes existing evidence, knowledge, and applicability contracts.
-It does not infer product context, rerun earlier matching logic, select a best
-method, determine illegality, or represent a laboratory detection result.
+Current V2 products enter the inspection knowledge chain through governed Claim
+records.  Legacy Phase 3 Effect analysis remains an explicit compatibility path
+for historical artifacts without Claim analysis.  The builder does not infer
+product context, create new mappings, select a best method, determine
+illegality, or represent a laboratory detection result.
 """
 
 from __future__ import annotations
@@ -137,8 +139,8 @@ def _evidence_qualification(
 def _possible_risk_summary(risk_category: str, risk_labels: list[str]) -> str:
     label = "、".join(risk_labels) if risk_labels else risk_category
     return (
-        f"页面中发现与“{label}”相关的可桥接功效线索，"
-        "作为基于页面宣传线索的监管关注方向。"
+        f"页面中发现与“{label}”相关的宣传线索，"
+        "当前已治理知识将其作为监管抽检关注方向。"
     )
 
 
@@ -185,12 +187,12 @@ def _follow_up_reason(
 ) -> str:
     if status == "knowledge_integrity_gap":
         return (
-            "Bridge Reference与当前SQLite知识链存在不一致，暂不形成商品级检测"
+            "当前页面线索与知识库引用链存在不一致，暂不形成商品级检测"
             "建议；需先由人工核对知识完整性。"
         )
     if status == "auxiliary_evidence_only":
         return (
-            "当前可桥接线索仅来自用户生成内容，不能等同于商家作出的功效宣传；"
+            "当前线索仅来自用户生成内容，不能等同于商家作出的功效宣传；"
             "该方向仅作为辅助筛查线索保留，建议人工复核页面。"
         )
     if status == "suggest_testing":
@@ -205,17 +207,17 @@ def _follow_up_reason(
         )
     if status == "needs_context_review":
         return (
-            "需要人工确认商品类别、剂型或相关ingredient context后，才能确定"
-            "当前方法的Reference范围是否覆盖该商品；暂不形成商品级检测建议。"
+            "需要人工确认商品类别、剂型或相关配料/原料信息后，才能判断"
+            "当前方法的适用范围是否覆盖该商品；暂不形成商品级检测建议。"
         )
     return (
-        "当前已知Reference中没有同时满足current状态和适用性条件的已核验方法；"
+        "当前已核验知识中没有同时满足现行状态和适用性条件的方法；"
         "这不表示相关方法在科学上绝对不可使用，需由检验人员人工判断。"
     )
 
 
 class InspectionRecommendationBuilder:
-    """Build deterministic product-level screening follow-ups from D3 and D4."""
+    """Build deterministic product-level screening follow-ups."""
 
     def __init__(self, data_store: DataStore) -> None:
         self.signal_trace_resolver = InspectionSignalTraceResolver(data_store)
@@ -225,19 +227,33 @@ class InspectionRecommendationBuilder:
         analysis: Mapping[str, Any],
         product_context: ProductInspectionContext,
         *,
+        claim_analysis: Mapping[str, Any] | None = None,
         include_historical: bool = False,
     ) -> ProductInspectionRecommendationResult:
-        """Compose existing contracts into a conservative product result."""
+        """Compose governed page signals, knowledge and applicability.
+
+        When ``claim_analysis`` is present it is the authoritative V2 page-signal
+        input.  ``analysis`` remains required for stable product identity fields
+        and as an explicit historical fallback when no Claim artifact exists.
+        """
 
         if not isinstance(analysis, Mapping):
             raise TypeError("analysis must be a mapping")
+        if claim_analysis is not None and not isinstance(claim_analysis, Mapping):
+            raise TypeError("claim_analysis must be a mapping or None")
         if not isinstance(product_context, ProductInspectionContext):
             raise TypeError("product_context must be a ProductInspectionContext")
 
-        signal_trace = self.signal_trace_resolver.resolve_analysis(
-            analysis,
-            include_historical=include_historical,
-        )
+        if claim_analysis is not None:
+            signal_trace = self.signal_trace_resolver.resolve_claim_analysis(
+                claim_analysis,
+                include_historical=include_historical,
+            )
+        else:
+            signal_trace = self.signal_trace_resolver.resolve_analysis(
+                analysis,
+                include_historical=include_historical,
+            )
         applicability_result = evaluate_signal_trace(signal_trace, product_context)
         assessments_by_identity = {
             (
