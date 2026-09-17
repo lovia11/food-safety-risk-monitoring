@@ -146,7 +146,7 @@ export function NewInspectionPage() {
             <label>
               每个搜索词最多收集候选
               <input type="number" min={1} max={50} value={monitorCandidateLimit} onChange={(event) => setMonitorCandidateLimit(Number(event.target.value))} />
-              <small>先从每个已验证搜索词收集候选商品，只读取搜索卡片，不进入详情页。</small>
+              <small>先从每个已验证搜索策略收集候选商品，只读取搜索卡片，不进入详情页。</small>
             </label>
             <label>
               最多进入详情分析
