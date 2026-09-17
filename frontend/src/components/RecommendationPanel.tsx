@@ -167,7 +167,7 @@ export function RecommendationPanel({
       {inspection.riskFindings.length === 0 ? (
         <div className="inline-message">
           <BookOpenCheck size={17} />
-          <span>当前快照没有可桥接至已核验知识的风险方向，页面证据仍可供人工复核。</span>
+          <span>已发现页面宣传线索，但当前知识库尚未建立对应的检测关注方向；页面证据仍可供人工复核。</span>
         </div>
       ) : (
         inspection.riskFindings.map((finding) => (
