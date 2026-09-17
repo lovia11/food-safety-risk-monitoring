@@ -1,5 +1,6 @@
 import copy
 import unittest
+from pathlib import Path
 
 from src.claim_analysis import derive_claim_analysis, load_claim_taxonomy
 from src.claim_inspection_bridge import (
@@ -35,7 +36,7 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
 
     @staticmethod
     def _historical_risk_reference() -> tuple[dict, str]:
-        risk_reference = read_json("config/risk_substance_reference.json")
+        risk_reference = read_json(Path("config/risk_substance_reference.json"))
         mapping_id = "test-sleep-historical-sedative-group"
         risk_reference["mappings"].append(
             {
