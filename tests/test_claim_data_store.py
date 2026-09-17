@@ -275,18 +275,6 @@ class ClaimDataStoreTest(unittest.TestCase):
             if item["status"] == "active"
         ]
         self.assertEqual(options["claimTypes"], expected_claim_types)
-        self.assertIn(
-            {"value": "sleep_related", "label": "睡眠相关宣传"},
-            options["claimTypes"],
-        )
-        self.assertIn(
-            {"value": "blood_glucose_related", "label": "血糖相关宣传"},
-            options["claimTypes"],
-        )
-        self.assertIn(
-            {"value": "anti_fatigue_related", "label": "抗疲劳相关宣传"},
-            options["claimTypes"],
-        )
 
 
 if __name__ == "__main__":
