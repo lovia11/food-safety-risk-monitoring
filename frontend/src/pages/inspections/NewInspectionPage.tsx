@@ -32,7 +32,9 @@ export function NewInspectionPage() {
   const [targetSearch, setTargetSearch] = useState("");
   const [availabilityFilter, setAvailabilityFilter] =
     useState<MonitorAvailabilityFilter>("all");
-  const [analysisLimit, setAnalysisLimit] = useState(10);
+  const [quickAnalysisLimit, setQuickAnalysisLimit] = useState(10);
+  const [monitorCandidateLimit, setMonitorCandidateLimit] = useState(30);
+  const [monitorAnalysisLimit, setMonitorAnalysisLimit] = useState(8);
   const [targetList, setTargetList] = useState<MonitorTargetList | null>(null);
   const [tasks, setTasks] = useState<TaskList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,8 @@ export function NewInspectionPage() {
         name,
         keyword,
         targetId,
-        analysisLimit,
+        analysisLimit: mode === "quick" ? quickAnalysisLimit : monitorAnalysisLimit,
+        candidateLimit: mode === "monitor" ? monitorCandidateLimit : undefined,
       });
       const created = await createTask(payload);
       window.location.hash = `#/inspections/${encodeURIComponent(created.task.id)}`;
@@ -120,24 +123,41 @@ export function NewInspectionPage() {
         <label>排查名称（可选）<input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} placeholder="例如：九月重点商品排查" /></label>
         <label>采集平台<input value="淘宝" readOnly /></label>
         {mode === "quick" ? (
-          <label>搜索关键词<div className="input-with-icon"><Search size={16} /><input required value={keyword} maxLength={80} onChange={(event) => setKeyword(event.target.value)} /></div></label>
+          <>
+            <label>搜索关键词<div className="input-with-icon"><Search size={16} /><input required value={keyword} maxLength={80} onChange={(event) => setKeyword(event.target.value)} /></div></label>
+            <label>
+              最多分析商品数
+              <input type="number" min={1} max={50} value={quickAnalysisLimit} onChange={(event) => setQuickAnalysisLimit(Number(event.target.value))} />
+              <small>快速任务会按搜索顺序选择这些商品继续采集详情、识别文字并分析线索。</small>
+            </label>
+          </>
         ) : (
-          <MonitorTargetPicker
-            targetList={targetList}
-            visibleTargets={visibleTargets}
-            selectedTarget={selectedTarget}
-            targetSearch={targetSearch}
-            availabilityFilter={availabilityFilter}
-            onSearch={setTargetSearch}
-            onFilter={setAvailabilityFilter}
-            onSelect={setTargetId}
-          />
+          <>
+            <MonitorTargetPicker
+              targetList={targetList}
+              visibleTargets={visibleTargets}
+              selectedTarget={selectedTarget}
+              targetSearch={targetSearch}
+              availabilityFilter={availabilityFilter}
+              onSearch={setTargetSearch}
+              onFilter={setAvailabilityFilter}
+              onSelect={setTargetId}
+            />
+            <label>
+              每个搜索词最多收集候选
+              <input type="number" min={1} max={50} value={monitorCandidateLimit} onChange={(event) => setMonitorCandidateLimit(Number(event.target.value))} />
+              <small>先从每个已验证搜索词收集候选商品，只读取搜索卡片，不进入详情页。</small>
+            </label>
+            <label>
+              最多进入详情分析
+              <input type="number" min={1} max={50} value={monitorAnalysisLimit} onChange={(event) => setMonitorAnalysisLimit(Number(event.target.value))} />
+              <small>候选合并去重后，系统按搜索靠前、可见宣传线索和探索样本选择这些商品进入详情、OCR 与后续分析。</small>
+            </label>
+            <div className="monitor-target-guidance" data-availability="operational">
+              当前设置：每个搜索词最多收集 {monitorCandidateLimit} 个候选，合并去重后最多分析 {monitorAnalysisLimit} 个商品。
+            </div>
+          </>
         )}
-        <label>
-          最多分析商品数
-          <input type="number" min={1} max={50} value={analysisLimit} onChange={(event) => setAnalysisLimit(Number(event.target.value))} />
-          <small>搜索结果合并去重后，最多选择这些商品继续采集详情、识别文字并分析线索。</small>
-        </label>
         {mode === "monitor" && selectedTarget && (
           <div className="monitor-target-guidance" data-availability={selectedTarget.availability}>
             {monitorAvailabilityMessage(selectedTarget)}
