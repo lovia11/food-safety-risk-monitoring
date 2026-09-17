@@ -29,6 +29,7 @@ export function buildWebTaskRequest(input: {
   keyword: string;
   targetId: string;
   analysisLimit: number;
+  candidateLimit?: number;
 }) {
   const common = { name: input.name };
   if (input.mode === "quick") {
@@ -44,7 +45,7 @@ export function buildWebTaskRequest(input: {
     ...common,
     task_type: "monitor",
     target_id: input.targetId,
-    per_query_candidate_limit: input.analysisLimit,
+    per_query_candidate_limit: input.candidateLimit ?? input.analysisLimit,
     detail_limit: input.analysisLimit,
   };
 }
