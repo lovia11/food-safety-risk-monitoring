@@ -10,6 +10,12 @@ import { KNOWLEDGE_GAP_MESSAGE } from "../domain/recommendation";
 import { safeHttpUrl } from "../domain/product";
 import { StatusBadge } from "./StatusBadge";
 
+type TemporalRiskFinding = InspectionView["riskFindings"][number] & {
+  temporal_basis?: "current_only" | "current_and_historical" | "historical_reference_only";
+  historical_reference_mapping_ids?: string[];
+  historical_reference_note?: string;
+};
+
 function MethodItem({
   method,
   secondary = false,
@@ -72,6 +78,13 @@ function MethodGroup({
   );
 }
 
+function followUpStatusLabel(status: string) {
+  if (status === "suggest_testing") return "建议重点关注";
+  if (status === "needs_context_review") return "需要补充信息";
+  if (status === "regulatory_context_review") return "需核对监管语境";
+  return "需人工判断";
+}
+
 function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
   return (
     <article className="substance-card">
@@ -88,11 +101,7 @@ function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
             substance.follow_up_status === "suggest_testing" ? "info" : "neutral"
           }
         >
-          {substance.follow_up_status === "suggest_testing"
-            ? "建议重点关注"
-            : substance.follow_up_status === "needs_context_review"
-              ? "需要补充信息"
-              : "需人工判断"}
+          {followUpStatusLabel(substance.follow_up_status)}
         </StatusBadge>
       </div>
       <p className="substance-reason">{substance.reason}</p>
@@ -170,22 +179,34 @@ export function RecommendationPanel({
           <span>已发现页面宣传线索，但当前知识库尚未建立对应的检测关注方向；页面证据仍可供人工复核。</span>
         </div>
       ) : (
-        inspection.riskFindings.map((finding) => (
-          <div className="risk-finding" key={finding.risk_category}>
-            <div className="risk-labels">
-              {finding.risk_labels.map((label) => (
-                <StatusBadge key={label} tone="warning">{label}</StatusBadge>
-              ))}
-              {finding.evidence_qualification === "user_generated_auxiliary_only" && (
-                <StatusBadge>仅辅助线索</StatusBadge>
+        inspection.riskFindings.map((baseFinding) => {
+          const finding = baseFinding as TemporalRiskFinding;
+          const hasHistoricalReference =
+            finding.temporal_basis === "current_and_historical" ||
+            finding.temporal_basis === "historical_reference_only";
+          return (
+            <div className="risk-finding" key={finding.risk_category}>
+              <div className="risk-labels">
+                {finding.risk_labels.map((label) => (
+                  <StatusBadge key={label} tone="warning">{label}</StatusBadge>
+                ))}
+                {finding.evidence_qualification === "user_generated_auxiliary_only" && (
+                  <StatusBadge>仅辅助线索</StatusBadge>
+                )}
+                {hasHistoricalReference && (
+                  <StatusBadge>含历史筛查参考</StatusBadge>
+                )}
+              </div>
+              <p>{finding.possible_risk_summary}</p>
+              {finding.historical_reference_note && (
+                <p className="context-note">{finding.historical_reference_note}</p>
               )}
+              {finding.substance_follow_ups.map((substance) => (
+                <SubstanceCard key={substance.substance_id} substance={substance} />
+              ))}
             </div>
-            <p>{finding.possible_risk_summary}</p>
-            {finding.substance_follow_ups.map((substance) => (
-              <SubstanceCard key={substance.substance_id} substance={substance} />
-            ))}
-          </div>
-        ))
+          );
+        })
       )}
       {(hasKnowledgeGap || (inspection.riskFindings.length > 0 && !hasSubstances)) && (
         <div className="knowledge-gap">
