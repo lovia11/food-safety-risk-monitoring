@@ -1,8 +1,9 @@
-"""D6 integration for D5 recommendations and their file contracts.
+"""Integration for product-level inspection recommendations.
 
-This module only wires the existing DataStore, ProductInspectionContext, and
-InspectionRecommendationBuilder together.  It intentionally contains no D1-D5
-matching, knowledge, applicability, or recommendation rules.
+The runtime wires persisted product artifacts, DataStore references, explicit
+ProductInspectionContext, and InspectionRecommendationBuilder together.  V2
+uses Claim analysis when present; legacy analysis remains the compatibility
+fallback for historical artifacts without Claim analysis.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from src.claim_analysis import CLAIM_ANALYSIS_FILE
 from src.data_store import DataStore
 from src.inspection_applicability import ProductInspectionContext
 from src.inspection_recommendation import InspectionRecommendationBuilder
@@ -32,7 +34,7 @@ class InspectionContextValidationError(ValueError):
 
 
 class InspectionAnalysisUnavailableError(RuntimeError):
-    """Phase 3 has not produced analysis.json for the selected product."""
+    """Required analysis artifacts are unavailable for the selected product."""
 
 
 def database_path_for_output_root(output_root: Path) -> Path:
@@ -46,7 +48,7 @@ def bootstrap_inspection_references(
     inspection_config: Path = DEFAULT_INSPECTION_CONFIG_PATH,
     risk_substance_config: Path = DEFAULT_RISK_SUBSTANCE_CONFIG_PATH,
 ) -> dict[str, dict[str, int]]:
-    """Initialize and idempotently import D5's two Reference dependencies."""
+    """Initialize and idempotently import the two Reference dependencies."""
 
     if not inspection_config.is_file():
         raise FileNotFoundError(f"Inspection数据集不存在：{inspection_config}")
@@ -182,7 +184,7 @@ def human_confirmed_context(payload: Any) -> ProductInspectionContext:
 
 
 class InspectionRuntime:
-    """Generate D5 files from explicit product artifacts and Reference index."""
+    """Generate recommendation files from explicit product artifacts and References."""
 
     def __init__(self, store: DataStore) -> None:
         self.store = store
@@ -233,8 +235,23 @@ class InspectionRuntime:
         analysis = read_json(analysis_path)
         if not isinstance(analysis, Mapping):
             raise InspectionAnalysisUnavailableError("analysis.json必须包含JSON对象")
+
+        claim_analysis: Mapping[str, Any] | None = None
+        claim_path = product_root / CLAIM_ANALYSIS_FILE
+        if claim_path.is_file():
+            claim_payload = read_json(claim_path)
+            if not isinstance(claim_payload, Mapping):
+                raise InspectionAnalysisUnavailableError(
+                    "claim_analysis.json必须包含JSON对象"
+                )
+            claim_analysis = claim_payload
+
         context = load_product_inspection_context(product_root)
-        result = self.builder.build(analysis, context).to_dict()
+        result = self.builder.build(
+            analysis,
+            context,
+            claim_analysis=claim_analysis,
+        ).to_dict()
         write_json(product_root / INSPECTION_RECOMMENDATION_FILE, result)
         (product_root / INSPECTION_RECOMMENDATION_ERROR_FILE).unlink(
             missing_ok=True
