@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from src.claim_analysis import derive_claim_analysis, load_claim_taxonomy
-from src.inspection_runtime import InspectionRuntime
+from src.inspection_runtime import InspectionAnalysisUnavailableError, InspectionRuntime
 from src.runtime import write_json
 
 
@@ -91,6 +91,18 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
             any(item["risk_category"] == "weight_loss" for item in result["risk_findings"])
         )
         self.assertNotIn("claimType", result["risk_findings"][0]["trigger_evidence"][0])
+
+    def test_claim_failure_does_not_silently_fall_back_to_legacy_effect(self):
+        write_json(
+            self.product_root / "claim_analysis_error.json",
+            {"status": "error", "message": "injected claim failure"},
+        )
+
+        with self.assertRaisesRegex(
+            InspectionAnalysisUnavailableError,
+            "不回退使用旧版功效分析",
+        ):
+            self.runtime.generate(self.product_root)
 
 
 if __name__ == "__main__":
