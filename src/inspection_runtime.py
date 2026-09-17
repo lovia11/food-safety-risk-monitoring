@@ -3,7 +3,8 @@
 The runtime wires persisted product artifacts, DataStore references, explicit
 ProductInspectionContext, and InspectionRecommendationBuilder together.  V2
 uses Claim analysis when present; legacy analysis remains the compatibility
-fallback for historical artifacts without Claim analysis.
+fallback only for historical artifacts with neither Claim output nor Claim
+failure diagnostics.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from src.claim_analysis import CLAIM_ANALYSIS_FILE
+from src.claim_analysis import CLAIM_ANALYSIS_ERROR_FILE, CLAIM_ANALYSIS_FILE
 from src.data_store import DataStore
 from src.inspection_applicability import ProductInspectionContext
 from src.inspection_recommendation import InspectionRecommendationBuilder
@@ -238,6 +239,7 @@ class InspectionRuntime:
 
         claim_analysis: Mapping[str, Any] | None = None
         claim_path = product_root / CLAIM_ANALYSIS_FILE
+        claim_error_path = product_root / CLAIM_ANALYSIS_ERROR_FILE
         if claim_path.is_file():
             claim_payload = read_json(claim_path)
             if not isinstance(claim_payload, Mapping):
@@ -245,6 +247,10 @@ class InspectionRuntime:
                     "claim_analysis.json必须包含JSON对象"
                 )
             claim_analysis = claim_payload
+        elif claim_error_path.is_file():
+            raise InspectionAnalysisUnavailableError(
+                "V2页面宣传线索分析失败，当前抽检辅助建议不回退使用旧版功效分析"
+            )
 
         context = load_product_inspection_context(product_root)
         result = self.builder.build(
