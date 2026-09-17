@@ -1,10 +1,14 @@
+import copy
 import unittest
 
 from src.claim_analysis import derive_claim_analysis, load_claim_taxonomy
 from src.claim_inspection_bridge import (
+    ClaimInspectionBridgeConfigValidationError,
     bridge_claim_analysis,
     load_claim_inspection_bridge_config,
+    validate_claim_inspection_bridge_config,
 )
+from src.runtime import read_json
 
 
 class ClaimInspectionBridgeTest(unittest.TestCase):
@@ -29,6 +33,47 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             generated_at="2026-09-18T00:00:00+08:00",
         )
 
+    @staticmethod
+    def _historical_risk_reference() -> tuple[dict, str]:
+        risk_reference = read_json("config/risk_substance_reference.json")
+        mapping_id = "test-sleep-historical-sedative-group"
+        risk_reference["mappings"].append(
+            {
+                "mapping_id": mapping_id,
+                "dataset_id": risk_reference["dataset_id"],
+                "risk_category": "sleep_aid",
+                "risk_label": "睡眠相关宣传",
+                "target_type": "substance_group",
+                "substance_id": None,
+                "target_group_label": "镇静催眠类物质",
+                "evidence_grade": "B",
+                "basis_type": "historical_sampling_plan",
+                "temporal_status": "historical",
+                "product_scope": "改善睡眠类样品",
+                "source_name": "历史中央专项抽检测试来源",
+                "source_reference": "https://example.invalid/historical-sleep",
+                "source_date": "2014-01-01",
+                "source_basis_text": "历史抽检资料将改善睡眠类样品与镇静催眠类检测项目关联。",
+                "note": "synthetic B3 governance fixture; not production knowledge",
+            }
+        )
+        return risk_reference, mapping_id
+
+    @staticmethod
+    def _historical_bridge_mapping(reference_mapping_id: str) -> dict:
+        return {
+            "bridge_mapping_id": "test-sleep-historical-bridge",
+            "claim_type": "sleep_related",
+            "expression_id": "v2b2-sleep-related-youzhuyugaishanshuimian",
+            "matched_expression": "有助于改善睡眠",
+            "risk_category": "sleep_aid",
+            "reference_mapping_id": reference_mapping_id,
+            "temporal_policy": "historical_reference_allowed",
+            "governance_basis": "direct_verified_reference",
+            "migrated_from_bridge_mapping_id": None,
+            "note": "synthetic B3 governance fixture",
+        }
+
     def test_bridge_contains_only_three_migrated_verified_relations(self):
         config = load_claim_inspection_bridge_config()
 
@@ -37,6 +82,54 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             {item["matched_expression"] for item in config["mappings"]},
             {"减肥", "壮阳", "补肾"},
         )
+        self.assertEqual(
+            {item["temporal_policy"] for item in config["mappings"]},
+            {"current_only"},
+        )
+        self.assertTrue(config["metadata"]["historical_reference_disclosure"])
+
+    def test_historical_reference_requires_explicit_per_mapping_permission(self):
+        risk_reference, reference_mapping_id = self._historical_risk_reference()
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        mapping = self._historical_bridge_mapping(reference_mapping_id)
+        bridge["mappings"].append(mapping)
+
+        validated = validate_claim_inspection_bridge_config(
+            bridge,
+            taxonomy=self.taxonomy,
+            risk_reference_config=risk_reference,
+        )
+        historical = next(
+            item
+            for item in validated["mappings"]
+            if item["bridge_mapping_id"] == "test-sleep-historical-bridge"
+        )
+        self.assertEqual(
+            historical["temporal_policy"], "historical_reference_allowed"
+        )
+
+        bridge["mappings"][-1]["temporal_policy"] = "current_only"
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+                risk_reference_config=risk_reference,
+            )
+
+    def test_historical_permission_rejects_non_historical_sampling_basis(self):
+        risk_reference, reference_mapping_id = self._historical_risk_reference()
+        risk_reference["mappings"][-1]["basis_type"] = "official_case"
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        bridge["mappings"].append(
+            self._historical_bridge_mapping(reference_mapping_id)
+        )
+
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+                risk_reference_config=risk_reference,
+            )
 
     def test_jianfei_reaches_existing_weight_loss_direction(self):
         result = bridge_claim_analysis(self._analysis("帮助减肥"))
