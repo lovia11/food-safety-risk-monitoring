@@ -612,8 +612,8 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
 
         self.assertEqual(
             finding["possible_risk_summary"],
-            "页面中发现与“减肥/减重宣传”相关的可桥接功效线索，"
-            "作为基于页面宣传线索的监管关注方向。",
+            "页面中发现与“减肥/减重宣传”相关的宣传线索，"
+            "当前已治理知识将其作为监管抽检关注方向。",
         )
         self.assertNotIn("非法添加西布曲明风险", finding["possible_risk_summary"])
 
