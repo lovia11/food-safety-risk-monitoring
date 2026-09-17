@@ -1,10 +1,10 @@
 """Governed V2 ClaimMention-to-inspection-direction bridge.
 
-This module is the V2 production bridge from page Claim records to the existing
-inspection knowledge chain.  It only accepts explicitly governed,
-expression-specific relations.  It does not infer synonyms, expand a Claim type
-to every expression, reverse-map inspection methods, or create new
-Risk->Substance knowledge.
+This is the V2 production bridge from page Claim records to the existing
+inspection knowledge chain. Relations are expression-specific and must point to
+an already verified Risk Reference. The bridge never infers synonyms, expands a
+whole Claim type, reverse-maps inspection methods, or creates Risk->Substance
+knowledge.
 """
 
 from __future__ import annotations
@@ -46,8 +46,13 @@ _MAPPING_FIELDS = {
     "matched_expression",
     "risk_category",
     "reference_mapping_id",
+    "governance_basis",
     "migrated_from_bridge_mapping_id",
     "note",
+}
+_ALLOWED_GOVERNANCE_BASES = {
+    "legacy_verified_migration",
+    "direct_verified_reference",
 }
 
 
@@ -126,6 +131,14 @@ def _required_text(value: Any, field: str) -> str:
     return value.strip()
 
 
+def _optional_text(value: Any, field: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ClaimInspectionBridgeConfigValidationError(f"{field}必须是非空字符串或null")
+    return value.strip()
+
+
 def _require_exact_fields(item: Mapping[str, Any], expected: set[str], field: str) -> None:
     missing = sorted(expected - set(item))
     if missing:
@@ -146,7 +159,7 @@ def validate_claim_inspection_bridge_config(
     risk_reference_config: Any | None = None,
     legacy_bridge_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Validate every V2 bridge relation against governed source identities."""
+    """Validate each Claim relation against the Claim and Risk authorities."""
 
     if not isinstance(payload, Mapping):
         raise ClaimInspectionBridgeConfigValidationError("Claim Inspection Bridge根节点必须是对象")
@@ -197,21 +210,36 @@ def validate_claim_inspection_bridge_config(
     if not isinstance(metadata, Mapping):
         raise ClaimInspectionBridgeConfigValidationError("metadata必须是对象")
 
-    normalized: list[dict[str, str]] = []
+    normalized: list[dict[str, Any]] = []
     seen_mapping_ids: set[str] = set()
     seen_expression_ids: set[str] = set()
     for index, raw in enumerate(mappings_raw, start=1):
         if not isinstance(raw, Mapping):
             raise ClaimInspectionBridgeConfigValidationError(f"mappings[{index}]必须是对象")
-        _require_exact_fields(raw, _MAPPING_FIELDS, f"mappings[{index}]")
-        item = {key: _required_text(raw.get(key), f"mappings[{index}].{key}") for key in _MAPPING_FIELDS}
+        context = f"mappings[{index}]"
+        _require_exact_fields(raw, _MAPPING_FIELDS, context)
+        item: dict[str, Any] = {
+            key: _required_text(raw.get(key), f"{context}.{key}")
+            for key in _MAPPING_FIELDS
+            if key != "migrated_from_bridge_mapping_id"
+        }
+        item["migrated_from_bridge_mapping_id"] = _optional_text(
+            raw.get("migrated_from_bridge_mapping_id"),
+            f"{context}.migrated_from_bridge_mapping_id",
+        )
 
-        mapping_id = item["bridge_mapping_id"]
+        mapping_id = str(item["bridge_mapping_id"])
         if mapping_id in seen_mapping_ids:
             raise ClaimInspectionBridgeConfigValidationError(f"bridge_mapping_id重复：{mapping_id}")
         seen_mapping_ids.add(mapping_id)
 
-        expression_id = item["expression_id"]
+        governance_basis = str(item["governance_basis"])
+        if governance_basis not in _ALLOWED_GOVERNANCE_BASES:
+            raise ClaimInspectionBridgeConfigValidationError(
+                f"{mapping_id}的governance_basis不受支持：{governance_basis}"
+            )
+
+        expression_id = str(item["expression_id"])
         if expression_id in seen_expression_ids:
             raise ClaimInspectionBridgeConfigValidationError(
                 f"同一Claim expression不能重复桥接：{expression_id}"
@@ -222,22 +250,23 @@ def validate_claim_inspection_bridge_config(
             raise ClaimInspectionBridgeConfigValidationError(
                 f"引用的active Claim expression不存在：{expression_id}"
             )
-        claim_type = item["claim_type"]
+        claim_type = str(item["claim_type"])
         if claim_type not in active_types or str(expression["claim_type"]) != claim_type:
             raise ClaimInspectionBridgeConfigValidationError(
                 f"{expression_id}的claim_type与治理词表不一致"
             )
-        if str(expression["text"]) != item["matched_expression"]:
+        if str(expression["text"]) != str(item["matched_expression"]):
             raise ClaimInspectionBridgeConfigValidationError(
                 f"{expression_id}的matched_expression与治理词表不一致"
             )
 
-        reference = risk_mapping_by_id.get(item["reference_mapping_id"])
+        reference_mapping_id = str(item["reference_mapping_id"])
+        reference = risk_mapping_by_id.get(reference_mapping_id)
         if reference is None:
             raise ClaimInspectionBridgeConfigValidationError(
-                f"Risk reference mapping不存在：{item['reference_mapping_id']}"
+                f"Risk reference mapping不存在：{reference_mapping_id}"
             )
-        if str(reference["risk_category"]) != item["risk_category"]:
+        if str(reference["risk_category"]) != str(item["risk_category"]):
             raise ClaimInspectionBridgeConfigValidationError(
                 f"{mapping_id}的risk_category与Risk Reference不一致"
             )
@@ -246,24 +275,34 @@ def validate_claim_inspection_bridge_config(
                 f"{mapping_id}不能引用historical Risk Reference"
             )
 
-        legacy = legacy_mapping_by_id.get(item["migrated_from_bridge_mapping_id"])
-        if legacy is None:
+        migration_id = item["migrated_from_bridge_mapping_id"]
+        if governance_basis == "legacy_verified_migration":
+            if migration_id is None:
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}缺少legacy迁移来源"
+                )
+            legacy = legacy_mapping_by_id.get(str(migration_id))
+            if legacy is None:
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"迁移来源legacy bridge不存在：{migration_id}"
+                )
+            legacy_ref = expression.get("legacy_reference")
+            if not isinstance(legacy_ref, Mapping):
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{expression_id}缺少legacy_reference，不能证明精确迁移"
+                )
+            if (
+                str(legacy_ref.get("effect") or "") != str(legacy["effect_label"])
+                or str(legacy_ref.get("keyword") or "") != str(legacy["matched_keyword"])
+                or str(item["risk_category"]) != str(legacy["risk_category"])
+                or reference_mapping_id != str(legacy["reference_mapping_id"])
+            ):
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}与既有已核验legacy bridge关系不一致"
+                )
+        elif migration_id is not None:
             raise ClaimInspectionBridgeConfigValidationError(
-                f"迁移来源legacy bridge不存在：{item['migrated_from_bridge_mapping_id']}"
-            )
-        legacy_ref = expression.get("legacy_reference")
-        if not isinstance(legacy_ref, Mapping):
-            raise ClaimInspectionBridgeConfigValidationError(
-                f"{expression_id}缺少legacy_reference，不能证明精确迁移"
-            )
-        if (
-            str(legacy_ref.get("effect") or "") != str(legacy["effect_label"])
-            or str(legacy_ref.get("keyword") or "") != str(legacy["matched_keyword"])
-            or item["risk_category"] != str(legacy["risk_category"])
-            or item["reference_mapping_id"] != str(legacy["reference_mapping_id"])
-        ):
-            raise ClaimInspectionBridgeConfigValidationError(
-                f"{mapping_id}与既有已核验legacy bridge关系不一致"
+                f"{mapping_id}为direct_verified_reference时不得伪装legacy迁移来源"
             )
         normalized.append(item)
 
@@ -300,7 +339,7 @@ def _base_claim_evidence(
     locator = locator if isinstance(locator, Mapping) else {}
     matched_expression = str(mention["matchedExpression"])
     return {
-        # Compatibility keys retained for downstream D3-D6 presentation/export.
+        # Compatibility keys retained for downstream presentation/export only.
         "effect": display_label,
         "text": str(mention["rawText"]),
         "matched_keywords": [matched_expression],
@@ -309,7 +348,7 @@ def _base_claim_evidence(
         "content_origin": "seller_managed",
         "source_path": str(locator.get("sourcePath") or ""),
         "line_number": locator.get("lineNumber"),
-        # V2 identities make the true source contract explicit.
+        # These identities make Claim, rather than legacy Effect, authoritative.
         "claimMentionId": str(mention["claimMentionId"]),
         "claimType": str(mention["claimType"]),
         "claimDisplayLabel": display_label,
