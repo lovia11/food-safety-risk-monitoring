@@ -499,7 +499,7 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
             follow_up["regulatory_context_note"], REGULATORY_CONTEXT_NOTE
         )
 
-    def test_regulatory_context_does_not_change_follow_up_status(self):
+    def test_regulatory_context_blocks_direct_suggestion_until_review(self):
         self._execute(
             "UPDATE risk_substance_mappings SET substance_id = ? "
             "WHERE mapping_id = 'weight-loss-sibutramine-cn-2025'",
@@ -529,8 +529,13 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            with_context["follow_up_status"], without_context["follow_up_status"]
+            with_context["follow_up_status"], "regulatory_context_review"
         )
+        self.assertEqual(with_context["suggested_methods"], [])
+        self.assertTrue(with_context["other_known_methods"])
+        self.assertIn("注册/备案", with_context["reason"])
+        self.assertEqual(without_context["follow_up_status"], "suggest_testing")
+        self.assertTrue(without_context["suggested_methods"])
         self.assertEqual(without_context["regulatory_contexts"], [])
         self.assertEqual(without_context["regulatory_context_note"], "")
 
