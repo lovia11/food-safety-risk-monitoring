@@ -46,6 +46,7 @@ _MAPPING_FIELDS = {
     "matched_expression",
     "risk_category",
     "reference_mapping_id",
+    "temporal_policy",
     "governance_basis",
     "migrated_from_bridge_mapping_id",
     "note",
@@ -53,6 +54,10 @@ _MAPPING_FIELDS = {
 _ALLOWED_GOVERNANCE_BASES = {
     "legacy_verified_migration",
     "direct_verified_reference",
+}
+_ALLOWED_TEMPORAL_POLICIES = {
+    "current_only",
+    "historical_reference_allowed",
 }
 
 
@@ -209,6 +214,10 @@ def validate_claim_inspection_bridge_config(
     metadata = payload.get("metadata")
     if not isinstance(metadata, Mapping):
         raise ClaimInspectionBridgeConfigValidationError("metadata必须是对象")
+    historical_disclosure = _required_text(
+        metadata.get("historical_reference_disclosure"),
+        "metadata.historical_reference_disclosure",
+    )
 
     normalized: list[dict[str, Any]] = []
     seen_mapping_ids: set[str] = set()
@@ -237,6 +246,11 @@ def validate_claim_inspection_bridge_config(
         if governance_basis not in _ALLOWED_GOVERNANCE_BASES:
             raise ClaimInspectionBridgeConfigValidationError(
                 f"{mapping_id}的governance_basis不受支持：{governance_basis}"
+            )
+        temporal_policy = str(item["temporal_policy"])
+        if temporal_policy not in _ALLOWED_TEMPORAL_POLICIES:
+            raise ClaimInspectionBridgeConfigValidationError(
+                f"{mapping_id}的temporal_policy不受支持：{temporal_policy}"
             )
 
         expression_id = str(item["expression_id"])
@@ -270,13 +284,37 @@ def validate_claim_inspection_bridge_config(
             raise ClaimInspectionBridgeConfigValidationError(
                 f"{mapping_id}的risk_category与Risk Reference不一致"
             )
-        if str(reference["temporal_status"]) != "current":
-            raise ClaimInspectionBridgeConfigValidationError(
-                f"{mapping_id}不能引用historical Risk Reference"
-            )
+
+        reference_temporal_status = str(reference["temporal_status"])
+        if temporal_policy == "current_only":
+            if reference_temporal_status != "current":
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}声明current_only但引用了historical Risk Reference"
+                )
+        else:
+            if reference_temporal_status != "historical":
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}声明historical_reference_allowed但引用的不是historical Risk Reference"
+                )
+            if str(reference["basis_type"]) != "historical_sampling_plan":
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}只能选择性启用historical_sampling_plan，不能启用其他historical来源"
+                )
+            if governance_basis != "direct_verified_reference":
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}的historical Reference必须使用direct_verified_reference治理"
+                )
+            if not historical_disclosure:
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}启用historical Reference时必须提供展示边界"
+                )
 
         migration_id = item["migrated_from_bridge_mapping_id"]
         if governance_basis == "legacy_verified_migration":
+            if temporal_policy != "current_only":
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}的legacy迁移只能引用current Risk Reference"
+                )
             if migration_id is None:
                 raise ClaimInspectionBridgeConfigValidationError(
                     f"{mapping_id}缺少legacy迁移来源"
