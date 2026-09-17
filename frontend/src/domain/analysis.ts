@@ -72,9 +72,9 @@ export function analysisStatePresentation(
     if (!hasKnownMethod(input.inspection)) {
       return {
         code: "RISK_MAPPED_NO_METHOD",
-        label: "风险方向已形成",
+        label: "监管关注方向已形成",
         summary: "暂无已核验方法",
-        message: "已形成风险方向，但暂无可用的已核验检测方法。",
+        message: "已形成监管关注方向，但当前暂无可用的已核验检测方法。",
         tone: "warning",
       };
     }
@@ -89,9 +89,9 @@ export function analysisStatePresentation(
   if (input.inspection.available) {
     return {
       code: "EVIDENCE_UNMAPPED",
-      label: "发现线索 · 知识未映射",
-      summary: "已发现线索，暂无映射",
-      message: "已保留页面 Evidence，但当前已核验知识库尚未建立其到抽检风险方向的可靠映射。",
+      label: "发现宣传线索 · 检测知识待补充",
+      summary: "已发现宣传线索，暂无检测关注方向",
+      message: "已发现并保留页面宣传线索，但当前知识库尚未建立对应的检测关注方向。建议结合原始页面证据人工复核。",
       tone: "info",
     };
   }
