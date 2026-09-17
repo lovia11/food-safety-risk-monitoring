@@ -36,6 +36,11 @@ DEFAULT_HINTS = (
     "减脂",
 )
 
+PP_OCR_V6_MEDIUM_MODELS = {
+    "detection": "PP-OCRv6_medium_det",
+    "recognition": "PP-OCRv6_medium_rec",
+}
+
 
 @dataclass
 class OCRRuntime:
@@ -127,15 +132,38 @@ def write_json(path: Path, value: Any) -> None:
 
 
 def _installed_version(distribution: str) -> str:
-    try:
-        return importlib.metadata.version(distribution)
-    except importlib.metadata.PackageNotFoundError:
-        return "not-installed"
+    candidates = [distribution]
+    if distribution == "paddlepaddle":
+        candidates.append("paddlepaddle-gpu")
+    for candidate in candidates:
+        try:
+            return importlib.metadata.version(candidate)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+    return "not-installed"
 
 
 def _version_tuple(value: str) -> tuple[int, ...]:
     match = re.match(r"^(\d+(?:\.\d+)*)", value)
     return tuple(int(part) for part in match.group(1).split(".")) if match else ()
+
+
+def choose_ocr_device(cuda_available: bool, requested_device: str = "auto") -> str:
+    """Prefer the first CUDA GPU, while retaining an explicit CPU fallback."""
+
+    normalized = requested_device.strip().lower()
+    if normalized in {"", "auto"}:
+        return "gpu:0" if cuda_available else "cpu"
+    if normalized == "cpu":
+        return "cpu"
+    if normalized.startswith("gpu"):
+        if not cuda_available:
+            raise OCRRuntimeCompatibilityError(
+                "请求GPU OCR，但当前PaddlePaddle未启用CUDA；"
+                "请安装GPU版PaddlePaddle，或使用device='cpu'。"
+            )
+        return normalized
+    raise ValueError(f"不支持的OCR设备：{requested_device}")
 
 
 def validate_ocr_runtime_compatibility(
@@ -212,7 +240,7 @@ def record_ocr_runtime_initialization_failure(
     score_threshold: float = 0.5,
     ocr_version: str = "PP-OCRv6",
     model_source: str = "bos",
-    device: str = "cpu",
+    device: str = "auto",
 ) -> None:
     """Persist per-product diagnostics when the shared runtime cannot start."""
 
@@ -263,6 +291,7 @@ def create_ocr_runtime(
     cache_dir: Path,
     ocr_version: str = "PP-OCRv6",
     model_source: str = "bos",
+    device: str = "auto",
 ) -> OCRRuntime:
     cache_dir = cache_dir.resolve()
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -284,16 +313,33 @@ def create_ocr_runtime(
     )
     from paddleocr import PaddleOCR
 
-    print(f"Initializing PaddleOCR {ocr_version} on CPU", flush=True)
-    engine = PaddleOCR(
-        lang="ch",
-        ocr_version=ocr_version,
-        use_doc_orientation_classify=False,
-        use_doc_unwarping=False,
-        use_textline_orientation=False,
-        device="cpu",
-        engine="paddle",
+    selected_device = choose_ocr_device(
+        paddle.is_compiled_with_cuda(),
+        requested_device=device,
     )
+    paddle.set_device(selected_device)
+    print(
+        f"Initializing PaddleOCR {ocr_version} on {selected_device}",
+        flush=True,
+    )
+    engine_kwargs: dict[str, Any] = {
+        "lang": "ch",
+        "ocr_version": ocr_version,
+        "use_doc_orientation_classify": False,
+        "use_doc_unwarping": False,
+        "use_textline_orientation": False,
+        "device": selected_device,
+        "engine": "paddle",
+    }
+    if ocr_version == "PP-OCRv6":
+        engine_kwargs.update(
+            {
+                "text_detection_model_name": PP_OCR_V6_MEDIUM_MODELS["detection"],
+                "text_recognition_model_name": PP_OCR_V6_MEDIUM_MODELS["recognition"],
+                "text_recognition_batch_size": 8,
+            }
+        )
+    engine = PaddleOCR(**engine_kwargs)
     return OCRRuntime(
         engine=engine,
         cv2=cv2,
@@ -306,7 +352,17 @@ def create_ocr_runtime(
             "paddlexVersion": paddlex_package.__version__,
             "ocrVersion": ocr_version,
             "modelSource": model_source,
-            "device": paddle.get_device(),
+            "device": selected_device,
+            "textDetectionModel": (
+                PP_OCR_V6_MEDIUM_MODELS["detection"]
+                if ocr_version == "PP-OCRv6"
+                else None
+            ),
+            "textRecognitionModel": (
+                PP_OCR_V6_MEDIUM_MODELS["recognition"]
+                if ocr_version == "PP-OCRv6"
+                else None
+            ),
         },
     )
 
@@ -376,7 +432,7 @@ def build_report(
             f"- 耗时：{elapsed_seconds:.1f} 秒",
             f"- PaddlePaddle：`{model_info['paddleVersion']}`",
             f"- PaddleOCR：`{model_info['paddleocrVersion']}`",
-            f"- 模型：`{model_info['ocrVersion']}` / 中文 / CPU",
+            f"- 模型：`{model_info['ocrVersion']}` / 中文 / {model_info.get('device', 'cpu')}",
             f"- 纯文本置信度阈值：`{model_info['scoreThreshold']}`",
             f"- OCR 行数：{total_lines}",
             f"- OCR 字符数：{total_chars}",
@@ -396,7 +452,7 @@ def build_report(
             "## 输出",
             "",
             f"- 纯文本：`{(product_root / 'ocr').as_posix()}/original_###.txt`",
-            f"- 结构化结果：`{(product_root / 'ocr').as_posix()}/original_###.json`",
+            f"- 结构化结果：`{(product_root / 'ocr' / 'original_###.json').as_posix()}`",
             f"- 汇总清单：`{(product_root / 'ocr' / 'manifest.json').as_posix()}`",
             f"- 合并文本：`{(product_root / 'ocr' / 'combined_text.txt').as_posix()}`",
             "",
