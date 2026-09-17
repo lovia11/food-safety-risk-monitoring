@@ -30,8 +30,8 @@ DISCLAIMER = (
 )
 
 REGULATORY_CONTEXT_NOTE = (
-    "若存在监管语境，具体检验项目及风险解释需结合商品身份、食品类别、"
-    "备案/注册情况及该监管语境人工确认。"
+    "该物质存在需要结合具体产品解释的受治理监管语境；具体检验项目及风险解释"
+    "需结合商品身份、食品类别、备案/注册情况、配料/原料信息及该监管语境人工确认。"
 )
 
 EvidenceQualification = Literal[
@@ -39,9 +39,16 @@ EvidenceQualification = Literal[
     "user_generated_auxiliary_only",
 ]
 
+TemporalBasis = Literal[
+    "current_only",
+    "current_and_historical",
+    "historical_reference_only",
+]
+
 FollowUpStatus = Literal[
     "suggest_testing",
     "needs_context_review",
+    "regulatory_context_review",
     "auxiliary_evidence_only",
     "knowledge_integrity_gap",
     "no_applicable_verified_method",
@@ -85,6 +92,9 @@ class RiskFinding(TypedDict):
     risk_category: str
     risk_labels: list[str]
     possible_risk_summary: str
+    temporal_basis: TemporalBasis
+    historical_reference_mapping_ids: list[str]
+    historical_reference_note: str
     evidence_qualification: EvidenceQualification
     trigger_evidence: list[dict[str, Any]]
     group_targets: list[dict[str, Any]]
@@ -136,8 +146,42 @@ def _evidence_qualification(
     return "user_generated_auxiliary_only"
 
 
-def _possible_risk_summary(risk_category: str, risk_labels: list[str]) -> str:
+def _knowledge_has_current_mapping(knowledge_trace: Mapping[str, Any]) -> bool:
+    for target_field in ("group_targets", "substance_targets"):
+        for target in knowledge_trace.get(target_field, []):
+            for evidence in target.get("mapping_evidence", []):
+                if evidence.get("temporal_status") == "current":
+                    return True
+    return False
+
+
+def _temporal_basis(
+    knowledge_trace: Mapping[str, Any],
+    historical_reference_mapping_ids: list[str],
+) -> TemporalBasis:
+    if not historical_reference_mapping_ids:
+        return "current_only"
+    if _knowledge_has_current_mapping(knowledge_trace):
+        return "current_and_historical"
+    return "historical_reference_only"
+
+
+def _possible_risk_summary(
+    risk_category: str,
+    risk_labels: list[str],
+    temporal_basis: TemporalBasis,
+) -> str:
     label = "、".join(risk_labels) if risk_labels else risk_category
+    if temporal_basis == "historical_reference_only":
+        return (
+            f"页面中发现与“{label}”相关的宣传线索，"
+            "该方向依据受治理的历史中央专项抽检/风险监测资料作为抽检筛查参考。"
+        )
+    if temporal_basis == "current_and_historical":
+        return (
+            f"页面中发现与“{label}”相关的宣传线索，"
+            "当前受治理知识与历史中央专项抽检/风险监测资料共同提供抽检筛查参考。"
+        )
     return (
         f"页面中发现与“{label}”相关的宣传线索，"
         "当前已治理知识将其作为监管抽检关注方向。"
@@ -195,6 +239,12 @@ def _follow_up_reason(
             "当前线索仅来自用户生成内容，不能等同于商家作出的功效宣传；"
             "该方向仅作为辅助筛查线索保留，建议人工复核页面。"
         )
+    if status == "regulatory_context_review":
+        return (
+            f"“{substance_name}”存在需要结合具体产品解释的受治理监管语境；"
+            "需先核对商品身份、食品类别、注册/备案及配料/原料信息，"
+            "暂不依据页面宣传直接形成商品级检测建议。相关方法仅作为人工研判参考。"
+        )
     if status == "suggest_testing":
         method_numbers = "、".join(
             method["method_no"] for method in suggested_methods
@@ -233,8 +283,9 @@ class InspectionRecommendationBuilder:
         """Compose governed page signals, knowledge and applicability.
 
         When ``claim_analysis`` is present it is the authoritative V2 page-signal
-        input.  ``analysis`` remains required for stable product identity fields
-        and as an explicit historical fallback when no Claim artifact exists.
+        input. ``include_historical`` is only a legacy-artifact compatibility
+        switch; V2 Claim production admits historical references exclusively via
+        each governed Bridge mapping's temporal policy.
         """
 
         if not isinstance(analysis, Mapping):
@@ -274,6 +325,16 @@ class InspectionRecommendationBuilder:
             trigger_evidence = risk_signal["trigger_evidence"]
             evidence_qualification = _evidence_qualification(trigger_evidence)
             knowledge_trace = risk_signal["knowledge_trace"]
+            historical_reference_mapping_ids = list(
+                risk_signal.get("historical_reference_mapping_ids", [])
+            )
+            temporal_basis = _temporal_basis(
+                knowledge_trace,
+                historical_reference_mapping_ids,
+            )
+            historical_reference_note = str(
+                risk_signal.get("historical_reference_disclosure") or ""
+            )
             substance_follow_ups: list[SubstanceFollowUp] = []
             for substance in knowledge_trace["substance_targets"]:
                 substance_id = substance["substance_id"]
@@ -297,12 +358,17 @@ class InspectionRecommendationBuilder:
                     else:
                         other_known_methods.append(method_follow_up)
 
+                regulatory_contexts = substance["regulatory_contexts"]
                 if risk_category in gap_categories:
                     follow_up_status: FollowUpStatus = "knowledge_integrity_gap"
                     other_known_methods.extend(suggested_methods)
                     suggested_methods = []
                 elif evidence_qualification == "user_generated_auxiliary_only":
                     follow_up_status = "auxiliary_evidence_only"
+                    other_known_methods.extend(suggested_methods)
+                    suggested_methods = []
+                elif regulatory_contexts:
+                    follow_up_status = "regulatory_context_review"
                     other_known_methods.extend(suggested_methods)
                     suggested_methods = []
                 elif suggested_methods:
@@ -315,7 +381,6 @@ class InspectionRecommendationBuilder:
                 suggested_methods.sort(key=_method_order)
                 methods_needing_context.sort(key=_method_order)
                 other_known_methods.sort(key=_method_order)
-                regulatory_contexts = substance["regulatory_contexts"]
                 substance_follow_ups.append(
                     {
                         "substance_id": substance_id,
@@ -346,8 +411,13 @@ class InspectionRecommendationBuilder:
                     "risk_category": risk_category,
                     "risk_labels": risk_labels,
                     "possible_risk_summary": _possible_risk_summary(
-                        risk_category, risk_labels
+                        risk_category,
+                        risk_labels,
+                        temporal_basis,
                     ),
+                    "temporal_basis": temporal_basis,
+                    "historical_reference_mapping_ids": historical_reference_mapping_ids,
+                    "historical_reference_note": historical_reference_note,
                     "evidence_qualification": evidence_qualification,
                     "trigger_evidence": trigger_evidence,
                     "group_targets": knowledge_trace["group_targets"],
