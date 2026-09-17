@@ -6,6 +6,7 @@ from src.phase2_ocr import (
     OCRRuntime,
     OCRRuntimeCompatibilityError,
     OCRStageError,
+    choose_ocr_device,
     extract_lines,
     keyword_hits,
     run_ocr,
@@ -78,6 +79,14 @@ class PhaseTwoHelpersTest(unittest.TestCase):
         self.assertIn("paddleocr==3.7.0", requirements)
         self.assertIn("paddlex==3.7.2", requirements)
         self.assertNotIn("paddleocr>=", requirements)
+
+    def test_ocr_device_prefers_gpu_and_falls_back_to_cpu(self) -> None:
+        self.assertEqual(choose_ocr_device(True), "gpu:0")
+        self.assertEqual(choose_ocr_device(False), "cpu")
+        self.assertEqual(choose_ocr_device(True, "cpu"), "cpu")
+        self.assertEqual(choose_ocr_device(True, "gpu:0"), "gpu:0")
+        with self.assertRaisesRegex(OCRRuntimeCompatibilityError, "未启用CUDA"):
+            choose_ocr_device(False, "gpu:0")
 
     def test_selects_only_requested_original_range(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -200,4 +209,3 @@ class PhaseTwoHelpersTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
