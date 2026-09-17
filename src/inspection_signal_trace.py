@@ -29,6 +29,8 @@ class RiskKnowledgeSignal(TypedDict):
     risk_category: str
     bridge_mapping_ids: list[str]
     reference_mapping_ids: list[str]
+    historical_reference_mapping_ids: list[str]
+    historical_reference_disclosure: str
     trigger_evidence: list[dict[str, Any]]
     knowledge_trace: dict[str, Any]
 
@@ -88,11 +90,17 @@ class InspectionSignalTraceResolver:
         bridge_config: Mapping[str, Any],
         *,
         include_historical: bool,
+        selective_historical: bool,
     ) -> InspectionSignalTraceResult:
-        reference_id_by_bridge_id = {
-            str(mapping["bridge_mapping_id"]): str(mapping["reference_mapping_id"])
+        mapping_by_bridge_id = {
+            str(mapping["bridge_mapping_id"]): mapping
             for mapping in bridge_config["mappings"]
         }
+        metadata = bridge_config.get("metadata")
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        historical_disclosure = str(
+            metadata.get("historical_reference_disclosure") or ""
+        )
 
         risk_knowledge_signals: list[RiskKnowledgeSignal] = []
         composition_gaps: list[CompositionGap] = []
@@ -100,17 +108,32 @@ class InspectionSignalTraceResolver:
             risk_category = str(risk_signal["risk_category"])
             bridge_mapping_ids = [str(value) for value in risk_signal["bridge_mapping_ids"]]
             reference_to_bridge_ids: dict[str, list[str]] = {}
+            historical_reference_mapping_ids: set[str] = set()
             for bridge_mapping_id in bridge_mapping_ids:
-                reference_mapping_id = reference_id_by_bridge_id[bridge_mapping_id]
+                mapping = mapping_by_bridge_id[bridge_mapping_id]
+                reference_mapping_id = str(mapping["reference_mapping_id"])
                 reference_to_bridge_ids.setdefault(reference_mapping_id, []).append(
                     bridge_mapping_id
                 )
+                if (
+                    selective_historical
+                    and str(mapping.get("temporal_policy") or "")
+                    == "historical_reference_allowed"
+                ):
+                    historical_reference_mapping_ids.add(reference_mapping_id)
             reference_mapping_ids = sorted(reference_to_bridge_ids)
+            selected_historical_ids = sorted(historical_reference_mapping_ids)
 
-            knowledge_trace = self.knowledge_resolver.resolve(
-                risk_category,
-                include_historical=include_historical,
-            ).to_dict()
+            if selective_historical:
+                knowledge_trace = self.knowledge_resolver.resolve(
+                    risk_category,
+                    allowed_historical_mapping_ids=set(selected_historical_ids),
+                ).to_dict()
+            else:
+                knowledge_trace = self.knowledge_resolver.resolve(
+                    risk_category,
+                    include_historical=include_historical,
+                ).to_dict()
             resolved_mapping_ids = _resolved_mapping_ids(knowledge_trace)
             for reference_mapping_id in reference_mapping_ids:
                 if reference_mapping_id in resolved_mapping_ids:
@@ -135,6 +158,10 @@ class InspectionSignalTraceResolver:
                     "risk_category": risk_category,
                     "bridge_mapping_ids": bridge_mapping_ids,
                     "reference_mapping_ids": reference_mapping_ids,
+                    "historical_reference_mapping_ids": selected_historical_ids,
+                    "historical_reference_disclosure": (
+                        historical_disclosure if selected_historical_ids else ""
+                    ),
                     "trigger_evidence": list(risk_signal["trigger_evidence"]),
                     "knowledge_trace": knowledge_trace,
                 }
@@ -160,16 +187,26 @@ class InspectionSignalTraceResolver:
         *,
         include_historical: bool = False,
     ) -> InspectionSignalTraceResult:
-        """Resolve V2 ClaimMention records into inspection knowledge traces."""
+        """Resolve V2 ClaimMention records into inspection knowledge traces.
+
+        V2 production never accepts a category-wide historical switch.  Any
+        historical mapping must be explicitly authorized by the exact Claim
+        Bridge relation that references it.
+        """
 
         if not isinstance(include_historical, bool):
             raise TypeError("include_historical must be a boolean")
+        if include_historical:
+            raise ValueError(
+                "V2 Claim production forbids global include_historical; use governed Bridge temporal_policy"
+            )
         bridge_result = bridge_claim_analysis(claim_analysis).to_dict()
         bridge_config = load_claim_inspection_bridge_config()
         return self._compose_bridge_result(
             bridge_result,
             bridge_config,
-            include_historical=include_historical,
+            include_historical=False,
+            selective_historical=True,
         )
 
     def resolve_analysis(
@@ -188,4 +225,5 @@ class InspectionSignalTraceResolver:
             bridge_result,
             bridge_config,
             include_historical=include_historical,
+            selective_historical=False,
         )
