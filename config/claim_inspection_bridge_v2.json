@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "bridge_id": "claim-inspection-bridge-v2",
-  "bridge_version": "claim-inspection-bridge-v2.0",
-  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。当前仅迁移既有已核验 legacy Effect-Risk Bridge 的三条精确表达关系；未来新增关系必须由已核验 Risk Reference 单独治理，不得按 Claim 类型整体外推，也不得由检验方法反向推断宣传与物质关系。",
+  "bridge_version": "claim-inspection-bridge-v2.1",
+  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。每条关系必须引用已核验 Risk Reference；current 关系默认仅使用 current Reference，historical 关系只有在单条 Bridge 显式声明 historical_reference_allowed 时才可进入 V2 生产链。不得按 Claim 类型整体外推，也不得由检验方法反向推断宣传与物质关系。",
   "mappings": [
     {
       "bridge_mapping_id": "claim-weight-management-jianfei-to-weight-loss",
@@ -11,6 +11,7 @@
       "matched_expression": "减肥",
       "risk_category": "weight_loss",
       "reference_mapping_id": "weight-loss-sibutramine-group-cn-2025",
+      "temporal_policy": "current_only",
       "governance_basis": "legacy_verified_migration",
       "migrated_from_bridge_mapping_id": "jianfei-to-weight-loss",
       "note": "仅迁移既有“减脂 + 减肥”精确桥接；不扩展到减脂、瘦身、燃脂等其他体重管理表达。"
@@ -22,6 +23,7 @@
       "matched_expression": "壮阳",
       "risk_category": "male_function",
       "reference_mapping_id": "male-function-nafei-lafei-group-cn-2025",
+      "temporal_policy": "current_only",
       "governance_basis": "legacy_verified_migration",
       "migrated_from_bridge_mapping_id": "zhuangyang-to-male-function",
       "note": "仅迁移既有“男性相关 + 壮阳”精确桥接；不扩展到其他男性功能表达。"
@@ -33,6 +35,7 @@
       "matched_expression": "补肾",
       "risk_category": "male_function",
       "reference_mapping_id": "male-function-nafei-lafei-group-cn-2025",
+      "temporal_policy": "current_only",
       "governance_basis": "legacy_verified_migration",
       "migrated_from_bridge_mapping_id": "bushen-to-male-function",
       "note": "仅迁移既有“男性相关 + 补肾”精确桥接；不扩展到其他男性功能表达。"
@@ -43,6 +46,8 @@
     "authority": "project_governed_claim_inspection_bridge",
     "migration_source": "config/effect_risk_bridge.json",
     "allowed_governance_bases": ["legacy_verified_migration", "direct_verified_reference"],
-    "scope_note": "睡眠、血压、血脂等当前无已治理抽检关注桥接的 Claim 必须明确保留为知识缺口，不得自动推荐物质或方法。"
+    "allowed_temporal_policies": ["current_only", "historical_reference_allowed"],
+    "historical_reference_disclosure": "该关注方向依据历史中央专项抽检/风险监测资料，用于抽检筛查参考；不表示当前统一法定抽检项目，也不表示该商品实际含有相关物质。",
+    "scope_note": "没有单条受治理 Bridge 的 Claim 必须明确保留为知识缺口。historical Reference 不得通过全局开关进入 V2 Claim 生产链。"
   }
 }
