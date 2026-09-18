@@ -61,6 +61,12 @@ import {
 import { productQueryString } from "../src/domain/productQuery.ts";
 import { reviewPresentation } from "../src/domain/presentation.ts";
 import {
+  followUpStatusLabel,
+  historicalReferenceMessage,
+  needsProductContext,
+  substanceFollowUpMessage,
+} from "../src/domain/recommendation.ts";
+import {
   declaredOriginText,
   productFactArtifactPath,
   productFactSourceLabel,
@@ -358,40 +364,51 @@ test("analysis presentation distinguishes not analyzed, zero evidence, and unava
   const notAnalyzed = analysisStatePresentation({
     readiness: { ...eligibleReadiness, analysisReady: false, reviewEligible: false },
     evidence: [],
+    claimAnalysisStatus: "not_generated",
+    claimSignals: [],
     inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
   });
   const zeroEvidence = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [],
     inspection: inspection(),
   });
   const unavailable = analysisStatePresentation({
     readiness: eligibleReadiness,
-    evidence: [evidence("e1")],
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection({ available: false, recommendationStatus: "unavailable" }),
   });
 
   assert.equal(notAnalyzed.code, "NOT_ANALYZED");
   assert.equal(zeroEvidence.code, "ANALYZED_ZERO_EVIDENCE");
   assert.equal(unavailable.code, "RECOMMENDATION_UNAVAILABLE");
+  assert.notEqual(unavailable.code, "ANALYZED_ZERO_EVIDENCE");
 });
 
 test("analysis presentation distinguishes unmapped evidence and recommendation errors", () => {
   const unmapped = analysisStatePresentation({
     readiness: eligibleReadiness,
-    evidence: [evidence("e1")],
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection(),
   });
   const errored = analysisStatePresentation({
     readiness: eligibleReadiness,
-    evidence: [evidence("e1")],
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection({ recommendationStatus: "error", error: { message: "boom" } }),
   });
 
   assert.equal(unmapped.code, "EVIDENCE_UNMAPPED");
-  assert.match(unmapped.message, /尚未建立.*映射/);
+  assert.match(unmapped.message, /暂无对应的抽检建议/);
   assert.equal(errored.code, "RECOMMENDATION_ERROR");
-  assert.match(errored.message, /人工复核仍然可用/);
+  assert.match(errored.message, /抽检建议生成失败/);
 });
 
 test("analysis presentation distinguishes mapped risk without and with verified methods", () => {
@@ -415,12 +432,16 @@ test("analysis presentation distinguishes mapped risk without and with verified 
   };
   const withoutMethod = analysisStatePresentation({
     readiness: eligibleReadiness,
-    evidence: [evidence("e1")],
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection({ riskFindings: [finding] }),
   });
   const withMethod = analysisStatePresentation({
     readiness: eligibleReadiness,
-    evidence: [evidence("e1")],
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection({
       riskFindings: [{
         ...finding,
@@ -434,6 +455,42 @@ test("analysis presentation distinguishes mapped risk without and with verified 
 
   assert.equal(withoutMethod.code, "RISK_MAPPED_NO_METHOD");
   assert.equal(withMethod.code, "RECOMMENDATION_AVAILABLE");
+});
+
+test("inspection presentation stays concise and exposes product-context action when required", () => {
+  const regulatorySubstance = {
+    substance_id: "melatonin",
+    canonical_name: "褪黑素",
+    english_name: "Melatonin",
+    cas_no: "73-31-4",
+    regulatory_context_note: "backend audit detail",
+    follow_up_status: "regulatory_context_review",
+    suggested_methods: [],
+    methods_needing_context: [],
+    other_known_methods: [],
+    reason: "verbose backend reason",
+  };
+  const finding = {
+    risk_category: "sleep_aid",
+    risk_labels: ["改善睡眠宣传"],
+    possible_risk_summary: "",
+    temporal_basis: "historical_reference_only",
+    evidence_qualification: "seller_managed_primary",
+    substance_follow_ups: [regulatorySubstance],
+  };
+  const view = inspection({ riskFindings: [finding] });
+
+  assert.equal(followUpStatusLabel("regulatory_context_review"), "需核对商品信息");
+  assert.match(substanceFollowUpMessage(regulatorySubstance), /商品身份、注册备案及配料信息/);
+  assert.equal(needsProductContext(view), true);
+  assert.match(historicalReferenceMessage(finding), /历史专项抽检\/风险监测资料/);
+  assert.doesNotMatch(
+    [
+      substanceFollowUpMessage(regulatorySubstance),
+      historicalReferenceMessage(finding),
+    ].join(" "),
+    /Evidence|Phase3|V2|映射|治理|KnowledgeTrace/,
+  );
 });
 
 function claimMention(id, overrides = {}) {
@@ -540,8 +597,8 @@ test("claim presentation keeps claims, governed zero, not-generated, and error d
 
   assert.equal(one.summary, "检测到 1 类页面宣传线索，共 1 处表达");
   assert.equal(multiple.summary, "检测到 2 类页面宣传线索，共 3 处表达");
-  assert.equal(zero.label, "未发现已治理词表中的页面宣传表达");
-  assert.match(zero.description, /不表示无风险、无问题或宣传合规/);
+  assert.equal(zero.label, "未发现重点宣传线索");
+  assert.match(zero.description, /未识别到当前关注的页面宣传表达/);
   assert.equal(missing.label, "尚未生成页面宣传线索");
   assert.notEqual(zero.label, missing.label);
   assert.equal(error.label, "页面宣传线索分析失败");
@@ -604,19 +661,19 @@ test("claim consistency relation wording and colors remain non-adjudicative", ()
   );
   assert.match(
     claimConsistencyRelationPresentation.function_topic_recorded.description,
-    /不代表具体页面措辞获得官方认可/,
+    /有对应主题/,
   );
   assert.match(
     claimConsistencyRelationPresentation.function_topic_not_recorded.description,
-    /建议人工复核/,
+    /未找到对应主题/,
   );
   assert.match(
     claimConsistencyRelationPresentation.no_governed_function_mapping.label,
-    /暂无已治理/,
+    /暂无官方功能主题对应规则/,
   );
   assert.match(
     claimConsistencyRelationPresentation.mapping_unresolved.description,
-    /不能显示为未找到对应项/,
+    /暂无法确定/,
   );
 });
 
@@ -716,7 +773,7 @@ test("official function presentation retains raw aliases and unresolved descript
   const unresolvedView = officialFunctionViewModels(unresolved)[0];
   assert.equal(unresolvedView.rawText, descriptive);
   assert.equal(unresolvedView.currentName, null);
-  assert.equal(unresolvedView.resolutionLabel, "暂无法通过已治理名称解析");
+  assert.equal(unresolvedView.resolutionLabel, "名称暂无法确认");
 });
 
 test("claim consistency counts are descriptive and attention absence stays a gap", () => {
@@ -734,7 +791,7 @@ test("claim consistency counts are descriptive and attention absence stays a gap
   const summary = claimConsistencyCountSummary(assessment);
   assert.equal(
     summary,
-    "4 类页面宣传主题：2 类找到官方功能对应主题，1 类未在当前官方功能记录中找到对应项，1 类暂无治理映射。",
+    "4 类页面宣传主题：2 类找到官方功能对应主题，1 类未在当前官方功能记录中找到对应项，1 类暂无对应规则。",
   );
   assert.doesNotMatch(summary, /%|通过率|一致率|风险分/);
   assert.equal(hasClaimAttentionGovernanceGap(assessment), true);
@@ -1167,3 +1224,17 @@ test("knowledge workflow separates empty and error and preserves governed bounda
     /createKnowledge|updateKnowledge|deleteKnowledge|method=["']post["']/i,
   );
 });
+
+test("primary analysis and recommendation copy does not leak internal architecture terms", () => {
+  const files = [
+    readFileSync(new URL("../src/domain/analysis.ts", import.meta.url), "utf8"),
+    readFileSync(new URL("../src/domain/recommendation.ts", import.meta.url), "utf8"),
+    readFileSync(new URL("../src/components/RecommendationPanel.tsx", import.meta.url), "utf8"),
+    readFileSync(new URL("../src/components/ProductSnapshotSummary.tsx", import.meta.url), "utf8"),
+  ].join("\n");
+
+  for (const internalTerm of ["结构化页面 Evidence", "Phase3", "旧版界面称为", "尚未建立该宣传与检测关注方向之间的可靠关系"]) {
+    assert.doesNotMatch(files, new RegExp(internalTerm));
+  }
+});
+
