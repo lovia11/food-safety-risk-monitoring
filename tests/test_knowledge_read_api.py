@@ -55,8 +55,8 @@ class KnowledgeReadServiceTest(unittest.TestCase):
                 "recommendationReadyMethods": 6,
                 "referenceOnlyMethods": 1,
                 "substances": 201,
-                "riskMappings": 54,
-                "groupMappings": 7,
+                "riskMappings": 81,
+                "groupMappings": 12,
                 "regulatoryDocuments": 7,
             },
         )
@@ -138,7 +138,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         groups = self.service.risk_mappings(
             target_type="substance_group", limit=100, offset=0
         )
-        self.assertEqual(groups["total"], 7)
+        self.assertEqual(groups["total"], 12)
         self.assertTrue(
             all(
                 item["groupResolution"] == {"status": "unresolved", "memberCount": 0}
@@ -152,14 +152,14 @@ class KnowledgeReadServiceTest(unittest.TestCase):
             )
         )
         all_mappings = self.service.risk_mappings(limit=100, offset=0)
-        self.assertEqual(all_mappings["total"], 54)
+        self.assertEqual(all_mappings["total"], 81)
         current = self.service.risk_mappings(status="current", limit=100, offset=0)
         historical = self.service.risk_mappings(status="historical", limit=100, offset=0)
-        self.assertEqual(current["total"], 8)
-        self.assertEqual(historical["total"], 46)
+        self.assertEqual(current["total"], 13)
+        self.assertEqual(historical["total"], 68)
         self.assertEqual(
             {item["riskCategory"] for item in historical["items"]},
-            {"sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose"},
+            {"sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose", "weight_loss", "anti_fatigue"},
         )
         self.assertNotIn(
             "substance-cas-139755-95-6",
