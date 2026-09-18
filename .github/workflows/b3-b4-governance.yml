@@ -1,0 +1,35 @@
+name: B3 B4 governance regression
+
+on:
+  push:
+    branches:
+      - ux-redesign-v1
+  pull_request:
+    branches:
+      - ux-redesign-v1
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Run B3 B4 governance regression suite
+        run: >-
+          python -m unittest
+          tests.test_claim_inspection_bridge
+          tests.test_risk_substance_reference_data
+          tests.test_v2b3_temporal_governance
+          tests.test_inspection_knowledge
+          tests.test_inspection_signal_trace
+          tests.test_inspection_recommendation
+          tests.test_inspection_runtime
+          tests.test_inspection_runtime_claim_v2
+          tests.test_knowledge_read_api
+          tests.test_inspection_knowledge_audit
