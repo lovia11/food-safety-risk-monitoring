@@ -76,10 +76,10 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             "note": "synthetic B3 governance fixture",
         }
 
-    def test_bridge_preserves_three_current_relations_and_governs_sleep_scope(self):
+    def test_bridge_temporal_policies_match_governed_expression_scopes(self):
         config = load_claim_inspection_bridge_config()
 
-        self.assertEqual(len(config["mappings"]), 22)
+        self.assertEqual(len(config["mappings"]), 25)
         current = [
             item for item in config["mappings"]
             if item["temporal_policy"] == "current_only"
@@ -88,9 +88,17 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             item for item in config["mappings"]
             if item["temporal_policy"] == "historical_reference_allowed"
         ]
+        current_plus_historical = [
+            item for item in config["mappings"]
+            if item["temporal_policy"] == "current_plus_historical_reference_allowed"
+        ]
         self.assertEqual(
             {item["matched_expression"] for item in current},
-            {"减肥", "壮阳", "补肾"},
+            {"壮阳", "补肾"},
+        )
+        self.assertEqual(
+            {item["matched_expression"] for item in current_plus_historical},
+            {"减肥", "有助于控制体内脂肪", "抗疲劳", "缓解体力疲劳"},
         )
         self.assertEqual(
             {item["matched_expression"] for item in historical},
@@ -127,12 +135,25 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             all(item["authorized_historical_mapping_ids"] == [] for item in current)
         )
         self.assertTrue(
+            all(item["authorized_historical_mapping_ids"] for item in current_plus_historical)
+        )
+        self.assertTrue(
             all(
                 item["reference_mapping_id"]
                 in item["authorized_historical_mapping_ids"]
                 for item in historical
             )
         )
+        remaining = config["metadata"]["b4_remaining_direction_policy"]
+        self.assertEqual(
+            set(remaining["weight_loss"]["claim_only"]),
+            {"减脂", "瘦身", "燃脂"},
+        )
+        self.assertEqual(
+            set(remaining["male_function"]["claim_only"]),
+            {"阳痿", "早泄", "遗精", "男性功能"},
+        )
+        self.assertEqual(remaining["anti_fatigue"]["claim_only"], [])
         self.assertTrue(config["metadata"]["historical_reference_disclosure"])
 
     def test_historical_reference_requires_explicit_per_mapping_permission(self):
@@ -194,7 +215,11 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
 
     def test_current_mapping_cannot_authorize_historical_ids(self):
         bridge = copy.deepcopy(load_claim_inspection_bridge_config())
-        bridge["mappings"][0]["authorized_historical_mapping_ids"] = [
+        mapping = next(
+            item for item in bridge["mappings"]
+            if item["temporal_policy"] == "current_only"
+        )
+        mapping["authorized_historical_mapping_ids"] = [
             "synthetic-historical-id"
         ]
 
@@ -414,6 +439,36 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
                         and item["reason"] == "no_governed_claim_inspection_bridge"
                         for item in result.unmapped_evidence
                     )
+                )
+
+    def test_current_weight_function_wording_reaches_weight_loss(self):
+        result = bridge_claim_analysis(self._analysis("有助于控制体内脂肪"))
+
+        self.assertEqual(len(result.risk_signals), 1)
+        self.assertEqual(result.risk_signals[0]["risk_category"], "weight_loss")
+        self.assertIn(
+            "有助于控制体内脂肪",
+            {
+                item["matchedExpression"]
+                for item in result.risk_signals[0]["trigger_evidence"]
+            },
+        )
+
+    def test_anti_fatigue_official_expressions_reach_current_direction(self):
+        for expression in ("抗疲劳", "缓解体力疲劳"):
+            with self.subTest(expression=expression):
+                result = bridge_claim_analysis(self._analysis(expression))
+                self.assertEqual(len(result.risk_signals), 1)
+                self.assertEqual(
+                    result.risk_signals[0]["risk_category"],
+                    "anti_fatigue",
+                )
+                self.assertIn(
+                    expression,
+                    {
+                        item["matchedExpression"]
+                        for item in result.risk_signals[0]["trigger_evidence"]
+                    },
                 )
 
     def test_jianfei_reaches_existing_weight_loss_direction(self):
