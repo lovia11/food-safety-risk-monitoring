@@ -31,7 +31,7 @@ from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
 
 
-AUDIT_CONTRACT_VERSION = "v2.7c-1"
+AUDIT_CONTRACT_VERSION = "v2.8-1"
 DEFAULT_INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 DEFAULT_RISK_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
@@ -408,6 +408,12 @@ def build_audit(
     regulatory_documents = list(inspection["regulatory_documents"])
     group_memberships = list(inspection["substance_group_memberships"])
     risk_mappings = list(risk["mappings"])
+    current_risk_mappings = [
+        item for item in risk_mappings if item["temporal_status"] == "current"
+    ]
+    historical_risk_mappings = [
+        item for item in risk_mappings if item["temporal_status"] == "historical"
+    ]
     bridge_mappings = list(bridge["mappings"])
     candidate_methods = list((candidates or {}).get("candidates", []))
 
@@ -588,7 +594,7 @@ def build_audit(
         item["reference_mapping_id"] for item in bridge_mappings
     }
     reachability: list[dict[str, Any]] = []
-    for mapping in sorted(risk_mappings, key=lambda item: item["mapping_id"]):
+    for mapping in sorted(current_risk_mappings, key=lambda item: item["mapping_id"]):
         target_type = mapping["target_type"]
         substance_id = mapping["substance_id"]
         candidate_method_ids = (
@@ -645,7 +651,7 @@ def build_audit(
         )
 
     categories: list[dict[str, Any]] = []
-    for category in sorted({item["risk_category"] for item in risk_mappings}):
+    for category in sorted({item["risk_category"] for item in current_risk_mappings}):
         rows = [item for item in reachability if item["risk_category"] == category]
         categories.append(
             {
@@ -718,7 +724,7 @@ def build_audit(
 
     used_risk_rows = [
         item
-        for item in risk_mappings
+        for item in current_risk_mappings
         if item["risk_category"] in bridge_risk_categories
     ]
     used_substance_ids = {
@@ -855,11 +861,23 @@ def build_audit(
             "risk_substance_mappings": len(explicit_rows),
             "risk_substance_group_mappings": len(group_rows),
             "risk_mappings_total": len(risk_mappings),
+            "risk_mappings_current": len(current_risk_mappings),
+            "risk_mappings_historical": len(historical_risk_mappings),
             "risk_categories": len(all_categories),
+            "historical_risk_categories": len(
+                {item["risk_category"] for item in historical_risk_mappings}
+            ),
             "risk_group_labels": len(
                 {
                     item["target_group_label"]
-                    for item in risk_mappings
+                    for item in current_risk_mappings
+                    if item["target_type"] == "substance_group"
+                }
+            ),
+            "historical_risk_group_labels": len(
+                {
+                    item["target_group_label"]
+                    for item in historical_risk_mappings
                     if item["target_type"] == "substance_group"
                 }
             ),
