@@ -18,6 +18,8 @@ INSPECTION_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.js
 RISK_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 
 SIBUTRAMINE_ID = "substance-cas-106650-56-0"
+BISACODYL_ID = "substance-cas-603-50-9"
+PHENOLPHTHALEIN_ID = "substance-cas-77-09-8"
 MELATONIN_ID = "substance-cas-73-31-4"
 WEIGHT_LOSS_GROUP_MAPPING_ID = "weight-loss-sibutramine-group-cn-2025"
 
@@ -547,14 +549,16 @@ class InspectionRecommendationBuilderTest(unittest.TestCase):
         for method in suggested:
             self.assertTrue(forbidden.isdisjoint(method))
 
-    def test_one_substance_is_output_once(self):
+    def test_each_governed_weight_substance_is_output_once(self):
         follow_ups = self._finding(self._build_weight_loss())[
             "substance_follow_ups"
         ]
+        substance_ids = [item["substance_id"] for item in follow_ups]
 
+        self.assertEqual(len(substance_ids), len(set(substance_ids)))
         self.assertEqual(
-            [item["substance_id"] for item in follow_ups],
-            [SIBUTRAMINE_ID],
+            set(substance_ids),
+            {SIBUTRAMINE_ID, BISACODYL_ID, PHENOLPHTHALEIN_ID},
         )
 
     def test_multiple_evidence_for_one_risk_outputs_one_finding(self):
