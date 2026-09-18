@@ -188,7 +188,12 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             {item["matchedExpression"] for item in triggers},
             {"改善睡眠", "有助于改善睡眠"},
         )
-        self.assertEqual(result.unmapped_evidence, [])
+        self.assertEqual(len(result.unmapped_evidence), 1)
+        self.assertEqual(result.unmapped_evidence[0]["matchedExpression"], "睡眠")
+        self.assertEqual(
+            result.unmapped_evidence[0]["reason"],
+            "no_governed_claim_inspection_bridge",
+        )
 
     def test_colloquial_sleep_expression_remains_unmapped_until_separately_governed(self):
         result = bridge_claim_analysis(self._analysis("助眠"))
