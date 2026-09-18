@@ -445,11 +445,11 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
 
         assert_no_forbidden_fields(result)
 
-    def test_schema_version_is_nine(self):
+    def test_schema_version_is_fourteen(self):
         with sqlite3.connect(self.store.database_path) as connection:
             schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-        self.assertEqual(schema_version, 13)
+        self.assertEqual(schema_version, 14)
 
 
 if __name__ == "__main__":
