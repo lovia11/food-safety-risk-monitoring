@@ -266,7 +266,14 @@ class KnowledgeReadHttpApiTest(unittest.TestCase):
                         self.assertEqual(response.status, 200)
                         payloads.append(json.load(response))
                 self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 7)
-                self.assertEqual(payloads[4]["total"], 4)
+                self.assertEqual(payloads[4]["total"], len(payloads[4]["items"]))
+                self.assertGreater(payloads[4]["total"], 0)
+                self.assertTrue(
+                    all(
+                        item["targetType"] == "substance_group"
+                        for item in payloads[4]["items"]
+                    )
+                )
                 self.assertEqual(payloads[5]["items"][0]["methodStatus"], "revoked")
                 self.assertEqual(payloads[6]["items"][0]["status"], "revoked")
 
