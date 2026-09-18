@@ -141,6 +141,58 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         )
         self.assertGreaterEqual(len(finding["substance_follow_ups"]), 20)
 
+    def test_blood_pressure_claim_reaches_historical_screening_chain(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("帮助降压"))
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "blood_pressure"
+        )
+        self.assertEqual(finding["temporal_basis"], "historical_reference_only")
+        self.assertIn(
+            "降压",
+            {item["matchedExpression"] for item in finding["trigger_evidence"]},
+        )
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertEqual(len(names), 11)
+        self.assertIn("氨氯地平", names)
+        self.assertIn("硝苯地平", names)
+
+    def test_blood_lipid_claim_reaches_curated_historical_subset(self):
+        write_json(
+            self.product_root / "claim_analysis.json",
+            claim_analysis("辅助降血脂"),
+        )
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "blood_lipid"
+        )
+        self.assertEqual(finding["temporal_basis"], "historical_reference_only")
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertEqual(names, {"洛伐他汀", "辛伐他汀", "美伐他汀", "洛伐他汀羟酸钠盐"})
+        self.assertNotIn("烟酸", names)
+
+    def test_blood_glucose_claim_reaches_curated_historical_subset(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("降糖"))
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "blood_glucose"
+        )
+        self.assertEqual(finding["temporal_basis"], "historical_reference_only")
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertEqual(len(names), 7)
+        self.assertIn("甲苯磺丁脲", names)
+        self.assertIn("格列美脲", names)
+        self.assertNotIn("盐酸二甲双胍", names)
+
     def test_broad_sleep_symptom_claim_stays_unmapped(self):
         write_json(self.product_root / "claim_analysis.json", claim_analysis("难入睡"))
 
