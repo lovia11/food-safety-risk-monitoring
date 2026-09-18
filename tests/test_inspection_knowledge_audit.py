@@ -109,6 +109,23 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
             },
         )
 
+    def test_historical_sleep_inventory_does_not_pollute_current_coverage(self):
+        report = load_and_build_audit()
+
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 21)
+        self.assertNotIn(
+            "sleep_aid",
+            {item["risk_category"] for item in report["risk_reachability"]},
+        )
+        self.assertEqual(
+            report["metrics"]["recommendation_end_to_end_reachability"]["denominator"],
+            5,
+        )
+        self.assertEqual(
+            report["inventory"]["runtime_recommendation_usage"]["risk_category_ids"],
+            ["male_function", "weight_loss"],
+        )
+
     def test_no_dangling_governed_identities(self):
         report = load_and_build_audit()
 
