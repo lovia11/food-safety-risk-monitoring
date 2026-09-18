@@ -21,20 +21,54 @@ INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 
 
 class InspectionMethodCandidateManifestTest(unittest.TestCase):
-    def test_approved_candidates_retain_non_runtime_promotion_trace(self):
+    def test_manifest_separates_promoted_traces_from_verification_queue(self):
         payload = validate_inspection_candidate_manifest(read_json(CANDIDATE_CONFIG))
 
         self.assertFalse(payload["runtime_consumed"])
+        promoted = [
+            item for item in payload["candidates"]
+            if item["status"] == "promoted"
+        ]
+        verification = [
+            item for item in payload["candidates"]
+            if item["status"] == "verification"
+        ]
         self.assertEqual(
-            [item["candidate_id"] for item in payload["candidates"]],
+            [item["candidate_id"] for item in promoted],
             ["candidate-bjs-202405", "candidate-gbt-5009-170-2003"],
         )
-        bjs = payload["candidates"][0]
+        self.assertEqual(
+            {item["method_no"] for item in verification},
+            {
+                "BJS 201901",
+                "KJ201901",
+                "KJ201902",
+                "BJS 202409",
+                "BJS 202501",
+                "BJS 202502",
+                "BJS 202504",
+                "BJS 202601",
+                "BJS 202602",
+            },
+        )
+        self.assertTrue(
+            all(item["expected_depth"] == "reference_only" for item in verification)
+        )
+        self.assertTrue(
+            all(item["verification_sources"] for item in verification)
+        )
+        self.assertTrue(
+            all(item["promoted_method_id"] is None for item in verification)
+        )
+        self.assertTrue(
+            all(item["promoted_dataset_version"] is None for item in verification)
+        )
+
+        bjs = promoted[0]
         self.assertEqual(bjs["method_no"], "BJS 202405")
         self.assertEqual(
             bjs["title"], "食品中西地那非、他达拉非等化合物的测定"
         )
-        self.assertEqual(bjs["status"], "promoted")
         self.assertEqual(bjs["expected_depth"], "reference_only")
         self.assertEqual(bjs["promoted_method_id"], "bjs-202405")
         self.assertEqual(bjs["promoted_dataset_version"], "2026.09-b7")
@@ -43,8 +77,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertNotIn("西布曲明", bjs["reason"])
         self.assertIn("旧关联作废", bjs["correction_note"])
 
-        predecessor = payload["candidates"][1]
-        self.assertEqual(predecessor["status"], "promoted")
+        predecessor = promoted[1]
         self.assertEqual(
             predecessor["title"], "保健食品中褪黑素含量的测定"
         )
@@ -103,20 +136,35 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             connection.close()
 
         self.assertEqual(len(operational_method_numbers), 7)
+        promoted = [
+            item for item in candidates if item["status"] == "promoted"
+        ]
+        verification = [
+            item for item in candidates if item["status"] == "verification"
+        ]
         self.assertTrue(
-            {item["method_no"] for item in candidates}.issubset(
+            {item["method_no"] for item in promoted}.issubset(
                 operational_method_numbers
             )
         )
+        self.assertTrue(
+            {item["method_no"] for item in verification}.isdisjoint(
+                operational_method_numbers
+            )
+        )
+
         report = load_and_build_audit()
         self.assertEqual(report["inventory"]["indexed_methods"], 7)
-        self.assertEqual(report["inventory"]["candidate_records"], 2)
-        self.assertEqual(report["inventory"]["candidate_methods"], 0)
+        self.assertEqual(report["inventory"]["candidate_records"], 11)
+        self.assertEqual(report["inventory"]["candidate_methods"], 9)
         self.assertEqual(report["inventory"]["promoted_candidate_methods"], 2)
         self.assertEqual(
             report["metrics"]["method_reference_coverage"]["denominator"], 7
         )
-        self.assertEqual(report["candidate_manifest"]["pending_candidate_ids"], [])
+        self.assertEqual(
+            set(report["candidate_manifest"]["pending_candidate_ids"]),
+            {item["candidate_id"] for item in verification},
+        )
         self.assertEqual(len(report["candidate_manifest"]["promoted_candidates"]), 2)
         self.assertTrue(
             report["candidate_manifest"]["excluded_from_coverage_denominator"]
