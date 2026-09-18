@@ -9,7 +9,7 @@ from scripts.audit_inspection_knowledge import (
     build_audit,
     load_and_build_audit,
 )
-from src.effect_risk_bridge import validate_effect_risk_bridge_config
+from src.claim_inspection_bridge import validate_claim_inspection_bridge_config
 from src.inspection_reference import validate_inspection_config
 from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
@@ -23,7 +23,7 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         cls.bridge_raw = read_json(DEFAULT_BRIDGE_CONFIG)
         cls.inspection = validate_inspection_config(cls.inspection_raw)
         cls.risk = validate_risk_substance_config(cls.risk_raw)
-        cls.bridge = validate_effect_risk_bridge_config(
+        cls.bridge = validate_claim_inspection_bridge_config(
             cls.bridge_raw,
             risk_reference_config=cls.risk_raw,
         )
@@ -64,14 +64,14 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["regulatory_documents"], 7)
         self.assertEqual(inventory["method_regulatory_document_links"], 7)
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
-        self.assertEqual(inventory["risk_substance_mappings"], 5)
-        self.assertEqual(inventory["risk_substance_group_mappings"], 3)
-        self.assertEqual(inventory["risk_mappings_total"], 54)
-        self.assertEqual(inventory["risk_mappings_current"], 8)
-        self.assertEqual(inventory["risk_mappings_historical"], 46)
-        self.assertEqual(inventory["historical_risk_categories"], 4)
-        self.assertEqual(inventory["historical_risk_group_labels"], 4)
-        self.assertEqual(inventory["evidence_risk_bridge_mappings"], 3)
+        self.assertEqual(inventory["risk_substance_mappings"], 7)
+        self.assertEqual(inventory["risk_substance_group_mappings"], 6)
+        self.assertEqual(inventory["risk_mappings_total"], 81)
+        self.assertEqual(inventory["risk_mappings_current"], 13)
+        self.assertEqual(inventory["risk_mappings_historical"], 68)
+        self.assertEqual(inventory["historical_risk_categories"], 6)
+        self.assertEqual(inventory["historical_risk_group_labels"], 6)
+        self.assertEqual(inventory["evidence_risk_bridge_mappings"], 25)
         self.assertEqual(inventory["group_membership_relations"], 0)
         self.assertTrue(
             report["integrity"]["depth_declarations_match_static_gate"]
@@ -98,9 +98,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"],
             {
-                "numerator": 3,
-                "denominator": 5,
-                "ratio": 0.6,
+                "numerator": 7,
+                "denominator": 7,
+                "ratio": 1.0,
                 "denominator_definition": (
                     "current explicit governed Risk-to-Substance mappings; requires an "
                     "existing Evidence-to-Risk category bridge and a structurally ready "
@@ -112,21 +112,26 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
     def test_historical_inventory_does_not_pollute_current_coverage(self):
         report = load_and_build_audit()
 
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 46)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 68)
         current_reachability_categories = {
             item["risk_category"] for item in report["risk_reachability"]
         }
-        for historical_category in {
+        for historical_only_category in {
             "sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose"
         }:
-            self.assertNotIn(historical_category, current_reachability_categories)
+            self.assertNotIn(
+                historical_only_category,
+                current_reachability_categories,
+            )
+        self.assertIn("weight_loss", current_reachability_categories)
+        self.assertIn("anti_fatigue", current_reachability_categories)
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"]["denominator"],
-            5,
+            7,
         )
         self.assertEqual(
             report["inventory"]["runtime_recommendation_usage"]["risk_category_ids"],
-            ["male_function", "weight_loss"],
+            ["anti_fatigue", "male_function", "weight_loss"],
         )
 
     def test_no_dangling_governed_identities(self):
@@ -164,7 +169,7 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
             if item["target_type"] == "substance_group"
         ]
 
-        self.assertEqual(len(group_rows), 3)
+        self.assertEqual(len(group_rows), 6)
         self.assertTrue(all(not item["has_explicit_substance"] for item in group_rows))
         self.assertTrue(all(item["method_ids"] == [] for item in group_rows))
         self.assertTrue(all(item["gap_reason"] == "group_not_expanded" for item in group_rows))
@@ -196,9 +201,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
 
         report = build_audit(inspection, self.risk, self.bridge)
 
-        self.assertEqual(report["inventory"]["risk_mappings_total"], 54)
-        self.assertEqual(report["inventory"]["risk_mappings_current"], 8)
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 46)
+        self.assertEqual(report["inventory"]["risk_mappings_total"], 81)
+        self.assertEqual(report["inventory"]["risk_mappings_current"], 13)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 68)
         self.assertNotIn(
             unrelated["substance_id"],
             {item["target"] for item in report["risk_reachability"]},
@@ -269,9 +274,12 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
     def test_current_runtime_usage_is_computed_from_bridge_categories_only(self):
         usage = load_and_build_audit()["inventory"]["runtime_recommendation_usage"]
 
-        self.assertEqual(usage["risk_category_ids"], ["male_function", "weight_loss"])
-        self.assertEqual(usage["risk_mapping_rows"], 5)
-        self.assertEqual(usage["explicit_substances"], 3)
+        self.assertEqual(
+            usage["risk_category_ids"],
+            ["anti_fatigue", "male_function", "weight_loss"],
+        )
+        self.assertEqual(usage["risk_mapping_rows"], 13)
+        self.assertEqual(usage["explicit_substances"], 5)
         self.assertEqual(
             usage["method_ids"],
             ["bjs-201701", "bjs-201710", "bjs-202405"],
