@@ -278,7 +278,7 @@ class DataStoreTest(unittest.TestCase):
             }
             <= tables
         )
-        self.assertEqual(version, 13)
+        self.assertEqual(version, 14)
 
     def test_schema_7_migration_is_additive_and_preserves_review(self):
         run_root = create_run(self.output_root, "legacy_run")
@@ -309,7 +309,7 @@ class DataStoreTest(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 13)
+        self.assertEqual(version, 14)
         self.assertIn("display_name", task_columns)
         self.assertTrue(
             {
@@ -346,7 +346,7 @@ class DataStoreTest(unittest.TestCase):
             fact_columns = {
                 row[1] for row in connection.execute("PRAGMA table_info(product_facts)")
             }
-        self.assertEqual(version, 13)
+        self.assertEqual(version, 14)
         for table, count in before.items():
             if table != "product_facts":
                 self.assertEqual(after[table], count, table)
@@ -408,7 +408,7 @@ class DataStoreTest(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
             }
-        self.assertEqual(version, 13)
+        self.assertEqual(version, 14)
         for table, count in before.items():
             if table not in {"health_food_identities", "health_food_registry_records"}:
                 self.assertEqual(after[table], count, table)
