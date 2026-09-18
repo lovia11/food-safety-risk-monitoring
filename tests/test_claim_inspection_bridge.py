@@ -65,8 +65,8 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
         return {
             "bridge_mapping_id": "test-sleep-historical-bridge",
             "claim_type": "sleep_related",
-            "expression_id": "legacy-sleep-related-zhumian",
-            "matched_expression": "助眠",
+            "expression_id": "legacy-sleep-related-rushui",
+            "matched_expression": "入睡",
             "risk_category": "sleep_aid",
             "reference_mapping_id": reference_mapping_id,
             "authorized_historical_mapping_ids": [reference_mapping_id],
@@ -76,10 +76,10 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             "note": "synthetic B3 governance fixture",
         }
 
-    def test_bridge_preserves_three_current_relations_and_adds_two_sleep_relations(self):
+    def test_bridge_preserves_three_current_relations_and_governs_sleep_scope(self):
         config = load_claim_inspection_bridge_config()
 
-        self.assertEqual(len(config["mappings"]), 5)
+        self.assertEqual(len(config["mappings"]), 10)
         current = [
             item for item in config["mappings"]
             if item["temporal_policy"] == "current_only"
@@ -94,7 +94,19 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
         )
         self.assertEqual(
             {item["matched_expression"] for item in historical},
-            {"改善睡眠", "有助于改善睡眠"},
+            {"改善睡眠", "有助于改善睡眠", "助眠", "安睡", "好眠", "深睡", "催眠"},
+        )
+        self.assertEqual(
+            {
+                item["matched_expression"]
+                for item in historical
+                if item["governance_basis"] == "governed_functional_scope"
+            },
+            {"助眠", "安睡", "好眠", "深睡", "催眠"},
+        )
+        self.assertEqual(
+            set(config["metadata"]["expression_scope_policy"]["claim_only_sleep_expressions"]),
+            {"睡眠", "入睡", "失眠", "辗转反侧", "安神"},
         )
         self.assertTrue(
             all(item["authorized_historical_mapping_ids"] == [] for item in current)
@@ -195,16 +207,40 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             "no_governed_claim_inspection_bridge",
         )
 
-    def test_colloquial_sleep_expression_remains_unmapped_until_separately_governed(self):
-        result = bridge_claim_analysis(self._analysis("助眠"))
+    def test_explicit_sleep_benefit_expressions_reach_sleep_aid(self):
+        for expression in ("助眠", "安睡", "好眠", "深睡", "催眠"):
+            with self.subTest(expression=expression):
+                result = bridge_claim_analysis(self._analysis(expression))
+                self.assertEqual(len(result.risk_signals), 1)
+                self.assertEqual(result.risk_signals[0]["risk_category"], "sleep_aid")
+                self.assertIn(
+                    expression,
+                    {
+                        item["matchedExpression"]
+                        for item in result.risk_signals[0]["trigger_evidence"]
+                    },
+                )
 
-        self.assertEqual(result.risk_signals, [])
-        self.assertEqual(len(result.unmapped_evidence), 1)
-        self.assertEqual(result.unmapped_evidence[0]["matchedExpression"], "助眠")
-        self.assertEqual(
-            result.unmapped_evidence[0]["reason"],
-            "no_governed_claim_inspection_bridge",
-        )
+    def test_broad_or_symptom_sleep_expressions_remain_claim_only(self):
+        for text, expected in (
+            ("睡眠", "睡眠"),
+            ("难入睡", "入睡"),
+            ("失眠", "失眠"),
+            ("辗转反侧", "辗转反侧"),
+            ("安神", "安神"),
+        ):
+            with self.subTest(text=text):
+                result = bridge_claim_analysis(self._analysis(text))
+                self.assertEqual(result.risk_signals, [])
+                self.assertEqual(len(result.unmapped_evidence), 1)
+                self.assertEqual(
+                    result.unmapped_evidence[0]["matchedExpression"],
+                    expected,
+                )
+                self.assertEqual(
+                    result.unmapped_evidence[0]["reason"],
+                    "no_governed_claim_inspection_bridge",
+                )
 
     def test_jianfei_reaches_existing_weight_loss_direction(self):
         result = bridge_claim_analysis(self._analysis("帮助减肥"))
