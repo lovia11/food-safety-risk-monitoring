@@ -60,6 +60,7 @@ _ALLOWED_GOVERNANCE_BASES = {
 _ALLOWED_TEMPORAL_POLICIES = {
     "current_only",
     "historical_reference_allowed",
+    "current_plus_historical_reference_allowed",
 }
 
 
@@ -324,29 +325,42 @@ def validate_claim_inspection_bridge_config(
                     f"{mapping_id}为current_only时不得授权historical Risk Mapping"
                 )
         else:
-            if reference_temporal_status != "historical":
-                raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}声明historical_reference_allowed但引用的不是historical Risk Reference"
-                )
-            if str(reference["basis_type"]) != "historical_sampling_plan":
-                raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}只能选择性启用historical_sampling_plan，不能启用其他historical来源"
-                )
-            if governance_basis not in {
-                "direct_verified_reference",
-                "governed_functional_scope",
-            }:
-                raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}的historical Reference必须使用直接来源或受治理功能场景依据"
-                )
             if not historical_disclosure:
                 raise ClaimInspectionBridgeConfigValidationError(
                     f"{mapping_id}启用historical Reference时必须提供展示边界"
                 )
-            if reference_mapping_id not in authorized_historical_mapping_ids:
-                raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}的authorized_historical_mapping_ids必须包含reference_mapping_id"
-                )
+
+            if temporal_policy == "historical_reference_allowed":
+                if reference_temporal_status != "historical":
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}声明historical_reference_allowed但引用的不是historical Risk Reference"
+                    )
+                if str(reference["basis_type"]) != "historical_sampling_plan":
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}只能选择性启用historical_sampling_plan，不能启用其他historical来源"
+                    )
+                if governance_basis not in {
+                    "direct_verified_reference",
+                    "governed_functional_scope",
+                }:
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}的historical Reference必须使用直接来源或受治理功能场景依据"
+                    )
+                if reference_mapping_id not in authorized_historical_mapping_ids:
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}的authorized_historical_mapping_ids必须包含reference_mapping_id"
+                    )
+            else:
+                if reference_temporal_status != "current":
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}声明current_plus_historical_reference_allowed时必须引用current Risk Reference"
+                    )
+                if not authorized_historical_mapping_ids:
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}声明current_plus_historical_reference_allowed时必须显式授权historical Risk Mapping"
+                    )
+
+            historical_rows: list[dict[str, Any]] = []
             for historical_mapping_id in authorized_historical_mapping_ids:
                 historical_mapping = risk_mapping_by_id.get(historical_mapping_id)
                 if historical_mapping is None:
@@ -364,17 +378,32 @@ def validate_claim_inspection_bridge_config(
                     raise ClaimInspectionBridgeConfigValidationError(
                         f"{mapping_id}只能授权historical_sampling_plan类型的historical mapping"
                     )
-                for source_field in ("source_reference", "source_date", "product_scope"):
-                    if historical_mapping[source_field] != reference[source_field]:
-                        raise ClaimInspectionBridgeConfigValidationError(
-                            f"{mapping_id}授权的historical mapping必须与reference_mapping_id共享{source_field}"
-                        )
+                historical_rows.append(historical_mapping)
+
+            if temporal_policy == "historical_reference_allowed":
+                for historical_mapping in historical_rows:
+                    for source_field in ("source_reference", "source_date", "product_scope"):
+                        if historical_mapping[source_field] != reference[source_field]:
+                            raise ClaimInspectionBridgeConfigValidationError(
+                                f"{mapping_id}授权的historical mapping必须与reference_mapping_id共享{source_field}"
+                            )
+            elif historical_rows:
+                cohort = historical_rows[0]
+                for historical_mapping in historical_rows[1:]:
+                    for source_field in ("source_reference", "source_date", "product_scope"):
+                        if historical_mapping[source_field] != cohort[source_field]:
+                            raise ClaimInspectionBridgeConfigValidationError(
+                                f"{mapping_id}的current+historical allowlist必须属于同一历史来源批次"
+                            )
 
         migration_id = item["migrated_from_bridge_mapping_id"]
         if governance_basis == "legacy_verified_migration":
-            if temporal_policy != "current_only":
+            if temporal_policy not in {
+                "current_only",
+                "current_plus_historical_reference_allowed",
+            }:
                 raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}的legacy迁移只能引用current Risk Reference"
+                    f"{mapping_id}的legacy迁移必须以current Risk Reference为主"
                 )
             if migration_id is None:
                 raise ClaimInspectionBridgeConfigValidationError(
