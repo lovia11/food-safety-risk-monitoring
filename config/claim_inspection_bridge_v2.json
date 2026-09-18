@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "bridge_id": "claim-inspection-bridge-v2",
-  "bridge_version": "claim-inspection-bridge-v2.3",
-  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。既支持官方/历史功能名称的直接关系，也支持经单独审计确认的明确功能表达进入同一监管功能场景；所有关系仍以 exact expression 为入口，不按 Claim 类型整体外推。historical 关系仅可通过单条 Bridge 的显式 allowlist 进入生产链。",
+  "bridge_version": "claim-inspection-bridge-v2.4",
+  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。官方/过渡功能名称可通过 direct_verified_reference 承接来源中的功能筛查场景；经单独审计的明确结果性功效表达可使用 governed_functional_scope。所有 historical 关系继续通过单条 Bridge 的显式 allowlist 进入生产链，不按 Claim 类型整体外推。",
   "mappings": [
     {
       "bridge_mapping_id": "claim-weight-management-jianfei-to-weight-loss",
@@ -287,6 +287,274 @@
       "governance_basis": "governed_functional_scope",
       "migrated_from_bridge_mapping_id": null,
       "note": "“催眠”属于明确的睡眠功效/结果表达。历史中央专项抽检资料按“声称的功能（包括批准和虚假宣传）”确定非法添加项目，因此将该精确表达纳入改善睡眠筛查场景；不扩展到整个sleep_related类型。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-pressure-fuzhujiangxueya-to-blood-pressure",
+      "claim_type": "blood_pressure_related",
+      "expression_id": "v2b2-blood-pressure-related-fuzhujiangxueya",
+      "matched_expression": "辅助降血压",
+      "risk_category": "blood_pressure",
+      "reference_mapping_id": "blood-pressure-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-pressure-cas-19216-56-9-historical-cn-2018",
+        "blood-pressure-cas-21829-25-4-historical-cn-2018",
+        "blood-pressure-cas-29122-68-7-historical-cn-2018",
+        "blood-pressure-cas-39562-70-4-historical-cn-2018",
+        "blood-pressure-cas-50-55-5-historical-cn-2018",
+        "blood-pressure-cas-58-93-5-historical-cn-2018",
+        "blood-pressure-cas-62571-86-2-historical-cn-2018",
+        "blood-pressure-cas-63675-72-9-historical-cn-2018",
+        "blood-pressure-cas-66085-59-4-historical-cn-2018",
+        "blood-pressure-cas-72509-76-3-historical-cn-2018",
+        "blood-pressure-cas-88150-42-9-historical-cn-2018",
+        "blood-pressure-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“辅助降血压”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_pressure筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-pressure-tiaojiexueya-to-blood-pressure",
+      "claim_type": "blood_pressure_related",
+      "expression_id": "v2b2-blood-pressure-related-tiaojiexueya",
+      "matched_expression": "调节血压",
+      "risk_category": "blood_pressure",
+      "reference_mapping_id": "blood-pressure-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-pressure-cas-19216-56-9-historical-cn-2018",
+        "blood-pressure-cas-21829-25-4-historical-cn-2018",
+        "blood-pressure-cas-29122-68-7-historical-cn-2018",
+        "blood-pressure-cas-39562-70-4-historical-cn-2018",
+        "blood-pressure-cas-50-55-5-historical-cn-2018",
+        "blood-pressure-cas-58-93-5-historical-cn-2018",
+        "blood-pressure-cas-62571-86-2-historical-cn-2018",
+        "blood-pressure-cas-63675-72-9-historical-cn-2018",
+        "blood-pressure-cas-66085-59-4-historical-cn-2018",
+        "blood-pressure-cas-72509-76-3-historical-cn-2018",
+        "blood-pressure-cas-88150-42-9-historical-cn-2018",
+        "blood-pressure-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“调节血压”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_pressure筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-pressure-youzhuyuweichixueyajiankangshuiping-to-blood-pressure",
+      "claim_type": "blood_pressure_related",
+      "expression_id": "v2b2-blood-pressure-related-youzhuyuweichixueyajiankangshuiping",
+      "matched_expression": "有助于维持血压健康水平",
+      "risk_category": "blood_pressure",
+      "reference_mapping_id": "blood-pressure-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-pressure-cas-19216-56-9-historical-cn-2018",
+        "blood-pressure-cas-21829-25-4-historical-cn-2018",
+        "blood-pressure-cas-29122-68-7-historical-cn-2018",
+        "blood-pressure-cas-39562-70-4-historical-cn-2018",
+        "blood-pressure-cas-50-55-5-historical-cn-2018",
+        "blood-pressure-cas-58-93-5-historical-cn-2018",
+        "blood-pressure-cas-62571-86-2-historical-cn-2018",
+        "blood-pressure-cas-63675-72-9-historical-cn-2018",
+        "blood-pressure-cas-66085-59-4-historical-cn-2018",
+        "blood-pressure-cas-72509-76-3-historical-cn-2018",
+        "blood-pressure-cas-88150-42-9-historical-cn-2018",
+        "blood-pressure-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“有助于维持血压健康水平”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_pressure筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-pressure-jiangya-to-blood-pressure",
+      "claim_type": "blood_pressure_related",
+      "expression_id": "legacy-blood-pressure-related-jiangya",
+      "matched_expression": "降压",
+      "risk_category": "blood_pressure",
+      "reference_mapping_id": "blood-pressure-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-pressure-cas-19216-56-9-historical-cn-2018",
+        "blood-pressure-cas-21829-25-4-historical-cn-2018",
+        "blood-pressure-cas-29122-68-7-historical-cn-2018",
+        "blood-pressure-cas-39562-70-4-historical-cn-2018",
+        "blood-pressure-cas-50-55-5-historical-cn-2018",
+        "blood-pressure-cas-58-93-5-historical-cn-2018",
+        "blood-pressure-cas-62571-86-2-historical-cn-2018",
+        "blood-pressure-cas-63675-72-9-historical-cn-2018",
+        "blood-pressure-cas-66085-59-4-historical-cn-2018",
+        "blood-pressure-cas-72509-76-3-historical-cn-2018",
+        "blood-pressure-cas-88150-42-9-historical-cn-2018",
+        "blood-pressure-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "governed_functional_scope",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“降压”是明确的结果性功效表达，纳入历史中央专项抽检资料对应的blood_pressure功能筛查场景；不扩展到整个Claim类型。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-lipid-fuzhujiangxuezhi-to-blood-lipid",
+      "claim_type": "blood_lipid_related",
+      "expression_id": "v2b2-blood-lipid-related-fuzhujiangxuezhi",
+      "matched_expression": "辅助降血脂",
+      "risk_category": "blood_lipid",
+      "reference_mapping_id": "blood-lipid-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-lipid-cas-73573-88-3-historical-cn-2018",
+        "blood-lipid-cas-75225-50-2-historical-cn-2018",
+        "blood-lipid-cas-75330-75-5-historical-cn-2018",
+        "blood-lipid-cas-79902-63-9-historical-cn-2018",
+        "blood-lipid-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“辅助降血脂”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_lipid筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-lipid-tiaojiexuezhi-to-blood-lipid",
+      "claim_type": "blood_lipid_related",
+      "expression_id": "v2b2-blood-lipid-related-tiaojiexuezhi",
+      "matched_expression": "调节血脂",
+      "risk_category": "blood_lipid",
+      "reference_mapping_id": "blood-lipid-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-lipid-cas-73573-88-3-historical-cn-2018",
+        "blood-lipid-cas-75225-50-2-historical-cn-2018",
+        "blood-lipid-cas-75330-75-5-historical-cn-2018",
+        "blood-lipid-cas-79902-63-9-historical-cn-2018",
+        "blood-lipid-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“调节血脂”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_lipid筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-lipid-official-full-to-blood-lipid",
+      "claim_type": "blood_lipid_related",
+      "expression_id": "v2b2-blood-lipid-related-official-full",
+      "matched_expression": "有助于维持血脂（胆固醇/甘油三酯）健康水平",
+      "risk_category": "blood_lipid",
+      "reference_mapping_id": "blood-lipid-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-lipid-cas-73573-88-3-historical-cn-2018",
+        "blood-lipid-cas-75225-50-2-historical-cn-2018",
+        "blood-lipid-cas-75330-75-5-historical-cn-2018",
+        "blood-lipid-cas-79902-63-9-historical-cn-2018",
+        "blood-lipid-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“有助于维持血脂（胆固醇/甘油三酯）健康水平”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_lipid筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-lipid-jiangzhi-to-blood-lipid",
+      "claim_type": "blood_lipid_related",
+      "expression_id": "legacy-blood-lipid-related-jiangzhi",
+      "matched_expression": "降脂",
+      "risk_category": "blood_lipid",
+      "reference_mapping_id": "blood-lipid-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-lipid-cas-73573-88-3-historical-cn-2018",
+        "blood-lipid-cas-75225-50-2-historical-cn-2018",
+        "blood-lipid-cas-75330-75-5-historical-cn-2018",
+        "blood-lipid-cas-79902-63-9-historical-cn-2018",
+        "blood-lipid-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "governed_functional_scope",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“降脂”是明确的结果性功效表达，纳入历史中央专项抽检资料对应的blood_lipid功能筛查场景；不扩展到整个Claim类型。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-glucose-fuzhujiangxuetang-to-blood-glucose",
+      "claim_type": "blood_glucose_related",
+      "expression_id": "v2b2-blood-glucose-related-fuzhujiangxuetang",
+      "matched_expression": "辅助降血糖",
+      "risk_category": "blood_glucose",
+      "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-135062-02-1-historical-cn-2018",
+        "blood-glucose-cas-21187-98-4-historical-cn-2018",
+        "blood-glucose-cas-26944-48-9-historical-cn-2018",
+        "blood-glucose-cas-29094-61-9-historical-cn-2018",
+        "blood-glucose-cas-33342-05-1-historical-cn-2018",
+        "blood-glucose-cas-64-77-7-historical-cn-2018",
+        "blood-glucose-cas-93479-97-1-historical-cn-2018",
+        "blood-glucose-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“辅助降血糖”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_glucose筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-glucose-tiaojiexuetang-to-blood-glucose",
+      "claim_type": "blood_glucose_related",
+      "expression_id": "v2b2-blood-glucose-related-tiaojiexuetang",
+      "matched_expression": "调节血糖",
+      "risk_category": "blood_glucose",
+      "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-135062-02-1-historical-cn-2018",
+        "blood-glucose-cas-21187-98-4-historical-cn-2018",
+        "blood-glucose-cas-26944-48-9-historical-cn-2018",
+        "blood-glucose-cas-29094-61-9-historical-cn-2018",
+        "blood-glucose-cas-33342-05-1-historical-cn-2018",
+        "blood-glucose-cas-64-77-7-historical-cn-2018",
+        "blood-glucose-cas-93479-97-1-historical-cn-2018",
+        "blood-glucose-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“调节血糖”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_glucose筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-glucose-youzhuyuweichixuetangjiankangshuiping-to-blood-glucose",
+      "claim_type": "blood_glucose_related",
+      "expression_id": "v2b2-blood-glucose-related-youzhuyuweichixuetangjiankangshuiping",
+      "matched_expression": "有助于维持血糖健康水平",
+      "risk_category": "blood_glucose",
+      "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-135062-02-1-historical-cn-2018",
+        "blood-glucose-cas-21187-98-4-historical-cn-2018",
+        "blood-glucose-cas-26944-48-9-historical-cn-2018",
+        "blood-glucose-cas-29094-61-9-historical-cn-2018",
+        "blood-glucose-cas-33342-05-1-historical-cn-2018",
+        "blood-glucose-cas-64-77-7-historical-cn-2018",
+        "blood-glucose-cas-93479-97-1-historical-cn-2018",
+        "blood-glucose-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“有助于维持血糖健康水平”与官方历史/过渡/当前保健功能名称链有直接受治理关系，承接历史中央专项抽检资料对应的blood_glucose筛查场景。"
+    },
+    {
+      "bridge_mapping_id": "claim-blood-glucose-jiangtang-to-blood-glucose",
+      "claim_type": "blood_glucose_related",
+      "expression_id": "v2b2-blood-glucose-related-jiangtang",
+      "matched_expression": "降糖",
+      "risk_category": "blood_glucose",
+      "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
+      "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-135062-02-1-historical-cn-2018",
+        "blood-glucose-cas-21187-98-4-historical-cn-2018",
+        "blood-glucose-cas-26944-48-9-historical-cn-2018",
+        "blood-glucose-cas-29094-61-9-historical-cn-2018",
+        "blood-glucose-cas-33342-05-1-historical-cn-2018",
+        "blood-glucose-cas-64-77-7-historical-cn-2018",
+        "blood-glucose-cas-93479-97-1-historical-cn-2018",
+        "blood-glucose-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "historical_reference_allowed",
+      "governance_basis": "governed_functional_scope",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“降糖”是明确的结果性功效表达，纳入历史中央专项抽检资料对应的blood_glucose功能筛查场景；不扩展到整个Claim类型。"
     }
   ],
   "metadata": {
@@ -323,6 +591,52 @@
         "辗转反侧",
         "安神"
       ]
+    },
+    "cardiometabolic_expression_scope_policy": {
+      "version": "cardiometabolic-functional-scope-v1",
+      "principle": "历史中央专项抽检资料按类别、声称类别配置重点检测项目；官方功能名称链直接承接，明确结果性页面功效词经单独审计后可进入相同功能筛查场景；宽泛主题词、疾病词和非官方简写仍保持Claim-only。",
+      "directions": {
+        "blood_pressure": {
+          "admitted_direct": [
+            "辅助降血压",
+            "调节血压",
+            "有助于维持血压健康水平"
+          ],
+          "admitted_functional_scope": [
+            "降压"
+          ],
+          "claim_only": [
+            "血压",
+            "高血压"
+          ]
+        },
+        "blood_lipid": {
+          "admitted_direct": [
+            "辅助降血脂",
+            "调节血脂",
+            "有助于维持血脂（胆固醇/甘油三酯）健康水平"
+          ],
+          "admitted_functional_scope": [
+            "降脂"
+          ],
+          "claim_only": [
+            "血脂",
+            "胆固醇",
+            "有助于维持血脂健康水平"
+          ]
+        },
+        "blood_glucose": {
+          "admitted_direct": [
+            "辅助降血糖",
+            "调节血糖",
+            "有助于维持血糖健康水平"
+          ],
+          "admitted_functional_scope": [
+            "降糖"
+          ],
+          "claim_only": []
+        }
+      }
     }
   }
 }
