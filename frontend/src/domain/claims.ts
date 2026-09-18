@@ -41,7 +41,7 @@ export function claimPresentation(
       code: "error",
       label: "页面宣传线索分析失败",
       summary: "分析失败",
-      description: "本次页面宣传线索分析未成功；页面证据和其它分析结果仍可查看。",
+      description: "本次页面宣传线索分析失败，已采集的页面内容仍可查看。",
       tone: "danger",
       signalCount: 0,
       mentionCount: 0,
@@ -52,7 +52,7 @@ export function claimPresentation(
       code: "not_generated",
       label: "尚未生成页面宣传线索",
       summary: "尚未生成",
-      description: "该页面快照尚未运行 V2 Claim Analysis。",
+      description: "该页面尚未完成宣传线索分析。",
       tone: "neutral",
       signalCount: 0,
       mentionCount: 0,
@@ -61,9 +61,9 @@ export function claimPresentation(
   if (signals.length === 0) {
     return {
       code: "zero",
-      label: "未发现已治理词表中的页面宣传表达",
-      summary: "已生成 · 零条线索",
-      description: "分析已完成，但当前已治理词表未命中页面宣传表达；这不表示无风险、无问题或宣传合规。",
+      label: "未发现重点宣传线索",
+      summary: "未发现宣传线索",
+      description: "本次分析未识别到当前关注的页面宣传表达。",
       tone: "neutral",
       signalCount: 0,
       mentionCount: 0,
@@ -75,9 +75,9 @@ export function claimPresentation(
   );
   return {
     code: "with_claims",
-    label: "页面宣传线索已生成",
+    label: "已发现页面宣传线索",
     summary: `检测到 ${signals.length} 类页面宣传线索，共 ${mentionCount} 处表达`,
-    description: "以下内容记录页面出现的宣传表达，不验证功效，也不构成风险或合规结论。",
+    description: "下方列出页面中实际出现的宣传表达及来源。",
     tone: "info",
     signalCount: signals.length,
     mentionCount,
