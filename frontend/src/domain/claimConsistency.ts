@@ -49,7 +49,7 @@ const completeStatePresentation: Record<
 > = {
   identity_not_verified: {
     label: "保健食品身份尚未核验",
-    description: "保健食品身份尚未核验，无法进行官方功能一致性比较。",
+    description: "先核验保健食品身份，核验后才能与官方功能记录比较。",
     tone: "neutral",
     showIdentityAction: true,
     showOfficialFunctions: false,
@@ -57,7 +57,7 @@ const completeStatePresentation: Record<
   },
   claim_not_generated: {
     label: "页面宣传线索尚未生成",
-    description: "页面宣传线索尚未生成，暂无法进行官方功能比较。",
+    description: "先完成页面宣传线索分析，再进行官方功能比较。",
     tone: "neutral",
     showIdentityAction: false,
     showOfficialFunctions: false,
@@ -65,7 +65,7 @@ const completeStatePresentation: Record<
   },
   claim_analysis_error: {
     label: "页面宣传线索分析失败",
-    description: "页面宣传线索分析失败，本次官方功能比较暂不可用；其它页面证据与官方身份结果仍可查看。",
+    description: "页面宣传线索分析失败，本次官方功能比较暂不可用。",
     tone: "neutral",
     showIdentityAction: false,
     showOfficialFunctions: false,
@@ -73,7 +73,7 @@ const completeStatePresentation: Record<
   },
   framework_unresolved: {
     label: "官方功能框架暂无法确定",
-    description: "官方功能框架暂无法确定，需人工核对。当前已保存的官方功能原文仍保留供审阅。",
+    description: "官方功能信息暂不完整，需人工核对。",
     tone: "warning",
     showIdentityAction: false,
     showOfficialFunctions: true,
@@ -81,7 +81,7 @@ const completeStatePresentation: Record<
   },
   official_function_unresolved: {
     label: "当前比较结果不完整",
-    description: "部分官方功能原文暂无法通过已治理名称解析，当前比较结果不完整。可保留已有明确对应，但不能据此确认未记录关系。",
+    description: "部分官方功能名称暂无法确认，当前比较结果不完整。",
     tone: "warning",
     showIdentityAction: false,
     showOfficialFunctions: true,
@@ -89,7 +89,7 @@ const completeStatePresentation: Record<
   },
   no_page_claims: {
     label: "未发现可比较的页面宣传表达",
-    description: "当前已治理词表未发现可比较的页面宣传表达。这不表示页面无其它宣传表达，也不构成一致或合规结论。",
+    description: "本次未识别到可与官方功能记录比较的页面宣传。",
     tone: "neutral",
     showIdentityAction: false,
     showOfficialFunctions: true,
@@ -97,7 +97,7 @@ const completeStatePresentation: Record<
   },
   assessed: {
     label: "逐项主题比较已生成",
-    description: "可逐项查看页面宣传主题与当前已核验官方功能记录之间的治理比较关系；系统不生成总体判定。",
+    description: "已完成页面宣传主题与官方功能记录的逐项比较。",
     tone: "info",
     showIdentityAction: false,
     showOfficialFunctions: true,
@@ -113,7 +113,7 @@ export function claimConsistencyPresentation(
     return {
       code: "not_generated",
       label: "尚未生成保健功能一致性比较",
-      description: "当前页面快照尚未生成 V2 保健功能一致性分析。",
+      description: "该页面尚未生成保健功能比较结果。",
       tone: "neutral",
       showIdentityAction: false,
       showOfficialFunctions: false,
@@ -124,7 +124,7 @@ export function claimConsistencyPresentation(
     return {
       code: "error",
       label: "保健功能一致性分析失败",
-      description: "本次一致性分析未成功；页面证据、页面宣传线索、官方身份与其它分析结果仍可查看。",
+      description: "本次保健功能比较失败。",
       tone: "danger",
       showIdentityAction: false,
       showOfficialFunctions: false,
@@ -143,22 +143,22 @@ export const claimConsistencyRelationPresentation: Record<
 > = {
   function_topic_recorded: {
     label: "找到官方功能对应主题",
-    description: "页面宣传主题在该产品官方功能记录中找到对应主题。主题对应不代表具体页面措辞获得官方认可。",
+    description: "该页面宣传主题在产品官方功能记录中有对应主题。",
     tone: "info",
   },
   function_topic_not_recorded: {
     label: "当前官方记录中未找到对应项",
-    description: "该页面宣传主题未在当前核验的官方功能记录中找到对应项，建议人工复核；该关系只描述当前记录中的主题比较结果。",
+    description: "当前核验的官方功能记录中未找到对应主题。",
     tone: "warning",
   },
   no_governed_function_mapping: {
-    label: "暂无已治理的官方功能主题映射",
-    description: "当前无已治理的官方功能主题映射，需人工研判；请勿据此推断官方功能范围。",
+    label: "暂无官方功能主题对应规则",
+    description: "该宣传主题目前没有可用的对应规则，暂不比较。",
     tone: "neutral",
   },
   mapping_unresolved: {
     label: "暂无法确定对应关系",
-    description: "当前知识或官方功能解析不足，暂无法确定该宣传主题的对应关系。未解析项可能影响比较，因此不能显示为未找到对应项。",
+    description: "现有信息不足，暂无法确定该宣传主题的对应关系。",
     tone: "warning",
   },
 };
@@ -175,13 +175,13 @@ export function healthFunctionFrameworkLabel(frameworkId: string | null) {
 
 function resolutionLabel(resolution: OfficialFunctionResolution) {
   if (resolution.resolutionStatus === "unresolved") {
-    return "暂无法通过已治理名称解析";
+    return "名称暂无法确认";
   }
   if (resolution.resolutionSource === "official_transition_alias") {
     return "官方新旧功能名称衔接";
   }
   if (resolution.resolutionSource === "explicit_governed_mapping") {
-    return "已治理的官方名称映射";
+    return "官方名称对应";
   }
   return "当前官方功能名称";
 }
@@ -205,7 +205,7 @@ export function officialFunctionViewModels(
         rawText,
         currentName: null,
         resolutionStatus: "unresolved",
-        resolutionLabel: "暂无法通过已治理名称解析",
+        resolutionLabel: "名称暂无法确认",
         showRawText: true,
       };
     }
@@ -264,7 +264,7 @@ export function claimConsistencyCountSummary(
     parts.push(`${summary.functionTopicNotRecordedCount} 类未在当前官方功能记录中找到对应项`);
   }
   if (summary.noMappingCount > 0) {
-    parts.push(`${summary.noMappingCount} 类暂无治理映射`);
+    parts.push(`${summary.noMappingCount} 类暂无对应规则`);
   }
   if (summary.mappingUnresolvedCount > 0) {
     parts.push(`${summary.mappingUnresolvedCount} 类暂无法确定对应关系`);
