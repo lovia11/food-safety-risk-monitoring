@@ -1,0 +1,268 @@
+name: B5 official source fetch
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ux-redesign-v1
+    paths:
+      - ".github/workflows/b5-official-source-fetch.yml"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install PDF text helper
+        run: python -m pip install "pypdf>=5,<7"
+
+      - name: Fetch and extract official SAMR sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p b5_sources
+          python - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import html
+          import json
+          import re
+          import time
+          import urllib.parse
+          import urllib.request
+          import zipfile
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+
+          from pypdf import PdfReader
+
+          OUT = Path("b5_sources")
+          USER_AGENT = "Mozilla/5.0 (compatible; food-safety-risk-monitoring-research/1.0)"
+          INDEX_URL = "https://www.samr.gov.cn/spcjs/bz/"
+
+          DIRECT = {
+              "bjs-201901": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516389935220036.doc",
+              "kj-201901": "https://www.samr.gov.cn/cms_files/filemanager/samr/www/samrnew/samrgkml/nsjg/spcjs/201910/W020191012316481139387.docx",
+              "kj-201902": "https://www.samr.gov.cn/cms_files/filemanager/samr/www/samrnew/samrgkml/nsjg/spcjs/201910/W020191012316481143847.docx",
+              "bjs-201808": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516383836747775.docx",
+          }
+          PAGE_TITLES = {
+              "bjs-202409": "食品中托拉塞米等19种利尿剂的测定",
+              "bjs-202501": "食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定",
+              "bjs-202502": "食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定",
+              "bjs-202504": "食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定",
+              "bjs-202601": "食品中布噻嗪和美布噻嗪的测定",
+              "bjs-202602": "食品中伐地那非杂质30的测定",
+          }
+
+          def fetch(url: str) -> bytes:
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": USER_AGENT,
+                      "Accept": "*/*",
+                      "Referer": "https://www.samr.gov.cn/",
+                  },
+              )
+              last = None
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(req, timeout=45) as response:
+                          return response.read()
+                  except Exception as exc:
+                      last = exc
+                      time.sleep(2 * (attempt + 1))
+              raise RuntimeError(f"fetch failed: {url}: {last}")
+
+          class LinkParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.links = []
+                  self._href = None
+                  self._text = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "a":
+                      self._href = dict(attrs).get("href")
+                      self._text = []
+              def handle_data(self, data):
+                  if self._href is not None:
+                      self._text.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() == "a" and self._href is not None:
+                      self.links.append((self._href, "".join(self._text).strip()))
+                      self._href = None
+                      self._text = []
+
+          def sha256(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest().upper()
+
+          def safe_name(value: str) -> str:
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", value)
+
+          def extract_docx(data: bytes) -> str:
+              import io
+              with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                  xml_bytes = zf.read("word/document.xml")
+              root = ET.fromstring(xml_bytes)
+              ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+              paragraphs = []
+              for p in root.iter(ns + "p"):
+                  parts = [node.text or "" for node in p.iter(ns + "t")]
+                  text = "".join(parts).strip()
+                  if text:
+                      paragraphs.append(text)
+              return "\n".join(paragraphs)
+
+          def extract_pdf(data: bytes) -> str:
+              import io
+              reader = PdfReader(io.BytesIO(data))
+              return "\n".join((page.extract_text() or "") for page in reader.pages)
+
+          metadata = {"index_url": INDEX_URL, "pages": {}, "files": {}, "errors": []}
+
+          index_bytes = fetch(INDEX_URL)
+          index_text = index_bytes.decode("utf-8", errors="replace")
+          (OUT / "samr_method_index.html").write_bytes(index_bytes)
+          parser = LinkParser()
+          parser.feed(index_text)
+
+          for key, title in PAGE_TITLES.items():
+              href = None
+              for candidate_href, candidate_text in parser.links:
+                  if title in html.unescape(candidate_text):
+                      href = urllib.parse.urljoin(INDEX_URL, candidate_href)
+                      break
+              if not href:
+                  metadata["errors"].append({"key": key, "stage": "discover_page", "title": title})
+                  continue
+
+              try:
+                  page_bytes = fetch(href)
+                  page_text = page_bytes.decode("utf-8", errors="replace")
+                  page_path = OUT / f"{key}.html"
+                  page_path.write_bytes(page_bytes)
+                  metadata["pages"][key] = {
+                      "title": title,
+                      "url": href,
+                      "sha256": sha256(page_bytes),
+                  }
+
+                  candidates = set()
+                  for match in re.findall(
+                      r"""(?:href|src)\s*=\s*["']([^"']+)["']""",
+                      page_text,
+                      flags=re.I,
+                  ):
+                      decoded = html.unescape(match)
+                      absolute = urllib.parse.urljoin(href, decoded)
+                      if re.search(r"\.(?:docx?|pdf)(?:$|\?)", absolute, flags=re.I):
+                          candidates.add(absolute)
+                  for match in re.findall(
+                      r"""((?:https?:)?//[^"'<>\s]+|/cms_files/[^"'<>\s]+)""",
+                      page_text,
+                      flags=re.I,
+                  ):
+                      absolute = urllib.parse.urljoin(href, html.unescape(match))
+                      if re.search(r"\.(?:docx?|pdf)(?:$|\?)", absolute, flags=re.I):
+                          candidates.add(absolute)
+
+                  metadata["pages"][key]["attachment_candidates"] = sorted(candidates)
+                  for n, attachment_url in enumerate(sorted(candidates), start=1):
+                      try:
+                          data = fetch(attachment_url)
+                          path_part = urllib.parse.urlparse(attachment_url).path
+                          ext = Path(path_part).suffix.lower() or ".bin"
+                          file_name = f"{key}-{n}{ext}"
+                          file_path = OUT / file_name
+                          file_path.write_bytes(data)
+                          text = ""
+                          extraction = "binary_only"
+                          if ext == ".docx":
+                              text = extract_docx(data)
+                              extraction = "docx_xml"
+                          elif ext == ".pdf":
+                              text = extract_pdf(data)
+                              extraction = "pypdf"
+                          if text:
+                              (OUT / f"{file_name}.txt").write_text(text, encoding="utf-8")
+                          metadata["files"][file_name] = {
+                              "source_url": attachment_url,
+                              "sha256": sha256(data),
+                              "bytes": len(data),
+                              "extraction": extraction,
+                              "text_chars": len(text),
+                          }
+                      except Exception as exc:
+                          metadata["errors"].append({
+                              "key": key,
+                              "stage": "fetch_attachment",
+                              "url": attachment_url,
+                              "error": repr(exc),
+                          })
+              except Exception as exc:
+                  metadata["errors"].append({
+                      "key": key,
+                      "stage": "fetch_page",
+                      "url": href,
+                      "error": repr(exc),
+                  })
+
+          for key, url in DIRECT.items():
+              try:
+                  data = fetch(url)
+                  ext = Path(urllib.parse.urlparse(url).path).suffix.lower() or ".bin"
+                  file_name = f"{key}{ext}"
+                  (OUT / file_name).write_bytes(data)
+                  text = ""
+                  extraction = "binary_only"
+                  if ext == ".docx":
+                      text = extract_docx(data)
+                      extraction = "docx_xml"
+                  elif ext == ".pdf":
+                      text = extract_pdf(data)
+                      extraction = "pypdf"
+                  if text:
+                      (OUT / f"{file_name}.txt").write_text(text, encoding="utf-8")
+                  metadata["files"][file_name] = {
+                      "source_url": url,
+                      "sha256": sha256(data),
+                      "bytes": len(data),
+                      "extraction": extraction,
+                      "text_chars": len(text),
+                  }
+              except Exception as exc:
+                  metadata["errors"].append({
+                      "key": key,
+                      "stage": "fetch_direct",
+                      "url": url,
+                      "error": repr(exc),
+                  })
+
+          (OUT / "metadata.json").write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+
+          print("=== B5 SOURCE FETCH METADATA ===")
+          print(json.dumps(metadata, ensure_ascii=False, indent=2))
+          for path in sorted(OUT.glob("*.txt")):
+              text = path.read_text(encoding="utf-8", errors="replace")
+              print(f"\n=== EXTRACT PREVIEW {path.name} ===")
+              print(text[:12000])
+          PY
+
+      - name: Upload official-source research artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: b5-official-sources
+          path: b5_sources/
+          if-no-files-found: error
+          retention-days: 7
