@@ -25,8 +25,44 @@ EXPECTED_SUBSTANCE_MAPPING_IDS = {
     "anti-fatigue-sildenafil-cn-2025",
     "anti-fatigue-tadalafil-cn-2025",
 }
-EXPECTED_MAPPING_IDS = EXPECTED_GROUP_MAPPING_IDS | EXPECTED_SUBSTANCE_MAPPING_IDS
-EXPECTED_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue"}
+EXPECTED_CURRENT_MAPPING_IDS = EXPECTED_GROUP_MAPPING_IDS | EXPECTED_SUBSTANCE_MAPPING_IDS
+SLEEP_HISTORICAL_GROUP_MAPPING_ID = "sleep-aid-historical-screening-group-cn-2018"
+SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES = {
+    "substance-cas-43200-80-2": "佐匹克隆",
+    "substance-cas-2934-97-6": "罗通定",
+    "substance-cas-28911-01-5": "三唑仑",
+    "substance-cas-115-53-7": "青藤碱",
+    "substance-cas-846-49-1": "劳拉西泮",
+    "substance-cas-1622-61-3": "氯硝西泮",
+    "substance-cas-28981-97-7": "阿普唑仑",
+    "substance-cas-151319-34-5": "扎来普隆",
+    "substance-cas-29975-16-4": "艾司唑仑",
+    "substance-cas-604-75-1": "奥沙西泮",
+    "substance-cas-439-14-5": "地西泮",
+    "substance-cas-146-22-5": "硝西泮",
+    "substance-cas-93413-69-5": "文拉法辛",
+    "substance-cas-132-22-9": "氯苯那敏",
+    "substance-cas-80-77-3": "氯美扎酮",
+    "substance-cas-76-73-3": "司可巴比妥",
+    "substance-cas-73-31-4": "褪黑素",
+    "substance-cas-50-06-6": "苯巴比妥",
+    "substance-cas-57-43-2": "异戊巴比妥",
+    "substance-cas-57-44-3": "巴比妥",
+}
+SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
+    f"sleep-aid-cas-{substance_id.removeprefix('substance-cas-')}-historical-cn-2018"
+    for substance_id in SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES
+}
+EXPECTED_MAPPING_IDS = (
+    EXPECTED_CURRENT_MAPPING_IDS
+    | {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
+    | SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS
+)
+EXPECTED_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue", "sleep_aid"}
+SLEEP_HISTORICAL_SOURCE = (
+    "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/"
+    "P020181214555096215303.pdf"
+)
 SIBUTRAMINE_SOURCE = (
     "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/"
     "art_935c1a68c87445729ad2e6c1d88607c6.html"
@@ -125,9 +161,9 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         payload = load_verified_risk_dataset()
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["dataset_id"], "risk-substance-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-c3")
+        self.assertEqual(payload["dataset_version"], "2026.09-c4")
         self.assertEqual(payload["dataset_status"], "verified_reference")
-        self.assertEqual(len(payload["mappings"]), 8)
+        self.assertEqual(len(payload["mappings"]), 29)
         self.assertEqual(
             {mapping["mapping_id"] for mapping in payload["mappings"]},
             EXPECTED_MAPPING_IDS,
@@ -143,6 +179,7 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
             mapping["mapping_id"]: mapping
             for mapping in mappings
             if mapping["target_type"] == "substance_group"
+            and mapping["temporal_status"] == "current"
         }
         self.assertEqual(set(group_mappings), EXPECTED_GROUP_MAPPING_IDS)
         self.assertEqual(group_mappings, EXPECTED_GROUP_MAPPINGS)
@@ -150,7 +187,10 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
     def test_exactly_five_verified_substance_mappings_reuse_inspection_entities(self):
         mappings = load_verified_risk_dataset()["mappings"]
         substance_mappings = [
-            mapping for mapping in mappings if mapping["target_type"] == "substance"
+            mapping
+            for mapping in mappings
+            if mapping["target_type"] == "substance"
+            and mapping["temporal_status"] == "current"
         ]
         self.assertEqual(len(substance_mappings), 5)
         self.assertEqual(
@@ -201,23 +241,79 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
             EXPECTED_SUBSTANCE_IDENTITIES,
         )
 
+    def test_sleep_historical_mappings_are_source_backed_and_reuse_inspection_entities(self):
+        mappings = load_verified_risk_dataset()["mappings"]
+        historical = [
+            mapping
+            for mapping in mappings
+            if mapping["risk_category"] == "sleep_aid"
+        ]
+
+        self.assertEqual(len(historical), 21)
+        self.assertEqual(
+            {mapping["mapping_id"] for mapping in historical},
+            {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
+            | SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS,
+        )
+        self.assertTrue(
+            all(mapping["temporal_status"] == "historical" for mapping in historical)
+        )
+        self.assertTrue(
+            all(mapping["basis_type"] == "historical_sampling_plan" for mapping in historical)
+        )
+        self.assertTrue(all(mapping["evidence_grade"] == "B" for mapping in historical))
+        self.assertTrue(
+            all(mapping["source_reference"] == SLEEP_HISTORICAL_SOURCE for mapping in historical)
+        )
+        self.assertTrue(all(mapping["source_date"] == "2018-10-09" for mapping in historical))
+        self.assertTrue(
+            all("当前统一法定抽检项目" in mapping["note"] for mapping in historical)
+        )
+
+        substance_ids = {
+            mapping["substance_id"]
+            for mapping in historical
+            if mapping["target_type"] == "substance"
+        }
+        self.assertEqual(substance_ids, set(SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES))
+
+        inspection = validate_inspection_config(read_json(INSPECTION_REFERENCE_CONFIG))
+        canonical_by_id = {
+            substance["substance_id"]: substance["canonical_name"]
+            for substance in inspection["substances"]
+        }
+        self.assertEqual(
+            {
+                substance_id: canonical_by_id[substance_id]
+                for substance_id in SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES
+            },
+            SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES,
+        )
+
     def test_mapping_sources_dates_and_nonconclusion_boundaries_are_exact(self):
         mappings = load_verified_risk_dataset()["mappings"]
         for mapping in mappings:
-            expected_reference = (
-                SIBUTRAMINE_SOURCE
-                if mapping["risk_category"] == "weight_loss"
-                else NAFEI_LAFEI_SOURCE
-            )
-            expected_date = (
-                "2025-10-18"
-                if mapping["risk_category"] == "weight_loss"
-                else "2025-06-28"
-            )
-            self.assertEqual(mapping["source_reference"], expected_reference)
-            self.assertEqual(mapping["source_date"], expected_date)
+            if mapping["risk_category"] == "sleep_aid":
+                self.assertEqual(mapping["source_reference"], SLEEP_HISTORICAL_SOURCE)
+                self.assertEqual(mapping["source_date"], "2018-10-09")
+                self.assertEqual(mapping["temporal_status"], "historical")
+                self.assertEqual(mapping["basis_type"], "historical_sampling_plan")
+                self.assertIn("不表示具体商品实际含有", mapping["note"])
+            else:
+                expected_reference = (
+                    SIBUTRAMINE_SOURCE
+                    if mapping["risk_category"] == "weight_loss"
+                    else NAFEI_LAFEI_SOURCE
+                )
+                expected_date = (
+                    "2025-10-18"
+                    if mapping["risk_category"] == "weight_loss"
+                    else "2025-06-28"
+                )
+                self.assertEqual(mapping["source_reference"], expected_reference)
+                self.assertEqual(mapping["source_date"], expected_date)
+                self.assertIn("不得解释", mapping["note"])
             self.assertTrue(mapping["source_basis_text"])
-            self.assertIn("不得解释", mapping["note"])
 
     def test_sqlite_import_is_idempotent_and_preserves_inspection_counts(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -231,13 +327,13 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 INSPECTION_COUNTS,
             )
 
-            expected = {"dataset": 1, "mappings": 8}
+            expected = {"dataset": 1, "mappings": 29}
             self.assertEqual(
                 store.import_risk_substance_config(RISK_REFERENCE_CONFIG), expected
             )
             first = store.table_counts()
             self.assertEqual(first["risk_mapping_datasets"], 1)
-            self.assertEqual(first["risk_substance_mappings"], 8)
+            self.assertEqual(first["risk_substance_mappings"], 29)
 
             connection = sqlite3.connect(store.database_path)
             try:
