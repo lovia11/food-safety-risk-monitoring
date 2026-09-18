@@ -6,7 +6,12 @@ import type {
   SubstanceFollowUp,
 } from "../api/contracts";
 import type { AnalysisStatePresentation } from "../domain/analysis";
-import { KNOWLEDGE_GAP_MESSAGE } from "../domain/recommendation";
+import {
+  KNOWLEDGE_GAP_MESSAGE,
+  followUpStatusLabel,
+  historicalReferenceMessage,
+  substanceFollowUpMessage,
+} from "../domain/recommendation";
 import { safeHttpUrl } from "../domain/product";
 import { StatusBadge } from "./StatusBadge";
 
@@ -78,13 +83,6 @@ function MethodGroup({
   );
 }
 
-function followUpStatusLabel(status: string) {
-  if (status === "suggest_testing") return "建议重点关注";
-  if (status === "needs_context_review") return "需要补充信息";
-  if (status === "regulatory_context_review") return "需核对监管语境";
-  return "需人工判断";
-}
-
 function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
   return (
     <article className="substance-card">
@@ -104,16 +102,16 @@ function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
           {followUpStatusLabel(substance.follow_up_status)}
         </StatusBadge>
       </div>
-      <p className="substance-reason">{substance.reason}</p>
-      <MethodGroup title="相关已核验方法" methods={substance.suggested_methods} />
+      <p className="substance-reason">{substanceFollowUpMessage(substance)}</p>
+      <MethodGroup title="可参考检测方法" methods={substance.suggested_methods} />
       <MethodGroup
-        title="需补充商品信息后判断"
+        title="补充商品信息后可判断"
         methods={substance.methods_needing_context}
         secondary
       />
       {substance.other_known_methods.length > 0 && (
         <details className="other-methods">
-          <summary>其他已知方法（{substance.other_known_methods.length}）</summary>
+          <summary>其他方法记录（{substance.other_known_methods.length}）</summary>
           <MethodGroup
             title=""
             methods={substance.other_known_methods}
@@ -122,7 +120,7 @@ function SubstanceCard({ substance }: { substance: SubstanceFollowUp }) {
         </details>
       )}
       {substance.regulatory_context_note && (
-        <p className="context-note">{substance.regulatory_context_note}</p>
+        <p className="context-note">该成分需结合商品身份、注册备案和配料信息判断。</p>
       )}
     </article>
   );
@@ -176,7 +174,7 @@ export function RecommendationPanel({
       {inspection.riskFindings.length === 0 ? (
         <div className="inline-message">
           <BookOpenCheck size={17} />
-          <span>已发现页面宣传线索，但当前知识库尚未建立对应的检测关注方向；页面证据仍可供人工复核。</span>
+          <span>已发现页面宣传线索，但当前暂无对应的抽检建议。</span>
         </div>
       ) : (
         inspection.riskFindings.map((baseFinding) => {
@@ -198,8 +196,8 @@ export function RecommendationPanel({
                 )}
               </div>
               <p>{finding.possible_risk_summary}</p>
-              {finding.historical_reference_note && (
-                <p className="context-note">{finding.historical_reference_note}</p>
+              {historicalReferenceMessage(finding) && (
+                <p className="context-note">{historicalReferenceMessage(finding)}</p>
               )}
               {finding.substance_follow_ups.map((substance) => (
                 <SubstanceCard key={substance.substance_id} substance={substance} />
