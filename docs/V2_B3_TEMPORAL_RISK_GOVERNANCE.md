@@ -14,6 +14,7 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 - historical 官方专项抽检/风险监测资料可以作为抽检筛查参考，但不得被展示为当前统一法定抽检项目；
 - historical 关系不得通过全局 `include_historical=True` 进入 V2 Claim production；
 - historical 关系必须由某一条具体 ClaimInspectionBridge 显式授权；
+- 单条 historical Bridge 必须显式列出受控 `authorized_historical_mapping_ids`，不得仅靠 risk category 放开整类历史知识；
 - Method 只能回答“如何检测”，不能反向证明 Claim→Risk→Substance；
 - 页面宣传线索不表示商品实际含有某物质，也不构成违法认定或实验室检出结论。
 
@@ -23,6 +24,10 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 
 - `current_only`
 - `historical_reference_allowed`
+
+每条 mapping 还必须包含：
+
+- `authorized_historical_mapping_ids`：historical policy 的显式 allowlist；current-only mapping 必须为空数组。
 
 规则：
 
@@ -47,7 +52,8 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 3. `basis_type=historical_sampling_plan`；
 4. `governance_basis=direct_verified_reference`；
 5. 保留完整 source/date/product_scope/source_basis_text；
-6. UI 输出历史资料边界说明。
+6. UI 输出历史资料边界说明；
+7. allowlist 必须包含主 `reference_mapping_id`，且所有授权 mapping 必须与主 reference 同 risk category、同 source_reference、source_date 与 product_scope。
 
 legacy migration 不允许使用该 policy。
 
@@ -65,6 +71,7 @@ V2 的正确路径是：
 ClaimMention
   → exact ClaimInspectionBridge
   → Bridge temporal_policy
+  → authorized_historical_mapping_ids
   → current mappings + Bridge-authorized historical mapping IDs only
 ```
 
@@ -136,9 +143,7 @@ RecommendationPanel 只做最小展示增量，不改变既有交互结构：
 
 ## 8. 本阶段明确没有做的事
 
-V2-B3 **没有**：
-
-- 向 production `risk_substance_reference.json` 批量加入历史关系；
+V2-B3 初始 Gate **没有**批量加入历史关系。进入 B4 后，只有通过 source-level audit 的历史关系才可按本规则逐条进入 production `risk_substance_reference.json`；
 - 因 Method 可检测某物质而新增 Claim→Risk/风险关系；
 - 按 Claim type 整体扩展 Bridge；
 - 把历史抽检表称为当前统一法定抽检要求；
