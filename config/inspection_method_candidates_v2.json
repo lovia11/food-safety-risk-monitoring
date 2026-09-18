@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b3",
+  "manifest_version": "2026.09-b4",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。保留既有promotion追溯，并新增9个由SAMR一手公告核验编号/正式标题/发布身份的verification候选。verification仅证明方法身份，不表示analyte、适用范围、生命周期细节或Recommendation已深核；manifest仍不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。保留既有promotion追溯；当前共有10个由SAMR一手公告/数据库核验编号、正式标题或发布身份的verification候选。verification仅证明方法身份，不表示analyte、适用范围、生命周期细节或Recommendation已深核；manifest仍不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -380,6 +380,43 @@
         }
       ],
       "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-201808",
+      "method_no": "BJS 201808",
+      "title": "食品中5种α-受体阻断类药物的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "国家市场监督管理总局食品补充检验方法数据库：食品中5种α-受体阻断类药物的测定",
+      "discovery_source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
+      "discovery_source_date": "2018-11-26",
+      "discovery_source_record_id": "samr-database-bjs-201808",
+      "reason": "SAMR食品补充检验方法数据库确认正式标题和公开方法身份；SAMR官方公告附件标签明确给出BJS 201808编号。该方法与male_function/yohimbine等方向具有潜在方法价值，但当前尚未从官方DOCX全文完成5种目标物CAS、适用食品/保健食品基质和applicability深核，因此不进入runtime。",
+      "correction_note": "旧B5草案仅因可访问页面未显示编号而暂缓；后续找到SAMR官方公告附件标签，已一手确认BJS 201808编号。Method存在不自动建立任何新的Risk关系。",
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中5种α-受体阻断类药物的测定》食品补充检验方法的公告（2018年第28号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_6a101dda4a1e4876b157d6dd8f39254f.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "official_attachment_identity"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
+          "verified_facts": [
+            "official_title",
+            "current_database_identity",
+            "database_publication_date"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:30:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     }
