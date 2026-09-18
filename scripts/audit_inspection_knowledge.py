@@ -21,6 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.claim_inspection_bridge import validate_claim_inspection_bridge_config
 from src.effect_risk_bridge import validate_effect_risk_bridge_config
 from src.data_store import DataStore
 from src.inspection_applicability import ProductInspectionContext
@@ -31,10 +32,11 @@ from src.risk_substance_reference import validate_risk_substance_config
 from src.runtime import read_json
 
 
-AUDIT_CONTRACT_VERSION = "v2.8-1"
+AUDIT_CONTRACT_VERSION = "v2.9-1"
 DEFAULT_INSPECTION_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.json"
 DEFAULT_RISK_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
-DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
+DEFAULT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "claim_inspection_bridge_v2.json"
+DEFAULT_EFFECT_BRIDGE_CONFIG = PROJECT_ROOT / "config" / "effect_risk_bridge.json"
 DEFAULT_CANDIDATE_CONFIG = (
     PROJECT_ROOT / "config" / "inspection_method_candidates_v2.json"
 )
@@ -814,12 +816,12 @@ def build_audit(
         "dataset_versions": {
             "inspection": inspection["dataset_version"],
             "risk_substance": risk["dataset_version"],
-            "effect_risk_bridge": bridge["bridge_version"],
+            "claim_inspection_bridge": bridge["bridge_version"],
         },
         "inventory": {
             "inspection_datasets": 1,
             "risk_mapping_datasets": 1,
-            "effect_risk_bridges": 1,
+            "claim_inspection_bridges": 1,
             "governed_dataset_count": 3,
             "methods": len(methods),
             "indexed_methods": len(methods),
@@ -961,20 +963,31 @@ def load_and_build_audit(
     inspection_path: Path = DEFAULT_INSPECTION_CONFIG,
     risk_path: Path = DEFAULT_RISK_CONFIG,
     bridge_path: Path = DEFAULT_BRIDGE_CONFIG,
+    effect_bridge_path: Path = DEFAULT_EFFECT_BRIDGE_CONFIG,
     candidate_path: Path = DEFAULT_CANDIDATE_CONFIG,
     context_corpus_path: Path = DEFAULT_CONTEXT_CORPUS,
 ) -> dict[str, Any]:
-    """Validate governed files and build an offline audit."""
+    """Validate governed files and build an offline audit.
+
+    Current coverage is computed from the V2 Claim Inspection Bridge.  The
+    legacy Effect Bridge is loaded only to keep the deterministic historical
+    context corpus reproducible.
+    """
 
     inspection_raw = read_json(inspection_path)
     risk_raw = read_json(risk_path)
     bridge_raw = read_json(bridge_path)
+    effect_bridge_raw = read_json(effect_bridge_path)
     candidate_raw = read_json(candidate_path)
     context_corpus_raw = read_json(context_corpus_path)
     inspection = validate_inspection_config(inspection_raw)
     risk = validate_risk_substance_config(risk_raw)
-    bridge = validate_effect_risk_bridge_config(
+    bridge = validate_claim_inspection_bridge_config(
         bridge_raw,
+        risk_reference_config=risk_raw,
+    )
+    effect_bridge = validate_effect_risk_bridge_config(
+        effect_bridge_raw,
         risk_reference_config=risk_raw,
     )
     candidates = validate_inspection_candidate_manifest(candidate_raw)
@@ -982,7 +995,7 @@ def load_and_build_audit(
         context_corpus_raw,
         inspection_version=inspection["dataset_version"],
         risk_version=risk["dataset_version"],
-        bridge_version=bridge["bridge_version"],
+        bridge_version=effect_bridge["bridge_version"],
     )
     report = build_audit(inspection, risk, bridge, candidates)
     with tempfile.TemporaryDirectory() as temporary:
