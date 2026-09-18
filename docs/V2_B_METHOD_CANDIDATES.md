@@ -1,90 +1,230 @@
-# V2-B 检验方法候选清单
+# V2-B5 检验方法候选与深核队列
 
-> Status: CANDIDATE AUDIT — 未进入 runtime  
+> Status: B5-1 IMPLEMENTED — source-verified verification queue, non-runtime  
 > Date: 2026-09-18  
-> Rule: 方法存在 ≠ 可自动推荐；必须完成目标物、适用范围、生命周期和上游 Risk 关系核验。
+> Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
-## 1. 为什么需要这份清单
+## 1. 本阶段解决什么
 
-当前项目 `inspection_reference.json` 只有一个深度整理的 7-method 子集，而市场监管总局截至 2026 年公开说明已累计发布 112 项食品补充检验方法。
+B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 治理。B5 不再扩 Claim 或 Risk，而只处理：
 
-V2-B 重新从“宣传方向”出发检索后发现，项目现有方法集既有“上游暂时触达不到”的方法，也漏了多项与减肥、降压、降糖、男性功能/抗疲劳高度相关的方法。
+```text
+已有监管关注方向 / Substance
+→ 官方检验方法候选
+→ 正式全文深核
+→ MethodSubstance
+→ MethodApplicability
+→ lifecycle / provenance
+→ promotion
+```
 
-因此不再继续无方向扩充 Method，而建立与 7 个监管关注方向绑定的候选池。
+核心原则保持不变：
 
-## 2. P0 候选：优先深核
+- Method 能检测某物质，不能反推 Claim → Risk；
+- 官方公告出现一个方法，只能先证明“方法身份存在”；
+- 未读取正式方法全文之前，不能声称完整 analyte、CAS、适用基质、剂型、定性/定量角色或 Recommendation-ready；
+- candidate manifest 始终 non-runtime；
+- 当前 runtime 仍是 `inspection-reference@2026.09-b8` 的 7-method index。
 
-| Method | 方向 | 官方来源 | 当前状态 |
+## 2. Candidate lifecycle
+
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b3`。
+
+状态含义：
+
+### `candidate`
+
+只完成发现。还没有足够一手来源核验，不得记录 verification/promotion 字段。
+
+### `verification`
+
+已经由一手官方来源核验至少：
+
+- method_no；
+- 正式标题；
+- 发布机构 / 发布公告；
+- 发布身份。
+
+但仍未完成正式全文的 analyte / applicability / lifecycle 深核，因此：
+
+```text
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime_consumed = false
+```
+
+### `promoted`
+
+已经形成正式 Inspection Method 身份并进入 `inspection_reference.json`。manifest 只保留 promotion trace，不重复导入 runtime。
+
+## 3. B5-1 当前 verification queue
+
+以下 9 个方法已由 SAMR 一手公告核实编号和正式标题，但尚未 promotion：
+
+| Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
-| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose | SAMR 2019年第4号公告 | candidate_pending_deep_verification |
-| KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | male_function / anti_fatigue | SAMR 2019年第41号公告 | candidate_pending_deep_verification |
-| KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 | candidate_pending_deep_verification |
-| BJS 201805 食品中那非类物质的测定 | male_function / anti_fatigue | SAMR 2018年第14号公告 | candidate_pending_deep_verification |
-| 食品中硝苯地平及其降解产物的测定（2022年第29号公告） | blood_pressure | SAMR 2022 | candidate_pending_deep_verification |
-| BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | candidate_pending_deep_verification |
-| BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | candidate_pending_deep_verification |
-| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss | SAMR 2025年第39号公告 | candidate_pending_deep_verification |
-| BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | candidate_pending_deep_verification |
-| BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | candidate_pending_deep_verification |
+| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose | SAMR 2019年第4号公告 | `verification / reference_only` |
+| KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | male_function / anti_fatigue | SAMR 2019年第41号公告 | `verification / reference_only` |
+| KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 | `verification / reference_only` |
+| BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
+| BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
+| BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
+| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss | SAMR 2025年第39号公告 | `verification / reference_only` |
+| BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
+| BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
 
-## 3. P1 候选：相关但需先核适用范围
+这些“方向”只是深核优先级上下文，不是由 Method 自动建立的新 Risk relation。
 
-| Method | 方向 | 原因 |
-|---|---|---|
-| 食品中5种α-受体阻断类药物的测定（2018） | blood_pressure | 历史降压抽检项目含哌唑嗪等，需核正文目标物和适用基质 |
-| BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss | 利尿剂同时出现在部分历史减肥/降压筛查项目中，必须避免按药理反推 |
-| 2025 西布曲明系列衍生物执法检验方法 | weight_loss | current 强场景证据，但属于执法检验方法，不应和 BJS 生命周期字段混淆 |
-| 2025 比沙可啶系列衍生物执法检验方法 | weight_loss | current 强场景证据；需要独立 method_type/适用性治理 |
-| 2025 酚汀（酚丁）/酚酞系列执法检验方法 | weight_loss | current 强场景证据；需和 BJS 202504 的关系去重 |
-| 2025 4-氯双异丁酚丁执法检验方法 | weight_loss | current 强场景证据；需决定是否纳入 Deep Verified Subset |
+## 4. 对旧 shortlist 的关键修正
 
-## 4. 已有方法的角色重新定位
+### 4.1 BJS 201805 不再是 current runtime 缺口
 
-### BJS 201701
+旧清单把：
 
-继续作为 weight_loss 当前核心方法之一，但不能再被理解成“整个减肥方向只有西布曲明”。
+```text
+BJS 201805 食品中那非类物质的测定
+```
 
-### BJS 202405
+列为 male_function / anti_fatigue P0 候选。
 
-继续作为 male_function/anti_fatigue 重要方法；现有 95 analyte 深度知识具有价值。随着 2025 那非/拉非 current Risk 和 2026 BJS202602 出现，这部分可达性应增强。
+但当前项目已经完成 BJS 202405 正式全文深核；该方法明确代替：
 
-### BJS 201710
+- BJS 201601；
+- BJS 201704；
+- BJS 201805。
 
-不是摆设。它覆盖大量睡眠、降压、调脂、降糖、男性功能相关化合物，并具有保健食品/声称具有保健功效食品的剂型范围。但它只是 Method→Substance Authority，不能单独制造 Claim→Substance。
+因此 BJS 201805 的正确角色是：
 
-### KJ201903
+```text
+historical / superseded lifecycle reference
+≠ current runtime expansion target
+```
 
-保留为巴比妥类快速筛查，适用于其正式范围；阳性结果仍需进一步确证。V2-B sleep_aid 可能让它获得真实上游触达路径。
+B5 不再把它作为现行 Recommendation Method promotion。
 
-### GB/T 45443-2025
+### 4.2 2022 硝苯地平方法暂不写入 manifest
 
-保留为保健食品褪黑素测定方法，不纳入一般“睡眠宣传→非法添加物”推荐。它更适合已核验褪黑素保健食品的产品身份/配方/含量语境。
+SAMR 2022年第29号公告和方法数据库已确认正式方法：
 
-## 5. 深核 Gate
+```text
+食品中硝苯地平及其降解产物的测定
+```
 
-每个 candidate 升级到 `recommendation_ready` 前必须获取正式方法正文并记录：
+但当前可访问的一手页面没有在正文中可靠给出方法编号。candidate schema 要求 `method_no`，因此本阶段不猜编号、不用列表顺序推编号。
 
-- method_no / title / publisher / source URL
-- lifecycle/current status
-- analyte 全量或明确受控 subset
-- CAS/别名规范化
-- determination role（定性/定量/快速筛查）
-- product category
-- product form
-- matrix / ingredient exceptions
-- 替代/废止关系
-- 与已有 MethodSubstance 是否重复
-- 是否需要独立 `method_type = enforcement_method` 或 `rapid_kj`
+保留为“已确认方法标题，待编号/全文核验”的文档候选。
 
-未完成以上字段的，只能留在 candidate 文档，不能写进 `inspection_reference.json` 的 recommendation-ready runtime。
+### 4.3 2018 五种 α-受体阻断剂方法暂不写入 manifest
 
-## 6. 官方入口
+SAMR 方法数据库确认：
 
-- 食品补充检验方法数据库：`https://www.samr.gov.cn/spcjs/bcjyff/`
-- BJS 201901：`https://www.samr.gov.cn/spcjs/bz/cs/art/2019/art_32afdd76c9f542f2bdd734801920ad0b.html`
-- KJ 2019年第41号公告：`https://www.samr.gov.cn/spcjs/xxfb/art/2019/art_2a1de171556f40f2b8f5829fe9810086.html`
-- BJS 201805公告：`https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_17e84b8961684057bbf27d6b7edd4813.html`
-- 2022年第29号公告：`https://www.samr.gov.cn/spcjs/xxfb/art/2022/art_547b6bf10c8e4fa7ab052e250a1aa4b4.html`
-- 2024年第51号公告：`https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html`
-- 2025年第39号公告：`https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html`
-- 2026年第24号公告：`https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html`
+```text
+食品中5种α-受体阻断类药物的测定
+```
+
+但当前可访问页面同样没有可靠给出方法编号。继续留在文档候选，不伪造编号。
+
+### 4.4 2025 执法检验方法暂不混入 BJS runtime schema
+
+西布曲明、比沙可啶、酚汀/酚酞、4-氯双异丁酚丁等 2025 current 执法检验方法具有很高业务价值，但它们的规范身份与 `supplementary_bjs / rapid_kj / national_standard_gbt` 不完全相同。
+
+在确定是否需要新增 `method_type = enforcement_method` 及其 lifecycle/applicability 规则前，不把它们硬塞进现有 Method schema。
+
+## 5. 首批深核优先级
+
+优先级是知识工程顺序，不是产品风险排序。
+
+### 第一批：小规模、当前、能直接补现有链路
+
+1. **BJS 202504**
+   - current；
+   - 标题仅 5 个化合物；
+   - 与 B4 current weight_loss 酚丁/酚酞监管场景最直接；
+   - 适合先验证“候选 → 全文 → analyte/applicability → promotion”的 B5 流程。
+
+2. **BJS 202501**
+   - current；
+   - 标题明确 3 个降压相关化合物；
+   - 规模小，适合与 blood_pressure historical/current knowledge 做独立对照。
+
+3. **KJ201901 / KJ201902**
+   - analyte 数量小；
+   - 可补“快速筛查”角色；
+   - 必须核清产品剂型、判定规则以及阳性后确证边界。
+
+4. **BJS 202601 / BJS 202602**
+   - 2026 current；
+   - 标题目标物少；
+   - 但必须特别防止用“方法存在”反推新的 Risk→Substance。
+
+### 第二批：较大 analyte 集
+
+- BJS 201901；
+- BJS 202409；
+- BJS 202502。
+
+它们需要更多 Substance identity / CAS / applicability 解析工作，等第一批 promotion 流程跑通后再处理。
+
+## 6. Deep verification Gate
+
+任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
+
+- method_no / official title；
+- publisher / source URL / source date；
+- method lifecycle / 是否被替代；
+- analyte 全量或明确受控 subset；
+- source label / CAS / normalization；
+- determination role；
+- product category / form / matrix；
+- include / conditional / exclude applicability；
+- 前处理或适用性例外中会影响 Product Context 的条件；
+- RegulatoryDocument identity；
+- 与已有 MethodSubstance 的重叠；
+- 是否真的满足 `reference_only → analyte_verified → applicability_verified → recommendation_ready` 的对应 Gate。
+
+标题、新闻稿或公告目录不能替代正式全文。
+
+## 7. 官方入口
+
+### BJS 201901
+
+SAMR 2019年第4号公告：  
+`https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_a5204e5dff584b91b222bf9b47c2c92b.html`
+
+### KJ201901 / KJ201902
+
+SAMR 2019年第41号公告：  
+`https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_0ac8c49f7b2a4536a2bd1397ed010c2d.html`
+
+### BJS 202409
+
+SAMR 2024年第51号公告：  
+`https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html`
+
+### BJS 202501 / 202502 / 202504
+
+SAMR 2025年第39号公告：  
+`https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html`
+
+### BJS 202601 / 202602
+
+SAMR 2026年第24号公告：  
+`https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html`
+
+### 方法数据库
+
+`https://www.samr.gov.cn/spcjs/bcjyff/`
+
+## 8. B5-1 Acceptance
+
+B5-1 只要求：
+
+- verification queue 可由 validator 通过；
+- 9 个 verification 方法不进入 operational method index；
+- 2 个历史 promotion trace 仍只计一次；
+- Audit 的 Method Reference / Deep Verification denominator 仍为 7；
+- candidate 数量变化不得改变 Recommendation；
+- syntax / candidate / audit / full regression 通过。
+
+通过后进入 B5-2：从 BJS 202504 等第一批方法开始正式全文深核。
