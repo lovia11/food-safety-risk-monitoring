@@ -271,6 +271,26 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
             self.assertTrue(mapping["source_date"])
             self.assertTrue(mapping["source_basis_text"])
 
+    def test_risk_scoped_applicability_does_not_leak_across_risk_categories(self):
+        inspection = copy.deepcopy(self.inspection)
+        for item in inspection["method_applicabilities"]:
+            if item["method_id"] == "bjs-202405":
+                item["risk_category"] = "anti_fatigue"
+
+        report = build_audit(inspection, self.risk, self.bridge)
+        by_key = {
+            (item["risk_category"], item["target"]): item
+            for item in report["risk_reachability"]
+            if item["target_type"] == "substance"
+        }
+        sildenafil_id = "substance-cas-139755-83-2"
+
+        anti = by_key[("anti_fatigue", sildenafil_id)]
+        male = by_key[("male_function", sildenafil_id)]
+        self.assertIn("bjs-202405", anti["recommendation_ready_method_ids"])
+        self.assertNotIn("bjs-202405", male["recommendation_ready_method_ids"])
+        self.assertIn("bjs-201710", male["recommendation_ready_method_ids"])
+
     def test_current_runtime_usage_is_computed_from_bridge_categories_only(self):
         usage = load_and_build_audit()["inventory"]["runtime_recommendation_usage"]
 
