@@ -509,6 +509,13 @@ def build_audit(
     for applicability in applicabilities:
         applicabilities_by_method[applicability["method_id"]].append(applicability)
 
+    def applicability_matches_risk(
+        applicability: Mapping[str, Any],
+        risk_category: str,
+    ) -> bool:
+        required_risk = str(applicability.get("risk_category", ""))
+        return not required_risk or required_risk == risk_category
+
     method_matrix = [
         _method_audit(
             method,
@@ -610,8 +617,14 @@ def build_audit(
             relevant_apps = [
                 item
                 for item in applicabilities_by_method[method_id]
-                if item["substance_id"] is None
-                or item["substance_id"] == substance_id
+                if (
+                    item["substance_id"] is None
+                    or item["substance_id"] == substance_id
+                )
+                and applicability_matches_risk(
+                    item,
+                    str(mapping["risk_category"]),
+                )
             ]
             if relevant_apps:
                 methods_with_applicability.append(method_id)
@@ -739,14 +752,29 @@ def build_audit(
     }
     used_method_ids: set[str] = set()
     used_applicability_ids: set[str] = set()
-    for substance_id in used_substance_ids:
+    for risk_mapping in used_risk_rows:
+        if risk_mapping["target_type"] != "substance":
+            continue
+        substance_id = risk_mapping["substance_id"]
+        risk_category = str(risk_mapping["risk_category"])
         for method_id in methods_by_substance[substance_id]:
             if method_id not in deep_methods:
                 continue
+            relevant_apps = [
+                item
+                for item in applicabilities_by_method[method_id]
+                if (
+                    item["substance_id"] is None
+                    or item["substance_id"] == substance_id
+                )
+                and applicability_matches_risk(item, risk_category)
+            ]
+            if not relevant_apps:
+                continue
             used_method_ids.add(method_id)
-            for item in applicabilities_by_method[method_id]:
-                if item["substance_id"] is None or item["substance_id"] == substance_id:
-                    used_applicability_ids.add(item["applicability_id"])
+            used_applicability_ids.update(
+                item["applicability_id"] for item in relevant_apps
+            )
 
     metrics = {
         "method_reference_coverage": {
