@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 IMPLEMENTED — source-verified verification queue, non-runtime  
+> Status: B5-1 ACCEPTED — source-verified verification queue, non-runtime; full acceptance passed  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b3`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b5`。
 
 状态含义：
 
@@ -237,4 +237,4 @@ B5-1 只要求：
 - candidate 数量变化不得改变 Recommendation；
 - syntax / candidate / audit / full regression 通过。
 
-通过后进入 B5-2：从 BJS 202504 等第一批方法开始正式全文深核。
+B5-1 已通过 syntax / governance / full backend+frontend acceptance。现进入 B5-2：从 BJS 202504 等第一批方法开始正式全文深核。
