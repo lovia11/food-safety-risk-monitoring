@@ -19,6 +19,8 @@ INSPECTION_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.js
 RISK_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 
 SIBUTRAMINE_ID = "substance-cas-106650-56-0"
+BISACODYL_ID = "substance-cas-603-50-9"
+PHENOLPHTHALEIN_ID = "substance-cas-77-09-8"
 SILDENAFIL_ID = "substance-cas-139755-83-2"
 TADALAFIL_ID = "substance-cas-171596-29-5"
 WEIGHT_LOSS_GROUP_MAPPING_ID = "weight-loss-sibutramine-group-cn-2025"
@@ -104,19 +106,22 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
             signal["reference_mapping_ids"], [WEIGHT_LOSS_GROUP_MAPPING_ID]
         )
 
-    def test_weight_loss_trace_has_one_group_and_one_substance(self):
+    def test_weight_loss_trace_has_governed_current_groups_and_substances(self):
         trace = self._resolve_weight_loss().risk_knowledge_signals[0][
             "knowledge_trace"
         ]
 
-        self.assertEqual(len(trace["group_targets"]), 1)
         self.assertEqual(
-            trace["group_targets"][0]["target_group_label"],
-            "西布曲明及其系列衍生物",
+            {item["target_group_label"] for item in trace["group_targets"]},
+            {
+                "西布曲明及其系列衍生物",
+                "比沙可啶及其系列衍生物",
+                "酚汀（酚丁）、酚酞及其酯类衍生物或类似物",
+            },
         )
-        self.assertEqual(len(trace["substance_targets"]), 1)
         self.assertEqual(
-            trace["substance_targets"][0]["substance_id"], SIBUTRAMINE_ID
+            {item["substance_id"] for item in trace["substance_targets"]},
+            {SIBUTRAMINE_ID, BISACODYL_ID, PHENOLPHTHALEIN_ID},
         )
 
     def test_method_chain_remains_a_dynamic_d1_query(self):
@@ -164,15 +169,14 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
             signal["reference_mapping_ids"], [MALE_FUNCTION_GROUP_MAPPING_ID]
         )
 
-    def test_male_function_trace_has_one_group_and_two_substances(self):
+    def test_male_function_trace_has_governed_current_groups_and_substances(self):
         trace = self._resolve_male_function().risk_knowledge_signals[0][
             "knowledge_trace"
         ]
 
-        self.assertEqual(len(trace["group_targets"]), 1)
         self.assertEqual(
-            trace["group_targets"][0]["target_group_label"],
-            "那非类、拉非类物质",
+            {item["target_group_label"] for item in trace["group_targets"]},
+            {"那非类、拉非类物质", "育亨宾及其系列衍生物"},
         )
         self.assertEqual(
             {item["substance_id"] for item in trace["substance_targets"]},
@@ -278,7 +282,7 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertEqual(
             [gap["type"] for gap in actual["knowledge_gaps"]],
-            ["unresolved_group"],
+            ["unresolved_group", "unresolved_group", "unresolved_group"],
         )
 
     def test_include_historical_is_forwarded_to_d1_only(self):
@@ -305,13 +309,22 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
         signal = result.risk_knowledge_signals[0]
         self.assertEqual(signal["risk_category"], "weight_loss")
         self.assertEqual(signal["reference_mapping_ids"], [WEIGHT_LOSS_GROUP_MAPPING_ID])
-        self.assertEqual(signal["knowledge_trace"]["group_targets"], [])
         self.assertEqual(
-            [
+            {
+                item["target_group_label"]
+                for item in signal["knowledge_trace"]["group_targets"]
+            },
+            {
+                "比沙可啶及其系列衍生物",
+                "酚汀（酚丁）、酚酞及其酯类衍生物或类似物",
+            },
+        )
+        self.assertEqual(
+            {
                 item["substance_id"]
                 for item in signal["knowledge_trace"]["substance_targets"]
-            ],
-            [SIBUTRAMINE_ID],
+            },
+            {SIBUTRAMINE_ID, BISACODYL_ID, PHENOLPHTHALEIN_ID},
         )
         self.assertEqual(
             result.composition_gaps,
