@@ -2,6 +2,8 @@
 
 > 状态：implementation gate pending local test acceptance
 > 日期：2026-09-18
+>
+> 数据版本说明：本文记录 cardiometabolic slice 在 Risk Reference c5 时的实现快照；后续 B4 已继续扩充至 c6，本文中的 8/46/54 等数字只描述该阶段，不是当前全库库存。
 
 ## 1. 范围
 
