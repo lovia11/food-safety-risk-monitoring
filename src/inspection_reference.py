@@ -642,6 +642,10 @@ def validate_inspection_config(payload: Any) -> dict[str, Any]:
                     item.get("ingredient_context"),
                     f"Applicability {applicability_id} 的ingredient_context",
                 ),
+                "risk_category": _text_default(
+                    item.get("risk_category"),
+                    f"Applicability {applicability_id} 的risk_category",
+                ),
                 "source_scope_text": _text_default(
                     item.get("source_scope_text"),
                     f"Applicability {applicability_id} 的source_scope_text",
