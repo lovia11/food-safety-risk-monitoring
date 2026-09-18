@@ -53,13 +53,60 @@ SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
     f"sleep-aid-cas-{substance_id.removeprefix('substance-cas-')}-historical-cn-2018"
     for substance_id in SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES
 }
-EXPECTED_MAPPING_IDS = (
-    EXPECTED_CURRENT_MAPPING_IDS
-    | {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
+CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES = {
+    "blood_pressure": {
+        "substance-cas-29122-68-7": "阿替洛尔",
+        "substance-cas-58-93-5": "氢氯噻嗪",
+        "substance-cas-62571-86-2": "卡托普利",
+        "substance-cas-19216-56-9": "哌唑嗪",
+        "substance-cas-50-55-5": "利血平",
+        "substance-cas-21829-25-4": "硝苯地平",
+        "substance-cas-88150-42-9": "氨氯地平",
+        "substance-cas-39562-70-4": "尼群地平",
+        "substance-cas-66085-59-4": "尼莫地平",
+        "substance-cas-63675-72-9": "尼索地平",
+        "substance-cas-72509-76-3": "非洛地平",
+    },
+    "blood_lipid": {
+        "substance-cas-75330-75-5": "洛伐他汀",
+        "substance-cas-79902-63-9": "辛伐他汀",
+        "substance-cas-73573-88-3": "美伐他汀",
+        "substance-cas-75225-50-2": "洛伐他汀羟酸钠盐",
+    },
+    "blood_glucose": {
+        "substance-cas-64-77-7": "甲苯磺丁脲",
+        "substance-cas-21187-98-4": "格列齐特",
+        "substance-cas-29094-61-9": "格列吡嗪",
+        "substance-cas-33342-05-1": "格列喹酮",
+        "substance-cas-93479-97-1": "格列美脲",
+        "substance-cas-135062-02-1": "瑞格列奈",
+        "substance-cas-26944-48-9": "格列波脲",
+    },
+}
+CARDIOMETABOLIC_HISTORICAL_GROUP_MAPPING_IDS = {
+    "blood_pressure": "blood-pressure-historical-screening-group-cn-2018",
+    "blood_lipid": "blood-lipid-historical-screening-group-cn-2018",
+    "blood_glucose": "blood-glucose-historical-screening-group-cn-2018",
+}
+CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
+    category: {
+        f"{category.replace('_', '-')}-cas-{substance_id.removeprefix('substance-cas-')}-historical-cn-2018"
+        for substance_id in identities
+    }
+    for category, identities in CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES.items()
+}
+EXPECTED_HISTORICAL_MAPPING_IDS = (
+    {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
     | SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS
+    | set(CARDIOMETABOLIC_HISTORICAL_GROUP_MAPPING_IDS.values())
+    | set().union(*CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_MAPPING_IDS.values())
 )
+EXPECTED_MAPPING_IDS = EXPECTED_CURRENT_MAPPING_IDS | EXPECTED_HISTORICAL_MAPPING_IDS
 EXPECTED_CURRENT_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue"}
-EXPECTED_CATEGORIES = EXPECTED_CURRENT_CATEGORIES | {"sleep_aid"}
+EXPECTED_HISTORICAL_CATEGORIES = {
+    "sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose"
+}
+EXPECTED_CATEGORIES = EXPECTED_CURRENT_CATEGORIES | EXPECTED_HISTORICAL_CATEGORIES
 SLEEP_HISTORICAL_SOURCE = (
     "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/"
     "P020181214555096215303.pdf"
@@ -162,9 +209,9 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         payload = load_verified_risk_dataset()
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["dataset_id"], "risk-substance-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-c4")
+        self.assertEqual(payload["dataset_version"], "2026.09-c5")
         self.assertEqual(payload["dataset_status"], "verified_reference")
-        self.assertEqual(len(payload["mappings"]), 29)
+        self.assertEqual(len(payload["mappings"]), 54)
         self.assertEqual(
             {mapping["mapping_id"] for mapping in payload["mappings"]},
             EXPECTED_MAPPING_IDS,
@@ -291,13 +338,57 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
             SLEEP_HISTORICAL_SUBSTANCE_IDENTITIES,
         )
 
+    def test_cardiometabolic_historical_mappings_use_curated_inspection_subset(self):
+        mappings = load_verified_risk_dataset()["mappings"]
+        inspection = validate_inspection_config(read_json(INSPECTION_REFERENCE_CONFIG))
+        canonical_by_id = {
+            substance["substance_id"]: substance["canonical_name"]
+            for substance in inspection["substances"]
+        }
+
+        for category, expected_identities in CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES.items():
+            with self.subTest(category=category):
+                historical = [
+                    mapping for mapping in mappings
+                    if mapping["risk_category"] == category
+                ]
+                self.assertEqual(
+                    {mapping["mapping_id"] for mapping in historical},
+                    {CARDIOMETABOLIC_HISTORICAL_GROUP_MAPPING_IDS[category]}
+                    | CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_MAPPING_IDS[category],
+                )
+                self.assertTrue(
+                    all(mapping["temporal_status"] == "historical" for mapping in historical)
+                )
+                substance_ids = {
+                    mapping["substance_id"]
+                    for mapping in historical
+                    if mapping["target_type"] == "substance"
+                }
+                self.assertEqual(substance_ids, set(expected_identities))
+                self.assertEqual(
+                    {
+                        substance_id: canonical_by_id[substance_id]
+                        for substance_id in expected_identities
+                    },
+                    expected_identities,
+                )
+
+        lipid_ids = set(CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES["blood_lipid"])
+        niacin = next(
+            substance["substance_id"]
+            for substance in inspection["substances"]
+            if substance["canonical_name"] == "烟酸"
+        )
+        self.assertNotIn(niacin, lipid_ids)
+
     def test_mapping_sources_dates_and_nonconclusion_boundaries_are_exact(self):
         mappings = load_verified_risk_dataset()["mappings"]
         for mapping in mappings:
-            if mapping["risk_category"] == "sleep_aid":
+            if mapping["temporal_status"] == "historical":
+                self.assertIn(mapping["risk_category"], EXPECTED_HISTORICAL_CATEGORIES)
                 self.assertEqual(mapping["source_reference"], SLEEP_HISTORICAL_SOURCE)
                 self.assertEqual(mapping["source_date"], "2018-10-09")
-                self.assertEqual(mapping["temporal_status"], "historical")
                 self.assertEqual(mapping["basis_type"], "historical_sampling_plan")
                 self.assertIn("不表示具体商品实际含有", mapping["note"])
             else:
@@ -328,13 +419,13 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 INSPECTION_COUNTS,
             )
 
-            expected = {"dataset": 1, "mappings": 29}
+            expected = {"dataset": 1, "mappings": 54)
             self.assertEqual(
                 store.import_risk_substance_config(RISK_REFERENCE_CONFIG), expected
             )
             first = store.table_counts()
             self.assertEqual(first["risk_mapping_datasets"], 1)
-            self.assertEqual(first["risk_substance_mappings"], 29)
+            self.assertEqual(first["risk_substance_mappings"], 54)
 
             connection = sqlite3.connect(store.database_path)
             try:
