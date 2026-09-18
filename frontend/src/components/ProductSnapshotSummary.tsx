@@ -79,10 +79,10 @@ export function ProductSnapshotSummary({
   const keyEvidence = firstMention
     ? `${claimSourceLabel(firstMention.sourceAssetType)}：“${shortText(firstMention.rawText)}”`
     : claims.code === "zero"
-      ? "当前没有形成重点宣传线索证据"
+      ? "当前未发现重点宣传线索"
       : claims.code === "with_claims"
-        ? "已发现宣传线索，可在下方查看原始页面证据"
-        : "尚无可展示的关键宣传证据";
+        ? "已发现宣传线索，可在下方查看页面原文"
+        : "暂无可展示的关键页面内容";
 
   const suggestedSubstances = workspace.inspection.riskFindings.flatMap((finding) =>
     finding.substance_follow_ups.filter(
@@ -110,18 +110,18 @@ export function ProductSnapshotSummary({
       : "";
     const methodSummary = methodLabels.length > 0
       ? `；检验方法：${shortText(methodLabels[0], 54)}${methodLabels.length > 1 ? ` 等 ${methodLabels.length} 项` : ""}`
-      : "；当前暂无可直接引用的已核验方法";
+      : "；暂无可参考检测方法";
     recommendationSummary = `建议重点关注：${shownSubstances}${remainingSubstances}${methodSummary}`;
   } else if (workspace.inspection.riskFindings.length > 0) {
-    recommendationSummary = "已形成需要关注的方向，暂未关联到可直接建议的检测成分";
+    recommendationSummary = "已识别抽检关注方向，暂未形成具体检测成分建议";
   } else if (claims.code === "with_claims") {
-    recommendationSummary = "已发现页面宣传线索，当前知识库暂无可靠的针对性检测建议";
+    recommendationSummary = "已发现页面宣传线索，当前暂无对应抽检建议";
   } else if (claims.code === "zero") {
-    recommendationSummary = "当前无针对性检测建议，可继续人工查看原始页面证据";
+    recommendationSummary = "当前未形成抽检建议";
   } else if (analysis.code === "RECOMMENDATION_ERROR") {
-    recommendationSummary = "检测建议暂不可用，页面证据和人工复核仍可继续使用";
+    recommendationSummary = "抽检建议暂不可用";
   } else {
-    recommendationSummary = "当前尚未形成针对性检测建议";
+    recommendationSummary = "当前未形成抽检建议";
   }
 
   const reviewSummary = workspace.sampling.inCurrentList
