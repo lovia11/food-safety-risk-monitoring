@@ -79,7 +79,7 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
     def test_bridge_preserves_three_current_relations_and_governs_sleep_scope(self):
         config = load_claim_inspection_bridge_config()
 
-        self.assertEqual(len(config["mappings"]), 10)
+        self.assertEqual(len(config["mappings"]), 22)
         current = [
             item for item in config["mappings"]
             if item["temporal_policy"] == "current_only"
@@ -94,7 +94,12 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
         )
         self.assertEqual(
             {item["matched_expression"] for item in historical},
-            {"改善睡眠", "有助于改善睡眠", "助眠", "安睡", "好眠", "深睡", "催眠"},
+            {
+                "改善睡眠", "有助于改善睡眠", "助眠", "安睡", "好眠", "深睡", "催眠",
+                "辅助降血压", "调节血压", "有助于维持血压健康水平", "降压",
+                "辅助降血脂", "调节血脂", "有助于维持血脂（胆固醇/甘油三酯）健康水平", "降脂",
+                "辅助降血糖", "调节血糖", "有助于维持血糖健康水平", "降糖",
+            },
         )
         self.assertEqual(
             {
@@ -102,12 +107,22 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
                 for item in historical
                 if item["governance_basis"] == "governed_functional_scope"
             },
-            {"助眠", "安睡", "好眠", "深睡", "催眠"},
+            {"助眠", "安睡", "好眠", "深睡", "催眠", "降压", "降脂", "降糖"},
         )
         self.assertEqual(
             set(config["metadata"]["expression_scope_policy"]["claim_only_sleep_expressions"]),
             {"睡眠", "入睡", "失眠", "辗转反侧", "安神"},
         )
+        cardiometabolic = config["metadata"]["cardiometabolic_expression_scope_policy"]["directions"]
+        self.assertEqual(
+            set(cardiometabolic["blood_pressure"]["claim_only"]),
+            {"血压", "高血压"},
+        )
+        self.assertEqual(
+            set(cardiometabolic["blood_lipid"]["claim_only"]),
+            {"血脂", "胆固醇", "有助于维持血脂健康水平"},
+        )
+        self.assertEqual(cardiometabolic["blood_glucose"]["claim_only"], [])
         self.assertTrue(
             all(item["authorized_historical_mapping_ids"] == [] for item in current)
         )
@@ -240,6 +255,56 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
                 self.assertEqual(
                     result.unmapped_evidence[0]["reason"],
                     "no_governed_claim_inspection_bridge",
+                )
+
+    def test_cardiometabolic_governed_expressions_reach_expected_directions(self):
+        cases = (
+            ("辅助降血压", "blood_pressure"),
+            ("调节血压", "blood_pressure"),
+            ("有助于维持血压健康水平", "blood_pressure"),
+            ("降压", "blood_pressure"),
+            ("辅助降血脂", "blood_lipid"),
+            ("调节血脂", "blood_lipid"),
+            ("有助于维持血脂（胆固醇/甘油三酯）健康水平", "blood_lipid"),
+            ("降脂", "blood_lipid"),
+            ("辅助降血糖", "blood_glucose"),
+            ("调节血糖", "blood_glucose"),
+            ("有助于维持血糖健康水平", "blood_glucose"),
+            ("降糖", "blood_glucose"),
+        )
+        for expression, expected_risk in cases:
+            with self.subTest(expression=expression):
+                result = bridge_claim_analysis(self._analysis(expression))
+                self.assertEqual(len(result.risk_signals), 1)
+                self.assertEqual(result.risk_signals[0]["risk_category"], expected_risk)
+                self.assertIn(
+                    expression,
+                    {
+                        item["matchedExpression"]
+                        for item in result.risk_signals[0]["trigger_evidence"]
+                    },
+                )
+
+    def test_cardiometabolic_broad_expressions_remain_claim_only(self):
+        cases = (
+            ("血压", "blood_pressure_related", "血压"),
+            ("高血压", "blood_pressure_related", "高血压"),
+            ("血脂", "blood_lipid_related", "血脂"),
+            ("胆固醇", "blood_lipid_related", "胆固醇"),
+            ("有助于维持血脂健康水平", "blood_lipid_related", "有助于维持血脂健康水平"),
+        )
+        for text, expected_claim_type, expected_expression in cases:
+            with self.subTest(text=text):
+                result = bridge_claim_analysis(self._analysis(text))
+                self.assertEqual(result.risk_signals, [])
+                self.assertGreaterEqual(len(result.unmapped_evidence), 1)
+                self.assertTrue(
+                    any(
+                        item["claimType"] == expected_claim_type
+                        and item["matchedExpression"] == expected_expression
+                        and item["reason"] == "no_governed_claim_inspection_bridge"
+                        for item in result.unmapped_evidence
+                    )
                 )
 
     def test_jianfei_reaches_existing_weight_loss_direction(self):
