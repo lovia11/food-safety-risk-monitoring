@@ -182,9 +182,12 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
 
         self.assertEqual(len(result.risk_signals), 1)
         self.assertEqual(result.risk_signals[0]["risk_category"], "sleep_aid")
-        trigger = result.risk_signals[0]["trigger_evidence"][0]
-        self.assertEqual(trigger["claimType"], "sleep_related")
-        self.assertEqual(trigger["matchedExpression"], "有助于改善睡眠")
+        triggers = result.risk_signals[0]["trigger_evidence"]
+        self.assertTrue(all(item["claimType"] == "sleep_related" for item in triggers))
+        self.assertEqual(
+            {item["matchedExpression"] for item in triggers},
+            {"改善睡眠", "有助于改善睡眠"},
+        )
         self.assertEqual(result.unmapped_evidence, [])
 
     def test_colloquial_sleep_expression_remains_unmapped_until_separately_governed(self):
