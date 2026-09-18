@@ -55,6 +55,7 @@ _MAPPING_FIELDS = {
 _ALLOWED_GOVERNANCE_BASES = {
     "legacy_verified_migration",
     "direct_verified_reference",
+    "governed_functional_scope",
 }
 _ALLOWED_TEMPORAL_POLICIES = {
     "current_only",
@@ -331,9 +332,12 @@ def validate_claim_inspection_bridge_config(
                 raise ClaimInspectionBridgeConfigValidationError(
                     f"{mapping_id}只能选择性启用historical_sampling_plan，不能启用其他historical来源"
                 )
-            if governance_basis != "direct_verified_reference":
+            if governance_basis not in {
+                "direct_verified_reference",
+                "governed_functional_scope",
+            }:
                 raise ClaimInspectionBridgeConfigValidationError(
-                    f"{mapping_id}的historical Reference必须使用direct_verified_reference治理"
+                    f"{mapping_id}的historical Reference必须使用直接来源或受治理功能场景依据"
                 )
             if not historical_disclosure:
                 raise ClaimInspectionBridgeConfigValidationError(
@@ -397,7 +401,7 @@ def validate_claim_inspection_bridge_config(
                 )
         elif migration_id is not None:
             raise ClaimInspectionBridgeConfigValidationError(
-                f"{mapping_id}为direct_verified_reference时不得伪装legacy迁移来源"
+                f"{mapping_id}为非legacy迁移关系时不得伪装legacy迁移来源"
             )
         normalized.append(item)
 
