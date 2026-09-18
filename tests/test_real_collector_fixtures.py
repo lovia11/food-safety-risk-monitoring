@@ -1,3 +1,4 @@
+import hashlib
 import unittest
 from pathlib import Path
 
@@ -6,13 +7,19 @@ from src.phase4_search_snapshot import (
     deduplicate_cards,
     parse_snapshot,
 )
-from src.runtime import extract_product_id, file_sha256, read_json
+from src.runtime import extract_product_id, read_json
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REAL_SEARCH_HTML = REPO_ROOT / "manual_input" / "taobao_search.html"
 CONTRACT_FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "real_collector"
-REAL_SEARCH_SHA256 = "321140c75ac0efef50fc9e46904f65fe2b43ed16a22a09f0143a029a21533059"
+REAL_SEARCH_CANONICAL_SHA256 = "e018be570d6829f97692b9c9b116565c91cd313f22622383b3fe718321d10126"
+
+
+def canonical_text_sha256(path: Path) -> str:
+    document = path.read_text(encoding="utf-8")
+    normalized = document.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 class RealCollectorFixtureRegressionTest(unittest.TestCase):
@@ -25,7 +32,10 @@ class RealCollectorFixtureRegressionTest(unittest.TestCase):
         cls.unique_cards = deduplicate_cards(cls.cards)
 
     def test_saved_search_fixture_identity_and_fixed_card_count(self):
-        self.assertEqual(file_sha256(REAL_SEARCH_HTML), REAL_SEARCH_SHA256)
+        self.assertEqual(
+            canonical_text_sha256(REAL_SEARCH_HTML),
+            REAL_SEARCH_CANONICAL_SHA256,
+        )
         self.assertEqual(len(self.cards), 46)
         self.assertEqual(len(self.unique_cards), 46)
 
