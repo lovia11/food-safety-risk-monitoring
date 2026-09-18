@@ -100,8 +100,8 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         self.assertTrue(finding["historical_reference_mapping_ids"])
         self.assertIn("历史中央专项抽检", finding["historical_reference_note"])
         self.assertEqual(
-            finding["trigger_evidence"][0]["matchedExpression"],
-            "有助于改善睡眠",
+            {item["matchedExpression"] for item in finding["trigger_evidence"]},
+            {"改善睡眠", "有助于改善睡眠"},
         )
         self.assertGreaterEqual(len(finding["substance_follow_ups"]), 20)
         names = {
