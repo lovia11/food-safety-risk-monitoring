@@ -1,4 +1,6 @@
 import type {
+  ClaimAnalysisStatus,
+  ClaimSignalDTO,
   Evidence,
   InspectionView,
   PipelineReadiness,
@@ -25,6 +27,8 @@ export type AnalysisStatePresentation = {
 type AnalysisStateInput = {
   readiness: PipelineReadiness;
   evidence: Evidence[];
+  claimAnalysisStatus: ClaimAnalysisStatus;
+  claimSignals: ClaimSignalDTO[];
   inspection: InspectionView;
 };
 
@@ -46,33 +50,41 @@ function unmappedClaimLabels(inspection: InspectionView) {
   return [...new Set(labels)];
 }
 
+function hasPageClues(input: AnalysisStateInput) {
+  if (input.claimAnalysisStatus === "complete") {
+    return input.claimSignals.length > 0;
+  }
+  // Historical snapshots may predate V2 Claim artifacts.
+  return input.evidence.length > 0;
+}
+
 export function analysisStatePresentation(
   input: AnalysisStateInput,
 ): AnalysisStatePresentation {
   if (!input.readiness.analysisReady) {
     return {
       code: "NOT_ANALYZED",
-      label: "尚未完成线索分析",
-      summary: "尚未分析",
-      message: "该页面快照尚未成功完成 Phase3 线索分析。",
+      label: "尚未完成分析",
+      summary: "等待分析",
+      message: "该页面尚未完成线索分析。",
       tone: "neutral",
     };
   }
   if (input.inspection.recommendationStatus === "error") {
     return {
       code: "RECOMMENDATION_ERROR",
-      label: "抽检辅助建议暂不可用",
-      summary: "建议生成异常",
-      message: "抽检辅助建议生成异常，但页面证据和人工复核仍然可用。",
+      label: "抽检建议生成失败",
+      summary: "建议暂不可用",
+      message: "抽检建议生成失败，可继续查看页面线索并人工复核。",
       tone: "warning",
     };
   }
-  if (input.evidence.length === 0) {
+  if (!hasPageClues(input)) {
     return {
       code: "ANALYZED_ZERO_EVIDENCE",
-      label: "已分析 · 未发现线索",
-      summary: "当前规则未发现线索",
-      message: "已完成分析，但当前规则未形成结构化页面 Evidence。",
+      label: "未发现重点宣传线索",
+      summary: "未发现重点线索",
+      message: "本次分析未识别到当前关注的页面宣传线索。",
       tone: "success",
     };
   }
@@ -80,17 +92,17 @@ export function analysisStatePresentation(
     if (!hasKnownMethod(input.inspection)) {
       return {
         code: "RISK_MAPPED_NO_METHOD",
-        label: "监管关注方向已形成",
-        summary: "暂无已核验方法",
-        message: "已形成监管关注方向，但当前暂无可用的已核验检测方法。",
+        label: "已识别抽检关注方向",
+        summary: "暂无适用检测方法",
+        message: "已识别抽检关注方向，但暂未找到适用的检测方法。",
         tone: "warning",
       };
     }
     return {
       code: "RECOMMENDATION_AVAILABLE",
       label: "抽检辅助建议可用",
-      summary: "已有知识与方法支持",
-      message: "已基于当前已核验知识形成抽检辅助建议。",
+      summary: "已有具体建议",
+      message: "已形成抽检辅助建议。",
       tone: "success",
     };
   }
@@ -101,17 +113,17 @@ export function analysisStatePresentation(
       : "页面宣传线索";
     return {
       code: "EVIDENCE_UNMAPPED",
-      label: "发现宣传线索 · 检测知识待补充",
-      summary: "已发现宣传线索，暂无检测关注方向",
-      message: `已发现并保留${subject}，但当前知识库尚未建立该宣传与检测关注方向之间的可靠关系（旧版界面称为“映射”）。建议结合原始页面证据人工复核。`,
+      label: "已发现宣传线索",
+      summary: "暂无对应抽检建议",
+      message: `已识别${subject}，但当前暂无对应的抽检建议。`,
       tone: "info",
     };
   }
   return {
     code: "RECOMMENDATION_UNAVAILABLE",
-    label: "抽检辅助建议未生成",
-    summary: "建议文件不可用",
-    message: "该次快照已完成分析并保留页面证据，但暂无可读取的抽检辅助建议；人工复核仍然可用。",
+    label: "抽检建议暂不可用",
+    summary: "建议暂不可用",
+    message: "分析已完成，但抽检建议暂不可用。",
     tone: "neutral",
   };
 }
