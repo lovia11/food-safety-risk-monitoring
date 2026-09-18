@@ -3,6 +3,8 @@
 > 状态：implementation gate pending local test acceptance
 >
 > 日期：2026-09-18
+>
+> 数据版本说明：本文记录 sleep slice 在 Risk Reference c4 时的实现快照；后续 B4 已继续扩充至 c6，本文中的 c4 总量不是当前全库库存。
 
 ## 1. 本切片解决的问题
 
