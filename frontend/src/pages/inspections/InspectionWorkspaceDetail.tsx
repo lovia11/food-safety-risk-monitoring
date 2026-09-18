@@ -63,6 +63,8 @@ export function InspectionWorkspaceDetail({ snapshotId, selection, onChanged }: 
   const analysis = useMemo(() => workspace ? analysisStatePresentation({
     readiness: workspace.snapshot.readiness,
     evidence: workspace.evidence,
+    claimAnalysisStatus: workspace.claimAnalysisStatus,
+    claimSignals: workspace.claimSignals,
     inspection: workspace.inspection,
   }) : null, [workspace]);
 
