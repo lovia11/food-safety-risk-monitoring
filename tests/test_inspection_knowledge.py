@@ -13,6 +13,8 @@ INSPECTION_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.js
 RISK_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "risk_substance_reference.json"
 
 SIBUTRAMINE_ID = "substance-cas-106650-56-0"
+BISACODYL_ID = "substance-cas-603-50-9"
+PHENOLPHTHALEIN_ID = "substance-cas-77-09-8"
 SILDENAFIL_ID = "substance-cas-139755-83-2"
 TADALAFIL_ID = "substance-cas-171596-29-5"
 MELATONIN_ID = "substance-cas-73-31-4"
@@ -98,20 +100,30 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
     def _substances_by_id(trace: KnowledgeTrace) -> dict[str, dict]:
         return {item["substance_id"]: item for item in trace.substance_targets}
 
-    def test_weight_loss_resolves_one_group_and_sibutramine_identity(self):
+    def test_weight_loss_resolves_governed_current_groups_and_substances(self):
         trace = self.resolver.resolve("weight_loss")
 
         self.assertEqual(trace.risk_category, "weight_loss")
         self.assertEqual(trace.risk_labels, ["减肥/减重宣传"])
-        self.assertEqual(len(trace.group_targets), 1)
-        self.assertEqual(len(trace.substance_targets), 1)
         self.assertEqual(
-            trace.group_targets[0]["target_group_label"],
-            "西布曲明及其系列衍生物",
+            {item["target_group_label"] for item in trace.group_targets},
+            {
+                "西布曲明及其系列衍生物",
+                "比沙可啶及其系列衍生物",
+                "酚汀（酚丁）、酚酞及其酯类衍生物或类似物",
+            },
+        )
+        self.assertEqual(
+            {item["substance_id"] for item in trace.substance_targets},
+            {SIBUTRAMINE_ID, BISACODYL_ID, PHENOLPHTHALEIN_ID},
+        )
+        sibutramine = next(
+            item for item in trace.substance_targets
+            if item["substance_id"] == SIBUTRAMINE_ID
         )
         self.assertEqual(
             {
-                key: trace.substance_targets[0][key]
+                key: sibutramine[key]
                 for key in ("substance_id", "canonical_name", "cas_no")
             },
             {
@@ -121,10 +133,13 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             },
         )
 
-    def test_male_function_resolves_one_group_and_two_substances(self):
+    def test_male_function_resolves_governed_current_groups_and_substances(self):
         trace = self.resolver.resolve("male_function")
 
-        self.assertEqual(len(trace.group_targets), 1)
+        self.assertEqual(
+            {item["target_group_label"] for item in trace.group_targets},
+            {"那非类、拉非类物质", "育亨宾及其系列衍生物"},
+        )
         self.assertEqual(
             {item["substance_id"] for item in trace.substance_targets},
             {SILDENAFIL_ID, TADALAFIL_ID},
@@ -143,25 +158,35 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
         weight_loss = self.resolver.resolve("weight_loss")
         male_function = self.resolver.resolve("male_function")
 
-        self.assertEqual(weight_loss.group_targets[0]["resolution_status"], "partial")
-        self.assertEqual(
-            weight_loss.unresolved_groups[0]["resolution_status"], "partial"
+        self.assertTrue(
+            all(item["resolution_status"] == "partial" for item in weight_loss.group_targets)
+        )
+        self.assertTrue(
+            all(item["resolution_status"] == "partial" for item in weight_loss.unresolved_groups)
         )
         self.assertEqual(
-            weight_loss.unresolved_groups[0]["mapping_ids"],
-            ["weight-loss-sibutramine-group-cn-2025"],
+            {
+                mapping_id
+                for item in weight_loss.unresolved_groups
+                for mapping_id in item["mapping_ids"]
+            },
+            {
+                "weight-loss-sibutramine-group-cn-2025",
+                "weight-loss-bisacodyl-group-cn-2025",
+                "weight-loss-phenbut-phenolphthalein-group-cn-2025",
+            },
         )
         self.assertEqual(
             {item["substance_id"] for item in weight_loss.substance_targets},
-            {SIBUTRAMINE_ID},
+            {SIBUTRAMINE_ID, BISACODYL_ID, PHENOLPHTHALEIN_ID},
         )
         self.assertEqual(
             {item["substance_id"] for item in male_function.substance_targets},
             {SILDENAFIL_ID, TADALAFIL_ID},
         )
-        self.assertIn(
-            "unresolved_group",
-            {gap["type"] for gap in weight_loss.knowledge_gaps},
+        self.assertEqual(
+            sum(gap["type"] == "unresolved_group" for gap in weight_loss.knowledge_gaps),
+            3,
         )
 
     def test_substance_mapping_provenance_is_preserved_completely(self):
@@ -171,7 +196,7 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             for target in self.resolver.resolve(category).substance_targets
         ]
 
-        self.assertEqual(len(evidence_rows), 5)
+        self.assertEqual(len(evidence_rows), 7)
         for evidence_list in evidence_rows:
             self.assertEqual(len(evidence_list), 1)
             evidence = evidence_list[0]
@@ -369,6 +394,11 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
         )
 
     def test_non_verified_risk_datasets_are_excluded_in_both_temporal_modes(self):
+        expected_current = self.resolver.resolve("weight_loss").to_dict()
+        expected_with_history = self.resolver.resolve(
+            "weight_loss", include_historical=True
+        ).to_dict()
+
         self._insert_risk_dataset("synthetic-development-risk")
         self._insert_mapping(
             mapping_id="synthetic-development-weight-loss-group",
@@ -388,17 +418,15 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
             group_label="待核验测试Group",
         )
 
-        for include_historical in (False, True):
+        for include_historical, expected in (
+            (False, expected_current),
+            (True, expected_with_history),
+        ):
             with self.subTest(include_historical=include_historical):
                 trace = self.resolver.resolve(
                     "weight_loss", include_historical=include_historical
                 )
-                self.assertEqual(len(trace.group_targets), 1)
-                self.assertEqual(len(trace.substance_targets), 1)
-                self.assertEqual(
-                    trace.group_targets[0]["target_group_label"],
-                    "西布曲明及其系列衍生物",
-                )
+                self.assertEqual(trace.to_dict(), expected)
                 self.assertNotIn(
                     "开发测试Group",
                     {
@@ -515,12 +543,43 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
 
     def test_include_historical_defaults_to_false(self):
         for category in ("weight_loss", "male_function", "anti_fatigue"):
-            self.assertEqual(
-                self.resolver.resolve(category).to_dict(),
-                self.resolver.resolve(
-                    category, include_historical=True
-                ).to_dict(),
+            current = self.resolver.resolve(category)
+            for target in current.group_targets:
+                self.assertTrue(
+                    all(
+                        evidence["temporal_status"] == "current"
+                        for evidence in target["mapping_evidence"]
+                    )
+                )
+            for target in current.substance_targets:
+                self.assertTrue(
+                    all(
+                        evidence["temporal_status"] == "current"
+                        for evidence in target["mapping_evidence"]
+                    )
+                )
+
+        for category in ("weight_loss", "anti_fatigue"):
+            with_history = self.resolver.resolve(
+                category, include_historical=True
             )
+            self.assertTrue(
+                any(
+                    evidence["temporal_status"] == "historical"
+                    for target in (
+                        list(with_history.group_targets)
+                        + list(with_history.substance_targets)
+                    )
+                    for evidence in target["mapping_evidence"]
+                )
+            )
+
+        self.assertEqual(
+            self.resolver.resolve("male_function").to_dict(),
+            self.resolver.resolve(
+                "male_function", include_historical=True
+            ).to_dict(),
+        )
 
         self._insert_mapping(
             mapping_id="synthetic-history-current",
