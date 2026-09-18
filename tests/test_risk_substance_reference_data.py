@@ -58,7 +58,8 @@ EXPECTED_MAPPING_IDS = (
     | {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
     | SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS
 )
-EXPECTED_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue", "sleep_aid"}
+EXPECTED_CURRENT_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue"}
+EXPECTED_CATEGORIES = EXPECTED_CURRENT_CATEGORIES | {"sleep_aid"}
 SLEEP_HISTORICAL_SOURCE = (
     "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/"
     "P020181214555096215303.pdf"
@@ -224,7 +225,7 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 for mapping in substance_mappings
                 if mapping["risk_category"] == category
             }
-            for category in EXPECTED_CATEGORIES
+            for category in EXPECTED_CURRENT_CATEGORIES
         }
         self.assertEqual(by_category, EXPECTED_SUBSTANCE_TARGETS)
 
