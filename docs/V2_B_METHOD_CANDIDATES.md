@@ -73,6 +73,7 @@ runtime_consumed = false
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
+| BJS 201808 食品中5种α-受体阻断类药物的测定 | male_function / yohimbine 方法候选 | SAMR 2018年第28号公告 + 官方方法数据库 | `verification / reference_only` |
 
 这些“方向”只是深核优先级上下文，不是由 Method 自动建立的新 Risk relation。
 
@@ -115,15 +116,24 @@ SAMR 2022年第29号公告和方法数据库已确认正式方法：
 
 保留为“已确认方法标题，待编号/全文核验”的文档候选。
 
-### 4.3 2018 五种 α-受体阻断剂方法暂不写入 manifest
+### 4.3 BJS 201808 已从“编号待确认”升级为 verification
 
-SAMR 方法数据库确认：
+后续检索找到 SAMR 官方公告：
 
 ```text
-食品中5种α-受体阻断类药物的测定
+市场监管总局关于发布《食品中5种α-受体阻断类药物的测定》
+食品补充检验方法的公告（2018年第28号）
 ```
 
-但当前可访问页面同样没有可靠给出方法编号。继续留在文档候选，不伪造编号。
+公告附件标签直接写明：
+
+```text
+食品中5种α-受体阻断类药物的测定（BJS 201808）
+```
+
+因此编号已经由一手来源确认，现已进入 manifest `verification`。
+
+但当前工具仍未直接解析 SAMR 官方 DOCX 正文，所以还不能把第三方镜像中的5种目标物、CAS和适用基质直接当作 production MethodSubstance / Applicability。Method身份已核验，全文深核仍未完成。
 
 ### 4.4 2025 执法检验方法暂不混入 BJS runtime schema
 
@@ -148,10 +158,10 @@ SAMR 方法数据库确认：
    - 标题明确 3 个降压相关化合物；
    - 规模小，适合与 blood_pressure historical/current knowledge 做独立对照。
 
-3. **KJ201901 / KJ201902**
-   - analyte 数量小；
-   - 可补“快速筛查”角色；
-   - 必须核清产品剂型、判定规则以及阳性后确证边界。
+3. **BJS 201808 / KJ201901 / KJ201902**
+   - BJS 201808 与快速方法都属于小规模 analyte 集；
+   - 可补 male_function / yohimbine 与快速筛查角色；
+   - BJS 201808 必须先取得/解析官方全文；KJ 方法还必须核清判定规则以及阳性后确证边界。
 
 4. **BJS 202601 / BJS 202602**
    - 2026 current；
@@ -221,7 +231,7 @@ SAMR 2026年第24号公告：
 B5-1 只要求：
 
 - verification queue 可由 validator 通过；
-- 9 个 verification 方法不进入 operational method index；
+- 10 个 verification 方法不进入 operational method index；
 - 2 个历史 promotion trace 仍只计一次；
 - Audit 的 Method Reference / Deep Verification denominator 仍为 7；
 - candidate 数量变化不得改变 Recommendation；
