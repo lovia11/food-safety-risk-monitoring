@@ -66,6 +66,11 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
         self.assertEqual(inventory["risk_substance_mappings"], 5)
         self.assertEqual(inventory["risk_substance_group_mappings"], 3)
+        self.assertEqual(inventory["risk_mappings_total"], 29)
+        self.assertEqual(inventory["risk_mappings_current"], 8)
+        self.assertEqual(inventory["risk_mappings_historical"], 21)
+        self.assertEqual(inventory["historical_risk_categories"], 1)
+        self.assertEqual(inventory["historical_risk_group_labels"], 1)
         self.assertEqual(inventory["evidence_risk_bridge_mappings"], 3)
         self.assertEqual(inventory["group_membership_relations"], 0)
         self.assertTrue(
@@ -171,7 +176,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
 
         report = build_audit(inspection, self.risk, self.bridge)
 
-        self.assertEqual(report["inventory"]["risk_mappings_total"], 8)
+        self.assertEqual(report["inventory"]["risk_mappings_total"], 29)
+        self.assertEqual(report["inventory"]["risk_mappings_current"], 8)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 21)
         self.assertNotIn(
             unrelated["substance_id"],
             {item["target"] for item in report["risk_reachability"]},
