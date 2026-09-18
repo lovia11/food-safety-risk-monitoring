@@ -84,6 +84,62 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         self.assertEqual(finding["trigger_evidence"][0]["claimType"], "weight_management")
         self.assertEqual(finding["trigger_evidence"][0]["matchedExpression"], "减肥")
 
+    def test_weight_claim_combines_current_and_historical_screening_evidence(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("帮助减肥"))
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "weight_loss"
+        )
+        self.assertEqual(finding["temporal_basis"], "current_and_historical")
+        self.assertEqual(len(finding["historical_reference_mapping_ids"]), 8)
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertIn("西布曲明", names)
+        self.assertIn("比沙可啶", names)
+        self.assertIn("酚酞", names)
+        self.assertIn("N-单去甲基西布曲明", names)
+        self.assertIn("N,N-双去甲基西布曲明", names)
+        self.assertIn("呋塞米", names)
+
+    def test_anti_fatigue_claim_combines_current_and_historical_screening_evidence(self):
+        write_json(
+            self.product_root / "claim_analysis.json",
+            claim_analysis("缓解体力疲劳"),
+        )
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "anti_fatigue"
+        )
+        self.assertEqual(finding["temporal_basis"], "current_and_historical")
+        self.assertEqual(len(finding["historical_reference_mapping_ids"]), 14)
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertEqual(len(names), 13)
+        self.assertIn("西地那非", names)
+        self.assertIn("他达拉非", names)
+        self.assertIn("去甲基他达拉非", names)
+        self.assertIn("硫代西地那非", names)
+
+    def test_male_function_current_yohimbine_group_does_not_invent_substance(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("壮阳"))
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "male_function"
+        )
+        group_labels = {
+            item["target_group_label"] for item in finding["group_targets"]
+        }
+        self.assertIn("育亨宾及其系列衍生物", group_labels)
+        names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
+        self.assertNotIn("育亨宾", names)
+
     def test_governed_sleep_claim_reaches_historical_screening_chain(self):
         write_json(
             self.product_root / "claim_analysis.json",
