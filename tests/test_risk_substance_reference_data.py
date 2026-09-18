@@ -163,6 +163,39 @@ NAFEI_LAFEI_SOURCE = (
     "https://www.samr.gov.cn/xw/zj/art/2025/"
     "art_b066d669285e4494bbee7c988b6dfb2e.html"
 )
+BISACODYL_SOURCE = (
+    "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/"
+    "art_e357c00946a24d19905b2098cdf4f955.html"
+)
+PHENOLPHTHALEIN_SOURCE = (
+    "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/"
+    "art_d39285cfe10f402aa9479a33d552ec35.html"
+)
+YOHIMBINE_SOURCE = (
+    "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/zfjcs/art/2025/"
+    "art_7d3c1941d493408eb57a0038fd14358b.html"
+)
+CURRENT_SOURCE_EXPECTATIONS = {
+    "weight-loss-sibutramine-group-cn-2025": (SIBUTRAMINE_SOURCE, "2025-10-18"),
+    "weight-loss-sibutramine-cn-2025": (SIBUTRAMINE_SOURCE, "2025-10-18"),
+    "weight-loss-bisacodyl-group-cn-2025": (BISACODYL_SOURCE, "2025-02-14"),
+    "weight-loss-bisacodyl-cn-2025": (BISACODYL_SOURCE, "2025-02-14"),
+    "weight-loss-phenbut-phenolphthalein-group-cn-2025": (
+        PHENOLPHTHALEIN_SOURCE,
+        "2025-03-05",
+    ),
+    "weight-loss-phenolphthalein-cn-2025": (
+        PHENOLPHTHALEIN_SOURCE,
+        "2025-03-05",
+    ),
+    "male-function-nafei-lafei-group-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+    "male-function-sildenafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+    "male-function-tadalafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+    "male-function-yohimbine-group-cn-2025": (YOHIMBINE_SOURCE, "2025-10-18"),
+    "anti-fatigue-nafei-lafei-group-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+    "anti-fatigue-sildenafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+    "anti-fatigue-tadalafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
+}
 INSPECTION_COUNTS = {
     "inspection_methods": 7,
     "inspection_substances": 201,
@@ -192,6 +225,8 @@ EXPECTED_SUBSTANCE_TARGETS = {
         "substance-cas-171596-29-5",
     },
 }
+
+
 def load_verified_risk_dataset() -> dict:
     return validate_risk_substance_config(read_json(RISK_REFERENCE_CONFIG))
 
@@ -201,9 +236,9 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         payload = load_verified_risk_dataset()
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["dataset_id"], "risk-substance-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-c5")
+        self.assertEqual(payload["dataset_version"], "2026.09-c6")
         self.assertEqual(payload["dataset_status"], "verified_reference")
-        self.assertEqual(len(payload["mappings"]), 54)
+        self.assertEqual(len(payload["mappings"]), 81)
         self.assertEqual(
             {mapping["mapping_id"] for mapping in payload["mappings"]},
             EXPECTED_MAPPING_IDS,
@@ -213,18 +248,32 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
             EXPECTED_CATEGORIES,
         )
 
-    def test_c2_group_mappings_are_preserved_without_changes(self):
+    def test_current_group_mappings_are_explicit_governed_inventory(self):
         mappings = load_verified_risk_dataset()["mappings"]
-        group_mappings = {
-            mapping["mapping_id"]: mapping
+        group_mappings = [
+            mapping
             for mapping in mappings
             if mapping["target_type"] == "substance_group"
             and mapping["temporal_status"] == "current"
-        }
-        self.assertEqual(set(group_mappings), EXPECTED_GROUP_MAPPING_IDS)
-        self.assertEqual(group_mappings, EXPECTED_GROUP_MAPPINGS)
+        ]
+        self.assertEqual(
+            {mapping["mapping_id"] for mapping in group_mappings},
+            EXPECTED_GROUP_MAPPING_IDS,
+        )
+        self.assertTrue(
+            all(mapping["evidence_grade"] == "A" for mapping in group_mappings)
+        )
+        self.assertTrue(
+            all(
+                mapping["basis_type"] == "current_official_guidance"
+                for mapping in group_mappings
+            )
+        )
+        self.assertTrue(
+            all(mapping["substance_id"] is None for mapping in group_mappings)
+        )
 
-    def test_exactly_five_verified_substance_mappings_reuse_inspection_entities(self):
+    def test_current_verified_substance_mappings_reuse_inspection_entities(self):
         mappings = load_verified_risk_dataset()["mappings"]
         substance_mappings = [
             mapping
@@ -232,7 +281,7 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
             if mapping["target_type"] == "substance"
             and mapping["temporal_status"] == "current"
         ]
-        self.assertEqual(len(substance_mappings), 5)
+        self.assertEqual(len(substance_mappings), 7)
         self.assertEqual(
             {mapping["mapping_id"] for mapping in substance_mappings},
             EXPECTED_SUBSTANCE_MAPPING_IDS,
@@ -256,7 +305,13 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         self.assertTrue(
             all(mapping["temporal_status"] == "current" for mapping in substance_mappings)
         )
-        self.assertTrue(all("不得解释" in mapping["note"] for mapping in substance_mappings))
+        self.assertTrue(
+            all(
+                "不得解释" in mapping["note"]
+                or "不表示具体商品实际含有" in mapping["note"]
+                for mapping in substance_mappings
+            )
+        )
 
         by_category = {
             category: {
@@ -374,6 +429,53 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         )
         self.assertNotIn(niacin, lipid_ids)
 
+    def test_weight_and_anti_fatigue_historical_mappings_are_exact_source_sets(self):
+        mappings = load_verified_risk_dataset()["mappings"]
+        inspection = validate_inspection_config(read_json(INSPECTION_REFERENCE_CONFIG))
+        canonical_by_id = {
+            substance["substance_id"]: substance["canonical_name"]
+            for substance in inspection["substances"]
+        }
+        cases = (
+            (
+                "weight_loss",
+                WEIGHT_HISTORICAL_GROUP_MAPPING_ID,
+                WEIGHT_HISTORICAL_SUBSTANCE_MAPPING_IDS,
+                WEIGHT_HISTORICAL_SUBSTANCE_IDENTITIES,
+            ),
+            (
+                "anti_fatigue",
+                ANTI_FATIGUE_HISTORICAL_GROUP_MAPPING_ID,
+                ANTI_FATIGUE_HISTORICAL_SUBSTANCE_MAPPING_IDS,
+                ANTI_FATIGUE_HISTORICAL_SUBSTANCE_IDENTITIES,
+            ),
+        )
+        for category, group_id, mapping_ids, identities in cases:
+            with self.subTest(category=category):
+                historical = [
+                    mapping
+                    for mapping in mappings
+                    if mapping["risk_category"] == category
+                    and mapping["temporal_status"] == "historical"
+                ]
+                self.assertEqual(
+                    {mapping["mapping_id"] for mapping in historical},
+                    {group_id} | mapping_ids,
+                )
+                substance_ids = {
+                    mapping["substance_id"]
+                    for mapping in historical
+                    if mapping["target_type"] == "substance"
+                }
+                self.assertEqual(substance_ids, set(identities))
+                self.assertEqual(
+                    {
+                        substance_id: canonical_by_id[substance_id]
+                        for substance_id in identities
+                    },
+                    identities,
+                )
+
     def test_mapping_sources_dates_and_nonconclusion_boundaries_are_exact(self):
         mappings = load_verified_risk_dataset()["mappings"]
         for mapping in mappings:
@@ -384,19 +486,17 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 self.assertEqual(mapping["basis_type"], "historical_sampling_plan")
                 self.assertIn("不表示具体商品实际含有", mapping["note"])
             else:
-                expected_reference = (
-                    SIBUTRAMINE_SOURCE
-                    if mapping["risk_category"] == "weight_loss"
-                    else NAFEI_LAFEI_SOURCE
-                )
-                expected_date = (
-                    "2025-10-18"
-                    if mapping["risk_category"] == "weight_loss"
-                    else "2025-06-28"
-                )
+                expected_reference, expected_date = CURRENT_SOURCE_EXPECTATIONS[
+                    mapping["mapping_id"]
+                ]
                 self.assertEqual(mapping["source_reference"], expected_reference)
                 self.assertEqual(mapping["source_date"], expected_date)
-                self.assertIn("不得解释", mapping["note"])
+                self.assertEqual(mapping["basis_type"], "current_official_guidance")
+                self.assertEqual(mapping["evidence_grade"], "A")
+                self.assertTrue(
+                    "不得解释" in mapping["note"]
+                    or "不表示具体商品实际含有" in mapping["note"]
+                )
             self.assertTrue(mapping["source_basis_text"])
 
     def test_sqlite_import_is_idempotent_and_preserves_inspection_counts(self):
@@ -411,13 +511,13 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 INSPECTION_COUNTS,
             )
 
-            expected = {"dataset": 1, "mappings": 54}
+            expected = {"dataset": 1, "mappings": 81}
             self.assertEqual(
                 store.import_risk_substance_config(RISK_REFERENCE_CONFIG), expected
             )
             first = store.table_counts()
             self.assertEqual(first["risk_mapping_datasets"], 1)
-            self.assertEqual(first["risk_substance_mappings"], 54)
+            self.assertEqual(first["risk_substance_mappings"], 81)
 
             connection = sqlite3.connect(store.database_path)
             try:
