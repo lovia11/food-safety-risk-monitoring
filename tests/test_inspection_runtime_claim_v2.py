@@ -124,6 +124,86 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         self.assertIn("去甲基他达拉非", names)
         self.assertIn("硫代西地那非", names)
 
+    def _write_health_food_context(self):
+        write_json(
+            self.product_root / "inspection_context.json",
+            {
+                "product_category": "保健食品",
+                "product_form": None,
+                "confirmed_ingredient_contexts": [],
+                "context_evidence": [
+                    {
+                        "field": "product_category",
+                        "value": "保健食品",
+                        "source": "test-human-confirmed",
+                    }
+                ],
+            },
+        )
+
+    @staticmethod
+    def _substance_follow_up(finding: dict, canonical_name: str) -> dict:
+        return next(
+            item
+            for item in finding["substance_follow_ups"]
+            if item["canonical_name"] == canonical_name
+        )
+
+    def test_kj201901_is_suggested_for_anti_fatigue_health_food(self):
+        self._write_health_food_context()
+        write_json(
+            self.product_root / "claim_analysis.json",
+            claim_analysis("缓解体力疲劳"),
+        )
+
+        result = self.runtime.generate(self.product_root)
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "anti_fatigue"
+        )
+        sildenafil = self._substance_follow_up(finding, "西地那非")
+        self.assertIn(
+            "kj-201901",
+            {item["method_id"] for item in sildenafil["suggested_methods"]},
+        )
+
+    def test_kj201901_does_not_leak_into_male_function(self):
+        self._write_health_food_context()
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("壮阳"))
+
+        result = self.runtime.generate(self.product_root)
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "male_function"
+        )
+        sildenafil = self._substance_follow_up(finding, "西地那非")
+        self.assertNotIn(
+            "kj-201901",
+            {item["method_id"] for item in sildenafil["suggested_methods"]},
+        )
+        kj = next(
+            item
+            for item in sildenafil["other_known_methods"]
+            if item["method_id"] == "kj-201901"
+        )
+        self.assertEqual(kj["applicability_status"], "not_applicable")
+
+    def test_kj201902_is_suggested_for_blood_glucose_health_food(self):
+        self._write_health_food_context()
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("降糖"))
+
+        result = self.runtime.generate(self.product_root)
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "blood_glucose"
+        )
+        for name in ("罗格列酮", "格列苯脲"):
+            follow_up = self._substance_follow_up(finding, name)
+            self.assertIn(
+                "kj-201902",
+                {item["method_id"] for item in follow_up["suggested_methods"]},
+            )
+
     def test_male_function_current_yohimbine_group_does_not_invent_substance(self):
         write_json(self.product_root / "claim_analysis.json", claim_analysis("壮阳"))
 
