@@ -60,7 +60,7 @@ runtime_consumed = false
 
 ## 3. B5-1 当前 verification queue
 
-以下 9 个方法已由 SAMR 一手公告核实编号和正式标题，但尚未 promotion：
+以下 10 个方法已由 SAMR 一手公告/方法数据库核实编号和正式标题，但尚未 promotion：
 
 | Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
