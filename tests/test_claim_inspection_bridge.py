@@ -204,6 +204,115 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
                 taxonomy=self.taxonomy,
             )
 
+    def test_current_plus_historical_policy_keeps_current_primary_and_legacy_provenance(self):
+        risk_reference = read_json(Path("config/risk_substance_reference.json"))
+        historical_id = "test-weight-historical-group"
+        risk_reference["mappings"].append(
+            {
+                "mapping_id": historical_id,
+                "dataset_id": risk_reference["dataset_id"],
+                "risk_category": "weight_loss",
+                "risk_label": "减肥宣传",
+                "target_type": "substance_group",
+                "substance_id": None,
+                "target_group_label": "历史减肥筛查组",
+                "evidence_grade": "B",
+                "basis_type": "historical_sampling_plan",
+                "temporal_status": "historical",
+                "product_scope": "减肥类样品",
+                "source_name": "历史中央抽检测试来源",
+                "source_reference": "https://example.invalid/historical-weight",
+                "source_date": "2014-01-01",
+                "source_basis_text": "历史减肥筛查来源原文",
+                "note": "synthetic current-plus-history fixture",
+            }
+        )
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        mapping = next(
+            item for item in bridge["mappings"]
+            if item["matched_expression"] == "减肥"
+        )
+        mapping["temporal_policy"] = "current_plus_historical_reference_allowed"
+        mapping["authorized_historical_mapping_ids"] = [historical_id]
+
+        validated = validate_claim_inspection_bridge_config(
+            bridge,
+            taxonomy=self.taxonomy,
+            risk_reference_config=risk_reference,
+        )
+        result = next(
+            item for item in validated["mappings"]
+            if item["matched_expression"] == "减肥"
+        )
+        self.assertEqual(
+            result["reference_mapping_id"],
+            "weight-loss-sibutramine-group-cn-2025",
+        )
+        self.assertEqual(
+            result["migrated_from_bridge_mapping_id"],
+            "jianfei-to-weight-loss",
+        )
+        self.assertEqual(
+            result["authorized_historical_mapping_ids"],
+            [historical_id],
+        )
+
+    def test_current_plus_historical_policy_requires_explicit_allowlist(self):
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        mapping = next(
+            item for item in bridge["mappings"]
+            if item["matched_expression"] == "减肥"
+        )
+        mapping["temporal_policy"] = "current_plus_historical_reference_allowed"
+        mapping["authorized_historical_mapping_ids"] = []
+
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+            )
+
+    def test_current_plus_historical_policy_rejects_mixed_historical_cohorts(self):
+        risk_reference = read_json(Path("config/risk_substance_reference.json"))
+        ids = []
+        for index, source in enumerate(("historical-a", "historical-b"), start=1):
+            mapping_id = f"test-weight-historical-{index}"
+            ids.append(mapping_id)
+            risk_reference["mappings"].append(
+                {
+                    "mapping_id": mapping_id,
+                    "dataset_id": risk_reference["dataset_id"],
+                    "risk_category": "weight_loss",
+                    "risk_label": "减肥宣传",
+                    "target_type": "substance_group",
+                    "substance_id": None,
+                    "target_group_label": f"历史减肥筛查组{index}",
+                    "evidence_grade": "B",
+                    "basis_type": "historical_sampling_plan",
+                    "temporal_status": "historical",
+                    "product_scope": "减肥类样品",
+                    "source_name": f"历史来源{index}",
+                    "source_reference": f"https://example.invalid/{source}",
+                    "source_date": f"201{index}-01-01",
+                    "source_basis_text": "历史来源原文",
+                    "note": "synthetic mixed cohort fixture",
+                }
+            )
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        mapping = next(
+            item for item in bridge["mappings"]
+            if item["matched_expression"] == "减肥"
+        )
+        mapping["temporal_policy"] = "current_plus_historical_reference_allowed"
+        mapping["authorized_historical_mapping_ids"] = ids
+
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+                risk_reference_config=risk_reference,
+            )
+
     def test_official_sleep_expression_reaches_sleep_aid_direction(self):
         result = bridge_claim_analysis(self._analysis("有助于改善睡眠"))
 
