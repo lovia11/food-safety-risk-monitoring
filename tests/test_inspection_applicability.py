@@ -40,6 +40,7 @@ def applicability(
     product_category: str = "",
     product_form: str = "",
     ingredient_context: str = "",
+    risk_category: str = "",
 ) -> dict:
     return {
         "applicability_id": applicability_id,
@@ -49,6 +50,7 @@ def applicability(
         "product_category": product_category,
         "product_form": product_form,
         "ingredient_context": ingredient_context,
+        "risk_category": risk_category,
         "source_scope_text": "synthetic scope",
         "note": "synthetic test only",
     }
@@ -315,14 +317,56 @@ class FormalReferenceApplicabilityTest(unittest.TestCase):
             ],
         )
 
-    def test_schema_version_is_nine(self):
+    def test_schema_version_is_fourteen(self):
         with sqlite3.connect(self.store.database_path) as connection:
             schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-        self.assertEqual(schema_version, 13)
+        self.assertEqual(schema_version, 14)
 
 
 class SyntheticApplicabilityEvaluationTest(unittest.TestCase):
+    def test_risk_scoped_include_matches_same_risk_category(self):
+        row = applicability(
+            "risk-include",
+            "include",
+            product_category="保健食品",
+            risk_category="anti_fatigue",
+        )
+        result = evaluate_signal_trace(
+            trace(
+                signal(
+                    "anti_fatigue",
+                    substances=[substance(methods=[method(method_level=[row])])],
+                )
+            ),
+            context(product_category="保健食品"),
+        )
+
+        assessment = result.method_assessments[0]
+        self.assertEqual(assessment["applicability_status"], "applicable")
+        self.assertEqual(assessment["matched_applicability_ids"], ["risk-include"])
+
+    def test_risk_scoped_include_does_not_match_other_risk_category(self):
+        row = applicability(
+            "risk-include",
+            "include",
+            product_category="保健食品",
+            risk_category="anti_fatigue",
+        )
+        result = evaluate_signal_trace(
+            trace(
+                signal(
+                    "male_function",
+                    substances=[substance(methods=[method(method_level=[row])])],
+                )
+            ),
+            context(product_category="保健食品"),
+        )
+
+        assessment = result.method_assessments[0]
+        self.assertEqual(assessment["applicability_status"], "not_applicable")
+        self.assertEqual(assessment["matched_applicability_ids"], [])
+
     def test_ingredient_context_requires_exact_confirmed_value(self):
         row = applicability(
             "ingredient-include",
