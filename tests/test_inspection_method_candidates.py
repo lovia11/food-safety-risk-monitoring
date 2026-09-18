@@ -35,14 +35,17 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         ]
         self.assertEqual(
             [item["candidate_id"] for item in promoted],
-            ["candidate-bjs-202405", "candidate-gbt-5009-170-2003"],
+            [
+                "candidate-bjs-202405",
+                "candidate-gbt-5009-170-2003",
+                "candidate-kj201901",
+                "candidate-kj201902",
+            ],
         )
         self.assertEqual(
             {item["method_no"] for item in verification},
             {
                 "BJS 201901",
-                "KJ201901",
-                "KJ201902",
                 "BJS 202409",
                 "BJS 202501",
                 "BJS 202502",
@@ -87,6 +90,17 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         )
         self.assertEqual(predecessor["promoted_dataset_version"], "2026.09-b7")
         self.assertIn("两者保持独立身份", predecessor["correction_note"])
+
+        promoted_by_no = {item["method_no"]: item for item in promoted}
+        for method_no, method_id in (
+            ("KJ201901", "kj-201901"),
+            ("KJ201902", "kj-201902"),
+        ):
+            item = promoted_by_no[method_no]
+            self.assertEqual(item["expected_depth"], "recommendation_ready")
+            self.assertEqual(item["promoted_method_id"], method_id)
+            self.assertEqual(item["promoted_dataset_version"], "2026.09-b9")
+            self.assertIn("正式DOCX", item["reason"])
 
     def test_candidate_lifecycle_requires_governed_verification_trace(self):
         payload = read_json(CANDIDATE_CONFIG)
@@ -136,7 +150,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
                 }
             connection.close()
 
-        self.assertEqual(len(operational_method_numbers), 7)
+        self.assertEqual(len(operational_method_numbers), 9)
         promoted = [
             item for item in candidates if item["status"] == "promoted"
         ]
@@ -155,18 +169,18 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         )
 
         report = load_and_build_audit()
-        self.assertEqual(report["inventory"]["indexed_methods"], 7)
+        self.assertEqual(report["inventory"]["indexed_methods"], 9)
         self.assertEqual(report["inventory"]["candidate_records"], 12)
-        self.assertEqual(report["inventory"]["candidate_methods"], 10)
-        self.assertEqual(report["inventory"]["promoted_candidate_methods"], 2)
+        self.assertEqual(report["inventory"]["candidate_methods"], 8)
+        self.assertEqual(report["inventory"]["promoted_candidate_methods"], 4)
         self.assertEqual(
-            report["metrics"]["method_reference_coverage"]["denominator"], 7
+            report["metrics"]["method_reference_coverage"]["denominator"], 9
         )
         self.assertEqual(
             set(report["candidate_manifest"]["pending_candidate_ids"]),
             {item["candidate_id"] for item in verification},
         )
-        self.assertEqual(len(report["candidate_manifest"]["promoted_candidates"]), 2)
+        self.assertEqual(len(report["candidate_manifest"]["promoted_candidates"]), 4)
         self.assertTrue(
             report["candidate_manifest"]["excluded_from_coverage_denominator"]
         )
