@@ -76,7 +76,7 @@
       "temporal_policy": "historical_reference_allowed",
       "governance_basis": "direct_verified_reference",
       "migrated_from_bridge_mapping_id": null,
-      "note": "仅对“改善睡眠”这一精确治理表达启用历史中央专项抽检/风险监测筛查关系；不扩展到助眠、安睡、好眠、深睡、催眠等其他表达。"
+      "note": "历史中央专项抽检/风险监测资料直接使用“改善睡眠类样品/声称改善睡眠类样品”；仅对该精确治理表达启用 historical screening allowlist，不扩展到助眠、安睡、好眠、深睡、催眠等其他表达。"
     },
     {
       "bridge_mapping_id": "claim-sleep-youzhuyugaishanshuimian-to-sleep-aid",
@@ -111,7 +111,7 @@
       "temporal_policy": "historical_reference_allowed",
       "governance_basis": "direct_verified_reference",
       "migrated_from_bridge_mapping_id": null,
-      "note": "仅对“有助于改善睡眠”这一精确治理表达启用历史中央专项抽检/风险监测筛查关系；不扩展到助眠、安睡、好眠、深睡、催眠等其他表达。"
+      "note": "当前官方保健功能“有助于改善睡眠”的受治理 transition alias 为“改善睡眠”；据此承接历史中央专项抽检/风险监测中的“改善睡眠类样品”关系。仅对该精确治理表达启用，不扩展到其他睡眠相关表达。"
     }
   ],
   "metadata": {
