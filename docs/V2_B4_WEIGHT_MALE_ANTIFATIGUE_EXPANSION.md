@@ -1,6 +1,6 @@
 # V2-B4 Weight / Male / Anti-Fatigue Expansion
 
-> 状态：implementation gate pending local test acceptance
+> 状态：Accepted — full backend/frontend gate passed on 2026-09-18
 > 日期：2026-09-18
 
 ## 1. 范围
@@ -186,4 +186,4 @@ Claim / regulatory scenario
 
 再运行 B3/B4 targeted suite、全量后端和前端 workflow/typecheck/build。
 
-只有本地 Gate 全部通过后，B4 七方向才标记 Accepted，并进入 B5。
+完整 backend/frontend Gate 已通过；B4 七方向正式标记 Accepted，进入 B5。
