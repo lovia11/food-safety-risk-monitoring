@@ -1,6 +1,6 @@
 # V2-B4 Cardiometabolic Risk Expansion
 
-> 状态：implementation gate pending local test acceptance
+> 状态：Accepted — full backend/frontend gate passed on 2026-09-18
 > 日期：2026-09-18
 >
 > 数据版本说明：本文记录 cardiometabolic slice 在 Risk Reference c5 时的实现快照；后续 B4 已继续扩充至 c6，本文中的 8/46/54 等数字只描述该阶段，不是当前全库库存。
@@ -186,4 +186,4 @@ npm run typecheck
 npm run build
 ```
 
-本切片只有在本地 Gate 通过后才标记 accepted。
+本切片已通过完整 backend/frontend Gate，状态为 Accepted。
