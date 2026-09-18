@@ -46,6 +46,7 @@ _MAPPING_FIELDS = {
     "matched_expression",
     "risk_category",
     "reference_mapping_id",
+    "authorized_historical_mapping_ids",
     "temporal_policy",
     "governance_basis",
     "migrated_from_bridge_mapping_id",
@@ -144,6 +145,22 @@ def _optional_text(value: Any, field: str) -> str | None:
     return value.strip()
 
 
+def _text_list(value: Any, field: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ClaimInspectionBridgeConfigValidationError(f"{field}必须是字符串数组")
+    result: list[str] = []
+    seen: set[str] = set()
+    for index, item in enumerate(value):
+        text = _required_text(item, f"{field}[{index}]")
+        if text in seen:
+            raise ClaimInspectionBridgeConfigValidationError(
+                f"{field}包含重复值：{text}"
+            )
+        seen.add(text)
+        result.append(text)
+    return result
+
+
 def _require_exact_fields(item: Mapping[str, Any], expected: set[str], field: str) -> None:
     missing = sorted(expected - set(item))
     if missing:
@@ -230,8 +247,15 @@ def validate_claim_inspection_bridge_config(
         item: dict[str, Any] = {
             key: _required_text(raw.get(key), f"{context}.{key}")
             for key in _MAPPING_FIELDS
-            if key != "migrated_from_bridge_mapping_id"
+            if key not in {
+                "migrated_from_bridge_mapping_id",
+                "authorized_historical_mapping_ids",
+            }
         }
+        item["authorized_historical_mapping_ids"] = _text_list(
+            raw.get("authorized_historical_mapping_ids"),
+            f"{context}.authorized_historical_mapping_ids",
+        )
         item["migrated_from_bridge_mapping_id"] = _optional_text(
             raw.get("migrated_from_bridge_mapping_id"),
             f"{context}.migrated_from_bridge_mapping_id",
@@ -286,10 +310,17 @@ def validate_claim_inspection_bridge_config(
             )
 
         reference_temporal_status = str(reference["temporal_status"])
+        authorized_historical_mapping_ids = list(
+            item["authorized_historical_mapping_ids"]
+        )
         if temporal_policy == "current_only":
             if reference_temporal_status != "current":
                 raise ClaimInspectionBridgeConfigValidationError(
                     f"{mapping_id}声明current_only但引用了historical Risk Reference"
+                )
+            if authorized_historical_mapping_ids:
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}为current_only时不得授权historical Risk Mapping"
                 )
         else:
             if reference_temporal_status != "historical":
@@ -308,6 +339,32 @@ def validate_claim_inspection_bridge_config(
                 raise ClaimInspectionBridgeConfigValidationError(
                     f"{mapping_id}启用historical Reference时必须提供展示边界"
                 )
+            if reference_mapping_id not in authorized_historical_mapping_ids:
+                raise ClaimInspectionBridgeConfigValidationError(
+                    f"{mapping_id}的authorized_historical_mapping_ids必须包含reference_mapping_id"
+                )
+            for historical_mapping_id in authorized_historical_mapping_ids:
+                historical_mapping = risk_mapping_by_id.get(historical_mapping_id)
+                if historical_mapping is None:
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}授权的Risk mapping不存在：{historical_mapping_id}"
+                    )
+                if str(historical_mapping["risk_category"]) != str(item["risk_category"]):
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}授权的historical mapping必须属于同一risk_category"
+                    )
+                if (
+                    str(historical_mapping["temporal_status"]) != "historical"
+                    or str(historical_mapping["basis_type"]) != "historical_sampling_plan"
+                ):
+                    raise ClaimInspectionBridgeConfigValidationError(
+                        f"{mapping_id}只能授权historical_sampling_plan类型的historical mapping"
+                    )
+                for source_field in ("source_reference", "source_date", "product_scope"):
+                    if historical_mapping[source_field] != reference[source_field]:
+                        raise ClaimInspectionBridgeConfigValidationError(
+                            f"{mapping_id}授权的historical mapping必须与reference_mapping_id共享{source_field}"
+                        )
 
         migration_id = item["migrated_from_bridge_mapping_id"]
         if governance_basis == "legacy_verified_migration":
