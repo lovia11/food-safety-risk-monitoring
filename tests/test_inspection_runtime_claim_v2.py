@@ -119,8 +119,30 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
             "regulatory_context_review",
         )
 
-    def test_colloquial_sleep_claim_stays_unmapped_without_direct_bridge(self):
-        write_json(self.product_root / "claim_analysis.json", claim_analysis("助眠"))
+    def test_explicit_sleep_benefit_claim_reaches_screening_chain(self):
+        write_json(
+            self.product_root / "claim_analysis.json",
+            claim_analysis("安睡整个夜晚"),
+        )
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "sleep_aid"
+        )
+        self.assertEqual(finding["temporal_basis"], "historical_reference_only")
+        self.assertIn(
+            "安睡",
+            {
+                item["matchedExpression"]
+                for item in finding["trigger_evidence"]
+            },
+        )
+        self.assertGreaterEqual(len(finding["substance_follow_ups"]), 20)
+
+    def test_broad_sleep_symptom_claim_stays_unmapped(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("难入睡"))
 
         result = self.runtime.generate(self.product_root)
 
@@ -128,7 +150,7 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         self.assertEqual(len(result["unmapped_evidence"]), 1)
         self.assertEqual(
             result["unmapped_evidence"][0]["matchedExpression"],
-            "助眠",
+            "入睡",
         )
 
     def test_legacy_effect_is_used_only_when_claim_artifact_is_absent(self):
