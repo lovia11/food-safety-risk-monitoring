@@ -266,7 +266,7 @@ class KnowledgeReadHttpApiTest(unittest.TestCase):
                         self.assertEqual(response.status, 200)
                         payloads.append(json.load(response))
                 self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 7)
-                self.assertEqual(payloads[4]["total"], 3)
+                self.assertEqual(payloads[4]["total"], 4)
                 self.assertEqual(payloads[5]["items"][0]["methodStatus"], "revoked")
                 self.assertEqual(payloads[6]["items"][0]["status"], "revoked")
 
