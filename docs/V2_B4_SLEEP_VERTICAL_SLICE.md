@@ -1,6 +1,6 @@
 # V2-B4 Sleep Direction Vertical Slice
 
-> 状态：implementation gate pending local test acceptance
+> 状态：Accepted — full backend/frontend gate passed on 2026-09-18
 >
 > 日期：2026-09-18
 >
@@ -242,4 +242,4 @@ npm run typecheck
 npm run build
 ```
 
-Gate 通过后，本 sleep vertical slice 才可标记为 accepted。
+本 sleep vertical slice 已通过完整 backend/frontend Gate，状态为 Accepted。
