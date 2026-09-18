@@ -729,6 +729,9 @@ def build_audit(
         for item in current_risk_mappings
         if item["risk_category"] in bridge_risk_categories
     ]
+    used_current_risk_categories = {
+        item["risk_category"] for item in used_risk_rows
+    }
     used_substance_ids = {
         item["substance_id"]
         for item in used_risk_rows
@@ -886,12 +889,12 @@ def build_audit(
             "group_membership_relations": len(group_memberships),
             "evidence_risk_bridge_mappings": len(bridge_mappings),
             "runtime_recommendation_usage": {
-                "risk_categories": len(bridge_risk_categories),
+                "risk_categories": len(used_current_risk_categories),
                 "risk_mapping_rows": len(used_risk_rows),
                 "explicit_substances": len(used_substance_ids),
                 "methods": len(used_method_ids),
                 "applicability_records": len(used_applicability_ids),
-                "risk_category_ids": sorted(bridge_risk_categories),
+                "risk_category_ids": sorted(used_current_risk_categories),
                 "substance_ids": sorted(used_substance_ids),
                 "method_ids": sorted(used_method_ids),
                 "applicability_ids": sorted(used_applicability_ids),
