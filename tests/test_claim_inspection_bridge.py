@@ -69,23 +69,42 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
             "matched_expression": "有助于改善睡眠",
             "risk_category": "sleep_aid",
             "reference_mapping_id": reference_mapping_id,
+            "authorized_historical_mapping_ids": [reference_mapping_id],
             "temporal_policy": "historical_reference_allowed",
             "governance_basis": "direct_verified_reference",
             "migrated_from_bridge_mapping_id": None,
             "note": "synthetic B3 governance fixture",
         }
 
-    def test_bridge_contains_only_three_migrated_verified_relations(self):
+    def test_bridge_preserves_three_current_relations_and_adds_two_sleep_relations(self):
         config = load_claim_inspection_bridge_config()
 
-        self.assertEqual(len(config["mappings"]), 3)
+        self.assertEqual(len(config["mappings"]), 5)
+        current = [
+            item for item in config["mappings"]
+            if item["temporal_policy"] == "current_only"
+        ]
+        historical = [
+            item for item in config["mappings"]
+            if item["temporal_policy"] == "historical_reference_allowed"
+        ]
         self.assertEqual(
-            {item["matched_expression"] for item in config["mappings"]},
+            {item["matched_expression"] for item in current},
             {"减肥", "壮阳", "补肾"},
         )
         self.assertEqual(
-            {item["temporal_policy"] for item in config["mappings"]},
-            {"current_only"},
+            {item["matched_expression"] for item in historical},
+            {"改善睡眠", "有助于改善睡眠"},
+        )
+        self.assertTrue(
+            all(item["authorized_historical_mapping_ids"] == [] for item in current)
+        )
+        self.assertTrue(
+            all(
+                item["reference_mapping_id"]
+                in item["authorized_historical_mapping_ids"]
+                for item in historical
+            )
         )
         self.assertTrue(config["metadata"]["historical_reference_disclosure"])
 
@@ -131,6 +150,53 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
                 taxonomy=self.taxonomy,
                 risk_reference_config=risk_reference,
             )
+
+    def test_historical_allowlist_must_include_primary_reference(self):
+        risk_reference, reference_mapping_id = self._historical_risk_reference()
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        mapping = self._historical_bridge_mapping(reference_mapping_id)
+        mapping["authorized_historical_mapping_ids"] = []
+        bridge["mappings"].append(mapping)
+
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+                risk_reference_config=risk_reference,
+            )
+
+    def test_current_mapping_cannot_authorize_historical_ids(self):
+        bridge = copy.deepcopy(load_claim_inspection_bridge_config())
+        bridge["mappings"][0]["authorized_historical_mapping_ids"] = [
+            "synthetic-historical-id"
+        ]
+
+        with self.assertRaises(ClaimInspectionBridgeConfigValidationError):
+            validate_claim_inspection_bridge_config(
+                bridge,
+                taxonomy=self.taxonomy,
+            )
+
+    def test_official_sleep_expression_reaches_sleep_aid_direction(self):
+        result = bridge_claim_analysis(self._analysis("有助于改善睡眠"))
+
+        self.assertEqual(len(result.risk_signals), 1)
+        self.assertEqual(result.risk_signals[0]["risk_category"], "sleep_aid")
+        trigger = result.risk_signals[0]["trigger_evidence"][0]
+        self.assertEqual(trigger["claimType"], "sleep_related")
+        self.assertEqual(trigger["matchedExpression"], "有助于改善睡眠")
+        self.assertEqual(result.unmapped_evidence, [])
+
+    def test_colloquial_sleep_expression_remains_unmapped_until_separately_governed(self):
+        result = bridge_claim_analysis(self._analysis("助眠"))
+
+        self.assertEqual(result.risk_signals, [])
+        self.assertEqual(len(result.unmapped_evidence), 1)
+        self.assertEqual(result.unmapped_evidence[0]["matchedExpression"], "助眠")
+        self.assertEqual(
+            result.unmapped_evidence[0]["reason"],
+            "no_governed_claim_inspection_bridge",
+        )
 
     def test_jianfei_reaches_existing_weight_loss_direction(self):
         result = bridge_claim_analysis(self._analysis("帮助减肥"))
