@@ -322,7 +322,7 @@ class InspectionSignalTraceResolverTest(unittest.TestCase):
                     "bridge_mapping_ids": ["jianfei-to-weight-loss"],
                     "reference_mapping_id": WEIGHT_LOSS_GROUP_MAPPING_ID,
                     "message": (
-                        "The verified Bridge reference mapping is not present "
+                        "The verified Bridge-authorized mapping is not present "
                         "in the current SQLite KnowledgeTrace."
                     ),
                 }
