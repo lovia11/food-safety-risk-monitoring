@@ -76,7 +76,7 @@ DEFAULT_MONITOR_CONFIG_PATHS = (
     Path("config/monitor_targets.reference.json"),
 )
 SAMPLING_STATUSES = {"current", "historical_only", "never"}
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _DATASET_FIELDS = (
@@ -1023,6 +1023,7 @@ class DataStore:
                     product_category TEXT NOT NULL DEFAULT '',
                     product_form TEXT NOT NULL DEFAULT '',
                     ingredient_context TEXT NOT NULL DEFAULT '',
+                    risk_category TEXT NOT NULL DEFAULT '',
                     source_scope_text TEXT NOT NULL DEFAULT '',
                     note TEXT NOT NULL DEFAULT '',
                     updated_at TEXT NOT NULL
@@ -1210,6 +1211,12 @@ class DataStore:
                 "inspection_method_applicabilities",
                 "substance_id",
                 "TEXT REFERENCES inspection_substances(substance_id)",
+            )
+            self._ensure_column(
+                connection,
+                "inspection_method_applicabilities",
+                "risk_category",
+                "TEXT NOT NULL DEFAULT ''",
             )
             self._ensure_column(
                 connection,
@@ -1688,8 +1695,8 @@ class DataStore:
                     INSERT INTO inspection_method_applicabilities (
                         applicability_id, method_id, substance_id, scope_type,
                         product_category, product_form, ingredient_context,
-                        source_scope_text, note, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        risk_category, source_scope_text, note, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(applicability_id) DO UPDATE SET
                         method_id=excluded.method_id,
                         substance_id=excluded.substance_id,
@@ -1697,6 +1704,7 @@ class DataStore:
                         product_category=excluded.product_category,
                         product_form=excluded.product_form,
                         ingredient_context=excluded.ingredient_context,
+                        risk_category=excluded.risk_category,
                         source_scope_text=excluded.source_scope_text,
                         note=excluded.note,
                         updated_at=excluded.updated_at
@@ -1709,6 +1717,7 @@ class DataStore:
                         applicability["product_category"],
                         applicability["product_form"],
                         applicability["ingredient_context"],
+                        applicability["risk_category"],
                         applicability["source_scope_text"],
                         applicability["note"],
                         now,
@@ -2075,7 +2084,7 @@ class DataStore:
                 """
                 SELECT applicability_id, method_id, substance_id, scope_type,
                        product_category, product_form, ingredient_context,
-                       source_scope_text, note
+                       risk_category, source_scope_text, note
                 FROM inspection_method_applicabilities
                 WHERE method_id = ?
                   AND (substance_id IS NULL OR substance_id = ?)
