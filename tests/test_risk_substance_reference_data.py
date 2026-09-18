@@ -15,11 +15,16 @@ INSPECTION_REFERENCE_CONFIG = PROJECT_ROOT / "config" / "inspection_reference.js
 
 EXPECTED_GROUP_MAPPING_IDS = {
     "weight-loss-sibutramine-group-cn-2025",
+    "weight-loss-bisacodyl-group-cn-2025",
+    "weight-loss-phenbut-phenolphthalein-group-cn-2025",
     "male-function-nafei-lafei-group-cn-2025",
+    "male-function-yohimbine-group-cn-2025",
     "anti-fatigue-nafei-lafei-group-cn-2025",
 }
 EXPECTED_SUBSTANCE_MAPPING_IDS = {
     "weight-loss-sibutramine-cn-2025",
+    "weight-loss-bisacodyl-cn-2025",
+    "weight-loss-phenolphthalein-cn-2025",
     "male-function-sildenafil-cn-2025",
     "male-function-tadalafil-cn-2025",
     "anti-fatigue-sildenafil-cn-2025",
@@ -95,16 +100,55 @@ CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
     }
     for category, identities in CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES.items()
 }
+WEIGHT_HISTORICAL_GROUP_MAPPING_ID = "weight-loss-historical-screening-group-cn-2018"
+WEIGHT_HISTORICAL_SUBSTANCE_IDENTITIES = {
+    "substance-cas-106650-56-0": "西布曲明",
+    "substance-cas-168835-59-4": "N-单去甲基西布曲明",
+    "substance-cas-84467-54-9": "N,N-双去甲基西布曲明",
+    "substance-cas-458-24-2": "芬氟拉明",
+    "substance-cas-299-42-3": "麻黄碱",
+    "substance-cas-77-09-8": "酚酞",
+    "substance-cas-54-31-9": "呋塞米",
+}
+WEIGHT_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
+    f"weight-loss-cas-{substance_id.removeprefix('substance-cas-')}-historical-cn-2018"
+    for substance_id in WEIGHT_HISTORICAL_SUBSTANCE_IDENTITIES
+}
+ANTI_FATIGUE_HISTORICAL_GROUP_MAPPING_ID = "anti-fatigue-historical-screening-group-cn-2018"
+ANTI_FATIGUE_HISTORICAL_SUBSTANCE_IDENTITIES = {
+    "substance-cas-949091-38-7": "那红地那非",
+    "substance-cas-831217-01-7": "红地那非",
+    "substance-cas-224785-90-4": "伐地那非",
+    "substance-cas-139755-85-4": "羟基豪莫西地那非",
+    "substance-cas-139755-83-2": "西地那非",
+    "substance-cas-642928-07-2": "豪莫西地那非",
+    "substance-cas-385769-84-6": "氨基他达拉非",
+    "substance-cas-171596-29-5": "他达拉非",
+    "substance-cas-856190-47-1": "硫代艾地那非",
+    "substance-cas-224788-34-5": "伪伐地那非",
+    "substance-cas-371959-09-0": "那莫西地那非",
+    "substance-cas-171596-36-4": "去甲基他达拉非",
+    "substance-cas-479073-79-5": "硫代西地那非",
+}
+ANTI_FATIGUE_HISTORICAL_SUBSTANCE_MAPPING_IDS = {
+    f"anti-fatigue-cas-{substance_id.removeprefix('substance-cas-')}-historical-cn-2018"
+    for substance_id in ANTI_FATIGUE_HISTORICAL_SUBSTANCE_IDENTITIES
+}
 EXPECTED_HISTORICAL_MAPPING_IDS = (
     {SLEEP_HISTORICAL_GROUP_MAPPING_ID}
     | SLEEP_HISTORICAL_SUBSTANCE_MAPPING_IDS
     | set(CARDIOMETABOLIC_HISTORICAL_GROUP_MAPPING_IDS.values())
     | set().union(*CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_MAPPING_IDS.values())
+    | {WEIGHT_HISTORICAL_GROUP_MAPPING_ID}
+    | WEIGHT_HISTORICAL_SUBSTANCE_MAPPING_IDS
+    | {ANTI_FATIGUE_HISTORICAL_GROUP_MAPPING_ID}
+    | ANTI_FATIGUE_HISTORICAL_SUBSTANCE_MAPPING_IDS
 )
 EXPECTED_MAPPING_IDS = EXPECTED_CURRENT_MAPPING_IDS | EXPECTED_HISTORICAL_MAPPING_IDS
 EXPECTED_CURRENT_CATEGORIES = {"weight_loss", "male_function", "anti_fatigue"}
 EXPECTED_HISTORICAL_CATEGORIES = {
-    "sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose"
+    "sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose",
+    "weight_loss", "anti_fatigue",
 }
 EXPECTED_CATEGORIES = EXPECTED_CURRENT_CATEGORIES | EXPECTED_HISTORICAL_CATEGORIES
 SLEEP_HISTORICAL_SOURCE = (
@@ -128,11 +172,17 @@ INSPECTION_COUNTS = {
 }
 EXPECTED_SUBSTANCE_IDENTITIES = {
     "substance-cas-106650-56-0": "西布曲明",
+    "substance-cas-603-50-9": "比沙可啶",
+    "substance-cas-77-09-8": "酚酞",
     "substance-cas-139755-83-2": "西地那非",
     "substance-cas-171596-29-5": "他达拉非",
 }
 EXPECTED_SUBSTANCE_TARGETS = {
-    "weight_loss": {"substance-cas-106650-56-0"},
+    "weight_loss": {
+        "substance-cas-106650-56-0",
+        "substance-cas-603-50-9",
+        "substance-cas-77-09-8",
+    },
     "male_function": {
         "substance-cas-139755-83-2",
         "substance-cas-171596-29-5",
@@ -142,64 +192,6 @@ EXPECTED_SUBSTANCE_TARGETS = {
         "substance-cas-171596-29-5",
     },
 }
-EXPECTED_GROUP_MAPPINGS = {
-    "weight-loss-sibutramine-group-cn-2025": {
-        "mapping_id": "weight-loss-sibutramine-group-cn-2025",
-        "dataset_id": "risk-substance-reference",
-        "risk_category": "weight_loss",
-        "risk_label": "减肥/减重宣传",
-        "target_type": "substance_group",
-        "substance_id": None,
-        "target_group_label": "西布曲明及其系列衍生物",
-        "evidence_grade": "A",
-        "basis_type": "current_official_guidance",
-        "temporal_status": "current",
-        "product_scope": "宣称减肥功能的食品",
-        "source_name": "市场监管总局办公厅关于发布西布曲明及其系列衍生物有毒有害认定意见及执法检验方法的通知",
-        "source_reference": SIBUTRAMINE_SOURCE,
-        "source_date": "2025-10-18",
-        "source_basis_text": "市场监管总局在查办宣称减肥功能食品非法添加案件中，发现食品中非法添加西布曲明新型衍生物，并对食品中的西布曲明及其系列衍生物作出有毒有害认定。",
-        "note": "本Mapping表示“减肥/减重宣传”是当前官方来源明确出现的西布曲明及其系列衍生物监管关注方向。不得解释为出现减肥宣传的商品实际含有西布曲明，也不得解释为页面宣传本身构成非法添加证据。",
-    },
-    "male-function-nafei-lafei-group-cn-2025": {
-        "mapping_id": "male-function-nafei-lafei-group-cn-2025",
-        "dataset_id": "risk-substance-reference",
-        "risk_category": "male_function",
-        "risk_label": "补肾壮阳/男性功能宣传",
-        "target_type": "substance_group",
-        "substance_id": None,
-        "target_group_label": "那非类、拉非类物质",
-        "evidence_grade": "A",
-        "basis_type": "current_official_guidance",
-        "temporal_status": "current",
-        "product_scope": "酒类、压片糖果、咖啡等食品（来源列举的典型食品场景）",
-        "source_name": "市场监管总局等两部委将那非类、拉非类物质纳入食品中可能添加的非食用物质名录",
-        "source_reference": NAFEI_LAFEI_SOURCE,
-        "source_date": "2025-06-28",
-        "source_basis_text": "市场监管总局官方解读指出，那非类、拉非类物质包括西地那非、他达拉非等药物及其衍生物；部分不法商家将其掺入酒类、压片糖果、咖啡等食品，并以补肾壮阳等功效进行宣传。",
-        "note": "本Mapping表示“补肾壮阳/男性功能宣传”是当前官方来源明确关联的那非类、拉非类监管关注方向。不得解释为出现该宣传的商品实际含有相关物质。",
-    },
-    "anti-fatigue-nafei-lafei-group-cn-2025": {
-        "mapping_id": "anti-fatigue-nafei-lafei-group-cn-2025",
-        "dataset_id": "risk-substance-reference",
-        "risk_category": "anti_fatigue",
-        "risk_label": "抗疲劳宣传",
-        "target_type": "substance_group",
-        "substance_id": None,
-        "target_group_label": "那非类、拉非类物质",
-        "evidence_grade": "A",
-        "basis_type": "current_official_guidance",
-        "temporal_status": "current",
-        "product_scope": "酒类、压片糖果、咖啡等食品（来源列举的典型食品场景）",
-        "source_name": "市场监管总局等两部委将那非类、拉非类物质纳入食品中可能添加的非食用物质名录",
-        "source_reference": NAFEI_LAFEI_SOURCE,
-        "source_date": "2025-06-28",
-        "source_basis_text": "市场监管总局官方解读指出，部分不法商家将那非类、拉非类物质掺入酒类、压片糖果、咖啡等食品，并以抗疲劳等功效进行宣传。",
-        "note": "本Mapping表示“抗疲劳宣传”是当前官方来源明确关联的那非类、拉非类监管关注方向。不得解释为出现抗疲劳宣传的商品实际含有相关物质。",
-    },
-}
-
-
 def load_verified_risk_dataset() -> dict:
     return validate_risk_substance_config(read_json(RISK_REFERENCE_CONFIG))
 
