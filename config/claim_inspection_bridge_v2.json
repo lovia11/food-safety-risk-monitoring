@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "bridge_id": "claim-inspection-bridge-v2",
-  "bridge_version": "claim-inspection-bridge-v2.4",
-  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。官方/过渡功能名称可通过 direct_verified_reference 承接来源中的功能筛查场景；经单独审计的明确结果性功效表达可使用 governed_functional_scope。所有 historical 关系继续通过单条 Bridge 的显式 allowlist 进入生产链，不按 Claim 类型整体外推。",
+  "bridge_version": "claim-inspection-bridge-v2.5",
+  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。支持 current-only、historical-only 以及 current primary + selective historical 三种时间策略；所有 historical 关系必须由 exact Claim Bridge 显式 allowlist，禁止按 Claim 类型或 Risk 类别整体放开。",
   "mappings": [
     {
       "bridge_mapping_id": "claim-weight-management-jianfei-to-weight-loss",
@@ -11,11 +11,20 @@
       "matched_expression": "减肥",
       "risk_category": "weight_loss",
       "reference_mapping_id": "weight-loss-sibutramine-group-cn-2025",
-      "temporal_policy": "current_only",
+      "temporal_policy": "current_plus_historical_reference_allowed",
       "governance_basis": "legacy_verified_migration",
       "migrated_from_bridge_mapping_id": "jianfei-to-weight-loss",
-      "note": "仅迁移既有“减脂 + 减肥”精确桥接；不扩展到减脂、瘦身、燃脂等其他体重管理表达。",
-      "authorized_historical_mapping_ids": []
+      "note": "保留既有“减肥”精确迁移及current Risk主引用，同时显式加入历史中央专项抽检中的减肥类筛查关系；不扩展到减脂、瘦身、燃脂。",
+      "authorized_historical_mapping_ids": [
+        "weight-loss-cas-106650-56-0-historical-cn-2018",
+        "weight-loss-cas-168835-59-4-historical-cn-2018",
+        "weight-loss-cas-299-42-3-historical-cn-2018",
+        "weight-loss-cas-458-24-2-historical-cn-2018",
+        "weight-loss-cas-54-31-9-historical-cn-2018",
+        "weight-loss-cas-77-09-8-historical-cn-2018",
+        "weight-loss-cas-84467-54-9-historical-cn-2018",
+        "weight-loss-historical-screening-group-cn-2018"
+      ]
     },
     {
       "bridge_mapping_id": "claim-male-function-zhuangyang-to-male-function",
@@ -555,6 +564,84 @@
       "governance_basis": "governed_functional_scope",
       "migrated_from_bridge_mapping_id": null,
       "note": "“降糖”是明确的结果性功效表达，纳入历史中央专项抽检资料对应的blood_glucose功能筛查场景；不扩展到整个Claim类型。"
+    },
+    {
+      "bridge_mapping_id": "claim-weight-management-current-function-to-weight-loss",
+      "claim_type": "weight_management",
+      "expression_id": "v2b2-weight-management-youzhuyukongzhitineizhifang",
+      "matched_expression": "有助于控制体内脂肪",
+      "risk_category": "weight_loss",
+      "reference_mapping_id": "weight-loss-sibutramine-group-cn-2025",
+      "authorized_historical_mapping_ids": [
+        "weight-loss-cas-106650-56-0-historical-cn-2018",
+        "weight-loss-cas-168835-59-4-historical-cn-2018",
+        "weight-loss-cas-299-42-3-historical-cn-2018",
+        "weight-loss-cas-458-24-2-historical-cn-2018",
+        "weight-loss-cas-54-31-9-historical-cn-2018",
+        "weight-loss-cas-77-09-8-historical-cn-2018",
+        "weight-loss-cas-84467-54-9-historical-cn-2018",
+        "weight-loss-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "current_plus_historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "2023当前官方功能“有助于控制体内脂肪”与历史功能名称“减肥”存在已核验名称衔接；以current减肥监管关系为主，并选择性加入同一功能场景的历史中央抽检筛查关系。"
+    },
+    {
+      "bridge_mapping_id": "claim-anti-fatigue-kangpilao-to-anti-fatigue",
+      "claim_type": "anti_fatigue_related",
+      "expression_id": "v2b2-anti-fatigue-related-kangpilao",
+      "matched_expression": "抗疲劳",
+      "risk_category": "anti_fatigue",
+      "reference_mapping_id": "anti-fatigue-nafei-lafei-group-cn-2025",
+      "authorized_historical_mapping_ids": [
+        "anti-fatigue-cas-139755-83-2-historical-cn-2018",
+        "anti-fatigue-cas-139755-85-4-historical-cn-2018",
+        "anti-fatigue-cas-171596-29-5-historical-cn-2018",
+        "anti-fatigue-cas-171596-36-4-historical-cn-2018",
+        "anti-fatigue-cas-224785-90-4-historical-cn-2018",
+        "anti-fatigue-cas-224788-34-5-historical-cn-2018",
+        "anti-fatigue-cas-371959-09-0-historical-cn-2018",
+        "anti-fatigue-cas-385769-84-6-historical-cn-2018",
+        "anti-fatigue-cas-479073-79-5-historical-cn-2018",
+        "anti-fatigue-cas-642928-07-2-historical-cn-2018",
+        "anti-fatigue-cas-831217-01-7-historical-cn-2018",
+        "anti-fatigue-cas-856190-47-1-historical-cn-2018",
+        "anti-fatigue-cas-949091-38-7-historical-cn-2018",
+        "anti-fatigue-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "current_plus_historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "2025当前官方来源直接指出部分不法商家以“抗疲劳”等功效宣传含那非类、拉非类物质食品；同时选择性加入历史中央“缓解体力疲劳类”筛查关系。"
+    },
+    {
+      "bridge_mapping_id": "claim-anti-fatigue-huanjietilipilao-to-anti-fatigue",
+      "claim_type": "anti_fatigue_related",
+      "expression_id": "v2b2-anti-fatigue-related-huanjietilipilao",
+      "matched_expression": "缓解体力疲劳",
+      "risk_category": "anti_fatigue",
+      "reference_mapping_id": "anti-fatigue-nafei-lafei-group-cn-2025",
+      "authorized_historical_mapping_ids": [
+        "anti-fatigue-cas-139755-83-2-historical-cn-2018",
+        "anti-fatigue-cas-139755-85-4-historical-cn-2018",
+        "anti-fatigue-cas-171596-29-5-historical-cn-2018",
+        "anti-fatigue-cas-171596-36-4-historical-cn-2018",
+        "anti-fatigue-cas-224785-90-4-historical-cn-2018",
+        "anti-fatigue-cas-224788-34-5-historical-cn-2018",
+        "anti-fatigue-cas-371959-09-0-historical-cn-2018",
+        "anti-fatigue-cas-385769-84-6-historical-cn-2018",
+        "anti-fatigue-cas-479073-79-5-historical-cn-2018",
+        "anti-fatigue-cas-642928-07-2-historical-cn-2018",
+        "anti-fatigue-cas-831217-01-7-historical-cn-2018",
+        "anti-fatigue-cas-856190-47-1-historical-cn-2018",
+        "anti-fatigue-cas-949091-38-7-historical-cn-2018",
+        "anti-fatigue-historical-screening-group-cn-2018"
+      ],
+      "temporal_policy": "current_plus_historical_reference_allowed",
+      "governance_basis": "direct_verified_reference",
+      "migrated_from_bridge_mapping_id": null,
+      "note": "“缓解体力疲劳”为2023当前官方功能名称，“抗疲劳”为其已核验历史/过渡名称；据此承接current抗疲劳监管关系，并选择性加入历史中央筛查关系。"
     }
   ],
   "metadata": {
@@ -636,6 +723,42 @@
           ],
           "claim_only": []
         }
+      }
+    },
+    "b4_remaining_direction_policy": {
+      "version": "weight-male-antifatigue-v1",
+      "weight_loss": {
+        "admitted": [
+          "减肥",
+          "有助于控制体内脂肪"
+        ],
+        "claim_only": [
+          "减脂",
+          "瘦身",
+          "燃脂"
+        ],
+        "temporal_strategy": "current_plus_selective_historical"
+      },
+      "male_function": {
+        "admitted": [
+          "壮阳",
+          "补肾"
+        ],
+        "claim_only": [
+          "阳痿",
+          "早泄",
+          "遗精",
+          "男性功能"
+        ],
+        "temporal_strategy": "current_only"
+      },
+      "anti_fatigue": {
+        "admitted": [
+          "抗疲劳",
+          "缓解体力疲劳"
+        ],
+        "claim_only": [],
+        "temporal_strategy": "current_plus_selective_historical"
       }
     }
   }
