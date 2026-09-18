@@ -1,7 +1,7 @@
 # V2-B 睡眠宣传监管知识专项审计
 
 > 日期：2026-09-18  
-> 状态：Research Gate / 尚未写入生产映射
+> 状态：Research baseline / sleep production implementation 已进入 `V2_B4_SLEEP_VERTICAL_SLICE.md`；本文件保留研究依据与边界
 
 ## 1. 结论先行
 
