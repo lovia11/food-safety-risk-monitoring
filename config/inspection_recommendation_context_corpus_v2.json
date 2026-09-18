@@ -5,7 +5,7 @@
   "status": "deterministic_validation_corpus",
   "description": "用于验证既有Risk→显式Substance→Recommendation-ready Method→Product Context链路的六例离线语料。它不是全国代表性样本，不评价风险识别准确率，也不证明商品实际含有任何物质。",
   "knowledge_versions": {
-    "inspection_reference": "2026.09-b8",
+    "inspection_reference": "2026.09-b9",
     "risk_substance_reference": "2026.09-c6",
     "effect_risk_bridge": "2026.09-d2"
   },
