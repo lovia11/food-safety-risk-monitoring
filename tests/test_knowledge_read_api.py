@@ -173,7 +173,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
     def test_method_depth_lifecycle_pagination_and_recommendation_boundary(self):
         first = self.service.inspection_methods(limit=3, offset=0)
         second = self.service.inspection_methods(limit=3, offset=3)
-        self.assertEqual(first["total"], 7)
+        self.assertEqual(first["total"], 9)
         self.assertEqual(first["count"], 3)
         self.assertTrue(first["hasMore"])
         self.assertEqual(second["offset"], 3)
@@ -188,7 +188,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         self.assertEqual(old["knowledgeDepth"], "reference_only")
         self.assertEqual(old["applicability"]["availability"], "not_recorded")
         self.assertIn("analyte_depth_not_verified", old["knowledgeGaps"])
-        self.assertEqual(old["source"]["datasetVersion"], "2026.09-b8")
+        self.assertEqual(old["source"]["datasetVersion"], "2026.09-b9")
 
         recommendation_methods = self.store.list_substance_methods(
             "substance-cas-73-31-4", recommendation_ready_only=True
