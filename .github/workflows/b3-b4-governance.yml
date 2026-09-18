@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install lightweight test dependency
+        run: python -m pip install "openpyxl>=3.1,<4"
+
       - name: Run B3 B4 governance regression suite
         run: >-
           python -m unittest
