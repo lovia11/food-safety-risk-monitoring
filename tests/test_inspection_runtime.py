@@ -111,7 +111,7 @@ class InspectionRuntimeTest(unittest.TestCase):
 
         self.assertEqual(first, second)
         self.assertEqual(store.table_counts()["inspection_methods"], 7)
-        self.assertEqual(store.table_counts()["risk_substance_mappings"], 54)
+        self.assertEqual(store.table_counts()["risk_substance_mappings"], 81)
         with sqlite3.connect(store.database_path) as connection:
             self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 13)
 
