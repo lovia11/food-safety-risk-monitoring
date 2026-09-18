@@ -49,6 +49,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
                 "BJS 202504",
                 "BJS 202601",
                 "BJS 202602",
+                "BJS 201808",
             },
         )
         self.assertTrue(
@@ -155,8 +156,8 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
 
         report = load_and_build_audit()
         self.assertEqual(report["inventory"]["indexed_methods"], 7)
-        self.assertEqual(report["inventory"]["candidate_records"], 11)
-        self.assertEqual(report["inventory"]["candidate_methods"], 9)
+        self.assertEqual(report["inventory"]["candidate_records"], 12)
+        self.assertEqual(report["inventory"]["candidate_methods"], 10)
         self.assertEqual(report["inventory"]["promoted_candidate_methods"], 2)
         self.assertEqual(
             report["metrics"]["method_reference_coverage"]["denominator"], 7
