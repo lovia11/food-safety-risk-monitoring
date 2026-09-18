@@ -35,8 +35,8 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["governed_dataset_count"], 3)
         self.assertEqual(inventory["methods"], 7)
         self.assertEqual(inventory["indexed_methods"], 7)
-        self.assertEqual(inventory["candidate_records"], 11)
-        self.assertEqual(inventory["candidate_methods"], 9)
+        self.assertEqual(inventory["candidate_records"], 12)
+        self.assertEqual(inventory["candidate_methods"], 10)
         self.assertEqual(inventory["promoted_candidate_methods"], 2)
         self.assertEqual(
             inventory["knowledge_depth_counts"],
