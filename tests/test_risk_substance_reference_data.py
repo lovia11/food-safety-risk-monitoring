@@ -419,7 +419,7 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 INSPECTION_COUNTS,
             )
 
-            expected = {"dataset": 1, "mappings": 54)
+            expected = {"dataset": 1, "mappings": 54}
             self.assertEqual(
                 store.import_risk_substance_config(RISK_REFERENCE_CONFIG), expected
             )
