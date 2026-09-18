@@ -65,8 +65,8 @@ class ClaimInspectionBridgeTest(unittest.TestCase):
         return {
             "bridge_mapping_id": "test-sleep-historical-bridge",
             "claim_type": "sleep_related",
-            "expression_id": "v2b2-sleep-related-youzhuyugaishanshuimian",
-            "matched_expression": "有助于改善睡眠",
+            "expression_id": "legacy-sleep-related-zhumian",
+            "matched_expression": "助眠",
             "risk_category": "sleep_aid",
             "reference_mapping_id": reference_mapping_id,
             "authorized_historical_mapping_ids": [reference_mapping_id],
