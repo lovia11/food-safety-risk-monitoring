@@ -120,7 +120,14 @@ class InspectionSignalTraceResolver:
                     and str(mapping.get("temporal_policy") or "")
                     == "historical_reference_allowed"
                 ):
-                    historical_reference_mapping_ids.add(reference_mapping_id)
+                    authorized = mapping.get("authorized_historical_mapping_ids")
+                    if not isinstance(authorized, list):
+                        raise ValueError(
+                            f"Bridge {bridge_mapping_id} missing authorized_historical_mapping_ids"
+                        )
+                    historical_reference_mapping_ids.update(
+                        str(value) for value in authorized
+                    )
             reference_mapping_ids = sorted(reference_to_bridge_ids)
             selected_historical_ids = sorted(historical_reference_mapping_ids)
 
@@ -135,19 +142,22 @@ class InspectionSignalTraceResolver:
                     include_historical=include_historical,
                 ).to_dict()
             resolved_mapping_ids = _resolved_mapping_ids(knowledge_trace)
-            for reference_mapping_id in reference_mapping_ids:
+            required_mapping_ids = set(reference_mapping_ids)
+            required_mapping_ids.update(selected_historical_ids)
+            for reference_mapping_id in sorted(required_mapping_ids):
                 if reference_mapping_id in resolved_mapping_ids:
                     continue
+                bridge_ids = reference_to_bridge_ids.get(
+                    reference_mapping_id, bridge_mapping_ids
+                )
                 composition_gaps.append(
                     {
                         "type": "bridge_reference_not_in_knowledge_trace",
                         "risk_category": risk_category,
-                        "bridge_mapping_ids": sorted(
-                            reference_to_bridge_ids[reference_mapping_id]
-                        ),
+                        "bridge_mapping_ids": sorted(bridge_ids),
                         "reference_mapping_id": reference_mapping_id,
                         "message": (
-                            "The verified Bridge reference mapping is not present "
+                            "The verified Bridge-authorized mapping is not present "
                             "in the current SQLite KnowledgeTrace."
                         ),
                     }
