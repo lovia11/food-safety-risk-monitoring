@@ -1,6 +1,6 @@
 # V2-B 重点宣传方向监管知识总审计
 
-> Status: WORKING BASELINE — B2/B3 已完成；B4 已实现 sleep、blood_pressure、blood_lipid、blood_glucose，weight/male/anti-fatigue 扩充仍按本文件逐项推进  
+> Status: WORKING BASELINE — B2/B3 已实现；B4 七个方向已完成 production implementation，等待本地 Gate 后统一标记 accepted；下一阶段为 B5 Method 深核  
 > Date: 2026-09-18  
 > Scope: 页面宣传 Claim → 监管抽检关注方向 → Substance → Method  
 > Boundary: 本文件描述抽检辅助筛查知识，不表示具体商品实际含有相关物质，不构成违法认定。
