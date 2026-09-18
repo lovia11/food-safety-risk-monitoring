@@ -33,36 +33,36 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         inventory = report["inventory"]
 
         self.assertEqual(inventory["governed_dataset_count"], 3)
-        self.assertEqual(inventory["methods"], 7)
-        self.assertEqual(inventory["indexed_methods"], 7)
+        self.assertEqual(inventory["methods"], 9)
+        self.assertEqual(inventory["indexed_methods"], 9)
         self.assertEqual(inventory["candidate_records"], 12)
-        self.assertEqual(inventory["candidate_methods"], 10)
-        self.assertEqual(inventory["promoted_candidate_methods"], 2)
+        self.assertEqual(inventory["candidate_methods"], 8)
+        self.assertEqual(inventory["promoted_candidate_methods"], 4)
         self.assertEqual(
             inventory["knowledge_depth_counts"],
             {
                 "reference_only": 1,
                 "analyte_verified": 0,
                 "applicability_verified": 0,
-                "recommendation_ready": 6,
+                "recommendation_ready": 8,
             },
         )
         self.assertEqual(
             inventory["method_type_counts"],
             {
                 "supplementary_bjs": 4,
-                "rapid_kj": 1,
+                "rapid_kj": 3,
                 "national_standard_gbt": 2,
             },
         )
-        self.assertEqual(inventory["method_status_counts"]["current"], 6)
+        self.assertEqual(inventory["method_status_counts"]["current"], 8)
         self.assertEqual(inventory["method_status_counts"]["revoked"], 1)
         self.assertEqual(inventory["substances"], 201)
-        self.assertEqual(inventory["method_substance_relations"], 227)
-        self.assertEqual(inventory["method_applicabilities"], 44)
+        self.assertEqual(inventory["method_substance_relations"], 231)
+        self.assertEqual(inventory["method_applicabilities"], 46)
         self.assertEqual(inventory["substance_regulatory_contexts"], 1)
         self.assertEqual(inventory["regulatory_documents"], 7)
-        self.assertEqual(inventory["method_regulatory_document_links"], 7)
+        self.assertEqual(inventory["method_regulatory_document_links"], 9)
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
         self.assertEqual(inventory["risk_substance_mappings"], 7)
         self.assertEqual(inventory["risk_substance_group_mappings"], 6)
@@ -79,8 +79,8 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(
             report["metrics"]["method_reference_coverage"],
             {
-                "numerator": 7,
-                "denominator": 7,
+                "numerator": 9,
+                "denominator": 9,
                 "ratio": 1.0,
                 "denominator_definition": (
                     "methods in the committed Inspection Reference Index"
@@ -89,11 +89,11 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["numerator"],
-            6,
+            8,
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["denominator"],
-            7,
+            9,
         )
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"],
@@ -302,9 +302,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(usage["explicit_substances"], 5)
         self.assertEqual(
             usage["method_ids"],
-            ["bjs-201701", "bjs-201710", "bjs-202405"],
+            ["bjs-201701", "bjs-201710", "bjs-202405", "kj-201901"],
         )
-        self.assertEqual(usage["applicability_records"], 19)
+        self.assertEqual(usage["applicability_records"], 20)
 
     def test_bjs_202405_enters_deep_subset_while_old_gbt_stays_reference_only(self):
         report = load_and_build_audit()
@@ -325,7 +325,39 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertFalse(methods["gbt-5009-170-2003"]["recommendation_ready"])
         self.assertEqual(
             report["inventory"]["runtime_recommendation_usage"]["method_ids"],
-            ["bjs-201701", "bjs-201710", "bjs-202405"],
+            ["bjs-201701", "bjs-201710", "bjs-202405", "kj-201901"],
+        )
+
+    def test_kj_promotions_are_deep_but_preserve_risk_scopes(self):
+        report = load_and_build_audit()
+        methods = {item["method_id"]: item for item in report["method_matrix"]}
+
+        for method_id in ("kj-201901", "kj-201902"):
+            self.assertEqual(
+                methods[method_id]["knowledge_depth"],
+                "recommendation_ready",
+            )
+            self.assertTrue(methods[method_id]["recommendation_ready"])
+            self.assertEqual(methods[method_id]["analyte_relation_count"], 2)
+            self.assertEqual(methods[method_id]["applicability_count"], 1)
+
+        by_key = {
+            (item["risk_category"], item["target"]): item
+            for item in report["risk_reachability"]
+            if item["target_type"] == "substance"
+        }
+        sildenafil_id = "substance-cas-139755-83-2"
+        self.assertIn(
+            "kj-201901",
+            by_key[("anti_fatigue", sildenafil_id)][
+                "recommendation_ready_method_ids"
+            ],
+        )
+        self.assertNotIn(
+            "kj-201901",
+            by_key[("male_function", sildenafil_id)][
+                "recommendation_ready_method_ids"
+            ],
         )
 
     def test_context_corpus_is_reproducible_and_denominator_defined(self):
