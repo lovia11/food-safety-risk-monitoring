@@ -640,7 +640,7 @@ class InspectionKnowledgeResolverTest(unittest.TestCase):
 
         self.assertNotIn("risk_method_mapping", tables)
         self.assertNotIn("risk_method_mappings", tables)
-        self.assertEqual(schema_version, 13)
+        self.assertEqual(schema_version, 14)
 
 
 if __name__ == "__main__":
