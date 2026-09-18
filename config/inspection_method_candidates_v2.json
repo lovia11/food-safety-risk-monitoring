@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b2",
+  "manifest_version": "2026.09-b3",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-7A批准的两个官方方法发现候选及其V2-7B2核验、promotion追溯。manifest本身不被runtime消费；promoted Method只通过inspection-reference进入SQLite，且每个Method仅按其正式knowledge_depth参与业务。",
+  "description": "V2-B5非运行时检验方法候选治理清单。保留既有promotion追溯，并新增9个由SAMR一手公告核验编号/正式标题/发布身份的verification候选。verification仅证明方法身份，不表示analyte、适用范围、生命周期细节或Recommendation已深核；manifest仍不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -22,12 +22,20 @@
         {
           "source_name": "市场监管总局2024年第51号公告",
           "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
-          "verified_facts": ["method_no", "official_title", "issuer", "announcement_date"]
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
         },
         {
           "source_name": "国家市场监督管理总局食品补充检验方法数据库",
           "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/art_6f2901cf3f95499f8726e3420f3708a7.html",
-          "verified_facts": ["official_title", "current_database_identity"]
+          "verified_facts": [
+            "official_title",
+            "current_database_identity"
+          ]
         }
       ],
       "verified_at": "2026-09-15T22:57:45+08:00",
@@ -50,17 +58,330 @@
         {
           "source_name": "全国标准信息公共服务平台GB/T 5009.170-2003标准记录",
           "source_reference": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A",
-          "verified_facts": ["standard_no", "official_title", "published_date", "effective_date", "revoked_date", "superseded_by"]
+          "verified_facts": [
+            "standard_no",
+            "official_title",
+            "published_date",
+            "effective_date",
+            "revoked_date",
+            "superseded_by"
+          ]
         },
         {
           "source_name": "国家标准全文公开系统GB/T 5009.170-2003标准记录",
           "source_reference": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=64B68E1EB5FDCD1920AD9521E1520408",
-          "verified_facts": ["standard_no", "official_title", "status", "publisher"]
+          "verified_facts": [
+            "standard_no",
+            "official_title",
+            "status",
+            "publisher"
+          ]
         }
       ],
       "verified_at": "2026-09-15T22:57:45+08:00",
       "promoted_method_id": "gbt-5009-170-2003",
       "promoted_dataset_version": "2026.09-b7"
+    },
+    {
+      "candidate_id": "candidate-bjs-201901",
+      "method_no": "BJS 201901",
+      "title": "食品中二甲双胍等非食品用化学物质的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中二甲双胍等非食品用化学物质的测定》等4项食品补充检验方法的公告（2019年第4号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_a5204e5dff584b91b222bf9b47c2c92b.html",
+      "discovery_source_date": "2019-01-29",
+      "discovery_source_record_id": "samr-announcement-2019-4",
+      "reason": "一手公告已核验BJS 201901编号、正式标题和发布身份；与blood_glucose方向高度相关，但尚未从正式方法全文录入完整目标物、CAS、适用食品范围和applicability，因此仅进入verification队列，不进入runtime。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中二甲双胍等非食品用化学物质的测定》等4项食品补充检验方法的公告（2019年第4号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_a5204e5dff584b91b222bf9b47c2c92b.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-kj201901",
+      "method_no": "KJ201901",
+      "title": "保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法》等13项食品快速检测方法的公告（2019年第41号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_0ac8c49f7b2a4536a2bd1397ed010c2d.html",
+      "discovery_source_date": "2019-09-27",
+      "discovery_source_record_id": "samr-announcement-2019-41-kj201901",
+      "reason": "一手公告已核验KJ201901编号、正式标题和食品快速检测方法身份；可补male_function/anti_fatigue的快速筛查角色，但尚未核正式全文的检出对象、适用剂型、判定阈值及阳性确证要求，因此不进入runtime。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法》等13项食品快速检测方法的公告（2019年第41号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_0ac8c49f7b2a4536a2bd1397ed010c2d.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-kj201902",
+      "method_no": "KJ201902",
+      "title": "保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法》等13项食品快速检测方法的公告（2019年第41号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_0ac8c49f7b2a4536a2bd1397ed010c2d.html",
+      "discovery_source_date": "2019-09-27",
+      "discovery_source_record_id": "samr-announcement-2019-41-kj201902",
+      "reason": "一手公告已核验KJ201902编号、正式标题和食品快速检测方法身份；可补blood_glucose快速筛查，但尚未核正式全文的检出对象、适用剂型、判定阈值及阳性确证要求，因此不进入runtime。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法》等13项食品快速检测方法的公告（2019年第41号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2023/art_0ac8c49f7b2a4536a2bd1397ed010c2d.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202409",
+      "method_no": "BJS 202409",
+      "title": "食品中托拉塞米等19种利尿剂的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中动物源性成分定性检测》等13项食品补充检验方法和2项修改单的公告（2024年第51号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
+      "discovery_source_date": "2024-12-22",
+      "discovery_source_record_id": "samr-announcement-2024-51-bjs-202409",
+      "reason": "一手公告和官方方法数据库已核验BJS 202409编号、正式标题和当前数据库身份；历史减肥/降压筛查资料存在利尿剂方向，但Method不能反推Risk，尚需全文核对19种目标物和适用基质后才能判断具体可达路径。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中动物源性成分定性检测》等13项食品补充检验方法和2项修改单的公告（2024年第51号）",
+          "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202501",
+      "method_no": "BJS 202501",
+      "title": "食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+      "discovery_source_date": "2025-09-29",
+      "discovery_source_record_id": "samr-announcement-2025-39-bjs-202501",
+      "reason": "一手公告和官方方法数据库已核验BJS 202501编号、正式标题和当前数据库身份；属于blood_pressure高相关现行方法，仍需全文核验目标物CAS、适用食品范围和applicability后才能promotion。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202502",
+      "method_no": "BJS 202502",
+      "title": "食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+      "discovery_source_date": "2025-09-29",
+      "discovery_source_record_id": "samr-announcement-2025-39-bjs-202502",
+      "reason": "一手公告和官方方法数据库已核验BJS 202502编号、正式标题和当前数据库身份；属于blood_pressure高相关现行方法，但25种目标物及适用食品范围必须从正式全文逐项深核后才能进入runtime。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202504",
+      "method_no": "BJS 202504",
+      "title": "食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+      "discovery_source_date": "2025-09-29",
+      "discovery_source_record_id": "samr-announcement-2025-39-bjs-202504",
+      "reason": "一手公告和官方方法数据库已核验BJS 202504编号、正式标题和当前数据库身份；与weight_loss当前酚丁/酚酞监管场景直接相邻，且标题明确5种化合物，适合作为B5首批全文深核对象，但标题本身不能代替CAS和适用范围核验。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
+          "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202601",
+      "method_no": "BJS 202601",
+      "title": "食品中布噻嗪和美布噻嗪的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
+      "discovery_source_date": "2026-06-25",
+      "discovery_source_record_id": "samr-announcement-2026-24-bjs-202601",
+      "reason": "一手公告和官方方法数据库已核验BJS 202601编号、正式标题和当前数据库身份；可作为blood_pressure/weight_loss相关场景候选，但不能依据药理角色反推Risk，需先核正式全文适用范围与现有Risk具体Substance是否存在独立来源关系。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
+          "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
+    },
+    {
+      "candidate_id": "candidate-bjs-202602",
+      "method_no": "BJS 202602",
+      "title": "食品中伐地那非杂质30的测定",
+      "status": "verification",
+      "expected_depth": "reference_only",
+      "discovery_source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
+      "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
+      "discovery_source_date": "2026-06-25",
+      "discovery_source_record_id": "samr-announcement-2026-24-bjs-202602",
+      "reason": "一手公告和官方方法数据库已核验BJS 202602编号、正式标题和当前数据库身份；与male_function current监管方向相关，但必须先核正式全文、目标物身份和现有Risk→Substance是否有独立依据，不得由方法标题反推Risk。",
+      "correction_note": null,
+      "verification_sources": [
+        {
+          "source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
+          "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
+          "verified_facts": [
+            "method_no",
+            "official_title",
+            "issuer",
+            "announcement_date"
+          ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bz/",
+          "verified_facts": [
+            "current_database_identity"
+          ]
+        }
+      ],
+      "verified_at": "2026-09-18T22:00:00+08:00",
+      "promoted_method_id": null,
+      "promoted_dataset_version": null
     }
   ]
 }
