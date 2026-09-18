@@ -66,11 +66,11 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
         self.assertEqual(inventory["risk_substance_mappings"], 5)
         self.assertEqual(inventory["risk_substance_group_mappings"], 3)
-        self.assertEqual(inventory["risk_mappings_total"], 29)
+        self.assertEqual(inventory["risk_mappings_total"], 54)
         self.assertEqual(inventory["risk_mappings_current"], 8)
-        self.assertEqual(inventory["risk_mappings_historical"], 21)
-        self.assertEqual(inventory["historical_risk_categories"], 1)
-        self.assertEqual(inventory["historical_risk_group_labels"], 1)
+        self.assertEqual(inventory["risk_mappings_historical"], 46)
+        self.assertEqual(inventory["historical_risk_categories"], 4)
+        self.assertEqual(inventory["historical_risk_group_labels"], 4)
         self.assertEqual(inventory["evidence_risk_bridge_mappings"], 3)
         self.assertEqual(inventory["group_membership_relations"], 0)
         self.assertTrue(
@@ -112,7 +112,7 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
     def test_historical_sleep_inventory_does_not_pollute_current_coverage(self):
         report = load_and_build_audit()
 
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 21)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 46)
         self.assertNotIn(
             "sleep_aid",
             {item["risk_category"] for item in report["risk_reachability"]},
@@ -193,9 +193,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
 
         report = build_audit(inspection, self.risk, self.bridge)
 
-        self.assertEqual(report["inventory"]["risk_mappings_total"], 29)
+        self.assertEqual(report["inventory"]["risk_mappings_total"], 54)
         self.assertEqual(report["inventory"]["risk_mappings_current"], 8)
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 21)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 46)
         self.assertNotIn(
             unrelated["substance_id"],
             {item["target"] for item in report["risk_reachability"]},
