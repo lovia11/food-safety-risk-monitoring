@@ -84,6 +84,53 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         self.assertEqual(finding["trigger_evidence"][0]["claimType"], "weight_management")
         self.assertEqual(finding["trigger_evidence"][0]["matchedExpression"], "减肥")
 
+    def test_governed_sleep_claim_reaches_historical_screening_chain(self):
+        write_json(
+            self.product_root / "claim_analysis.json",
+            claim_analysis("有助于改善睡眠"),
+        )
+
+        result = self.runtime.generate(self.product_root)
+
+        finding = next(
+            item for item in result["risk_findings"]
+            if item["risk_category"] == "sleep_aid"
+        )
+        self.assertEqual(finding["temporal_basis"], "historical_reference_only")
+        self.assertTrue(finding["historical_reference_mapping_ids"])
+        self.assertIn("历史中央专项抽检", finding["historical_reference_note"])
+        self.assertEqual(
+            finding["trigger_evidence"][0]["matchedExpression"],
+            "有助于改善睡眠",
+        )
+        self.assertGreaterEqual(len(finding["substance_follow_ups"]), 20)
+        names = {
+            item["canonical_name"] for item in finding["substance_follow_ups"]
+        }
+        self.assertIn("艾司唑仑", names)
+        self.assertIn("地西泮", names)
+        self.assertIn("褪黑素", names)
+        melatonin = next(
+            item for item in finding["substance_follow_ups"]
+            if item["canonical_name"] == "褪黑素"
+        )
+        self.assertEqual(
+            melatonin["follow_up_status"],
+            "regulatory_context_review",
+        )
+
+    def test_colloquial_sleep_claim_stays_unmapped_without_direct_bridge(self):
+        write_json(self.product_root / "claim_analysis.json", claim_analysis("助眠"))
+
+        result = self.runtime.generate(self.product_root)
+
+        self.assertEqual(result["risk_findings"], [])
+        self.assertEqual(len(result["unmapped_evidence"]), 1)
+        self.assertEqual(
+            result["unmapped_evidence"][0]["matchedExpression"],
+            "助眠",
+        )
+
     def test_legacy_effect_is_used_only_when_claim_artifact_is_absent(self):
         result = self.runtime.generate(self.product_root)
 
