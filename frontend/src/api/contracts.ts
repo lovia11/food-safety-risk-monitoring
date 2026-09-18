@@ -545,6 +545,12 @@ export type RiskFinding = {
   risk_category: string;
   risk_labels: string[];
   possible_risk_summary: string;
+  temporal_basis?:
+    | "current_only"
+    | "current_and_historical"
+    | "historical_reference_only";
+  historical_reference_mapping_ids?: string[];
+  historical_reference_note?: string;
   evidence_qualification:
     | "seller_managed_primary"
     | "user_generated_auxiliary_only";
