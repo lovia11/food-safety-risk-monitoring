@@ -109,14 +109,17 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
             },
         )
 
-    def test_historical_sleep_inventory_does_not_pollute_current_coverage(self):
+    def test_historical_inventory_does_not_pollute_current_coverage(self):
         report = load_and_build_audit()
 
         self.assertEqual(report["inventory"]["risk_mappings_historical"], 46)
-        self.assertNotIn(
-            "sleep_aid",
-            {item["risk_category"] for item in report["risk_reachability"]},
-        )
+        current_reachability_categories = {
+            item["risk_category"] for item in report["risk_reachability"]
+        }
+        for historical_category in {
+            "sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose"
+        }:
+            self.assertNotIn(historical_category, current_reachability_categories)
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"]["denominator"],
             5,
