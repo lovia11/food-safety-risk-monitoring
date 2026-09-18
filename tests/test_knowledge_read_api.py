@@ -55,8 +55,8 @@ class KnowledgeReadServiceTest(unittest.TestCase):
                 "recommendationReadyMethods": 6,
                 "referenceOnlyMethods": 1,
                 "substances": 201,
-                "riskMappings": 8,
-                "groupMappings": 3,
+                "riskMappings": 29,
+                "groupMappings": 4,
                 "regulatoryDocuments": 7,
             },
         )
@@ -138,7 +138,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         groups = self.service.risk_mappings(
             target_type="substance_group", limit=100, offset=0
         )
-        self.assertEqual(groups["total"], 3)
+        self.assertEqual(groups["total"], 4)
         self.assertTrue(
             all(
                 item["groupResolution"] == {"status": "unresolved", "memberCount": 0}
@@ -152,7 +152,15 @@ class KnowledgeReadServiceTest(unittest.TestCase):
             )
         )
         all_mappings = self.service.risk_mappings(limit=100, offset=0)
-        self.assertEqual(all_mappings["total"], 8)
+        self.assertEqual(all_mappings["total"], 29)
+        current = self.service.risk_mappings(status="current", limit=100, offset=0)
+        historical = self.service.risk_mappings(status="historical", limit=100, offset=0)
+        self.assertEqual(current["total"], 8)
+        self.assertEqual(historical["total"], 21)
+        self.assertEqual(
+            {item["riskCategory"] for item in historical["items"]},
+            {"sleep_aid"},
+        )
         self.assertNotIn(
             "substance-cas-139755-95-6",
             {
