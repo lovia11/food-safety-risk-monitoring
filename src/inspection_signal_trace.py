@@ -118,7 +118,10 @@ class InspectionSignalTraceResolver:
                 if (
                     selective_historical
                     and str(mapping.get("temporal_policy") or "")
-                    == "historical_reference_allowed"
+                    in {
+                        "historical_reference_allowed",
+                        "current_plus_historical_reference_allowed",
+                    }
                 ):
                     authorized = mapping.get("authorized_historical_mapping_ids")
                     if not isinstance(authorized, list):
