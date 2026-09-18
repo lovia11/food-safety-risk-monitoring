@@ -24,10 +24,11 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 
 - `current_only`
 - `historical_reference_allowed`
+- `current_plus_historical_reference_allowed`
 
 每条 mapping 还必须包含：
 
-- `authorized_historical_mapping_ids`：historical policy 的显式 allowlist；current-only mapping 必须为空数组。
+- `authorized_historical_mapping_ids`：所有启用 historical 的 policy 都必须使用显式 allowlist；`current_only` 必须为空数组。
 
 规则：
 
@@ -35,13 +36,7 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 
 只能引用 `temporal_status=current` 的 Risk Reference。
 
-现有生产桥：
-
-- `减肥` → `weight_loss`
-- `壮阳` → `male_function`
-- `补肾` → `male_function`
-
-均保持 `current_only`，本阶段没有扩大现有生产 coverage。
+当前仍保持 `current_only` 的表达仅用于纯 current 路径，例如 `壮阳 / 补肾`。如果同一 exact Claim 同时存在 current 主证据和历史筛查补充，不应复制第二条 Bridge，而应使用下述第三种 policy。
 
 ### `historical_reference_allowed`
 
@@ -55,7 +50,26 @@ V2-B3 只解决历史监管资料如何进入 V2 Claim-first 抽检辅助链路�
 6. UI 输出历史资料边界说明；
 7. allowlist 必须包含主 `reference_mapping_id`，且所有授权 mapping 必须与主 reference 同 risk category、同 source_reference、source_date 与 product_scope。
 
-legacy migration 不允许使用该 policy。
+legacy migration 不允许使用纯 `historical_reference_allowed`。
+
+### `current_plus_historical_reference_allowed`
+
+用于同一 exact Claim 同时具有 current 主证据和 historical screening 补充的场景。
+
+规则：
+
+1. 主 `reference_mapping_id` 必须是 `temporal_status=current`；
+2. `authorized_historical_mapping_ids` 必须非空；
+3. 所有历史条目必须属于同一 `risk_category`；
+4. 所有历史条目必须是 `historical_sampling_plan / historical`；
+5. 同一个 allowlist 内的历史条目必须属于同一历史来源批次（同 source_reference / source_date / product_scope）；
+6. runtime 解析结果为“所有 current mappings + 该 Bridge 显式授权的 historical mappings”；
+7. legacy 精确迁移可以保留 current primary provenance，并使用该 policy 增加受控历史参考。
+
+当前典型应用：
+
+- `减肥` / `有助于控制体内脂肪` → current weight evidence + selective historical weight screening；
+- `抗疲劳` / `缓解体力疲劳` → current PDE5 evidence + selective historical anti-fatigue screening。
 
 ## 3. 禁止全局打开 historical
 
@@ -73,6 +87,7 @@ ClaimMention
   → Bridge temporal_policy
   → authorized_historical_mapping_ids
   → current mappings + Bridge-authorized historical mapping IDs only
+  → 对 current-plus-historical，current primary provenance 始终保留
 ```
 
 `include_historical=True` 仅保留在 legacy Effect compatibility / debug 路径，不能成为新 V2 任务的生产开关。
@@ -127,7 +142,7 @@ regulatory_context_review
 - `suggested_methods=[]`；
 - 已知方法仍保留在 `other_known_methods` 供人工研判；
 - 要求先核对商品身份、食品类别、注册/备案、配料/原料等上下文；
-- UI 显示“需核对监管语境”。
+- UI 显示“需核对商品信息”。
 
 这条规则是为了防止把“可以在某类合法产品中出现的物质”粗暴显示为“疑似非法添加物”。
 
@@ -137,7 +152,7 @@ RecommendationPanel 只做最小展示增量，不改变既有交互结构：
 
 - historical RiskFinding 增加“含历史筛查参考”标签；
 - 显示 historical reference disclosure；
-- `regulatory_context_review` 显示“需核对监管语境”。
+- `regulatory_context_review` 显示“需核对商品信息”。
 
 不增加风险评分、红黄绿等级或自动裁决标签。
 
