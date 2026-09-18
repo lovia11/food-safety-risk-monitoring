@@ -111,7 +111,13 @@ class ProductApplicabilityResult(Mapping[str, Any]):
 def _row_match_state(
     applicability: Mapping[str, Any],
     product_context: ProductInspectionContext,
+    *,
+    risk_category: str,
 ) -> Literal["matched", "unresolved", "not_matched"]:
+    required_risk_category = str(applicability.get("risk_category", ""))
+    if required_risk_category and required_risk_category != risk_category:
+        return "not_matched"
+
     unresolved = False
     for field_name in ("product_category", "product_form"):
         required_value = applicability[field_name]
@@ -195,7 +201,11 @@ def _evaluate_method(
         scope_type = applicability["scope_type"]
         if scope_type not in {"include", "conditional", "exclude"}:
             raise ValueError(f"Unsupported applicability scope_type: {scope_type}")
-        match_state = _row_match_state(applicability, product_context)
+        match_state = _row_match_state(
+            applicability,
+            product_context,
+            risk_category=risk_category,
+        )
         applicability_id = str(applicability["applicability_id"])
         if match_state == "unresolved":
             unresolved_ids.append(applicability_id)
