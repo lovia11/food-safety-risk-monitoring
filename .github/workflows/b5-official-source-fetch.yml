@@ -178,24 +178,97 @@ jobs:
                       "sha256": sha256(page_bytes),
                   }
 
+                  # SAMR's newer article template leaves the static article body
+                  # empty and injects it through AuthorizedRead/unitbuild.js.
+                  # Reproduce the documented loader GET using the script's url/queryData
+                  # attributes so official attachments remain discoverable.
+                  source_fragments = [page_text]
+                  auth_tag = re.search(
+                      r"""<script[^>]+AuthorizedRead/unitbuild\.js[^>]*>""",
+                      page_text,
+                      flags=re.I,
+                  )
+                  if auth_tag:
+                      tag = auth_tag.group(0)
+                      url_match = re.search(r"""\burl=["']([^"']+)["']""", tag, flags=re.I)
+                      query_match = re.search(
+                          r"""\bqueryData=["']([^"']+)["']""",
+                          tag,
+                          flags=re.I,
+                      )
+                      if url_match and query_match:
+                          try:
+                              endpoint = urllib.parse.urljoin(
+                                  href, html.unescape(url_match.group(1))
+                              )
+                              query_data = json.loads(
+                                  html.unescape(query_match.group(1)).replace("'", '"')
+                              )
+                              body_url = (
+                                  endpoint
+                                  + "?"
+                                  + urllib.parse.urlencode(query_data)
+                              )
+                              body_bytes = fetch(body_url)
+                              body_payload = json.loads(
+                                  body_bytes.decode("utf-8", errors="replace")
+                              )
+                              body_html = (
+                                  body_payload.get("data", {}).get("html", "")
+                                  if isinstance(body_payload, dict)
+                                  else ""
+                              )
+                              if body_html:
+                                  source_fragments.append(body_html)
+                                  body_file = OUT / f"{key}.authorized-body.html"
+                                  body_file.write_text(body_html, encoding="utf-8")
+                                  metadata["pages"][key]["authorized_body"] = {
+                                      "url": body_url,
+                                      "response_sha256": sha256(body_bytes),
+                                      "html_chars": len(body_html),
+                                  }
+                              else:
+                                  metadata["errors"].append({
+                                      "key": key,
+                                      "stage": "authorized_body_empty",
+                                      "url": body_url,
+                                  })
+                          except Exception as exc:
+                              metadata["errors"].append({
+                                  "key": key,
+                                  "stage": "fetch_authorized_body",
+                                  "error": repr(exc),
+                              })
+
                   candidates = set()
-                  for match in re.findall(
-                      r"""(?:href|src)\s*=\s*["']([^"']+)["']""",
-                      page_text,
-                      flags=re.I,
-                  ):
-                      decoded = html.unescape(match)
-                      absolute = urllib.parse.urljoin(href, decoded)
-                      if re.search(r"\.(?:docx?|pdf)(?:$|\?)", absolute, flags=re.I):
-                          candidates.add(absolute)
-                  for match in re.findall(
-                      r"""((?:https?:)?//[^"'<>\s]+|/cms_files/[^"'<>\s]+)""",
-                      page_text,
-                      flags=re.I,
-                  ):
-                      absolute = urllib.parse.urljoin(href, html.unescape(match))
-                      if re.search(r"\.(?:docx?|pdf)(?:$|\?)", absolute, flags=re.I):
-                          candidates.add(absolute)
+                  for fragment in source_fragments:
+                      for match in re.findall(
+                          r"""(?:href|src)\s*=\s*["']([^"']+)["']""",
+                          fragment,
+                          flags=re.I,
+                      ):
+                          decoded = html.unescape(match)
+                          absolute = urllib.parse.urljoin(href, decoded)
+                          if re.search(
+                              r"\.(?:docx?|pdf)(?:$|\?)",
+                              absolute,
+                              flags=re.I,
+                          ):
+                              candidates.add(absolute)
+                      for match in re.findall(
+                          r"""((?:https?:)?//[^"'<>\s]+|/cms_files/[^"'<>\s]+)""",
+                          fragment,
+                          flags=re.I,
+                      ):
+                          absolute = urllib.parse.urljoin(
+                              href, html.unescape(match)
+                          )
+                          if re.search(
+                              r"\.(?:docx?|pdf)(?:$|\?)",
+                              absolute,
+                              flags=re.I,
+                          ):
+                              candidates.add(absolute)
 
                   metadata["pages"][key]["attachment_candidates"] = sorted(candidates)
                   for n, attachment_url in enumerate(sorted(candidates), start=1):
