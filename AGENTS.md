@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last verified against commit: `bbe992e54f9fc583b312f919f32f91f43e53fb06`
+> Last current-development audit baseline: `1f34dc07e1ebc8cfd09cb57513d386bbdf51284f`; see `docs/AI_HANDOFF_V2.md` for the active B5 handoff
 > Owner: Project
 
 ## Current technical baseline
@@ -17,15 +17,16 @@
 Resolve conflicts in this order:
 
 1. Current code, tests, and governed configuration.
-2. `docs/CURRENT_SYSTEM_STATUS.md`.
-3. `docs/PRODUCT_REQUIREMENTS_V2.md`.
-4. `docs/SYSTEM_V2_ARCHITECTURE.md`.
-5. `docs/DOMAIN_MODEL_V2.md`.
-6. `docs/UX_SPEC_V2.md`.
-7. `docs/KNOWLEDGE_GOVERNANCE.md`.
-8. `docs/IMPLEMENTATION_ROADMAP_V2.md`.
-9. Accepted ADRs that have not been superseded.
-10. `docs/archive/**` is never a current specification.
+2. `docs/AI_HANDOFF_V2.md` for the active development phase, versions, Gates and immediate next task.
+3. `docs/CURRENT_SYSTEM_STATUS.md`.
+4. `docs/PRODUCT_REQUIREMENTS_V2.md`.
+5. `docs/SYSTEM_V2_ARCHITECTURE.md`.
+6. `docs/DOMAIN_MODEL_V2.md`.
+7. `docs/UX_SPEC_V2.md`.
+8. `docs/KNOWLEDGE_GOVERNANCE.md`.
+9. `docs/IMPLEMENTATION_ROADMAP_V2.md`.
+10. Accepted ADRs that have not been superseded.
+11. `docs/archive/**` is never a current specification.
 
 If code clearly conflicts with Product Requirements, do not silently assume the code is the correct product behavior. Report the conflict and wait for a design decision.
 
