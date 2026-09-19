@@ -324,9 +324,20 @@ class InspectionRuntimeClaimV2Test(unittest.TestCase):
         )
         self.assertEqual(finding["temporal_basis"], "historical_reference_only")
         names = {item["canonical_name"] for item in finding["substance_follow_ups"]}
-        self.assertEqual(len(names), 7)
-        self.assertIn("甲苯磺丁脲", names)
-        self.assertIn("格列美脲", names)
+        self.assertEqual(
+            names,
+            {
+                "甲苯磺丁脲",
+                "格列苯脲",
+                "格列齐特",
+                "格列吡嗪",
+                "格列喹酮",
+                "格列美脲",
+                "罗格列酮",
+                "瑞格列奈",
+                "格列波脲",
+            },
+        )
         self.assertNotIn("盐酸二甲双胍", names)
 
     def test_broad_sleep_symptom_claim_stays_unmapped(self):
