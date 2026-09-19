@@ -134,6 +134,29 @@ jobs:
           parser = LinkParser()
           parser.feed(index_text)
 
+          # Newer SAMR article pages load the article body dynamically through
+          # AuthorizedRead. Keep the loader script in the research artifact so
+          # the fetch logic can be audited and adapted without guessing.
+          AUTHORIZED_READ_JS = (
+              "https://www.samr.gov.cn/cms_files/default/script/"
+              "AuthorizedRead/unitbuild.js?v=4.2.10.39-samr-U2"
+          )
+          try:
+              authorized_read_js = fetch(AUTHORIZED_READ_JS)
+              (OUT / "authorizedread-unitbuild.js").write_bytes(authorized_read_js)
+              metadata["authorized_read_loader"] = {
+                  "url": AUTHORIZED_READ_JS,
+                  "sha256": sha256(authorized_read_js),
+                  "bytes": len(authorized_read_js),
+              }
+          except Exception as exc:
+              metadata["errors"].append({
+                  "key": "authorized-read-loader",
+                  "stage": "fetch_loader",
+                  "url": AUTHORIZED_READ_JS,
+                  "error": repr(exc),
+              })
+
           for key, title in PAGE_TITLES.items():
               href = None
               for candidate_href, candidate_text in parser.links:
@@ -253,6 +276,10 @@ jobs:
 
           print("=== B5 SOURCE FETCH METADATA ===")
           print(json.dumps(metadata, ensure_ascii=False, indent=2))
+          loader_path = OUT / "authorizedread-unitbuild.js"
+          if loader_path.exists():
+              print("\n=== AUTHORIZEDREAD LOADER PREVIEW ===")
+              print(loader_path.read_text(encoding="utf-8", errors="replace")[:20000])
           for path in sorted(OUT.glob("*.txt")):
               text = path.read_text(encoding="utf-8", errors="replace")
               print(f"\n=== EXTRACT PREVIEW {path.name} ===")
