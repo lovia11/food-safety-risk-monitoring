@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "dataset_id": "risk-substance-reference",
-  "dataset_version": "2026.09-c6",
+  "dataset_version": "2026.09-c7",
   "dataset_status": "verified_reference",
   "source_name": "国家市场监督管理总局官方公开来源",
   "source_reference": "https://www.samr.gov.cn/",
   "source_date": null,
   "collected_at": "2026-09-04T18:09:24+08:00",
   "verified_at": "2026-09-04T18:09:24+08:00",
-  "description": "在2026.09-c5基础上完成B4剩余方向扩充：新增减肥 current 比沙可啶/酚酞监管关系、男性功能 current 育亨宾系列 group，以及 weight_loss / anti_fatigue 历史中央专项抽检筛查关系。historical 关系仅可经 exact Claim Bridge 显式 allowlist 进入；缺失 Substance 实体不现场推断或补造。",
+  "description": "在2026.09-c6基础上，B5依据既有2018中央辅助降血糖抽检来源与SAMR正式KJ201902全文补齐两条此前因名称/盐型身份未对齐而暂缓的historical concrete mapping：格列本脲→格列苯脲、马来酸罗格列酮→罗格列酮母体。Risk依据仍来自2018监管资料，Method全文仅用于Substance身份归一化，禁止Method反推Risk。",
   "mappings": [
     {
       "mapping_id": "weight-loss-sibutramine-group-cn-2025",
@@ -854,7 +854,7 @@
       "source_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/P020181214555096215303.pdf",
       "source_date": "2018-10-09",
       "source_basis_text": "历史中央专项整治资料的保健食品监督抽检表将“辅助降血糖类样品”列为类别、声称类别，并明确列出相应检验项目。",
-      "note": "历史中央专项整治资料中的抽检/风险监测筛查关系，仅用于抽检辅助参考；不表示当前统一法定抽检项目，不表示具体商品实际含有该物质，也不构成违法认定或实验室检出结论。 group保留来源集合语义；本版本具体Substance仅展开当前Inspection Reference已有已核验实体且不存在尚未治理特殊合法语境者。未展开：格列本脲（当前 Inspection Reference 尚无已核验实体）；马来酸罗格列酮（当前 Inspection Reference 尚无已核验实体）；盐酸吡格列酮（当前 Inspection Reference 尚无已核验实体）；盐酸二甲双胍（当前 Inspection Reference 尚无已核验实体）；盐酸苯乙双胍（当前 Inspection Reference 尚无已核验实体）；盐酸丁二胍（当前 Inspection Reference 尚无已核验实体）。"
+      "note": "历史中央专项整治资料中的抽检/风险监测筛查关系，仅用于抽检辅助参考；不表示当前统一法定抽检项目，不表示具体商品实际含有该物质，也不构成违法认定或实验室检出结论。 group保留来源集合语义；本版本具体Substance仅展开当前Inspection Reference已有已核验实体且不存在尚未治理特殊合法语境者。未展开：盐酸吡格列酮（当前 Inspection Reference 尚无已核验实体）；盐酸二甲双胍（当前 Inspection Reference 尚无已核验实体）；盐酸苯乙双胍（当前 Inspection Reference 尚无已核验实体）；盐酸丁二胍（当前 Inspection Reference 尚无已核验实体）。"
     },
     {
       "mapping_id": "blood-glucose-cas-64-77-7-historical-cn-2018",
@@ -1467,6 +1467,42 @@
       "source_date": "2018-10-09",
       "source_basis_text": "历史中央专项整治资料在“缓解体力疲劳类/提高免疫力类样品”检验项目中明确点名“硫代西地那非”。",
       "note": "历史中央专项整治资料中的抽检/风险监测筛查关系，仅用于抽检辅助参考；不表示当前统一法定抽检项目，不表示具体商品实际含有该物质，也不构成违法认定或实验室检出结论。"
+    },
+    {
+      "dataset_id": "risk-substance-reference",
+      "risk_category": "blood_glucose",
+      "risk_label": "辅助降血糖宣传",
+      "target_type": "substance",
+      "target_group_label": null,
+      "evidence_grade": "B",
+      "basis_type": "historical_sampling_plan",
+      "temporal_status": "historical",
+      "product_scope": "辅助降血糖类样品（历史食品保健食品欺诈和虚假宣传专项整治抽检语境）",
+      "source_name": "《食品保健食品欺诈和虚假宣传整治问答》辅助降血糖类样品检验项目表",
+      "source_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/P020181214555096215303.pdf",
+      "source_date": "2018-10-09",
+      "mapping_id": "blood-glucose-cas-10238-21-8-historical-cn-2018",
+      "substance_id": "substance-cas-10238-21-8",
+      "source_basis_text": "历史中央专项整治资料在“辅助降血糖类样品”检验项目中明确点名“格列本脲”；当前Inspection Reference复用CAS 10238-21-8的“格列苯脲”实体。KJ201902正式全文同样使用“格列苯脲”并给出CAS 10238-21-8，因此本Mapping仅做来源名称归一化，不由Method建立Risk关系。",
+      "note": "历史中央专项整治资料中的筛查关系仅用于抽检辅助参考；来源表原文“格列本脲”与当前规范实体“格列苯脲”按同一目标物归一化。该Mapping不表示当前统一法定抽检项目，不表示具体商品实际含有该物质，也不构成违法认定或实验室检出结论。"
+    },
+    {
+      "dataset_id": "risk-substance-reference",
+      "risk_category": "blood_glucose",
+      "risk_label": "辅助降血糖宣传",
+      "target_type": "substance",
+      "target_group_label": null,
+      "evidence_grade": "B",
+      "basis_type": "historical_sampling_plan",
+      "temporal_status": "historical",
+      "product_scope": "辅助降血糖类样品（历史食品保健食品欺诈和虚假宣传专项整治抽检语境）",
+      "source_name": "《食品保健食品欺诈和虚假宣传整治问答》辅助降血糖类样品检验项目表",
+      "source_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20233/P020181214555096215303.pdf",
+      "source_date": "2018-10-09",
+      "mapping_id": "blood-glucose-cas-122320-73-4-historical-cn-2018",
+      "substance_id": "substance-cas-122320-73-4",
+      "source_basis_text": "历史中央专项整治资料在“辅助降血糖类样品”检验项目中明确点名“马来酸罗格列酮”。KJ201902正式全文将检测对象表述为“罗格列酮”，参考物质使用“马来酸罗格列酮”（CAS 155141-29-0）；当前Inspection Reference据此复用“罗格列酮”母体实体（CAS 122320-73-4）。该盐型归一化只用于身份对齐，不由Method反推Risk。",
+      "note": "历史中央专项整治资料中的筛查关系仅用于抽检辅助参考；来源表原文为“马来酸罗格列酮”，当前按KJ201902正式全文的目标物/标准品关系归一到“罗格列酮”母体Substance。该Mapping不表示当前统一法定抽检项目，不表示具体商品实际含有该物质，也不构成违法认定或实验室检出结论。"
     }
   ]
 }
