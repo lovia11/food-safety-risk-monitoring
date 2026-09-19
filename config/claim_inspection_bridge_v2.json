@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "bridge_id": "claim-inspection-bridge-v2",
-  "bridge_version": "claim-inspection-bridge-v2.5",
-  "description": "V2 ClaimMention 到抽检监管关注方向的受治理桥接。支持 current-only、historical-only 以及 current primary + selective historical 三种时间策略；所有 historical 关系必须由 exact Claim Bridge 显式 allowlist，禁止按 Claim 类型或 Risk 类别整体放开。",
+  "bridge_version": "claim-inspection-bridge-v2.6",
+  "description": "V2 ClaimMention到抽检关注方向的受治理桥接。v2.6仅扩充blood_glucose historical allowlist，纳入B5完成身份归一化的格列苯脲与罗格列酮两条既有2018监管来源关系；不新增Claim表达，不由Method反推Risk。",
   "mappings": [
     {
       "bridge_mapping_id": "claim-weight-management-jianfei-to-weight-loss",
@@ -485,6 +485,8 @@
       "risk_category": "blood_glucose",
       "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
       "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-10238-21-8-historical-cn-2018",
+        "blood-glucose-cas-122320-73-4-historical-cn-2018",
         "blood-glucose-cas-135062-02-1-historical-cn-2018",
         "blood-glucose-cas-21187-98-4-historical-cn-2018",
         "blood-glucose-cas-26944-48-9-historical-cn-2018",
@@ -507,6 +509,8 @@
       "risk_category": "blood_glucose",
       "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
       "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-10238-21-8-historical-cn-2018",
+        "blood-glucose-cas-122320-73-4-historical-cn-2018",
         "blood-glucose-cas-135062-02-1-historical-cn-2018",
         "blood-glucose-cas-21187-98-4-historical-cn-2018",
         "blood-glucose-cas-26944-48-9-historical-cn-2018",
@@ -529,6 +533,8 @@
       "risk_category": "blood_glucose",
       "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
       "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-10238-21-8-historical-cn-2018",
+        "blood-glucose-cas-122320-73-4-historical-cn-2018",
         "blood-glucose-cas-135062-02-1-historical-cn-2018",
         "blood-glucose-cas-21187-98-4-historical-cn-2018",
         "blood-glucose-cas-26944-48-9-historical-cn-2018",
@@ -551,6 +557,8 @@
       "risk_category": "blood_glucose",
       "reference_mapping_id": "blood-glucose-historical-screening-group-cn-2018",
       "authorized_historical_mapping_ids": [
+        "blood-glucose-cas-10238-21-8-historical-cn-2018",
+        "blood-glucose-cas-122320-73-4-historical-cn-2018",
         "blood-glucose-cas-135062-02-1-historical-cn-2018",
         "blood-glucose-cas-21187-98-4-historical-cn-2018",
         "blood-glucose-cas-26944-48-9-historical-cn-2018",
