@@ -265,7 +265,7 @@ class KnowledgeReadHttpApiTest(unittest.TestCase):
                     with urlopen(f"{base}/api/knowledge/{endpoint}") as response:
                         self.assertEqual(response.status, 200)
                         payloads.append(json.load(response))
-                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 9)
+                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 10)
                 self.assertEqual(payloads[4]["total"], len(payloads[4]["items"]))
                 self.assertGreater(payloads[4]["total"], 0)
                 self.assertTrue(
