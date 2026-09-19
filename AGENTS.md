@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last current-development audit baseline: `1f34dc07e1ebc8cfd09cb57513d386bbdf51284f`; see `docs/AI_HANDOFF_V2.md` for the active B5 handoff
+> Last accepted code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; B5-3B BJS201808 promotion is accepted; see `docs/AI_HANDOFF_V2.md` for the next B5 handoff
 > Owner: Project
 
 ## Current technical baseline
@@ -10,7 +10,7 @@
 - Backend: Python 3.10.x (stable validation environment: 3.10.0), `ThreadingHTTPServer`, SQLite, Playwright with visible Chrome/CDP, `ManualActionGate`, raw run artifacts, and a `DataStore` business index.
 - OCR: `paddlepaddle==3.2.0`, `paddleocr==3.7.0`, `paddlex==3.7.2`, PP-OCRv6, BOS model source, CPU.
 - Frontend: React 19.2.8, TypeScript 7.0.2, Vite 8.2.2, Tailwind CSS 4.3.3, Lucide React 1.43.0.
-- Current SQLite schema: 13. Current production UI: `frontend/`; current backend entry: `python -m src.local_api`.
+- Current SQLite schema: 14. Current production UI: `frontend/`; current backend entry: `python -m src.local_api`.
 
 ## Source priority
 

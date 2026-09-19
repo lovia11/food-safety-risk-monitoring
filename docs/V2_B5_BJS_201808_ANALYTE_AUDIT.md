@@ -1,8 +1,8 @@
-# V2-B5-3A BJS 201808 Analyte Audit
+# V2-B5-3A / B5-3B BJS 201808 Analyte & Promotion Audit
 
-> Status: VERIFIED — official SAMR fulltext parsed; runtime unchanged  
+> Status: ACCEPTED — B5-3A official-fulltext audit verified; B5-3B parent identity governance and runtime promotion completed  
 > Date: 2026-09-20  
-> Scope: analyte identity / applicability / normalization audit only
+> Scope: analyte identity / applicability / salt→parent normalization / controlled promotion
 
 ## 1. Official source
 
@@ -78,11 +78,11 @@ The official method's target analytes are parent compounds, while section 3.2 / 
 
 | Target analyte | Official standard | Standard CAS | Canonical parent state in project |
 |---|---|---:|---|
-| 酚妥拉明 | 甲磺酸酚妥拉明 | 65-28-1 | missing |
+| 酚妥拉明 | 甲磺酸酚妥拉明 | 65-28-1 | governed: 50-60-2 |
 | 哌唑嗪 | 盐酸哌唑嗪 | 19237-84-4 | existing: 哌唑嗪 / 19216-56-9 |
-| 特拉唑嗪 | 盐酸特拉唑嗪 | 63074-08-8 | missing |
-| 育亨宾 | 盐酸育亨宾 | 65-19-0 | missing |
-| 妥拉唑林 | 盐酸妥拉唑林 | 59-97-2 | missing |
+| 特拉唑嗪 | 盐酸特拉唑嗪 | 63074-08-8 | governed: 63590-64-7 |
+| 育亨宾 | 盐酸育亨宾 | 65-19-0 | governed: 146-48-5 |
+| 妥拉唑林 | 盐酸妥拉唑林 | 59-97-2 | governed: 59-98-3 |
 
 The method itself confirms this parent/salt relationship because standard solutions are weighed as salts and explicitly converted to the corresponding parent analytes using conversion factors.
 
@@ -159,22 +159,23 @@ No current governed Risk mapping exists.
 
 They may exist in the Method index after future promotion, but Recommendation must not surface them until an independent Risk→Substance relation is verified.
 
-## 7. B5-3A decision
+## 7. B5-3A decision and B5-3B completion
 
-Do not promote BJS 201808 yet.
+B5-3A correctly stopped before promotion until canonical parent identities were governed.
 
-Next implementation step should be limited to:
+B5-3B then completed the controlled promotion in `inspection-reference@2026.09-b10`:
 
-1. add/verify canonical parent Substance identities for:
-   - 酚妥拉明
-   - 特拉唑嗪
-   - 育亨宾
-   - 妥拉唑林
-2. preserve existing 哌唑嗪 entity;
-3. prepare five MethodSubstance normalization rows using official salt names/CAS;
-4. add explicit MethodApplicability from the official BJS 201808 scope;
-5. do NOT add any new Risk mapping as a consequence of the Method;
-6. only after validation/tests decide BJS 201808 promotion depth.
+1. added canonical parent Substance identities for 酚妥拉明、特拉唑嗪、育亨宾、妥拉唑林;
+2. preserved the existing 哌唑嗪 / 19216-56-9 entity;
+3. added five MethodSubstance rows retaining official salt names/CAS and normalization notes;
+4. added seven explicit include rows for 硬质糖果、凝胶糖果、酒、茶饮料 and 保健食品片剂/口服液/胶囊剂;
+5. retained “其他类似基质可参照本方法” as source text only, not an unconditional runtime include;
+6. added no Claim→Risk mapping, no Risk→Substance mapping and no yohimbine group membership;
+7. promoted BJS 201808 to current `recommendation_ready`.
+
+Accepted code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`.
+
+Gates: Python syntax success; B3/B4 governance regression success; V2 full acceptance success.
 
 ## 8. Boundary
 
@@ -194,3 +195,21 @@ It does NOT establish:
 - automatic membership of the yohimbine group;
 - product illegality;
 - actual detection in any product.
+
+
+## 9. Current runtime inventory effect
+
+After B5-3B:
+
+```text
+inspection-reference = 2026.09-b10
+methods = 10
+recommendation_ready current methods = 9
+revoked reference_only methods = 1
+substances = 205
+method_substances = 236
+method_applicabilities = 53
+regulatory_documents = 8
+```
+
+Risk inventory and Claim→Risk governance remain unchanged.

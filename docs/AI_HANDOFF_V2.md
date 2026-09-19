@@ -2,7 +2,7 @@
 
 > Status: CANONICAL CURRENT-DEVELOPMENT HANDOFF  
 > Prepared from branch: `ux-redesign-v1`  
-> Code state inspected at: `1f34dc07e1ebc8cfd09cb57513d386bbdf51284f` (`Document BJS 201808 analyte identity audit`)  
+> Last accepted code/config/test state: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae` (`Refresh B5 acceptance inventory contracts`)  
 > Date: 2026-09-20  
 > Important: handoff/document commits may advance HEAD after the commit above. Always refresh the branch HEAD before editing.
 
@@ -563,13 +563,14 @@ Current:
 
 ```text
 config/inspection_reference.json
-dataset_version = 2026.09-b9
-methods = 9
-recommendation_ready current methods = 8
+dataset_version = 2026.09-b10
+methods = 10
+recommendation_ready current methods = 9
 revoked reference_only methods = 1
-substances = 201
-method applicability records = 46
-regulatory documents = 7
+substances = 205
+method-substance relations = 236
+method applicability records = 53
+regulatory documents = 8
 ```
 
 Indexed methods:
@@ -583,6 +584,7 @@ Indexed methods:
 - GB/T 5009.170-2003 — revoked / reference_only
 - KJ201901 — recommendation_ready
 - KJ201902 — recommendation_ready
+- BJS 201808 — recommendation_ready
 
 ## 15.2 Candidate manifest
 
@@ -590,10 +592,10 @@ Current:
 
 ```text
 config/inspection_method_candidates_v2.json
-manifest_version = 2026.09-b7
+manifest_version = 2026.09-b8
 records = 12
-promoted traces = 4
-verification = 8
+promoted traces = 5
+verification = 7
 runtime_consumed = false
 ```
 
@@ -620,7 +622,7 @@ KJ201902 official full text:
 - positive result requires confirmation
 - official source salt/name normalization is preserved instead of collapsing source provenance
 
-Their production state is already part of `inspection-reference@2026.09-b9`.
+Their production state remains part of `inspection-reference@2026.09-b10`; their individual promotion trace remains `@ b9`.
 
 ---
 
@@ -654,7 +656,7 @@ The B5 candidate doc records hashes and current status.
 
 ---
 
-# 17. BJS 201808 — current active subtask
+# 17. BJS 201808 — B5-3B accepted
 
 The latest specific development work is BJS 201808.
 
@@ -669,7 +671,21 @@ Status:
 ```text
 B5-3A VERIFIED
 official SAMR fulltext parsed
-runtime unchanged
+
+B5-3B ACCEPTED
+parent Substance identity governed
+MethodSubstance / MethodApplicability committed
+BJS 201808 promoted to recommendation_ready
+inspection-reference@2026.09-b10
+```
+
+Accepted baseline:
+
+```text
+7e71c41ad6f7ada85df061fcbb1787e2725c2fae
+Python syntax gate: success
+B3 B4 governance regression: success
+V2 full acceptance: success
 ```
 
 Method:
@@ -723,11 +739,11 @@ The method targets parent analytes but uses salt standards.
 
 | Parent target | Official standard | Official standard CAS | Canonical parent status |
 |---|---|---|---|
-| 酚妥拉明 | 甲磺酸酚妥拉明 | 65-28-1 | missing parent entity |
+| 酚妥拉明 | 甲磺酸酚妥拉明 | 65-28-1 | governed: 50-60-2 |
 | 哌唑嗪 | 盐酸哌唑嗪 | 19237-84-4 | parent exists: 19216-56-9 |
-| 特拉唑嗪 | 盐酸特拉唑嗪 | 63074-08-8 | missing parent entity |
-| 育亨宾 | 盐酸育亨宾 | 65-19-0 | missing parent entity |
-| 妥拉唑林 | 盐酸妥拉唑林 | 59-97-2 | missing parent entity |
+| 特拉唑嗪 | 盐酸特拉唑嗪 | 63074-08-8 | governed: 63590-64-7 |
+| 育亨宾 | 盐酸育亨宾 | 65-19-0 | governed: 146-48-5 |
+| 妥拉唑林 | 盐酸妥拉唑林 | 59-97-2 | governed: 59-98-3 |
 
 Candidate parent identities identified by the audit:
 
@@ -749,27 +765,19 @@ These parent CAS identities are **chemical identity evidence**, not regulatory R
 
 Therefore BJS201808 promotion must **not** create any new Risk relation.
 
-## 17.3 Immediate next subtask — B5-3B
+## 17.3 B5-3B accepted result
 
-Do this next, and only this:
+Completed in `inspection-reference@2026.09-b10`:
 
-1. verify/add canonical parent Substance identities for:
-   - 酚妥拉明
-   - 特拉唑嗪
-   - 育亨宾
-   - 妥拉唑林
-2. preserve existing 哌唑嗪 entity;
-3. keep chemical-identity provenance separate from regulatory-source provenance;
-4. prepare five MethodSubstance rows:
-   - canonical parent Substance
-   - official salt `source_label`
-   - official salt `source_cas_no`
-   - mandatory normalization note where source and canonical identity differ
-5. prepare explicit BJS201808 MethodApplicability rows from the official scope;
-6. add **zero** new Claim→Risk or Risk→Substance mappings as a side effect;
-7. only then decide whether BJS201808 can be promoted and to which `knowledge_depth`.
+1. governed the four missing canonical parent Substance identities and preserved existing 哌唑嗪;
+2. retained independent chemical-identity provenance;
+3. added five MethodSubstance rows with official salt `source_label` / `source_cas_no` and explicit normalization notes;
+4. added seven conservative MethodApplicability rows for the explicitly listed categories/forms;
+5. retained “其他类似基质可参照本方法” as source scope text only, not an unconditional runtime include;
+6. added **zero** Claim→Risk mappings, **zero** Risk→Substance mappings and **zero** yohimbine group memberships;
+7. promoted BJS 201808 to current `recommendation_ready`.
 
-Do not skip directly to promotion before the four missing canonical parent identities are governed.
+Canonical Yohimbine now exists in the Method index, but there is still no concrete male-function Risk→Yohimbine mapping.
 
 ---
 
@@ -784,7 +792,6 @@ Current verification queue includes methods such as:
 - BJS 202504
 - BJS 202601
 - BJS 202602
-- BJS 201808 until its promotion is completed
 
 Important corrections:
 
@@ -942,12 +949,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-3B BJS201808 parent Substance identity governance**.
-8. Do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
+7. Resume with **B5-4A BJS 202504 official-fulltext / analyte / applicability deep verification**; do not change runtime until formal source facts are verified.
+8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md` 和 `docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。继续 handoff 里定义的 B5-3B，但先核当前 HEAD 和 CI，不要重复已经完成的 KJ201901/KJ201902 promotion，也不要由 Method 反推 Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md` 和 `docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS201808 B5-3B 已完成并通过 full acceptance；下一步从 B5-4A BJS202504 正式全文深核开始，不要重复 KJ201901/KJ201902/BJS201808 promotion，也不要由 Method 反推 Risk。
 
 ---
 
@@ -957,10 +964,9 @@ If the current branch differs materially from the state above, stop and re-audit
 
 Especially stop if:
 
-- `inspection_reference` version is newer than b9;
-- BJS201808 is already promoted;
-- the four missing parent Substance identities already exist;
-- BJS201808 MethodSubstance/applicability rows already exist;
-- current HEAD has a failing full acceptance Gate.
+- `inspection_reference` version is newer than b10;
+- BJS202504 has already been promoted or its official-fulltext audit has advanced beyond this handoff;
+- current HEAD has a failing full acceptance Gate;
+- current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
 In that case, current repository truth supersedes this handoff and the handoff must be updated before continuing.

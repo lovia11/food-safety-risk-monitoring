@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A BJS201808 official-fulltext/analyte audit VERIFIED；NEXT = B5-3B parent Substance identity governance  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；NEXT = B5-4A BJS202504 official-fulltext deep verification  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -24,11 +24,11 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 - 官方公告出现一个方法，只能先证明“方法身份存在”；
 - 未读取正式方法全文之前，不能声称完整 analyte、CAS、适用基质、剂型、定性/定量角色或 Recommendation-ready；
 - candidate manifest 始终 non-runtime；
-- 当前 runtime 是 `inspection-reference@2026.09-b9`：9 个索引方法，其中 8 个 current `recommendation_ready`、1 个 revoked `reference_only`。candidate manifest 仍是 non-runtime。
+- 当前 runtime 是 `inspection-reference@2026.09-b10`：10 个索引方法，其中 9 个 current `recommendation_ready`、1 个 revoked `reference_only`；205 个 Substance、236 条 MethodSubstance、53 条 MethodApplicability、8 个 RegulatoryDocument。candidate manifest 仍是 non-runtime。
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b6`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b8`。
 
 状态含义：
 
@@ -60,7 +60,7 @@ runtime_consumed = false
 
 ## 3. B5-1 当前 verification queue
 
-当前 manifest 共12条记录：4条 promoted trace，8条仍处于 verification。下表同时列出已在 B5-2 promotion 的 KJ201901/KJ201902，便于保持候选到runtime的完整追溯：
+当前 manifest 共12条记录：5条 promoted trace，7条仍处于 verification。下表同时列出已 promotion 的 KJ201901/KJ201902/BJS201808，便于保持候选到runtime的完整追溯：
 
 | Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
@@ -73,7 +73,7 @@ runtime_consumed = false
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
-| BJS 201808 食品中5种α-受体阻断类药物的测定 | male_function / yohimbine 方法候选 | SAMR 2018年第28号公告 + 官方方法数据库 | `verification / reference_only` |
+| BJS 201808 食品中5种α-受体阻断类药物的测定 | Method index；不得由方法反推 male_function / yohimbine Risk | SAMR 2018年第28号公告 + 正式DOCX + 独立化学身份交叉核验 | `promoted / recommendation_ready @ b10` |
 
 这些“方向”只是深核优先级上下文，不是由 Method 自动建立的新 Risk relation。
 
@@ -116,7 +116,7 @@ SAMR 2022年第29号公告和方法数据库已确认正式方法：
 
 保留为“已确认方法标题，待编号/全文核验”的文档候选。
 
-### 4.3 BJS 201808 已从“编号待确认”升级为 verification
+### 4.3 BJS 201808 已完成 B5-3B promotion
 
 后续检索找到 SAMR 官方公告：
 
@@ -131,11 +131,11 @@ SAMR 2022年第29号公告和方法数据库已确认正式方法：
 食品中5种α-受体阻断类药物的测定（BJS 201808）
 ```
 
-因此编号已经由一手来源确认，现已进入 manifest `verification`。
+因此编号已经由一手来源确认，并在后续 B5-3A/B5-3B 完成正式全文深核与受控 promotion。
 
 后续 research workflow 已成功下载并解析 SAMR 官方 DOCX 正文。BJS201808 的 5 个目标物、方法角色、食品/保健食品适用范围以及盐标准品信息已经完成 B5-3A 核验，详见 `V2_B5_BJS_201808_ANALYTE_AUDIT.md`。
 
-BJS201808 仍未 promotion，原因已经从“缺官方全文”收敛为“4 个 canonical parent Substance identity 尚未正式治理”。下一步是 B5-3B，而不是重新抓全文。
+B5-3B 已在 `inspection-reference@2026.09-b10` 治理4个缺失母体 Substance，复用既有哌唑嗪，建立5条盐型→母体 MethodSubstance 和7条保守 MethodApplicability，并将 BJS201808 promotion 到 `recommendation_ready`；未新增 Claim→Risk、Risk→Substance 或 group membership。
 
 ### 4.4 2025 执法检验方法暂不混入 BJS runtime schema
 
@@ -160,11 +160,11 @@ BJS201808 仍未 promotion，原因已经从“缺官方全文”收敛为“4 �
    - 标题明确 3 个降压相关化合物；
    - 规模小，适合与 blood_pressure historical/current knowledge 做独立对照。
 
-3. **BJS 201808**
-   - SAMR 官方全文已经解析；
-   - 5 个 analyte 与明确 applicability 已核验；
-   - 当前唯一前置缺口是 4 个 canonical parent Substance identity 的正式治理与 source salt → parent normalization；
-   - 不得因为新增 MethodSubstance 自动展开育亨宾 group 或建立新的 Risk。
+3. **BJS 201808 — 已完成**
+   - B5-3A 正式全文 / analyte / applicability audit 已完成；
+   - B5-3B parent identity / salt normalization / promotion 已完成；
+   - 当前为 `recommendation_ready @ b10`；
+   - Method 仍不得反推育亨宾 group 或新的 Risk。
 
 KJ201901 / KJ201902 已完成 promotion，不再属于待深核队列。
 
@@ -203,7 +203,7 @@ KJ201902 promotion 暴露出 B4 时留下的两个身份缺口。随后 `risk-su
 
 这两条 Risk 的监管依据仍是2018中央抽检资料；KJ201902全文只用于名称/盐型身份归一化，不构成 Method→Risk 反推。
 
-BJS 201808 已取得并解析 SAMR 正式全文，但当前5个目标物中仅部分已有 canonical Substance 身份。其 promotion 留到下一子阶段，先完成5个目标物的base/salt identity治理。
+BJS 201808 已完成 parent/salt identity 治理并 promotion 到 `inspection-reference@2026.09-b10`；该 Method 不新增任何 Risk 映射。
 
 ## 6. Deep verification Gate
 
@@ -264,13 +264,13 @@ B5-1 已完成并通过 Gate。其“候选不进入 runtime”的边界继续�
 当前 candidate manifest 为：
 
 ```text
-2026.09-b7
+2026.09-b8
 12 records
-4 promoted traces
-8 verification
+5 promoted traces
+7 verification
 runtime_consumed = false
 ```
 
-当前 B5-3A 已完成 BJS201808 analyte/applicability audit，runtime 未改。
+BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-3B**，只做 canonical parent Substance identity + MethodSubstance normalization/applicability 准备；不新增 Claim/Risk。
+**下一验收子任务：B5-4A BJS202504**，先做正式全文、analyte、CAS、applicability 与 lifecycle 深核；正式事实未核清前不改 runtime，不新增 Claim/Risk。
