@@ -66,9 +66,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
         self.assertEqual(inventory["risk_substance_mappings"], 7)
         self.assertEqual(inventory["risk_substance_group_mappings"], 6)
-        self.assertEqual(inventory["risk_mappings_total"], 81)
+        self.assertEqual(inventory["risk_mappings_total"], 83)
         self.assertEqual(inventory["risk_mappings_current"], 13)
-        self.assertEqual(inventory["risk_mappings_historical"], 68)
+        self.assertEqual(inventory["risk_mappings_historical"], 70)
         self.assertEqual(inventory["historical_risk_categories"], 6)
         self.assertEqual(inventory["historical_risk_group_labels"], 6)
         self.assertEqual(inventory["evidence_risk_bridge_mappings"], 25)
@@ -112,7 +112,7 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
     def test_historical_inventory_does_not_pollute_current_coverage(self):
         report = load_and_build_audit()
 
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 68)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 70)
         current_reachability_categories = {
             item["risk_category"] for item in report["risk_reachability"]
         }
@@ -201,9 +201,9 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
 
         report = build_audit(inspection, self.risk, self.bridge)
 
-        self.assertEqual(report["inventory"]["risk_mappings_total"], 81)
+        self.assertEqual(report["inventory"]["risk_mappings_total"], 83)
         self.assertEqual(report["inventory"]["risk_mappings_current"], 13)
-        self.assertEqual(report["inventory"]["risk_mappings_historical"], 68)
+        self.assertEqual(report["inventory"]["risk_mappings_historical"], 70)
         self.assertNotIn(
             unrelated["substance_id"],
             {item["target"] for item in report["risk_reachability"]},
