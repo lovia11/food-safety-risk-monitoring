@@ -33,36 +33,36 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         inventory = report["inventory"]
 
         self.assertEqual(inventory["governed_dataset_count"], 3)
-        self.assertEqual(inventory["methods"], 9)
-        self.assertEqual(inventory["indexed_methods"], 9)
+        self.assertEqual(inventory["methods"], 10)
+        self.assertEqual(inventory["indexed_methods"], 10)
         self.assertEqual(inventory["candidate_records"], 12)
-        self.assertEqual(inventory["candidate_methods"], 8)
-        self.assertEqual(inventory["promoted_candidate_methods"], 4)
+        self.assertEqual(inventory["candidate_methods"], 7)
+        self.assertEqual(inventory["promoted_candidate_methods"], 5)
         self.assertEqual(
             inventory["knowledge_depth_counts"],
             {
                 "reference_only": 1,
                 "analyte_verified": 0,
                 "applicability_verified": 0,
-                "recommendation_ready": 8,
+                "recommendation_ready": 9,
             },
         )
         self.assertEqual(
             inventory["method_type_counts"],
             {
-                "supplementary_bjs": 4,
+                "supplementary_bjs": 5,
                 "rapid_kj": 3,
                 "national_standard_gbt": 2,
             },
         )
-        self.assertEqual(inventory["method_status_counts"]["current"], 8)
+        self.assertEqual(inventory["method_status_counts"]["current"], 9)
         self.assertEqual(inventory["method_status_counts"]["revoked"], 1)
-        self.assertEqual(inventory["substances"], 201)
-        self.assertEqual(inventory["method_substance_relations"], 231)
-        self.assertEqual(inventory["method_applicabilities"], 46)
+        self.assertEqual(inventory["substances"], 205)
+        self.assertEqual(inventory["method_substance_relations"], 236)
+        self.assertEqual(inventory["method_applicabilities"], 53)
         self.assertEqual(inventory["substance_regulatory_contexts"], 1)
-        self.assertEqual(inventory["regulatory_documents"], 7)
-        self.assertEqual(inventory["method_regulatory_document_links"], 9)
+        self.assertEqual(inventory["regulatory_documents"], 8)
+        self.assertEqual(inventory["method_regulatory_document_links"], 10)
         self.assertEqual(inventory["unresolved_lifecycle_document_edges"], 0)
         self.assertEqual(inventory["risk_substance_mappings"], 7)
         self.assertEqual(inventory["risk_substance_group_mappings"], 6)
@@ -79,8 +79,8 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         self.assertEqual(
             report["metrics"]["method_reference_coverage"],
             {
-                "numerator": 9,
-                "denominator": 9,
+                "numerator": 10,
+                "denominator": 10,
                 "ratio": 1.0,
                 "denominator_definition": (
                     "methods in the committed Inspection Reference Index"
@@ -89,11 +89,11 @@ class InspectionKnowledgeAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["numerator"],
-            8,
+            9,
         )
         self.assertEqual(
             report["metrics"]["method_deep_verification_coverage"]["denominator"],
-            9,
+            10,
         )
         self.assertEqual(
             report["metrics"]["recommendation_end_to_end_reachability"],

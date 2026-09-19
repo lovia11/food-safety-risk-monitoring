@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b7",
+  "manifest_version": "2026.09-b8",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902已在Inspection Reference b9完成promotion；BJS 201808已完成SAMR官方DOCX全文解析，但因4个母体Substance identity尚未正式治理而继续停留verification。候选manifest仍不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902与BJS 201808已完成正式全文/身份治理并promotion；当前Inspection Reference为b10。候选manifest仍不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -422,14 +422,14 @@
       "candidate_id": "candidate-bjs-201808",
       "method_no": "BJS 201808",
       "title": "食品中5种α-受体阻断类药物的测定",
-      "status": "verification",
-      "expected_depth": "reference_only",
+      "status": "promoted",
+      "expected_depth": "recommendation_ready",
       "discovery_source_name": "国家市场监督管理总局食品补充检验方法数据库：食品中5种α-受体阻断类药物的测定",
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
       "discovery_source_date": "2018-11-26",
       "discovery_source_record_id": "samr-database-bjs-201808",
-      "reason": "SAMR食品补充检验方法数据库和官方公告已确认BJS 201808方法身份；SAMR官方DOCX全文已通过研究workflow下载并解析（SHA-256 45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9）。全文已核实5个方法目标物、食品/保健食品适用范围、HPLC-MS/MS定量与确证角色，以及5种盐型标准品信息。当前仍不promotion：5个目标物中仅哌唑嗪已有canonical Substance，酚妥拉明、特拉唑嗪、育亨宾、妥拉唑林的母体Substance身份尚未正式写入Inspection Reference；盐型标准品CAS不得直接替代母体CAS。Method存在也不建立新的Risk关系。",
-      "correction_note": "旧B5草案先因编号/全文不可直接读取而暂缓；现已由SAMR官方公告确认BJS 201808编号，并由SAMR原始DOCX完成全文解析。下一步应先治理4个缺失母体Substance及盐型→母体normalization，再单独决定promotion；不得由BJS 201808反推Claim→Risk或展开育亨宾group。",
+      "reason": "SAMR食品补充检验方法数据库、2018年第28号公告及正式DOCX全文已核验BJS 201808方法身份、5个母体分析物、盐标准品、HPLC-MS/MS定量/确证角色与食品/保健食品适用范围；B5-3B进一步以独立化学身份来源治理酚妥拉明、特拉唑嗪、育亨宾、妥拉唑林4个缺失母体Substance，复用既有哌唑嗪，并建立5条盐型→母体MethodSubstance与7条保守MethodApplicability。b10 promotion不新增Claim→Risk、Risk→Substance或育亨宾group成员关系。",
+      "correction_note": "旧B5草案曾因编号/全文不可直接读取而暂缓；B5-3A已完成官方全文解析，B5-3B已完成4个缺失母体Substance身份治理和5条盐型归一化。BJS 201808现以recommendation_ready进入b10，但只有独立存在的Risk→Substance路径才能使其出现在Recommendation中。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中5种α-受体阻断类药物的测定》食品补充检验方法的公告（2018年第28号）",
@@ -465,8 +465,8 @@
         }
       ],
       "verified_at": "2026-09-18T22:30:00+08:00",
-      "promoted_method_id": null,
-      "promoted_dataset_version": null
+      "promoted_method_id": "bjs-201808",
+      "promoted_dataset_version": "2026.09-b10"
     }
   ]
 }

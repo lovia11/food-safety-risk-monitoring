@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
   "dataset_id": "inspection-reference",
-  "dataset_version": "2026.09-b9",
+  "dataset_version": "2026.09-b10",
   "dataset_status": "verified_reference",
   "source_name": "国家市场监督管理总局官方公开来源（各Method和RegulatoryContext保留独立provenance）",
   "source_reference": "https://www.samr.gov.cn/",
   "source_date": null,
   "collected_at": "2026-09-04T17:07:24+08:00",
-  "verified_at": "2026-09-18T23:24:00+08:00",
-  "description": "当前索引包含8个recommendation_ready方法和1个revoked reference_only历史方法。B5-2依据SAMR 2019年第41号公告正式DOCX全文加入KJ201901/KJ201902，并以schema 14的risk-scoped MethodApplicability精确保留其功能宣称适用范围；快速筛查阳性结果仍需确证，交叉反应物不被扩写成MethodSubstance。既有BJS 202405深核事实继续保留。Method事实不新增Risk、Claim、Group或非法添加结论，数据不代表全部现行检验方法或全部监管知识。",
+  "verified_at": "2026-09-20T00:33:00+08:00",
+  "description": "当前索引包含9个recommendation_ready现行方法和1个revoked reference_only历史方法。B5-3B依据BJS 201808正式全文与独立化学身份交叉核验，加入4个缺失母体Substance、复用既有哌唑嗪，建立5条盐标准品→母体MethodSubstance归一化及7条明确MethodApplicability；“其他类似基质可参照”仅保留为来源说明，不扩大成无条件适用范围。Method事实不新增Risk、Claim、Group或非法添加结论。",
   "regulatory_documents": [
     {
       "document_id": "regdoc-bjs-202209",
@@ -24,7 +24,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-bjs-201701",
@@ -40,7 +40,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-bjs-201710",
@@ -56,7 +56,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-kj-201903",
@@ -72,7 +72,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-gbt-45443-2025",
@@ -90,7 +90,7 @@
       ],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-bjs-202405",
@@ -106,7 +106,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
     },
     {
       "document_id": "regdoc-gbt-5009-170-2003",
@@ -124,7 +124,23 @@
         "regdoc-gbt-45443-2025"
       ],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b9"
+      "dataset_version": "2026.09-b10"
+    },
+    {
+      "document_id": "regdoc-bjs-201808",
+      "document_type": "official_method_page",
+      "document_no": "BJS 201808",
+      "title": "食品中5种α-受体阻断类药物的测定",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2018-11-26",
+      "effective_date": null,
+      "status": "current",
+      "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
+      "jurisdiction": "CN",
+      "supersedes": [],
+      "superseded_by": [],
+      "dataset_id": "inspection-reference",
+      "dataset_version": "2026.09-b10"
     }
   ],
   "methods": [
@@ -298,6 +314,25 @@
       "source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2019/art_2a1de171556f40f2b8f5829fe9810086.html",
       "source_date": "2019-09-27",
       "note": "SAMR正式附件KJ201902全文核验：本方法为声称具有辅助降血糖功能的保健食品中罗格列酮和格列苯脲的胶体金免疫层析定性快速筛查，当前runtime以blood_glucose Risk精确表达该功能宣称范围。阳性结果应进一步确证。罗格列酮试剂盒可能与吡格列酮交叉反应；格列苯脲试剂盒可能与格列美脲、格列齐特、格列吡嗪、格列喹酮、甲苯磺丁脲交叉反应，这些交叉反应物不作为本方法的MethodSubstance目标关系。正式附件：https://www.samr.gov.cn/cms_files/filemanager/samr/www/samrnew/samrgkml/nsjg/spcjs/201910/W020191012316481143847.docx（SHA-256 203DB061A5D171D9AFAC91402B3EAA1B7708C763E37F62DAD1663E231300B69C）。"
+    },
+    {
+      "method_id": "bjs-201808",
+      "dataset_id": "inspection-reference",
+      "method_no": "BJS 201808",
+      "method_name": "食品中5种α-受体阻断类药物的测定",
+      "method_type": "supplementary_bjs",
+      "method_status": "current",
+      "knowledge_depth": "recommendation_ready",
+      "regulatory_document_id": "regdoc-bjs-201808",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2018-11-26",
+      "effective_date": null,
+      "replaces_method_no": null,
+      "replaced_by_method_no": null,
+      "source_name": "国家市场监督管理总局食品补充检验方法数据库及2018年第28号公告",
+      "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
+      "source_date": "2018-11-26",
+      "note": "SAMR正式DOCX全文核验（SHA-256 45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9）：本方法以HPLC-MS/MS测定酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林，进行定量测定并包含定性确证；适用于硬质糖果、凝胶糖果、酒、茶饮料及保健食品片剂、口服液、胶囊剂。正式全文同时说明其他类似基质可参照本方法，但当前runtime不把该开放性表述编码为无条件include。标准品为相应甲磺酸盐/盐酸盐，MethodSubstance显式保留盐型source_label/source_cas_no并归一化到母体Substance。新增Method与Substance不得反推任何Claim→Risk、Risk→Substance或育亨宾group成员关系。正式附件：https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516383836747775.docx。"
     }
   ],
   "substances": [
@@ -2109,6 +2144,42 @@
       "cas_no": "1446089-84-4",
       "substance_group": "",
       "note": "BJS 202405附录A表A.1"
+    },
+    {
+      "substance_id": "substance-cas-50-60-2",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "酚妥拉明",
+      "english_name": "Phentolamine",
+      "cas_no": "50-60-2",
+      "substance_group": "",
+      "note": "BJS 201808母体分析物；化学身份经PubChem CID 5775（CAS 50-60-2）交叉核验，方法标准品为甲磺酸酚妥拉明（65-28-1）。PubChem仅用于化学身份，不构成Risk监管映射依据：https://pubchem.ncbi.nlm.nih.gov/compound/Phentolamine"
+    },
+    {
+      "substance_id": "substance-cas-63590-64-7",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "特拉唑嗪",
+      "english_name": "Terazosin",
+      "cas_no": "63590-64-7",
+      "substance_group": "",
+      "note": "BJS 201808母体分析物；化学身份经PubChem CID 5401（CAS 63590-64-7）交叉核验，方法标准品为盐酸特拉唑嗪（63074-08-8）。PubChem仅用于化学身份，不构成Risk监管映射依据：https://pubchem.ncbi.nlm.nih.gov/compound/Terazosin"
+    },
+    {
+      "substance_id": "substance-cas-146-48-5",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "育亨宾",
+      "english_name": "Yohimbine",
+      "cas_no": "146-48-5",
+      "substance_group": "",
+      "note": "BJS 201808母体分析物；化学身份经PubChem CID 8969（CAS 146-48-5）交叉核验，方法标准品为盐酸育亨宾（65-19-0）。该实体不自动成为“育亨宾及其系列衍生物”group成员；PubChem仅用于化学身份，不构成Risk监管映射依据：https://pubchem.ncbi.nlm.nih.gov/compound/Yohimbine"
+    },
+    {
+      "substance_id": "substance-cas-59-98-3",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "妥拉唑林",
+      "english_name": "Tolazoline",
+      "cas_no": "59-98-3",
+      "substance_group": "",
+      "note": "BJS 201808母体分析物；化学身份经PubChem CID 5504（CAS 59-98-3）交叉核验，方法标准品为盐酸妥拉唑林（59-97-2）。PubChem仅用于化学身份，不构成Risk监管映射依据：https://pubchem.ncbi.nlm.nih.gov/compound/Tolazoline"
     }
   ],
   "method_substances": [
@@ -4190,6 +4261,51 @@
       "determination_role": "rapid_screen",
       "normalization_note": "",
       "ordinal": 2
+    },
+    {
+      "method_id": "bjs-201808",
+      "substance_id": "substance-cas-50-60-2",
+      "source_label": "甲磺酸酚妥拉明",
+      "source_cas_no": "65-28-1",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201808检测目标为“酚妥拉明”母体，标准品使用“甲磺酸酚妥拉明”（CAS 65-28-1）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
+      "ordinal": 1
+    },
+    {
+      "method_id": "bjs-201808",
+      "substance_id": "substance-cas-19216-56-9",
+      "source_label": "盐酸哌唑嗪",
+      "source_cas_no": "19237-84-4",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201808检测目标为“哌唑嗪”母体，标准品使用“盐酸哌唑嗪”（CAS 19237-84-4）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
+      "ordinal": 2
+    },
+    {
+      "method_id": "bjs-201808",
+      "substance_id": "substance-cas-63590-64-7",
+      "source_label": "盐酸特拉唑嗪",
+      "source_cas_no": "63074-08-8",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201808检测目标为“特拉唑嗪”母体，标准品使用“盐酸特拉唑嗪”（CAS 63074-08-8）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
+      "ordinal": 3
+    },
+    {
+      "method_id": "bjs-201808",
+      "substance_id": "substance-cas-146-48-5",
+      "source_label": "盐酸育亨宾",
+      "source_cas_no": "65-19-0",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201808检测目标为“育亨宾”母体，标准品使用“盐酸育亨宾”（CAS 65-19-0）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
+      "ordinal": 4
+    },
+    {
+      "method_id": "bjs-201808",
+      "substance_id": "substance-cas-59-98-3",
+      "source_label": "盐酸妥拉唑林",
+      "source_cas_no": "59-97-2",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201808检测目标为“妥拉唑林”母体，标准品使用“盐酸妥拉唑林”（CAS 59-97-2）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
+      "ordinal": 5
     }
   ],
   "method_applicabilities": [
@@ -4700,6 +4816,83 @@
       "risk_category": "blood_glucose",
       "source_scope_text": "本方法适用于声称具有辅助降血糖功能的保健食品中罗格列酮和格列苯脲成分的快速筛查。",
       "note": "risk_category仅保留正式方法范围中的辅助降血糖功能宣称条件，不由Method反推Risk。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-01",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "硬质糖果",
+      "product_form": "",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-02",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "凝胶糖果",
+      "product_form": "",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-03",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "酒",
+      "product_form": "",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-04",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "茶饮料",
+      "product_form": "",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-05",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "保健食品",
+      "product_form": "片剂",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-06",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "保健食品",
+      "product_form": "口服液",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201808-scope-07",
+      "method_id": "bjs-201808",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "保健食品",
+      "product_form": "胶囊剂",
+      "ingredient_context": "",
+      "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
+      "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
     }
   ],
   "substance_regulatory_contexts": [
