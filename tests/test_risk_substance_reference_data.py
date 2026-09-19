@@ -80,10 +80,12 @@ CARDIOMETABOLIC_HISTORICAL_SUBSTANCE_IDENTITIES = {
     },
     "blood_glucose": {
         "substance-cas-64-77-7": "甲苯磺丁脲",
+        "substance-cas-10238-21-8": "格列苯脲",
         "substance-cas-21187-98-4": "格列齐特",
         "substance-cas-29094-61-9": "格列吡嗪",
         "substance-cas-33342-05-1": "格列喹酮",
         "substance-cas-93479-97-1": "格列美脲",
+        "substance-cas-122320-73-4": "罗格列酮",
         "substance-cas-135062-02-1": "瑞格列奈",
         "substance-cas-26944-48-9": "格列波脲",
     },
@@ -197,10 +199,10 @@ CURRENT_SOURCE_EXPECTATIONS = {
     "anti-fatigue-tadalafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
 }
 INSPECTION_COUNTS = {
-    "inspection_methods": 7,
+    "inspection_methods": 9,
     "inspection_substances": 201,
-    "inspection_method_substances": 227,
-    "inspection_method_applicabilities": 44,
+    "inspection_method_substances": 231,
+    "inspection_method_applicabilities": 46,
     "substance_regulatory_contexts": 1,
 }
 EXPECTED_SUBSTANCE_IDENTITIES = {
@@ -236,9 +238,9 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
         payload = load_verified_risk_dataset()
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["dataset_id"], "risk-substance-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-c6")
+        self.assertEqual(payload["dataset_version"], "2026.09-c7")
         self.assertEqual(payload["dataset_status"], "verified_reference")
-        self.assertEqual(len(payload["mappings"]), 81)
+        self.assertEqual(len(payload["mappings"]), 83)
         self.assertEqual(
             {mapping["mapping_id"] for mapping in payload["mappings"]},
             EXPECTED_MAPPING_IDS,
@@ -511,13 +513,13 @@ class VerifiedRiskSubstanceReferenceDataTest(unittest.TestCase):
                 INSPECTION_COUNTS,
             )
 
-            expected = {"dataset": 1, "mappings": 81}
+            expected = {"dataset": 1, "mappings": 83}
             self.assertEqual(
                 store.import_risk_substance_config(RISK_REFERENCE_CONFIG), expected
             )
             first = store.table_counts()
             self.assertEqual(first["risk_mapping_datasets"], 1)
-            self.assertEqual(first["risk_substance_mappings"], 81)
+            self.assertEqual(first["risk_substance_mappings"], 83)
 
             connection = sqlite3.connect(store.database_path)
             try:
