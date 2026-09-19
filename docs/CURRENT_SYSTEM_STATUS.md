@@ -8,13 +8,42 @@
 > V2-7A audit starting baseline: `5a8368fcb8b46fed9f5cb2714a32df52c0f377d0`
 > Owner: Project
 
-This document describes implemented behavior through the completed V2-5 Claim domain/runtime/presentation, V2-6 HealthFunction framework and Claim Consistency workflow, V2-7 Inspection Knowledge coverage program, V2-8 Knowledge Base UI, and V2-9A Analytics metric/read contract.
+> **ACTIVE DEVELOPMENT OVERLAY — 2026-09-20**  
+> The detailed sections below preserve accepted V2-3～V2-9 historical baselines and therefore contain older schema/count snapshots. For current B3/B4/B5 development, [AI_HANDOFF_V2.md](AI_HANDOFF_V2.md) and current code/config supersede those old counts.
+
+Current active facts:
+
+```text
+branch                    = ux-redesign-v1
+SQLite schema             = 14
+Claim taxonomy            = 7 types / 42 exact expressions
+Claim Inspection Bridge   = claim-inspection-bridge-v2.6 / 25 mappings
+Risk Reference            = 2026.09-c7 / 83 mappings
+                            13 current + 70 historical
+Inspection Reference      = 2026.09-b9 / 9 methods
+                            8 current recommendation_ready
+                            1 revoked reference_only
+Method candidate manifest = 2026.09-b7 / 12 records
+                            4 promoted traces + 8 verification
+active program            = B5
+```
+
+Current B5 state:
+
+- KJ201901 and KJ201902 were deep-verified from SAMR official DOCX and are already promoted in b9.
+- c7 added only two historical blood-glucose concrete Risk identities that were already supported by the 2018 central sampling source; KJ201902 was used for identity/salt normalization, not Method→Risk inference.
+- BJS201808 official DOCX has been parsed and audited in [V2_B5_BJS_201808_ANALYTE_AUDIT.md](V2_B5_BJS_201808_ANALYTE_AUDIT.md).
+- BJS201808 remains unpromoted because four canonical parent Substance identities are not yet governed.
+- Immediate next subtask is B5-3B parent-identity governance for 酚妥拉明 / 特拉唑嗪 / 育亨宾 / 妥拉唑林, preserving existing 哌唑嗪 and adding no new Risk mapping as a Method side effect.
+
+
+This document preserves the accepted historical V2 baseline. The active B3/B4/B5 development overlay above and `AI_HANDOFF_V2.md` supersede older counts and phase-next markers elsewhere in this file.
 
 ## Baseline
 
 - Branch: `ux-redesign-v1`
 - V2-3 starting HEAD: `0c597dd51ac577dd5d1b35fe90c0bc5a9a2495ca`
-- SQLite schema: 13
+- SQLite schema: 14
 - Backend entry: `python -m src.local_api`
 - Production static UI: `frontend/dist`, built from `frontend/`
 - Current primary navigation: 商品总览、排查档案、抽检清单、知识库
