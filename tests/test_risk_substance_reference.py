@@ -549,10 +549,10 @@ class RiskSubstanceReferencePersistenceTest(unittest.TestCase):
         self.assertEqual(
             inspection_counts,
             {
-                "methods": 9,
-                "substances": 201,
-                "method_substances": 231,
-                "applicabilities": 46,
+                "methods": 10,
+                "substances": 205,
+                "method_substances": 236,
+                "applicabilities": 53,
                 "contexts": 1,
             },
         )

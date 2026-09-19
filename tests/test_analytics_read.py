@@ -318,7 +318,7 @@ class AnalyticsReadModelTest(AnalyticsFixture):
                 self.assertEqual(metric["denominator"], source["denominator"])
                 self.assertEqual(metric["rate"], source["ratio"])
         self.assertEqual(_metric(payload, "reference_monitor_target_count")["value"], 106)
-        self.assertEqual(_metric(payload, "inspection_indexed_method_count")["value"], 9)
+        self.assertEqual(_metric(payload, "inspection_indexed_method_count")["value"], 10)
 
 
 class AnalyticsHttpApiTest(AnalyticsFixture):
@@ -378,7 +378,7 @@ class AnalyticsHttpApiTest(AnalyticsFixture):
             )
             self.assertEqual(_metric(payloads[3], "formal_claim_signal_count")["value"], 1)
             self.assertEqual(_metric(payloads[4], "declared_origin_distribution")["denominator"], 2)
-            self.assertEqual(_metric(payloads[5], "inspection_indexed_method_count")["value"], 9)
+            self.assertEqual(_metric(payloads[5], "inspection_indexed_method_count")["value"], 10)
             with self.assertRaises(HTTPError) as raised:
                 urlopen(f"{base}/api/analytics/claims?claim_type=legacy-effect")
             self.assertEqual(raised.exception.code, 400)

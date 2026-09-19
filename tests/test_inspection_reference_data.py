@@ -671,7 +671,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             "45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9",
             method["note"],
         )
-        self.assertIn("不新增Risk", method["note"])
+        self.assertIn("不得反推任何Claim→Risk", method["note"])
 
         expected_parents = [
             ("酚妥拉明", "Phentolamine", "50-60-2"),
@@ -909,7 +909,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertEqual(relation["ordinal"], 1)
 
         substances = payload["substances"]
-        self.assertEqual(len(substances), 201)
+        self.assertEqual(len(substances), 205)
         melatonin_substances = [
             item for item in substances if item["substance_id"] == "substance-cas-73-31-4"
         ]
@@ -979,11 +979,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             store.initialize()
             expected = {
                 "dataset": 1,
-                "regulatory_documents": 7,
-                "methods": 9,
-                "substances": 201,
-                "method_substances": 231,
-                "applicabilities": 46,
+                "regulatory_documents": 8,
+                "methods": 10,
+                "substances": 205,
+                "method_substances": 236,
+                "applicabilities": 53,
                 "regulatory_contexts": 1,
                 "group_memberships": 0,
             }
