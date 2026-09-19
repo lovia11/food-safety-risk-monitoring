@@ -205,26 +205,22 @@ jobs:
                   # pages when it contains AuthorizedRead request context.
                   # This is diagnostics only; it never writes governed facts.
                   debug_scripts = []
-                  for script_src in re.findall(
-                      r"""<script[^>]+src=["']([^"']+\.js(?:\?[^"']*)?)["']""",
-                      page_text,
-                      flags=re.I,
-                  ):
-                      script_url = urllib.parse.urljoin(
-                          href, html.unescape(script_src)
-                      )
-                      if urllib.parse.urlparse(script_url).netloc != "www.samr.gov.cn":
-                          continue
-                      try:
-                          script_bytes = fetch(script_url)
-                          script_text = script_bytes.decode(
-                              "utf-8", errors="replace"
+                  if key == "bjs-202504":
+                      for script_src in re.findall(
+                          r"""<script[^>]+src=["']([^"']+\.js(?:\?[^"']*)?)["']""",
+                          page_text,
+                          flags=re.I,
+                      ):
+                          if "/script/20219/" not in script_src:
+                              continue
+                          script_url = urllib.parse.urljoin(
+                              href, html.unescape(script_src)
                           )
-                          if (
-                              "paramsMap" in script_text
-                              or "paramJson" in script_text
-                              or "AuthorizedRead" in script_text
-                          ):
+                          try:
+                              script_bytes = fetch(script_url)
+                              script_text = script_bytes.decode(
+                                  "utf-8", errors="replace"
+                              )
                               debug_name = (
                                   f"{key}.debug-script-"
                                   f"{len(debug_scripts) + 1}.js"
@@ -235,14 +231,16 @@ jobs:
                                   "file": debug_name,
                                   "sha256": sha256(script_bytes),
                                   "bytes": len(script_bytes),
+                                  "has_params_map": "paramsMap" in script_text,
+                                  "has_param_json": "paramJson" in script_text,
                               })
-                      except Exception as exc:
-                          metadata["errors"].append({
-                              "key": key,
-                              "stage": "fetch_debug_script",
-                              "url": script_url,
-                              "error": repr(exc),
-                          })
+                          except Exception as exc:
+                              metadata["errors"].append({
+                                  "key": key,
+                                  "stage": "fetch_debug_script",
+                                  "url": script_url,
+                                  "error": repr(exc),
+                              })
                   if debug_scripts:
                       metadata["pages"][key]["debug_scripts"] = debug_scripts
 
