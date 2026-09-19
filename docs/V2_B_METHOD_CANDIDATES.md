@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED — source-verified verification queue, non-runtime; full acceptance passed  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 IMPLEMENTED，等待当前 b9/c7 full backend Gate 最终收口  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b5`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b6`。
 
 状态含义：
 
@@ -60,13 +60,13 @@ runtime_consumed = false
 
 ## 3. B5-1 当前 verification queue
 
-以下 10 个方法已由 SAMR 一手公告/方法数据库核实编号和正式标题，但尚未 promotion：
+当前 manifest 共12条记录：4条 promoted trace，8条仍处于 verification。下表同时列出已在 B5-2 promotion 的 KJ201901/KJ201902，便于保持候选到runtime的完整追溯：
 
 | Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
 | BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose | SAMR 2019年第4号公告 | `verification / reference_only` |
-| KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | male_function / anti_fatigue | SAMR 2019年第41号公告 | `verification / reference_only` |
-| KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 | `verification / reference_only` |
+| KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | anti_fatigue（正式范围另含调节免疫等，但runtime不扩Risk） | SAMR 2019年第41号公告 + 正式附件1 | `promoted / recommendation_ready @ b9` |
+| KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 + 正式附件2 | `promoted / recommendation_ready @ b9` |
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
 | BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
@@ -176,6 +176,30 @@ SAMR 2022年第29号公告和方法数据库已确认正式方法：
 
 它们需要更多 Substance identity / CAS / applicability 解析工作，等第一批 promotion 流程跑通后再处理。
 
+## 5.1 B5-2 已完成的官方全文抓取与 KJ promotion
+
+通过独立 GitHub Actions research workflow 从 SAMR 官方附件获取并留存 SHA-256：
+
+- KJ201901 DOCX：`CA99D709F8B38D6E53AC4DCED58BF99B3D0FF2B99EC8CCC9712B328F1B38D923`
+- KJ201902 DOCX：`203DB061A5D171D9AFAC91402B3EAA1B7708C763E37F62DAD1663E231300B69C`
+- BJS 201808 DOCX：`45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9`
+- BJS 201901 DOC：`C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9`（已下载，尚未完成文本解析）
+
+KJ201901 / KJ201902 已按正式全文进入 `inspection-reference@2026.09-b9`：
+
+- `KJ201901`：西地那非、他达拉非；`rapid_screen`；正式范围为声称抗疲劳、调节免疫等功能的保健食品。runtime只保留已有 `anti_fatigue` Risk，不因Method扩出“调节免疫”等新Risk；阳性需确证。
+- `KJ201902`：罗格列酮、格列苯脲；`rapid_screen`；精确限定 `blood_glucose`；阳性需确证。
+- 两份方法正文列出的交叉反应物均不自动扩写成 MethodSubstance。
+
+KJ201902 promotion 暴露出 B4 时留下的两个身份缺口。随后 `risk-substance-reference@2026.09-c7` 使用原有2018中央辅助降血糖抽检资料补齐：
+
+- 来源“格列本脲” → 当前 `格列苯脲` Substance（CAS 10238-21-8）；
+- 来源“马来酸罗格列酮” → 当前 `罗格列酮` 母体 Substance（CAS 122320-73-4）。
+
+这两条 Risk 的监管依据仍是2018中央抽检资料；KJ201902全文只用于名称/盐型身份归一化，不构成 Method→Risk 反推。
+
+BJS 201808 已取得并解析 SAMR 正式全文，但当前5个目标物中仅部分已有 canonical Substance 身份。其 promotion 留到下一子阶段，先完成5个目标物的base/salt identity治理。
+
 ## 6. Deep verification Gate
 
 任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
@@ -231,7 +255,7 @@ SAMR 2026年第24号公告：
 B5-1 只要求：
 
 - verification queue 可由 validator 通过；
-- 10 个 verification 方法不进入 operational method index；
+- 8 个仍处于 verification 的方法不进入 operational method index；
 - 2 个历史 promotion trace 仍只计一次；
 - Audit 的 Method Reference / Deep Verification denominator 仍为 7；
 - candidate 数量变化不得改变 Recommendation；
