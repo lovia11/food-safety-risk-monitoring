@@ -200,6 +200,52 @@ jobs:
                   # Reproduce the documented loader GET using the script's url/queryData
                   # attributes so official attachments remain discoverable.
                   source_fragments = [page_text]
+
+                  # Preserve same-origin JavaScript referenced by newer SAMR
+                  # pages when it contains AuthorizedRead request context.
+                  # This is diagnostics only; it never writes governed facts.
+                  debug_scripts = []
+                  for script_src in re.findall(
+                      r"""<script[^>]+src=["']([^"']+\.js(?:\?[^"']*)?)["']""",
+                      page_text,
+                      flags=re.I,
+                  ):
+                      script_url = urllib.parse.urljoin(
+                          href, html.unescape(script_src)
+                      )
+                      if urllib.parse.urlparse(script_url).netloc != "www.samr.gov.cn":
+                          continue
+                      try:
+                          script_bytes = fetch(script_url)
+                          script_text = script_bytes.decode(
+                              "utf-8", errors="replace"
+                          )
+                          if (
+                              "paramsMap" in script_text
+                              or "paramJson" in script_text
+                              or "AuthorizedRead" in script_text
+                          ):
+                              debug_name = (
+                                  f"{key}.debug-script-"
+                                  f"{len(debug_scripts) + 1}.js"
+                              )
+                              (OUT / debug_name).write_bytes(script_bytes)
+                              debug_scripts.append({
+                                  "url": script_url,
+                                  "file": debug_name,
+                                  "sha256": sha256(script_bytes),
+                                  "bytes": len(script_bytes),
+                              })
+                      except Exception as exc:
+                          metadata["errors"].append({
+                              "key": key,
+                              "stage": "fetch_debug_script",
+                              "url": script_url,
+                              "error": repr(exc),
+                          })
+                  if debug_scripts:
+                      metadata["pages"][key]["debug_scripts"] = debug_scripts
+
                   auth_tag = re.search(
                       r"""<script[^>]+AuthorizedRead/unitbuild\.js[^>]*>""",
                       page_text,
@@ -390,6 +436,11 @@ jobs:
               text = path.read_text(encoding="utf-8", errors="replace")
               print(f"\n=== EXTRACT PREVIEW {path.name} ===")
               print(text[:12000])
+          for path in sorted(OUT.glob("*.debug-script-*.js")):
+              text = path.read_text(encoding="utf-8", errors="replace")
+              if "paramsMap" in text or "paramJson" in text:
+                  print(f"\n=== REQUEST CONTEXT SCRIPT {path.name} ===")
+                  print(text[:30000])
           PY
 
       - name: Upload official-source research artifact
