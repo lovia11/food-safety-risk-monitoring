@@ -4,6 +4,8 @@
 
 它发现的是**页面风险线索**。它不自动判定违法，不验证功效真实性，不表示实验室检出药物，也不是风险概率预测或自动执法系统。
 
+> **继续当前开发 / 新开 AI 对话：先读 [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)。** 该文档记录当前 B3/B4/B5 真实版本、CI Gate、已完成工作和下一步；旧阶段文档中的历史计数不得覆盖当前代码/config。
+
 ## 快速启动
 
 稳定验证环境为 Windows + Python 3.10.0。Node/npm 使用本机兼容版本；前端依赖由 `package-lock.json` 固定。
@@ -105,6 +107,7 @@ npm run build
 
 后续开发先读根目录 [AGENTS.md](AGENTS.md)，再按需要阅读：
 
+- **[AI Development Handoff V2](docs/AI_HANDOFF_V2.md) — 当前开发第一入口**
 - [Current System Status](docs/CURRENT_SYSTEM_STATUS.md)
 - [Product Requirements V2](docs/PRODUCT_REQUIREMENTS_V2.md)
 - [System V2 Architecture](docs/SYSTEM_V2_ARCHITECTURE.md)
