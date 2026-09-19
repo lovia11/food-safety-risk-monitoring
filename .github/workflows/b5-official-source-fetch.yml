@@ -157,6 +157,23 @@ jobs:
                   "error": repr(exc),
               })
 
+          WEBGLOBAL_JS = "https://www.samr.gov.cn/script/webglobal.js"
+          try:
+              webglobal_js = fetch(WEBGLOBAL_JS)
+              (OUT / "webglobal.js").write_bytes(webglobal_js)
+              metadata["webglobal"] = {
+                  "url": WEBGLOBAL_JS,
+                  "sha256": sha256(webglobal_js),
+                  "bytes": len(webglobal_js),
+              }
+          except Exception as exc:
+              metadata["errors"].append({
+                  "key": "webglobal",
+                  "stage": "fetch_webglobal",
+                  "url": WEBGLOBAL_JS,
+                  "error": repr(exc),
+              })
+
           for key, title in PAGE_TITLES.items():
               href = None
               for candidate_href, candidate_text in parser.links:
@@ -210,9 +227,20 @@ jobs:
                                   + urllib.parse.urlencode(query_data)
                               )
                               body_bytes = fetch(body_url)
+                              (OUT / f"{key}.authorized-response.json").write_bytes(
+                                  body_bytes
+                              )
                               body_payload = json.loads(
                                   body_bytes.decode("utf-8", errors="replace")
                               )
+                              metadata["pages"][key]["authorized_response"] = {
+                                  "url": body_url,
+                                  "sha256": sha256(body_bytes),
+                                  "bytes": len(body_bytes),
+                                  "preview": body_bytes.decode(
+                                      "utf-8", errors="replace"
+                                  )[:2000],
+                              }
                               body_html = (
                                   body_payload.get("data", {}).get("html", "")
                                   if isinstance(body_payload, dict)
@@ -353,6 +381,11 @@ jobs:
           if loader_path.exists():
               print("\n=== AUTHORIZEDREAD LOADER PREVIEW ===")
               print(loader_path.read_text(encoding="utf-8", errors="replace")[:20000])
+
+          webglobal_path = OUT / "webglobal.js"
+          if webglobal_path.exists():
+              print("\n=== WEBGLOBAL PREVIEW ===")
+              print(webglobal_path.read_text(encoding="utf-8", errors="replace")[:20000])
           for path in sorted(OUT.glob("*.txt")):
               text = path.read_text(encoding="utf-8", errors="replace")
               print(f"\n=== EXTRACT PREVIEW {path.name} ===")
