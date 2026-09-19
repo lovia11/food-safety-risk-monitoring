@@ -210,11 +210,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
     def test_bjs_202209_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         self.assertEqual(payload["dataset_id"], "inspection-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-b8")
+        self.assertEqual(payload["dataset_version"], "2026.09-b9")
         self.assertEqual(payload["dataset_status"], "verified_reference")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
-        self.assertEqual(len(payload["methods"]), 7)
+        self.assertEqual(len(payload["methods"]), 9)
         method = next(
             item for item in payload["methods"] if item["method_id"] == "bjs-202209"
         )
@@ -287,6 +287,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "bjs-202209",
                 "bjs-201701",
                 "bjs-201710",
+                "kj-201901",
+                "kj-201902",
                 "kj-201903",
                 "gbt-45443-2025",
                 "bjs-202405",
@@ -382,8 +384,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         )
 
         self.assertEqual(len(payload["substances"]), 201)
-        self.assertEqual(len(payload["method_substances"]), 227)
-        self.assertEqual(len(payload["method_applicabilities"]), 44)
+        self.assertEqual(len(payload["method_substances"]), 231)
+        self.assertEqual(len(payload["method_applicabilities"]), 46)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_bjs_201710_reference_contract_matches_verified_source_facts(self):
@@ -542,15 +544,115 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["methods"]), 7)
+        self.assertEqual(len(payload["methods"]), 9)
         self.assertEqual(len(payload["substances"]), 201)
-        self.assertEqual(len(payload["method_substances"]), 227)
-        self.assertEqual(len(payload["method_applicabilities"]), 44)
+        self.assertEqual(len(payload["method_substances"]), 231)
+        self.assertEqual(len(payload["method_applicabilities"]), 46)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
+
+    def test_kj_201901_and_201902_match_samr_fulltext_and_scoped_runtime_rules(self):
+        payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
+        methods = {item["method_id"]: item for item in payload["methods"]}
+        substances = {item["substance_id"]: item for item in payload["substances"]}
+
+        kj1 = methods["kj-201901"]
+        self.assertEqual(kj1["method_no"], "KJ201901")
+        self.assertEqual(
+            kj1["method_name"],
+            "保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法",
+        )
+        self.assertEqual(kj1["method_type"], "rapid_kj")
+        self.assertEqual(kj1["method_status"], "current")
+        self.assertEqual(kj1["knowledge_depth"], "recommendation_ready")
+        self.assertEqual(kj1["published_date"], "2019-09-27")
+        self.assertEqual(kj1["source_reference"], KJ_201903_SOURCE_REFERENCE)
+        self.assertIn("阳性结果应进一步确证", kj1["note"])
+        self.assertIn("anti_fatigue", kj1["note"])
+        self.assertIn("不把“调节免疫等”扩写为新Risk", kj1["note"])
+        self.assertIn("CA99D709F8B38D6E53AC4DCED58BF99B3D0FF2B99EC8CCC9712B328F1B38D923", kj1["note"])
+
+        kj1_relations = [
+            item for item in payload["method_substances"]
+            if item["method_id"] == "kj-201901"
+        ]
+        self.assertEqual(
+            [
+                (
+                    item["source_label"],
+                    item["source_cas_no"],
+                    item["substance_id"],
+                    item["determination_role"],
+                )
+                for item in kj1_relations
+            ],
+            [
+                ("西地那非", "139755-83-2", "substance-cas-139755-83-2", "rapid_screen"),
+                ("他达拉非", "171596-29-5", "substance-cas-171596-29-5", "rapid_screen"),
+            ],
+        )
+        kj1_scope = [
+            item for item in payload["method_applicabilities"]
+            if item["method_id"] == "kj-201901"
+        ]
+        self.assertEqual(len(kj1_scope), 1)
+        self.assertEqual(kj1_scope[0]["scope_type"], "include")
+        self.assertEqual(kj1_scope[0]["product_category"], "保健食品")
+        self.assertEqual(kj1_scope[0]["product_form"], "")
+        self.assertEqual(kj1_scope[0]["risk_category"], "anti_fatigue")
+        self.assertIn("抗疲劳、调节免疫等", kj1_scope[0]["source_scope_text"])
+
+        kj2 = methods["kj-201902"]
+        self.assertEqual(kj2["method_no"], "KJ201902")
+        self.assertEqual(
+            kj2["method_name"],
+            "保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法",
+        )
+        self.assertEqual(kj2["method_type"], "rapid_kj")
+        self.assertEqual(kj2["method_status"], "current")
+        self.assertEqual(kj2["knowledge_depth"], "recommendation_ready")
+        self.assertEqual(kj2["source_reference"], KJ_201903_SOURCE_REFERENCE)
+        self.assertIn("阳性结果应进一步确证", kj2["note"])
+        self.assertIn("203DB061A5D171D9AFAC91402B3EAA1B7708C763E37F62DAD1663E231300B69C", kj2["note"])
+
+        kj2_relations = [
+            item for item in payload["method_substances"]
+            if item["method_id"] == "kj-201902"
+        ]
+        self.assertEqual(len(kj2_relations), 2)
+        rosiglitazone = kj2_relations[0]
+        self.assertEqual(rosiglitazone["source_label"], "马来酸罗格列酮")
+        self.assertEqual(rosiglitazone["source_cas_no"], "155141-29-0")
+        self.assertEqual(
+            rosiglitazone["substance_id"],
+            "substance-cas-122320-73-4",
+        )
+        self.assertEqual(
+            substances[rosiglitazone["substance_id"]]["canonical_name"],
+            "罗格列酮",
+        )
+        self.assertIn("母体Substance", rosiglitazone["normalization_note"])
+
+        glibenclamide = kj2_relations[1]
+        self.assertEqual(glibenclamide["source_label"], "格列苯脲")
+        self.assertEqual(glibenclamide["source_cas_no"], "10238-21-8")
+        self.assertEqual(
+            glibenclamide["substance_id"],
+            "substance-cas-10238-21-8",
+        )
+        self.assertEqual(glibenclamide["normalization_note"], "")
+
+        kj2_scope = [
+            item for item in payload["method_applicabilities"]
+            if item["method_id"] == "kj-201902"
+        ]
+        self.assertEqual(len(kj2_scope), 1)
+        self.assertEqual(kj2_scope[0]["product_category"], "保健食品")
+        self.assertEqual(kj2_scope[0]["risk_category"], "blood_glucose")
+        self.assertIn("辅助降血糖", kj2_scope[0]["source_scope_text"])
 
     def test_kj_201903_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b8")
+        self.assertEqual(payload["dataset_version"], "2026.09-b9")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
         methods = {item["method_id"]: item for item in payload["methods"]}
@@ -560,6 +662,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "bjs-202209",
                 "bjs-201701",
                 "bjs-201710",
+                "kj-201901",
+                "kj-201902",
                 "kj-201903",
                 "gbt-45443-2025",
                 "bjs-202405",
@@ -658,15 +762,15 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["methods"]), 7)
+        self.assertEqual(len(payload["methods"]), 9)
         self.assertEqual(len(payload["substances"]), 201)
-        self.assertEqual(len(payload["method_substances"]), 227)
-        self.assertEqual(len(payload["method_applicabilities"]), 44)
+        self.assertEqual(len(payload["method_substances"]), 231)
+        self.assertEqual(len(payload["method_applicabilities"]), 46)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_gbt_45443_and_melatonin_context_match_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b8")
+        self.assertEqual(payload["dataset_version"], "2026.09-b9")
 
         methods = {item["method_id"]: item for item in payload["methods"]}
         self.assertEqual(
@@ -675,6 +779,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "bjs-202209",
                 "bjs-201701",
                 "bjs-201710",
+                "kj-201901",
+                "kj-201902",
                 "kj-201903",
                 "gbt-45443-2025",
                 "bjs-202405",
@@ -772,10 +878,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertIn("bjs-201710", melatonin_method_ids)
         self.assertIn("gbt-45443-2025", melatonin_method_ids)
 
-        self.assertEqual(len(payload["methods"]), 7)
+        self.assertEqual(len(payload["methods"]), 9)
         self.assertEqual(len(payload["substances"]), 201)
-        self.assertEqual(len(payload["method_substances"]), 227)
-        self.assertEqual(len(payload["method_applicabilities"]), 44)
+        self.assertEqual(len(payload["method_substances"]), 231)
+        self.assertEqual(len(payload["method_applicabilities"]), 46)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_verified_dataset_import_is_idempotent_with_exact_scoped_counts(self):
@@ -786,10 +892,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             expected = {
                 "dataset": 1,
                 "regulatory_documents": 7,
-                "methods": 7,
+                "methods": 9,
                 "substances": 201,
-                "method_substances": 227,
-                "applicabilities": 44,
+                "method_substances": 231,
+                "applicabilities": 46,
                 "regulatory_contexts": 1,
                 "group_memberships": 0,
             }
