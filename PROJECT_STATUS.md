@@ -1,10 +1,33 @@
 # Project Status
 
+> **CURRENT DEVELOPMENT OVERRIDE — 2026-09-20**  
+> For active development, read [docs/AI_HANDOFF_V2.md](docs/AI_HANDOFF_V2.md) first. The long V2-4～V2-9 history below is retained as accepted historical evidence; its old counts and “V2-9B NEXT” statement do **not** override current B5 code/config.
+
+## Active Development Snapshot
+
+- Branch: `ux-redesign-v1`
+- Current code audit baseline: `1f34dc07e1ebc8cfd09cb57513d386bbdf51284f` (handoff/docs commits may advance HEAD)
+- SQLite schema: **14**
+- Active program: **B5 Inspection Method deep verification**
+- B3 temporal governance: implemented
+- B4 seven Claim→Risk→Substance directions: accepted
+- Claim taxonomy: **7 types / 42 exact expressions**
+- Claim Inspection Bridge: `claim-inspection-bridge-v2.6` / **25 mappings**
+- Risk Reference: `2026.09-c7` / **83 mappings = 13 current + 70 historical**
+- Inspection Reference: `2026.09-b9` / **9 methods = 8 current recommendation_ready + 1 revoked reference_only**
+- Candidate manifest: `2026.09-b7` / **12 records = 4 promoted traces + 8 verification**
+- KJ201901 / KJ201902: already promoted; do not repeat
+- BJS201808: official full text parsed; **B5-3A verified, runtime unchanged**
+- Immediate next task: **B5-3B canonical parent Substance identity governance for 酚妥拉明 / 特拉唑嗪 / 育亨宾 / 妥拉唑林**, then prepare BJS201808 MethodSubstance/Applicability without creating new Risk relations.
+- Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
+- BJS201808 audit: [V2-B5 BJS 201808 Analyte Audit](docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md)
+
+
 ## Baseline
 
 - Branch: `ux-redesign-v1`
 - V2-4 Wave 1 starting commit: `698b8ad482367ffbd20ba696799c47ebd372d2c3`
-- SQLite schema: 13
+- SQLite schema: 14
 - Active UI: React/Vite in `frontend/`
 - Backend: Python 3.10.x local API and pipeline
 
@@ -109,10 +132,12 @@ V2-8 — COMPLETE. The governed Knowledge read model and inspectable UI are impl
 
 V2-9A — COMPLETE. The governed metric dictionary, deterministic read-only metric projections, explicit unavailable metrics, six GET endpoints and frontend DTO/client contract are accepted.
 
-V2-9 — IN PROGRESS. The visible Analytics UI and Exit Gate remain outstanding.
+V2-9 — historical roadmap state retained for traceability. Its old “NEXT” marker has been superseded by the B3/B4/B5 inspection-governance program.
 
-## Next Gate
+## Current Next Gate
 
-V2-9B Analytics UI & V2-9 Exit Gate is NEXT and requires a separate phase Gate.
+The active next gate is **B5-3B / BJS201808 identity normalization**, as defined in [AI Development Handoff V2](docs/AI_HANDOFF_V2.md).
 
-See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md) and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).
+Do not resume V2-9B merely because older sections below/above mention it; re-enter Analytics only after an explicit product/roadmap decision.
+
+See [Current System Status](docs/CURRENT_SYSTEM_STATUS.md), [AI Development Handoff V2](docs/AI_HANDOFF_V2.md), and the [V2 Roadmap](docs/IMPLEMENTATION_ROADMAP_V2.md).
