@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b6",
+  "manifest_version": "2026.09-b7",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。4条记录已promotion（其中KJ201901/KJ201902在b9依据SAMR正式DOCX全文达到recommendation_ready），8条仍处verification。manifest只保存发现/核验/promotion追溯，不被runtime直接消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902已在Inspection Reference b9完成promotion；BJS 201808已完成SAMR官方DOCX全文解析，但因4个母体Substance identity尚未正式治理而继续停留verification。候选manifest仍不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -428,8 +428,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
       "discovery_source_date": "2018-11-26",
       "discovery_source_record_id": "samr-database-bjs-201808",
-      "reason": "SAMR食品补充检验方法数据库确认正式标题和公开方法身份；SAMR官方公告附件标签明确给出BJS 201808编号。该方法与male_function/yohimbine等方向具有潜在方法价值，但当前尚未从官方DOCX全文完成5种目标物CAS、适用食品/保健食品基质和applicability深核，因此不进入runtime。 已定位SAMR正式全文附件URL；当前工具尚未直接解析该二进制附件，因此locator本身不提升knowledge_depth。",
-      "correction_note": "旧B5草案仅因可访问页面未显示编号而暂缓；后续找到SAMR官方公告附件标签，已一手确认BJS 201808编号。Method存在不自动建立任何新的Risk关系。",
+      "reason": "SAMR食品补充检验方法数据库和官方公告已确认BJS 201808方法身份；SAMR官方DOCX全文已通过研究workflow下载并解析（SHA-256 45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9）。全文已核实5个方法目标物、食品/保健食品适用范围、HPLC-MS/MS定量与确证角色，以及5种盐型标准品信息。当前仍不promotion：5个目标物中仅哌唑嗪已有canonical Substance，酚妥拉明、特拉唑嗪、育亨宾、妥拉唑林的母体Substance身份尚未正式写入Inspection Reference；盐型标准品CAS不得直接替代母体CAS。Method存在也不建立新的Risk关系。",
+      "correction_note": "旧B5草案先因编号/全文不可直接读取而暂缓；现已由SAMR官方公告确认BJS 201808编号，并由SAMR原始DOCX完成全文解析。下一步应先治理4个缺失母体Substance及盐型→母体normalization，再单独决定promotion；不得由BJS 201808反推Claim→Risk或展开育亨宾group。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中5种α-受体阻断类药物的测定》食品补充检验方法的公告（2018年第28号）",
@@ -454,7 +454,13 @@
           "source_name": "SAMR正式方法附件：食品中5种α-受体阻断类药物的测定",
           "source_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516383836747775.docx",
           "verified_facts": [
-            "official_fulltext_locator"
+            "official_fulltext_locator",
+            "official_fulltext_sha256:45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9",
+            "five_target_analytes",
+            "food_and_health_food_scope",
+            "quantitative_and_confirmation_role",
+            "standard_salt_names_and_cas",
+            "limits_of_detection_and_quantification"
           ]
         }
       ],
