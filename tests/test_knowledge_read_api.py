@@ -51,18 +51,18 @@ class KnowledgeReadServiceTest(unittest.TestCase):
                 "queryPendingMonitorTargets": 88,
                 "pausedMonitorTargets": 2,
                 "healthFunctions": 25,
-                "inspectionMethods": 7,
-                "recommendationReadyMethods": 6,
+                "inspectionMethods": 9,
+                "recommendationReadyMethods": 8,
                 "referenceOnlyMethods": 1,
                 "substances": 201,
-                "riskMappings": 81,
+                "riskMappings": 83,
                 "groupMappings": 12,
                 "regulatoryDocuments": 7,
             },
         )
         self.assertEqual(
             summary["authorities"]["inspection"]["datasetVersion"],
-            "2026.09-b8",
+            "2026.09-b9",
         )
         self.assertEqual(
             summary["authorities"]["healthFunctions"]["datasetVersion"],
@@ -152,11 +152,11 @@ class KnowledgeReadServiceTest(unittest.TestCase):
             )
         )
         all_mappings = self.service.risk_mappings(limit=100, offset=0)
-        self.assertEqual(all_mappings["total"], 81)
+        self.assertEqual(all_mappings["total"], 83)
         current = self.service.risk_mappings(status="current", limit=100, offset=0)
         historical = self.service.risk_mappings(status="historical", limit=100, offset=0)
         self.assertEqual(current["total"], 13)
-        self.assertEqual(historical["total"], 68)
+        self.assertEqual(historical["total"], 70)
         self.assertEqual(
             {item["riskCategory"] for item in historical["items"]},
             {"sleep_aid", "blood_pressure", "blood_lipid", "blood_glucose", "weight_loss", "anti_fatigue"},
@@ -207,7 +207,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         self.assertEqual(document["status"], "revoked")
         self.assertEqual(document["supersededBy"], ["regdoc-gbt-45443-2025"])
         self.assertTrue(document["sourceReference"].startswith("https://"))
-        self.assertEqual(document["source"]["datasetVersion"], "2026.09-b8")
+        self.assertEqual(document["source"]["datasetVersion"], "2026.09-b9")
 
     def test_invalid_filters_and_pagination_are_rejected(self):
         with self.assertRaises(KnowledgeQueryValidationError):
@@ -265,7 +265,7 @@ class KnowledgeReadHttpApiTest(unittest.TestCase):
                     with urlopen(f"{base}/api/knowledge/{endpoint}") as response:
                         self.assertEqual(response.status, 200)
                         payloads.append(json.load(response))
-                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 7)
+                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 9)
                 self.assertEqual(payloads[4]["total"], len(payloads[4]["items"]))
                 self.assertGreater(payloads[4]["total"], 0)
                 self.assertTrue(
