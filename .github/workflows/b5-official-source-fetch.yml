@@ -32,6 +32,7 @@ jobs:
           from __future__ import annotations
           import hashlib
           import html
+          import http.cookiejar
           import json
           import re
           import time
@@ -63,19 +64,29 @@ jobs:
               "bjs-202602": "食品中伐地那非杂质30的测定",
           }
 
-          def fetch(url: str) -> bytes:
-              req = urllib.request.Request(
-                  url,
-                  headers={
-                      "User-Agent": USER_AGENT,
-                      "Accept": "*/*",
-                      "Referer": "https://www.samr.gov.cn/",
-                  },
-              )
+          COOKIE_JAR = http.cookiejar.CookieJar()
+          OPENER = urllib.request.build_opener(
+              urllib.request.HTTPCookieProcessor(COOKIE_JAR)
+          )
+
+          def fetch(
+              url: str,
+              *,
+              referer: str | None = None,
+              extra_headers: dict[str, str] | None = None,
+          ) -> bytes:
+              headers = {
+                  "User-Agent": USER_AGENT,
+                  "Accept": "*/*",
+                  "Referer": referer or "https://www.samr.gov.cn/",
+              }
+              if extra_headers:
+                  headers.update(extra_headers)
+              req = urllib.request.Request(url, headers=headers)
               last = None
               for attempt in range(3):
                   try:
-                      with urllib.request.urlopen(req, timeout=45) as response:
+                      with OPENER.open(req, timeout=45) as response:
                           return response.read()
                   except Exception as exc:
                       last = exc
@@ -270,7 +281,17 @@ jobs:
                                   + "?"
                                   + urllib.parse.urlencode(query_data)
                               )
-                              body_bytes = fetch(body_url)
+                              body_bytes = fetch(
+                                  body_url,
+                                  referer=href,
+                                  extra_headers={
+                                      "Accept": (
+                                          "application/json, text/javascript, "
+                                          "*/*; q=0.01"
+                                      ),
+                                      "X-Requested-With": "XMLHttpRequest",
+                                  },
+                              )
                               (OUT / f"{key}.authorized-response.json").write_bytes(
                                   body_bytes
                               )
