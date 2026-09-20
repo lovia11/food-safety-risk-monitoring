@@ -1250,6 +1250,16 @@ The secondary `依善利酮 / 依普利酮` inconsistency remains unresolved. Pr
 
 B5-9 is complete.
 
+Bounded B5-9B governance Gate:
+
+```text
+candidate manifest validation/invariants = success
+inspection-reference unchanged = 2026.09-b11
+BJS202409 runtime method = absent
+Risk mappings unchanged = 2026.09-c7 / 83
+Claim bridge unchanged = v2.6 / 25
+```
+
 ## 18.10A Immediate next subtask — B5-10A BJS202502
 
 Audit BJS 202502 independently:
