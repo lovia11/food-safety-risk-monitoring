@@ -34,19 +34,19 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             if item["status"] == "verification"
         ]
         self.assertEqual(
-            [item["candidate_id"] for item in promoted],
-            [
+            {item["candidate_id"] for item in promoted},
+            {
+                "candidate-bjs-201901",
                 "candidate-bjs-202405",
                 "candidate-gbt-5009-170-2003",
                 "candidate-kj201901",
                 "candidate-kj201902",
                 "candidate-bjs-201808",
-            ],
+            },
         )
         self.assertEqual(
             {item["method_no"] for item in verification},
             {
-                "BJS 201901",
                 "BJS 202409",
                 "BJS 202501",
                 "BJS 202502",
@@ -68,7 +68,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             all(item["promoted_dataset_version"] is None for item in verification)
         )
 
-        bjs = promoted[0]
+        bjs = next(item for item in promoted if item["method_no"] == "BJS 202405")
         self.assertEqual(bjs["method_no"], "BJS 202405")
         self.assertEqual(
             bjs["title"], "食品中西地那非、他达拉非等化合物的测定"
@@ -81,7 +81,9 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertNotIn("西布曲明", bjs["reason"])
         self.assertIn("旧关联作废", bjs["correction_note"])
 
-        predecessor = promoted[1]
+        predecessor = next(
+            item for item in promoted if item["method_no"] == "GB/T 5009.170-2003"
+        )
         self.assertEqual(
             predecessor["title"], "保健食品中褪黑素含量的测定"
         )
@@ -92,11 +94,11 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("两者保持独立身份", predecessor["correction_note"])
 
         bjs_201901 = next(
-            item for item in verification if item["method_no"] == "BJS 201901"
+            item for item in promoted if item["method_no"] == "BJS 201901"
         )
-        self.assertEqual(bjs_201901["expected_depth"], "reference_only")
-        self.assertIsNone(bjs_201901["promoted_method_id"])
-        self.assertIsNone(bjs_201901["promoted_dataset_version"])
+        self.assertEqual(bjs_201901["expected_depth"], "recommendation_ready")
+        self.assertEqual(bjs_201901["promoted_method_id"], "bjs-201901")
+        self.assertEqual(bjs_201901["promoted_dataset_version"], "2026.09-b11")
         self.assertIn("C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9", bjs_201901["reason"])
         self.assertIn("antiword", bjs_201901["reason"])
         self.assertIn("27种", bjs_201901["reason"])
@@ -111,7 +113,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b14")
+        self.assertEqual(payload["manifest_version"], "2026.09-b15")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
@@ -154,6 +156,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             ("KJ201901", "kj-201901", "2026.09-b9"),
             ("KJ201902", "kj-201902", "2026.09-b9"),
             ("BJS 201808", "bjs-201808", "2026.09-b10"),
+            ("BJS 201901", "bjs-201901", "2026.09-b11"),
         ):
             item = promoted_by_no[method_no]
             self.assertEqual(item["expected_depth"], "recommendation_ready")
@@ -209,7 +212,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
                 }
             connection.close()
 
-        self.assertEqual(len(operational_method_numbers), 10)
+        self.assertEqual(len(operational_method_numbers), 11)
         promoted = [
             item for item in candidates if item["status"] == "promoted"
         ]
@@ -228,18 +231,18 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         )
 
         report = load_and_build_audit()
-        self.assertEqual(report["inventory"]["indexed_methods"], 10)
+        self.assertEqual(report["inventory"]["indexed_methods"], 11)
         self.assertEqual(report["inventory"]["candidate_records"], 12)
-        self.assertEqual(report["inventory"]["candidate_methods"], 7)
-        self.assertEqual(report["inventory"]["promoted_candidate_methods"], 5)
+        self.assertEqual(report["inventory"]["candidate_methods"], 6)
+        self.assertEqual(report["inventory"]["promoted_candidate_methods"], 6)
         self.assertEqual(
-            report["metrics"]["method_reference_coverage"]["denominator"], 10
+            report["metrics"]["method_reference_coverage"]["denominator"], 11
         )
         self.assertEqual(
             set(report["candidate_manifest"]["pending_candidate_ids"]),
             {item["candidate_id"] for item in verification},
         )
-        self.assertEqual(len(report["candidate_manifest"]["promoted_candidates"]), 5)
+        self.assertEqual(len(report["candidate_manifest"]["promoted_candidates"]), 6)
         self.assertTrue(
             report["candidate_manifest"]["excluded_from_coverage_denominator"]
         )

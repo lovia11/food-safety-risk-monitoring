@@ -39,6 +39,10 @@ BJS_201808_SOURCE_REFERENCE = (
     "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/"
     "art_304e4c4a5f9d4e8d988c1b30ce408825.html"
 )
+BJS_201901_ATTACHMENT_REFERENCE = (
+    "https://www.samr.gov.cn/cms_files/filemanager/1647978232/"
+    "attach/20235/P020190516389935220036.doc"
+)
 GBT_5009_170_2003_SOURCE_REFERENCE = (
     "https://std.samr.gov.cn/gb/search/"
     "gbDetailed?id=71F772D7B65AD3A7E05397BE0A0AB82A"
@@ -196,6 +200,36 @@ EXPECTED_BJS_201710_ROWS = [
     ("烟酸", "Nicotinic acid", "59-67-6"),
 ]
 
+EXPECTED_BJS_201901_ROWS = [
+    ("苯乙双胍", "Phenformin", "114-86-3"),
+    ("丁二胍", "Buformin", "692-13-7"),
+    ("二甲双胍", "Metformin", "657-24-9"),
+    ("伏格列波糖", "Voglibose", "83480-29-9"),
+    ("阿卡波糖", "Acarbose", "56180-94-0"),
+    ("维达列汀", "Vildagliptin", "274901-16-5"),
+    ("罗格列酮", "Rosiglitazone", "122320-73-4"),
+    ("西他列汀", "Sitagliptin", "486460-32-6"),
+    ("吡格列酮", "Pioglitazone", "111025-46-8"),
+    ("氯磺丙脲", "Chlorpropamide", "94-20-2"),
+    ("达格列净", "Dapagliflozin", "461432-26-8"),
+    ("格列吡嗪", "Glipizide", "29094-61-9"),
+    ("甲苯磺丁脲", "Tolbutamide", "64-77-7"),
+    ("醋磺己脲", "Acetohexamide", "968-81-0"),
+    ("妥拉磺脲", "Tolazamide", "1156-19-0"),
+    ("瑞格列奈", "Repaglinide", "135062-02-1"),
+    ("卡格列净", "Canagliflozin", "842133-18-0"),
+    ("格列齐特", "Gliclazide", "21187-98-4"),
+    ("格列波脲", "Glibornuride", "26944-48-9"),
+    ("格列本脲", "Glibenclamide", "10238-21-8"),
+    ("那格列奈", "Nateglinide", "105816-04-4"),
+    ("格列美脲", "Glimepiride", "93479-97-1"),
+    ("曲格列酮", "Troglitazone", "97322-87-7"),
+    ("格列喹酮", "Gliquidone", "33342-05-1"),
+    ("莫格他唑", "Muraglitazar", "331741-94-7"),
+    ("GW501516", "GW501516", "317318-70-0"),
+    ("环格列酮", "Ciglitazone", "74772-77-3"),
+]
+
 REUSED_BJS_201710_CAS = {
     "79902-63-9",
     "75330-75-5",
@@ -214,11 +248,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
     def test_bjs_202209_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         self.assertEqual(payload["dataset_id"], "inspection-reference")
-        self.assertEqual(payload["dataset_version"], "2026.09-b10")
+        self.assertEqual(payload["dataset_version"], "2026.09-b11")
         self.assertEqual(payload["dataset_status"], "verified_reference")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
-        self.assertEqual(len(payload["methods"]), 10)
+        self.assertEqual(len(payload["methods"]), 11)
         method = next(
             item for item in payload["methods"] if item["method_id"] == "bjs-202209"
         )
@@ -297,6 +331,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "gbt-45443-2025",
                 "bjs-202405",
                 "bjs-201808",
+                "bjs-201901",
                 "gbt-5009-170-2003",
             },
         )
@@ -388,9 +423,9 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["substances"]), 205)
-        self.assertEqual(len(payload["method_substances"]), 236)
-        self.assertEqual(len(payload["method_applicabilities"]), 53)
+        self.assertEqual(len(payload["substances"]), 219)
+        self.assertEqual(len(payload["method_substances"]), 263)
+        self.assertEqual(len(payload["method_applicabilities"]), 61)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_bjs_201710_reference_contract_matches_verified_source_facts(self):
@@ -549,10 +584,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["methods"]), 10)
-        self.assertEqual(len(payload["substances"]), 205)
-        self.assertEqual(len(payload["method_substances"]), 236)
-        self.assertEqual(len(payload["method_applicabilities"]), 53)
+        self.assertEqual(len(payload["methods"]), 11)
+        self.assertEqual(len(payload["substances"]), 219)
+        self.assertEqual(len(payload["method_substances"]), 263)
+        self.assertEqual(len(payload["method_applicabilities"]), 61)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_kj_201901_and_201902_match_samr_fulltext_and_scoped_runtime_rules(self):
@@ -656,6 +691,76 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertIn("辅助降血糖", kj2_scope[0]["source_scope_text"])
 
 
+    def test_bjs_201901_fulltext_promotion_contract_is_governed(self):
+        payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
+        methods = {item["method_id"]: item for item in payload["methods"]}
+        substances = {item["substance_id"]: item for item in payload["substances"]}
+
+        method = methods["bjs-201901"]
+        self.assertEqual(method["method_no"], "BJS 201901")
+        self.assertEqual(method["method_type"], "supplementary_bjs")
+        self.assertEqual(method["method_status"], "current")
+        self.assertEqual(method["knowledge_depth"], "recommendation_ready")
+        self.assertEqual(method["source_reference"], BJS_201901_ATTACHMENT_REFERENCE)
+        self.assertEqual(method["source_date"], "2019-01-29")
+        self.assertIn(
+            "C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9",
+            method["note"],
+        )
+        self.assertIn("不得反推Claim→Risk或Risk→Substance", method["note"])
+
+        relations = [
+            item for item in payload["method_substances"]
+            if item["method_id"] == "bjs-201901"
+        ]
+        self.assertEqual(len(relations), 27)
+        self.assertEqual([item["ordinal"] for item in relations], list(range(1, 28)))
+        self.assertTrue(all(item["determination_role"] == "quantitative" for item in relations))
+        self.assertEqual(
+            [(item["source_label"], item["source_cas_no"]) for item in relations],
+            [(name, cas) for name, _, cas in EXPECTED_BJS_201901_ROWS],
+        )
+        by_source = {item["source_label"]: item for item in relations}
+        self.assertEqual(by_source["格列本脲"]["substance_id"], "substance-cas-10238-21-8")
+        self.assertEqual(substances["substance-cas-10238-21-8"]["canonical_name"], "格列苯脲")
+        self.assertTrue(by_source["格列本脲"]["normalization_note"])
+        self.assertEqual(by_source["吡格列酮"]["substance_id"], "substance-cas-111025-46-8")
+        self.assertEqual(substances["substance-cas-111025-46-8"]["canonical_name"], "吡咯列酮")
+        self.assertTrue(by_source["吡格列酮"]["normalization_note"])
+
+        new_cas = {
+            "83480-29-9", "56180-94-0", "274901-16-5", "486460-32-6",
+            "94-20-2", "461432-26-8", "968-81-0", "1156-19-0",
+            "842133-18-0", "105816-04-4", "97322-87-7", "331741-94-7",
+            "317318-70-0", "74772-77-3",
+        }
+        by_cas = {item["cas_no"]: item for item in substances.values()}
+        for source_name, english_name, cas_no in EXPECTED_BJS_201901_ROWS:
+            substance = by_cas[cas_no]
+            if cas_no in new_cas:
+                self.assertEqual(substance["canonical_name"], source_name)
+                self.assertEqual(substance["english_name"], english_name)
+                self.assertIn("不据此创建Risk映射", substance["note"])
+
+        scopes = [
+            item for item in payload["method_applicabilities"]
+            if item["method_id"] == "bjs-201901"
+        ]
+        self.assertEqual(len(scopes), 8)
+        self.assertEqual(
+            {(item["product_category"], item["product_form"]) for item in scopes},
+            {
+                ("茶叶", ""), ("奶粉", ""), ("饼干", ""), ("酒", ""), ("饮料", ""),
+                ("特殊食品", "片剂"), ("特殊食品", "胶囊剂"), ("特殊食品", "口服液"),
+            },
+        )
+        self.assertTrue(all(item["risk_category"] == "" for item in scopes))
+        oral = next(item for item in scopes if item["product_form"] == "口服液")
+        self.assertEqual(oral["scope_type"], "conditional")
+        self.assertIn("5.1.2", oral["source_scope_text"])
+        self.assertEqual(payload["substance_group_memberships"], [])
+
+
     def test_bjs_201808_parent_identity_normalization_and_scope_are_governed(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
         methods = {item["method_id"]: item for item in payload["methods"]}
@@ -738,7 +843,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
 
     def test_kj_201903_reference_contract_matches_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b10")
+        self.assertEqual(payload["dataset_version"], "2026.09-b11")
         self.assertEqual(payload["source_reference"], DATASET_SOURCE_REFERENCE)
 
         methods = {item["method_id"]: item for item in payload["methods"]}
@@ -754,6 +859,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "gbt-45443-2025",
                 "bjs-202405",
                 "bjs-201808",
+                "bjs-201901",
                 "gbt-5009-170-2003",
             },
         )
@@ -810,7 +916,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 for item in kj_relations
             )
         )
-        self.assertEqual(len(payload["substances"]), 205)
+        self.assertEqual(len(payload["substances"]), 219)
         self.assertTrue(
             all(item["determination_role"] == "rapid_screen" for item in kj_relations)
         )
@@ -849,15 +955,15 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             )
         )
 
-        self.assertEqual(len(payload["methods"]), 10)
-        self.assertEqual(len(payload["substances"]), 205)
-        self.assertEqual(len(payload["method_substances"]), 236)
-        self.assertEqual(len(payload["method_applicabilities"]), 53)
+        self.assertEqual(len(payload["methods"]), 11)
+        self.assertEqual(len(payload["substances"]), 219)
+        self.assertEqual(len(payload["method_substances"]), 263)
+        self.assertEqual(len(payload["method_applicabilities"]), 61)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_gbt_45443_and_melatonin_context_match_verified_source_facts(self):
         payload = validate_inspection_config(read_json(REFERENCE_CONFIG))
-        self.assertEqual(payload["dataset_version"], "2026.09-b10")
+        self.assertEqual(payload["dataset_version"], "2026.09-b11")
 
         methods = {item["method_id"]: item for item in payload["methods"]}
         self.assertEqual(
@@ -872,6 +978,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
                 "gbt-45443-2025",
                 "bjs-202405",
                 "bjs-201808",
+                "bjs-201901",
                 "gbt-5009-170-2003",
             },
         )
@@ -909,7 +1016,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertEqual(relation["ordinal"], 1)
 
         substances = payload["substances"]
-        self.assertEqual(len(substances), 205)
+        self.assertEqual(len(substances), 219)
         melatonin_substances = [
             item for item in substances if item["substance_id"] == "substance-cas-73-31-4"
         ]
@@ -966,10 +1073,10 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertIn("bjs-201710", melatonin_method_ids)
         self.assertIn("gbt-45443-2025", melatonin_method_ids)
 
-        self.assertEqual(len(payload["methods"]), 10)
-        self.assertEqual(len(payload["substances"]), 205)
-        self.assertEqual(len(payload["method_substances"]), 236)
-        self.assertEqual(len(payload["method_applicabilities"]), 53)
+        self.assertEqual(len(payload["methods"]), 11)
+        self.assertEqual(len(payload["substances"]), 219)
+        self.assertEqual(len(payload["method_substances"]), 263)
+        self.assertEqual(len(payload["method_applicabilities"]), 61)
         self.assertEqual(len(payload["substance_regulatory_contexts"]), 1)
 
     def test_verified_dataset_import_is_idempotent_with_exact_scoped_counts(self):
@@ -979,11 +1086,11 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             store.initialize()
             expected = {
                 "dataset": 1,
-                "regulatory_documents": 8,
-                "methods": 10,
-                "substances": 205,
-                "method_substances": 236,
-                "applicabilities": 53,
+                "regulatory_documents": 9,
+                "methods": 11,
+                "substances": 219,
+                "method_substances": 263,
+                "applicabilities": 61,
                 "regulatory_contexts": 1,
                 "group_memberships": 0,
             }
@@ -1055,7 +1162,7 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
             {item["knowledge_depth"] for item in payload["methods"]},
             {"reference_only", "recommendation_ready"},
         )
-        self.assertEqual(len(payload["regulatory_documents"]), 8)
+        self.assertEqual(len(payload["regulatory_documents"]), 9)
         self.assertEqual(
             {item["regulatory_document_id"] for item in payload["methods"]},
             {item["document_id"] for item in payload["regulatory_documents"]},

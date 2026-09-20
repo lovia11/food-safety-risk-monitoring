@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "dataset_id": "inspection-reference",
-  "dataset_version": "2026.09-b10",
+  "dataset_version": "2026.09-b11",
   "dataset_status": "verified_reference",
   "source_name": "国家市场监督管理总局官方公开来源（各Method和RegulatoryContext保留独立provenance）",
   "source_reference": "https://www.samr.gov.cn/",
   "source_date": null,
   "collected_at": "2026-09-04T17:07:24+08:00",
-  "verified_at": "2026-09-20T00:33:00+08:00",
+  "verified_at": "2026-09-21T00:35:00+09:00",
   "description": "当前索引包含9个recommendation_ready现行方法和1个revoked reference_only历史方法。B5-3B依据BJS 201808正式全文与独立化学身份交叉核验，加入4个缺失母体Substance、复用既有哌唑嗪，建立5条盐标准品→母体MethodSubstance归一化及7条明确MethodApplicability；“其他类似基质可参照”仅保留为来源说明，不扩大成无条件适用范围。Method事实不新增Risk、Claim、Group或非法添加结论。",
   "regulatory_documents": [
     {
@@ -24,7 +24,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-bjs-201701",
@@ -40,7 +40,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-bjs-201710",
@@ -56,7 +56,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-kj-201903",
@@ -72,7 +72,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-gbt-45443-2025",
@@ -90,7 +90,7 @@
       ],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-bjs-202405",
@@ -106,7 +106,7 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-gbt-5009-170-2003",
@@ -124,7 +124,7 @@
         "regdoc-gbt-45443-2025"
       ],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
     },
     {
       "document_id": "regdoc-bjs-201808",
@@ -140,7 +140,23 @@
       "supersedes": [],
       "superseded_by": [],
       "dataset_id": "inspection-reference",
-      "dataset_version": "2026.09-b10"
+      "dataset_version": "2026.09-b11"
+    },
+    {
+      "document_id": "regdoc-bjs-201901",
+      "document_type": "official_announcement",
+      "document_no": "市场监管总局2019年第4号公告",
+      "title": "市场监管总局关于发布《食品中二甲双胍等非食品用化学物质的测定》等4项食品补充检验方法的公告",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2019-01-29",
+      "effective_date": null,
+      "status": "current",
+      "source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_a5204e5dff584b91b222bf9b47c2c92b.html",
+      "jurisdiction": "CN",
+      "supersedes": [],
+      "superseded_by": [],
+      "dataset_id": "inspection-reference",
+      "dataset_version": "2026.09-b11"
     }
   ],
   "methods": [
@@ -333,6 +349,25 @@
       "source_reference": "https://www.samr.gov.cn/spcjs/bz/cs/art/2018/art_304e4c4a5f9d4e8d988c1b30ce408825.html",
       "source_date": "2018-11-26",
       "note": "SAMR正式DOCX全文核验（SHA-256 45D85B389553925AF01FCB5EEAB6DE7113E898ED998FCDEE44EBD3476DB696B9）：本方法以HPLC-MS/MS测定酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林，进行定量测定并包含定性确证；适用于硬质糖果、凝胶糖果、酒、茶饮料及保健食品片剂、口服液、胶囊剂。正式全文同时说明其他类似基质可参照本方法，但当前runtime不把该开放性表述编码为无条件include。标准品为相应甲磺酸盐/盐酸盐，MethodSubstance显式保留盐型source_label/source_cas_no并归一化到母体Substance。新增Method与Substance不得反推任何Claim→Risk、Risk→Substance或育亨宾group成员关系。正式附件：https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516383836747775.docx。"
+    },
+    {
+      "method_id": "bjs-201901",
+      "dataset_id": "inspection-reference",
+      "method_no": "BJS 201901",
+      "method_name": "食品中二甲双胍等非食品用化学物质的测定",
+      "method_type": "supplementary_bjs",
+      "method_status": "current",
+      "knowledge_depth": "recommendation_ready",
+      "regulatory_document_id": "regdoc-bjs-201901",
+      "publisher": "国家市场监督管理总局",
+      "published_date": "2019-01-29",
+      "effective_date": null,
+      "replaces_method_no": null,
+      "replaced_by_method_no": null,
+      "source_name": "市场监管总局2019年第4号公告及SAMR正式附件1",
+      "source_reference": "https://www.samr.gov.cn/cms_files/filemanager/1647978232/attach/20235/P020190516389935220036.doc",
+      "source_date": "2019-01-29",
+      "note": "SAMR正式DOC全文核验（SHA-256 C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9；antiword可复现解析）：本方法以HPLC-MS/MS测定27种非食品用化学物质，外标法定量，并以保留时间和定性离子相对丰度进行定性确证。正式范围列出茶叶、奶粉、饼干、酒、饮料等食品，并包括上述类似基质的片剂、胶囊剂等形式特殊食品；正文5.1.2另明确饮料、口服液前处理。runtime仅编码明确类别/剂型，“等食品/类似基质/等形式”不扩大为全部食品。Method分析物不得反推Claim→Risk或Risk→Substance。"
     }
   ],
   "substances": [
@@ -2180,6 +2215,132 @@
       "cas_no": "59-98-3",
       "substance_group": "",
       "note": "BJS 201808母体分析物；化学身份经PubChem CID 5504（CAS 59-98-3）交叉核验，方法标准品为盐酸妥拉唑林（59-97-2）。PubChem仅用于化学身份，不构成Risk监管映射依据：https://pubchem.ncbi.nlm.nih.gov/compound/Tolazoline"
+    },
+    {
+      "substance_id": "substance-cas-83480-29-9",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "伏格列波糖",
+      "english_name": "Voglibose",
+      "cas_no": "83480-29-9",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-56180-94-0",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "阿卡波糖",
+      "english_name": "Acarbose",
+      "cas_no": "56180-94-0",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-274901-16-5",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "维达列汀",
+      "english_name": "Vildagliptin",
+      "cas_no": "274901-16-5",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-486460-32-6",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "西他列汀",
+      "english_name": "Sitagliptin",
+      "cas_no": "486460-32-6",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-94-20-2",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "氯磺丙脲",
+      "english_name": "Chlorpropamide",
+      "cas_no": "94-20-2",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-461432-26-8",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "达格列净",
+      "english_name": "Dapagliflozin",
+      "cas_no": "461432-26-8",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-968-81-0",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "醋磺己脲",
+      "english_name": "Acetohexamide",
+      "cas_no": "968-81-0",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-1156-19-0",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "妥拉磺脲",
+      "english_name": "Tolazamide",
+      "cas_no": "1156-19-0",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-842133-18-0",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "卡格列净",
+      "english_name": "Canagliflozin",
+      "cas_no": "842133-18-0",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-105816-04-4",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "那格列奈",
+      "english_name": "Nateglinide",
+      "cas_no": "105816-04-4",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-97322-87-7",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "曲格列酮",
+      "english_name": "Troglitazone",
+      "cas_no": "97322-87-7",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-331741-94-7",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "莫格他唑",
+      "english_name": "Muraglitazar",
+      "cas_no": "331741-94-7",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-317318-70-0",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "GW501516",
+      "english_name": "GW501516",
+      "cas_no": "317318-70-0",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
+    },
+    {
+      "substance_id": "substance-cas-74772-77-3",
+      "dataset_id": "inspection-reference",
+      "canonical_name": "环格列酮",
+      "english_name": "Ciglitazone",
+      "cas_no": "74772-77-3",
+      "substance_group": "",
+      "note": "BJS 201901附录A；仅治理Method分析物身份，不据此创建Risk映射。"
     }
   ],
   "method_substances": [
@@ -4306,6 +4467,249 @@
       "determination_role": "quantitative",
       "normalization_note": "BJS 201808检测目标为“妥拉唑林”母体，标准品使用“盐酸妥拉唑林”（CAS 59-97-2）；正式方法按盐标准品配制并换算为对应母体分析物。当前关系仅在本方法内保留来源盐型并归一化到canonical母体Substance，不建立其他方法、法规或Risk中的通用盐型等同规则。",
       "ordinal": 5
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-114-86-3",
+      "source_label": "苯乙双胍",
+      "source_cas_no": "114-86-3",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 1
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-692-13-7",
+      "source_label": "丁二胍",
+      "source_cas_no": "692-13-7",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 2
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-657-24-9",
+      "source_label": "二甲双胍",
+      "source_cas_no": "657-24-9",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 3
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-83480-29-9",
+      "source_label": "伏格列波糖",
+      "source_cas_no": "83480-29-9",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 4
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-56180-94-0",
+      "source_label": "阿卡波糖",
+      "source_cas_no": "56180-94-0",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 5
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-274901-16-5",
+      "source_label": "维达列汀",
+      "source_cas_no": "274901-16-5",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 6
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-122320-73-4",
+      "source_label": "罗格列酮",
+      "source_cas_no": "122320-73-4",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 7
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-486460-32-6",
+      "source_label": "西他列汀",
+      "source_cas_no": "486460-32-6",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 8
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-111025-46-8",
+      "source_label": "吡格列酮",
+      "source_cas_no": "111025-46-8",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 9
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-94-20-2",
+      "source_label": "氯磺丙脲",
+      "source_cas_no": "94-20-2",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 10
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-461432-26-8",
+      "source_label": "达格列净",
+      "source_cas_no": "461432-26-8",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 11
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-29094-61-9",
+      "source_label": "格列吡嗪",
+      "source_cas_no": "29094-61-9",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 12
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-64-77-7",
+      "source_label": "甲苯磺丁脲",
+      "source_cas_no": "64-77-7",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 13
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-968-81-0",
+      "source_label": "醋磺己脲",
+      "source_cas_no": "968-81-0",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 14
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-1156-19-0",
+      "source_label": "妥拉磺脲",
+      "source_cas_no": "1156-19-0",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 15
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-135062-02-1",
+      "source_label": "瑞格列奈",
+      "source_cas_no": "135062-02-1",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 16
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-842133-18-0",
+      "source_label": "卡格列净",
+      "source_cas_no": "842133-18-0",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 17
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-21187-98-4",
+      "source_label": "格列齐特",
+      "source_cas_no": "21187-98-4",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 18
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-26944-48-9",
+      "source_label": "格列波脲",
+      "source_cas_no": "26944-48-9",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 19
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-10238-21-8",
+      "source_label": "格列本脲",
+      "source_cas_no": "10238-21-8",
+      "determination_role": "quantitative",
+      "normalization_note": "BJS 201901来源名称为“格列本脲”，当前canonical为“格列苯脲”；两者CAS均为10238-21-8，按同一化学身份归一化并保留source_label。",
+      "ordinal": 20
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-105816-04-4",
+      "source_label": "那格列奈",
+      "source_cas_no": "105816-04-4",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 21
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-93479-97-1",
+      "source_label": "格列美脲",
+      "source_cas_no": "93479-97-1",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 22
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-97322-87-7",
+      "source_label": "曲格列酮",
+      "source_cas_no": "97322-87-7",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 23
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-33342-05-1",
+      "source_label": "格列喹酮",
+      "source_cas_no": "33342-05-1",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 24
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-331741-94-7",
+      "source_label": "莫格他唑",
+      "source_cas_no": "331741-94-7",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 25
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-317318-70-0",
+      "source_label": "GW501516",
+      "source_cas_no": "317318-70-0",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 26
+    },
+    {
+      "method_id": "bjs-201901",
+      "substance_id": "substance-cas-74772-77-3",
+      "source_label": "环格列酮",
+      "source_cas_no": "74772-77-3",
+      "determination_role": "quantitative",
+      "normalization_note": "",
+      "ordinal": 27
     }
   ],
   "method_applicabilities": [
@@ -4893,6 +5297,102 @@
       "ingredient_context": "",
       "source_scope_text": "本方法适用于硬质糖果、凝胶糖果、酒、茶饮料和保健食品（片剂、口服液、胶囊剂）中酚妥拉明、哌唑嗪、特拉唑嗪、育亨宾和妥拉唑林的测定；其他类似基质可参照本方法。",
       "note": "仅编码正式全文明确列出的类别/剂型；“其他类似基质可参照本方法”保留在来源文本中，不扩大为无条件include。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-01",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "茶叶",
+      "product_form": "",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "仅编码正式范围明确列出的类别；“等食品”不扩大为全部食品。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-02",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "奶粉",
+      "product_form": "",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "仅编码正式范围明确列出的类别；“等食品”不扩大为全部食品。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-03",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "饼干",
+      "product_form": "",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "仅编码正式范围明确列出的类别；“等食品”不扩大为全部食品。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-04",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "酒",
+      "product_form": "",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "仅编码正式范围明确列出的类别；“等食品”不扩大为全部食品。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-05",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "饮料",
+      "product_form": "",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "仅编码正式范围明确列出的类别；“等食品”不扩大为全部食品。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-06",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "特殊食品",
+      "product_form": "片剂",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "主范围明确以片剂为特殊食品形式示例；“上述类似基质/等形式”不扩大为所有特殊食品剂型。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-07",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "include",
+      "product_category": "特殊食品",
+      "product_form": "胶囊剂",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "本标准适用于茶叶、奶粉、饼干、酒、饮料等食品（包括上述类似基质的片剂、胶囊剂等形式的特殊食品）中二甲双胍等27种非食品用化学物质的测定。",
+      "note": "主范围明确以胶囊剂为特殊食品形式示例；“上述类似基质/等形式”不扩大为所有特殊食品剂型。"
+    },
+    {
+      "applicability_id": "bjs-201901-scope-08",
+      "method_id": "bjs-201901",
+      "substance_id": null,
+      "scope_type": "conditional",
+      "product_category": "特殊食品",
+      "product_form": "口服液",
+      "ingredient_context": "",
+      "risk_category": "",
+      "source_scope_text": "5.1.2 饮料、口服液",
+      "note": "正文5.1.2明确口服液前处理，但主范围仅以片剂、胶囊剂举例并使用“等形式”，故保守编码conditional而非无条件include。"
     }
   ],
   "substance_regulatory_contexts": [
