@@ -1,6 +1,6 @@
 # V2-B5-4A BJS 202504 Analyte / Applicability Audit
 
-> Status: CONTENT VERIFIED WITH OFFICIAL-ATTACHMENT TRANSPORT GAP — runtime unchanged  
+> Status: B5-4A CONTENT VERIFIED；B5-4B SOURCE-GAP CONFIRMED / DEFERRED — runtime unchanged  
 > Date: 2026-09-20  
 > Scope: method identity / full-text content cross-check / analyte identity / applicability / lifecycle / current Risk overlap  
 > Runtime decision: DO NOT PROMOTE in B5-4A
@@ -277,3 +277,87 @@ Next work should be limited to **BJS 202504 canonical Substance identity governa
 7. decide promotion depth only after the above passes validation.
 
 Do not promote merely because the full-text mirror is available.
+
+
+## 9. B5-4B source-gap resolution result
+
+B5-4B first checked a structural invariant before changing data:
+
+```text
+inspection-reference@2026.09-b10
+Substances = 205
+Substances referenced by MethodSubstance = 205
+orphan Substance = 0
+```
+
+The current dataset therefore does not use “preload an unreferenced Substance now and link it to a Method later” as a normal pattern.
+
+To avoid creating a one-off data shape solely for BJS 202504, the five candidate identities were **not** inserted as orphan runtime Substance rows.
+
+### 9.1 Real-browser official-source reproduction
+
+Research workflow baseline:
+
+```text
+cff95b6388774f363f7b0a60fb0049c107bee4d6
+Render SAMR BJS 202504 in B5 research browser
+```
+
+The workflow installed Playwright/Chromium and loaded the official SAMR Method page in a real browser context.
+
+Observed result:
+
+```text
+navigation_status = 200
+official page title = correct
+body_contains_method_title = true
+body_contains_scope_keyword = false
+attachment_links = []
+downloaded_attachments = []
+```
+
+The browser itself received the same AuthorizedRead API result:
+
+```json
+{
+  "success": false,
+  "data": {},
+  "message": "",
+  "code": "200"
+}
+```
+
+Thus the gap is no longer attributed to urllib/session emulation. As of this audit, the official public page is returning an empty dynamic article body even in Chromium.
+
+All current-HEAD Gates at this research baseline passed:
+
+- Python syntax gate — success
+- B3 B4 governance regression — success
+- B5 official source fetch — success
+- V2 full acceptance — success
+
+### 9.2 B5-4B decision
+
+Do not force a runtime change.
+
+Keep:
+
+```text
+BJS 202504
+status = verification
+expected_depth = reference_only
+runtime = unchanged
+inspection-reference = 2026.09-b10
+```
+
+Deferred items:
+
+- official SAMR attachment URL / SHA-256;
+- five canonical Substance runtime rows;
+- five MethodSubstance rows;
+- MethodApplicability runtime rows;
+- promotion depth decision.
+
+If the SAMR page/attachment later becomes available, resume from this audit instead of repeating discovery.
+
+Until then, proceed to the next independent B5 candidate rather than weakening the provenance gate.

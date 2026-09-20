@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A BJS202504 CONTENT AUDIT COMPLETE / RUNTIME UNCHANGED；NEXT = B5-4B identity governance + official-source gap resolution  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A BJS202504 CONTENT AUDIT COMPLETE；B5-4B SOURCE GAP CONFIRMED / DEFERRED；NEXT = B5-5A BJS202501 deep verification  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -70,7 +70,7 @@ runtime_consumed = false
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
 | BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
-| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A另有全文镜像/化学身份交叉核验 | `verification / reference_only；B5-4A audited` |
+| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A全文镜像/化学身份交叉核验；B5-4B Chromium确认官方动态正文仍为空 | `verification / reference_only；deferred pending official attachment` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 201808 食品中5种α-受体阻断类药物的测定 | Method index；不得由方法反推 male_function / yohimbine Risk | SAMR 2018年第28号公告 + 正式DOCX + 独立化学身份交叉核验 | `promoted / recommendation_ready @ b10` |
@@ -238,8 +238,10 @@ verification / reference_only
 runtime unchanged
 ```
 
-Next = **B5-4B canonical Substance identity governance + official-source gap resolution**.  
-Do not create concrete weight_loss relations or group memberships as a side effect.
+B5-4B 已用真实 Chromium 复现官方页面，AuthorizedRead 仍返回 `success:false`；同时当前 Inspection Reference 不存在 orphan Substance，因此不预先插入5个孤立实体。BJS202504 保持 `verification/reference_only`，待官方附件恢复后再继续。
+
+Next = **B5-5A BJS202501 deep verification**.  
+Do not create concrete Risk relations as a side effect.
 
 Canonical audit: `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`.
 
@@ -311,4 +313,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-4B BJS202504**，只做 canonical Substance identity governance + 官方来源缺口处理；在 provenance 足够前不 promotion，不新增 Claim/Risk/group membership。
+**下一验收子任务：B5-5A BJS202501**，先做 Method identity/full-text/analyte/CAS/applicability/lifecycle 审计；BJS202504 暂停在 verification/reference_only，不降低 provenance Gate。

@@ -3,7 +3,7 @@
 > Status: CANONICAL CURRENT-DEVELOPMENT HANDOFF  
 > Prepared from branch: `ux-redesign-v1`  
 > Last accepted runtime code/config/test state: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae` (`Refresh B5 acceptance inventory contracts`)  
-> Current accepted B5 research-workflow state: `a8e9b78d88c4a7ea3f4eeb616be34553b7239d52` (`Reproduce SAMR AJAX session in B5 research`)  
+> Current accepted B5 research-workflow state: `cff95b6388774f363f7b0a60fb0049c107bee4d6` (`Render SAMR BJS 202504 in B5 research browser`)  
 > Date: 2026-09-20  
 > Important: handoff/document commits may advance HEAD after the commit above. Always refresh the branch HEAD before editing.
 
@@ -843,18 +843,48 @@ Current Risk has a `weight_loss` **group** reference to “酚汀（酚丁）、
 
 Therefore B5-4A creates **zero** runtime Risk/Method facts.
 
-## 18.1 Immediate next subtask — B5-4B
+## 18.1 B5-4B source-gap result — deferred, runtime unchanged
 
-Only:
+The current Inspection Reference has no orphan Substance rows:
 
-1. govern/verify the five canonical Substance identities;
-2. explicitly resolve `酚丁双环丙甲酸酯` vs `双环丙酚丁` normalization;
-3. continue official attachment/Appx-A recovery when a stable SAMR source becomes available;
-4. prepare MethodSubstance/applicability only after provenance is sufficient;
-5. add zero Claim→Risk, zero Risk→Substance and zero implicit group memberships;
-6. decide promotion depth only after validation.
+```text
+205 Substance
+205 referenced by MethodSubstance
+0 orphan
+```
 
-## 18.2 Remaining queue after BJS202504 audit
+A real Playwright/Chromium load of the official SAMR BJS202504 page at research baseline `cff95b6388774f363f7b0a60fb0049c107bee4d6` still produced:
+
+```text
+page HTTP 200
+correct Method title
+no Method body scope text
+no attachment links
+AuthorizedRead API success=false / data={}
+```
+
+Therefore:
+
+- do not preload five orphan Substance identities;
+- do not promote BJS202504 from third-party fulltext transport alone;
+- keep it `verification/reference_only`;
+- resume only if a stable official attachment/body source becomes available.
+
+All four workflows at `cff95b6...` passed: syntax, B3/B4 governance, B5 research, V2 full acceptance.
+
+## 18.2 Immediate next subtask — B5-5A BJS202501
+
+Audit BJS 202501 independently:
+
+1. official Method identity/current lifecycle;
+2. full-text content;
+3. three target analytes and CAS identities;
+4. applicability/product matrices;
+5. overlap with existing `blood_pressure` Risk/Substance knowledge;
+6. no Method→Risk inference;
+7. runtime unchanged until its own Gate is satisfied.
+
+## 18.3 Remaining queue after BJS202504 audit
 
 Current verification queue includes methods such as:
 
@@ -1023,12 +1053,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-4B BJS 202504 canonical Substance identity governance + official-source gap resolution**; do not promote until provenance is sufficient.
+7. Resume with **B5-5A BJS 202501 deep verification**. BJS202504 is intentionally deferred at verification/reference_only until a stable official attachment/body source is available.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202504 B5-4A 已完成内容审计但未 promotion；下一步从 B5-4B canonical Substance identity governance + official-source gap resolution 开始。不要由 Method 或 substance group 自动反推 concrete Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202504 已完成 B5-4A 审计，B5-4B 用 Chromium 确认官方正文/附件 transport gap，故保持 verification/reference_only；下一步从 B5-5A BJS202501 深核开始。不要由 Method 自动反推 Risk。
 
 ---
 
@@ -1039,7 +1069,8 @@ If the current branch differs materially from the state above, stop and re-audit
 Especially stop if:
 
 - `inspection_reference` version is newer than b10;
-- BJS202504 has already been promoted, its five Substance identities have already been governed, or the official-source gap has been resolved beyond this handoff;
+- BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
+- BJS202501 has already been promoted or audited beyond B5-5A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
