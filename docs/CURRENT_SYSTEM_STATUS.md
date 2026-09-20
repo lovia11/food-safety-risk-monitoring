@@ -15,26 +15,30 @@ Current active facts:
 
 ```text
 branch                    = ux-redesign-v1
+accepted runtime baseline = a1fcbc9f1f8e44a8954e29cafe06a06e15d93835
 SQLite schema             = 14
 Claim taxonomy            = 7 types / 42 exact expressions
 Claim Inspection Bridge   = claim-inspection-bridge-v2.6 / 25 mappings
 Risk Reference            = 2026.09-c7 / 83 mappings
                             13 current + 70 historical
-Inspection Reference      = 2026.09-b9 / 9 methods
-                            8 current recommendation_ready
+Inspection Reference      = 2026.09-b11 / 11 methods
+                            10 current recommendation_ready
                             1 revoked reference_only
-Method candidate manifest = 2026.09-b7 / 12 records
-                            4 promoted traces + 8 verification
+                            219 Substance / 263 MethodSubstance
+                            61 MethodApplicability / 9 RegulatoryDocument
+Method candidate manifest = 2026.09-b15 / 12 records
+                            6 promoted traces + 6 verification
 active program            = B5
 ```
 
 Current B5 state:
 
-- KJ201901 and KJ201902 were deep-verified from SAMR official DOCX and are already promoted in b9.
-- c7 added only two historical blood-glucose concrete Risk identities that were already supported by the 2018 central sampling source; KJ201902 was used for identity/salt normalization, not Method→Risk inference.
-- BJS201808 official DOCX has been parsed and audited in [V2_B5_BJS_201808_ANALYTE_AUDIT.md](V2_B5_BJS_201808_ANALYTE_AUDIT.md).
-- BJS201808 remains unpromoted because four canonical parent Substance identities are not yet governed.
-- Immediate next subtask is B5-3B parent-identity governance for 酚妥拉明 / 特拉唑嗪 / 育亨宾 / 妥拉唑林, preserving existing 哌唑嗪 and adding no new Risk mapping as a Method side effect.
+- KJ201901 / KJ201902, BJS201808 and BJS201901 are already promoted; do not repeat them.
+- BJS201901 official legacy DOC is reproducibly parsed with `antiword`; B5-8B is accepted at `inspection-reference@2026.09-b11`.
+- BJS201901 added 14 Method-only canonical Substance identities, reused 13 existing identities, added 27 MethodSubstance and 8 conservative MethodApplicability; it added **zero** Risk mappings.
+- Source `格列本脲 / 10238-21-8` is normalized to canonical `格列苯脲 / 10238-21-8`; `吡格列酮 / 111025-46-8` is a direct existing canonical match.
+- BJS202504 / BJS202501 / BJS202601 / BJS202602 remain deferred at `verification/reference_only`.
+- Immediate next subtask is **B5-9A BJS202409 deep verification**, preserving Method→Risk separation.
 
 
 This document preserves the accepted historical V2 baseline. The active B3/B4/B5 development overlay above and `AI_HANDOFF_V2.md` supersede older counts and phase-next markers elsewhere in this file.
