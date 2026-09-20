@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; BJS201901 B5-8A official DOC fulltext audit is complete with runtime unchanged; see `docs/AI_HANDOFF_V2.md` for B5-8B promotion preparation
+> Last accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; BJS201901 B5-8B is promoted/accepted at `inspection-reference@2026.09-b11` with zero new Risk mappings; see `docs/AI_HANDOFF_V2.md` for B5-9A BJS202409
 > Owner: Project
 
 ## Current technical baseline
