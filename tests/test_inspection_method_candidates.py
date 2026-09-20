@@ -102,7 +102,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9", bjs_201901["reason"])
         self.assertIn("antiword", bjs_201901["reason"])
         self.assertIn("27种", bjs_201901["reason"])
-        self.assertIn("另14个缺失", bjs_201901["correction_note"])
+        self.assertIn("14个新Substance", bjs_201901["correction_note"])
         self.assertIn("格列本脲", bjs_201901["correction_note"])
         self.assertIn("格列苯脲", bjs_201901["correction_note"])
         self.assertIn("吡格列酮", bjs_201901["correction_note"])
