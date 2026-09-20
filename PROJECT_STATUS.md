@@ -17,12 +17,13 @@
 - Risk Reference: `2026.09-c7` / **83 mappings = 13 current + 70 historical**
 - Inspection Reference: `2026.09-b11` / **11 methods = 10 current recommendation_ready + 1 revoked reference_only**
 - Inspection inventory: **219 Substance / 263 MethodSubstance / 61 MethodApplicability / 9 RegulatoryDocument**
-- Candidate manifest: `2026.09-b17` / **12 records = 6 promoted traces + 6 verification**
+- Candidate manifest: `2026.09-b18` / **12 records = 6 promoted traces + 6 verification**
 - KJ201901 / KJ201902 / BJS201808 / BJS201901: already promoted; do not repeat
 - BJS201901 B5-8B: **PROMOTED / ACCEPTED**, with 14 new Method-only Substance identities and zero new Risk mappings
 - BJS202504 / BJS202501 / BJS202601 / BJS202602: deferred at `verification/reference_only`
 - BJS202409 B5-9A/B: **DEFERRED / RUNTIME UNCHANGED**; stable official Method body/attachment provenance remains unavailable; third-party PDFs are cross-check only
-- Immediate next task: **B5-10A BJS202502 deep verification**
+- BJS202502 B5-10A: **PARTIAL VERIFIED / RUNTIME UNCHANGED**; official identity/current page and qualitative/quantitative method role are verified, 25-target/scope/CAS content is cross-checked, but stable SAMR fulltext/attachment provenance remains unavailable
+- Immediate next task: **B5-10B BJS202502 provenance/promotion-readiness decision**
 - Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
 - BJS201901 audit: [V2-B5 BJS 201901 Analyte Audit](docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md)
 
@@ -140,7 +141,7 @@ V2-9 — historical roadmap state retained for traceability. Its old “NEXT” 
 
 ## Current Next Gate
 
-The active next gate is **B5-10A / BJS202502 deep verification**, as defined in [AI Development Handoff V2](docs/AI_HANDOFF_V2.md). BJS202409 is already deferred at B5-9B and must not be re-promoted from third-party material.
+The active next gate is **B5-10B / BJS202502 provenance/promotion-readiness decision**, as defined in [AI Development Handoff V2](docs/AI_HANDOFF_V2.md). B5-10A is complete with runtime unchanged; do not promote from secondary CAS/scope material if the SAMR fulltext provenance gap remains.
 
 Do not resume V2-9B merely because older sections below/above mention it; re-enter Analytics only after an explicit product/roadmap decision.
 
