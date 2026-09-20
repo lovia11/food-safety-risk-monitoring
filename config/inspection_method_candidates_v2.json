@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b12",
+  "manifest_version": "2026.09-b13",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808已promotion；BJS202504/BJS202501/BJS202601因官方正文/附件provenance gap保持verification/reference_only；BJS202602 B5-7A已核官方身份、功能性食品/壮阳药物衍生物监管场景和第三方方法重现，但SAMR正式正文不可恢复且“伐地那非杂质30”商业杂质编号/CAS命名存在冲突，因此canonical Substance身份暂不治理，继续verification/reference_only。candidate manifest不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808已promotion；BJS202504/BJS202501/BJS202601/BJS202602均因正式方法正文/附件或canonical identity provenance未闭合而保持verification/reference_only。BJS202602 B5-7B已明确defer；O-丙基伐地那非官方标准样品项目仅保留为identity clue，不与“伐地那非杂质30”自动等同，不展开male_function group。candidate manifest不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -402,8 +402,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
       "discovery_source_date": "2026-06-25",
       "discovery_source_record_id": "samr-announcement-2026-24-bjs-202602",
-      "reason": "一手公告和官方方法数据库已核验BJS 202602编号、正式标题、发布身份及当前数据库存在；SAMR官方新闻明确该方法用于检测功能性食品中隐蔽添加的壮阳药物衍生物。B5 research记录官方方法页SHA-256 674D85F7A65D03E58939515203CCD41BF2410C4723CC3DC0C49F3C752A981F4C，AuthorizedRead响应SHA-256 C63B888DAC262CBD5C19FED9C96AB0246A8EAF6240826AA045855F573153C2C4且success=false/data={}、无附件候选。第三方方法重现可交叉核到UPLC-MS/MS及压片糖果、咖啡、苹果汁饮料、白酒、胶基糖果、果冻等基质，但不替代SAMR正式全文。",
-      "correction_note": "B5-7A boundary：公开商业化学数据库对“Vardenafil Impurity 30/伐地那非杂质30”的编号并不稳定；多个来源将其标为O-丙基伐地那非/CAS 2840532-32-1，但PubChem将该CAS收录为Sildenafil Impurity 72，另有供应商把完全不同结构的1792190-72-7标成Vardenafil Impurity 30。全国标准信息公共服务平台已公示“食品检测用O-丙基伐地那非纯度标准样品”项目，但未在可见记录中把它直接等同于BJS202602目标。因此当前不得治理canonical CAS/normalization。现有male_function已存在“那非类、拉非类物质”current group mapping且来源文本涵盖药物及其衍生物，但substance_group_memberships仍为0，不得仅凭Method标题或‘壮阳药物衍生物’新闻自动把伐地那非杂质30展开为该group具体成员或新增concrete Risk mapping。",
+      "reason": "一手公告和官方方法数据库已核验BJS 202602编号、正式标题、发布身份及当前数据库存在；SAMR官方新闻明确该方法用于检测功能性食品中隐蔽添加的壮阳药物衍生物。B5-7A已记录官方页面/AuthorizedRead transport gap及第三方UPLC-MS/MS方法重现。B5-7B再次核对全国标准信息公共服务平台的“食品检测用O-丙基伐地那非纯度标准样品”项目：它证明O-丙基伐地那非是官方食品检测标准样品研制对象，但公开记录未声明其等同于BJS202602“伐地那非杂质30”。因此canonical identity与正式Method内容均未闭合，明确deferred并继续verification/reference_only。",
+      "correction_note": "B5-7B decision：不得把商业供应商的“Vardenafil Impurity 30”编号当作稳定化学身份；不得把官方O-丙基伐地那非标准样品项目自动解释为BJS202602 target equivalence；不得仅因SAMR新闻称“壮阳药物衍生物”或现有male_function存在“那非类、拉非类物质”group mapping，就新增canonical Substance、substance_group_membership或concrete Risk→Substance。恢复条件是稳定SAMR正式Method正文/附件明确目标身份，或另一一手来源明确建立O-丙基伐地那非与BJS202602目标的等同关系。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
@@ -429,9 +429,17 @@
             "functional_food_regulatory_scene",
             "aphrodisiac_drug_derivative_context"
           ]
+        },
+        {
+          "source_name": "全国标准信息公共服务平台：食品检测用O-丙基伐地那非纯度标准样品",
+          "source_reference": "https://std.samr.gov.cn/gsm/search/gsmDetailed?id=4A9C0BCC7AFC9E65E06397BE0A0A3B06",
+          "verified_facts": [
+            "official_o_propyl_vardenafil_food_testing_reference_material_project",
+            "identity_clue_only_not_bjs202602_equivalence"
+          ]
         }
       ],
-      "verified_at": "2026-09-21T00:12:00+08:00",
+      "verified_at": "2026-09-21T00:24:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },

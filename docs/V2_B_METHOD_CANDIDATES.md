@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A BJS202602 PARTIAL VERIFIED / RUNTIME UNCHANGED；NEXT = B5-7B promotion-readiness/identity decision  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED / IDENTITY UNRESOLVED；NEXT = B5-8A BJS201901 official DOC parsing  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b12`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b13`。
 
 状态含义：
 
@@ -72,7 +72,7 @@ runtime_consumed = false
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A全文镜像/化学身份交叉核验；B5-4B Chromium确认官方动态正文仍为空 | `verification / reference_only；deferred pending official attachment` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | official news明确减肥/降压食品监管场景；场景进入独立Risk backlog但不自动写Risk | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻；B5-6A/B provenance audit | `verification / reference_only；deferred pending official Method body` |
-| BJS 202602 食品中伐地那非杂质30的测定 | official news明确功能性食品/壮阳药物衍生物场景；现有male_function group有语义重叠但不得自动展开 | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻；B5-7A source/identity audit | `verification / reference_only；canonical identity unresolved` |
+| BJS 202602 食品中伐地那非杂质30的测定 | official news明确功能性食品/壮阳药物衍生物场景；现有male_function group有语义重叠但不得自动展开 | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻 + O-丙基伐地那非官方标准样品identity clue；B5-7A/B provenance/identity audit | `verification / reference_only；deferred；canonical identity unresolved` |
 | BJS 201808 食品中5种α-受体阻断类药物的测定 | Method index；不得由方法反推 male_function / yohimbine Risk | SAMR 2018年第28号公告 + 正式DOCX + 独立化学身份交叉核验 | `promoted / recommendation_ready @ b10` |
 
 这些“方向”只是深核优先级上下文，不是由 Method 自动建立的新 Risk relation。
@@ -394,7 +394,15 @@ runtime unchanged
 canonical identity unresolved
 ```
 
-Next = **B5-7B BJS202602 promotion-readiness / identity decision**.
+B5-7B 已决定 **defer**。官方O-丙基伐地那非标准样品项目仅作为identity clue，当前没有一手来源明确建立：
+
+```text
+O-丙基伐地那非 == BJS202602 伐地那非杂质30
+```
+
+因此不建立canonical Substance、不展开male_function group、不写MethodSubstance/MethodApplicability。
+
+Next = **B5-8A BJS201901 official DOC parsing/deep verification**.
 
 Canonical audit: `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`.
 
@@ -457,7 +465,7 @@ B5-1 已完成并通过 Gate。其“候选不进入 runtime”的边界继续�
 当前 candidate manifest 为：
 
 ```text
-2026.09-b12
+2026.09-b13
 12 records
 5 promoted traces
 7 verification
@@ -466,4 +474,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-7B BJS202602**，只做 promotion-readiness/canonical identity decision；official fulltext与identity未闭合前不写runtime，不自动展开male_function group。
+**下一验收子任务：B5-8A BJS201901**，利用已下载的SAMR正式`.doc`做可复现解析，核完整analyte/CAS/applicability；在正式全文解析完成前不promotion。

@@ -1062,17 +1062,70 @@ Chemical identity remains unresolved for governance:
 
 Current `male_function` already has a current group relation for `那非类、拉非类物质`, but `substance_group_memberships = 0`; B5-7A does not expand the group.
 
-## 18.7 Immediate next subtask — B5-7B BJS202602
+## 18.7 B5-7B BJS202602 decision — deferred, canonical identity unresolved
 
-Decide promotion/identity readiness only:
+Decision:
 
-1. defer if stable official fulltext remains unavailable;
-2. decide whether O-propyl-vardenafil evidence is sufficient for canonical identity or remains unresolved;
-3. preserve zero automatic group membership;
-4. no concrete Risk mapping from Method/news alone;
-5. no third-party-only MethodApplicability in runtime.
+```text
+BJS 202602
+status = verification
+expected_depth = reference_only
+runtime = unchanged
+deferred pending official Method identity detail / canonical target equivalence
+```
 
-## 18.8 Remaining queue after BJS202602 audit
+The official national reference-material project:
+
+```text
+食品检测用O-丙基伐地那非纯度标准样品
+CRM of purity O-propyl vardenafil for Food Testing
+```
+
+is retained as an **identity clue only**.
+
+It does not currently prove:
+
+```text
+O-丙基伐地那非
+==
+BJS 202602 伐地那非杂质30
+```
+
+because the visible official project record does not state that equivalence, while commercial impurity numbering is inconsistent.
+
+Therefore B5-7B adds no:
+
+- canonical Substance;
+- MethodSubstance;
+- MethodApplicability;
+- substance_group_membership;
+- concrete Risk→Substance mapping.
+
+The existing `male_function → 那非类、拉非类物质` group remains unexpanded.
+
+Candidate manifest records the defer decision at `2026.09-b13`.
+
+## 18.8 Immediate next subtask — B5-8A BJS201901 official DOC parsing
+
+BJS201901 is the next preferred target because a stable SAMR official fulltext attachment is already available:
+
+```text
+BJS 201901 食品中二甲双胍等非食品用化学物质的测定
+official DOC SHA-256 =
+C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9
+```
+
+Do only:
+
+1. parse/convert the official binary `.doc` reproducibly;
+2. verify full analyte inventory and CAS;
+3. verify Method determination role;
+4. verify formal food/product matrices and applicability;
+5. compare targets with current `blood_glucose` Risk/Substance knowledge;
+6. preserve Method→Risk separation;
+7. do not promote until parsed official fulltext facts pass the normal Gate.
+
+## 18.9 Remaining queue after BJS202602 audit
 
 Current verification queue includes methods such as:
 
@@ -1244,12 +1297,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-7B BJS 202602 promotion-readiness / identity decision**. BJS202602 has verified official identity and male-function scene, but official fulltext and canonical impurity identity remain unresolved.
+7. Resume with **B5-8A BJS 201901 official DOC parsing/deep verification**. BJS202602 is now explicitly deferred; do not revisit its identity unless a stable official Method source or explicit first-party equivalence appears.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202602 B5-7A已核官方身份与“功能性食品/壮阳药物衍生物”场景，但正式Method正文和canonical impurity身份仍未闭合；下一步从B5-7B promotion-readiness/identity decision开始。不要自动展开male_function group。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202602 B5-7B已明确defer，O-丙基伐地那非仅为identity clue；下一步从B5-8A BJS201901官方DOC解析/深核开始。不要由Method自动反推Risk。
 
 ---
 
@@ -1263,7 +1316,8 @@ Especially stop if:
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202602 has already been promoted or audited beyond B5-7B;
+- BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
+- BJS201901 has already been parsed/promoted or audited beyond B5-8A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

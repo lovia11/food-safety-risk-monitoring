@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504/BJS202501/BJS202601 remain deferred; BJS202602 B5-7A confirms the official male-function scene but leaves canonical impurity identity/fulltext unresolved; see `docs/AI_HANDOFF_V2.md` for B5-7B
+> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504/BJS202501/BJS202601/BJS202602 are deferred at verification/reference_only; O-propyl-vardenafil is only an identity clue for BJS202602; see `docs/AI_HANDOFF_V2.md` for B5-8A BJS201901 official DOC parsing
 > Owner: Project
 
 ## Current technical baseline

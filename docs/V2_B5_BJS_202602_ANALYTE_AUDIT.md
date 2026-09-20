@@ -1,6 +1,6 @@
 # V2-B5-7A BJS 202602 Identity / Source-Gap Audit
 
-> Status: PARTIAL VERIFIED — official Method identity/current regulatory scene verified; third-party Method reproduction cross-checked; canonical chemical identity and official fulltext unresolved; runtime unchanged  
+> Status: B5-7A PARTIAL VERIFIED；B5-7B DEFERRED — official fulltext/canonical target equivalence unresolved; runtime unchanged  
 > Date: 2026-09-21  
 > Scope: Method identity / official source transport / regulatory scene / candidate chemical identity / applicability cross-check / current male_function overlap  
 > Runtime decision: DO NOT PROMOTE in B5-7A
@@ -261,3 +261,76 @@ Do only the BJS 202602 promotion-readiness / identity decision:
 4. do not turn the existing male_function group relation into a concrete mapping merely because BJS202602 detects a “壮阳药物衍生物”;
 5. do not encode third-party matrices as runtime MethodApplicability unless the provenance policy explicitly allows it;
 6. if deferred, advance to the next verification candidate without weakening the Gate.
+
+
+## 10. B5-7B promotion-readiness / identity decision
+
+Decision:
+
+```text
+DO NOT PROMOTE BJS 202602
+```
+
+Keep:
+
+```text
+status = verification
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime_consumed = false
+```
+
+### 10.1 O-propyl-vardenafil evidence
+
+The official national reference-material project:
+
+```text
+食品检测用O-丙基伐地那非纯度标准样品
+CRM of purity O-propyl vardenafil for Food Testing
+```
+
+confirms that O-propyl vardenafil is an official food-testing reference-material development target.
+
+It does **not** currently state that:
+
+```text
+O-丙基伐地那非
+==
+BJS 202602 伐地那非杂质30
+```
+
+The project is therefore an identity clue, not an equivalence authority.
+
+### 10.2 Why canonical identity stays unresolved
+
+The following combination is insufficient for runtime governance:
+
+```text
+commercial impurity numbering
++ third-party method reproduction
++ official O-propyl-vardenafil standard-sample project
+```
+
+because commercial “Impurity 30” numbering is inconsistent and the stable SAMR Method body remains unavailable.
+
+B5-7B therefore creates no:
+
+- canonical Substance;
+- MethodSubstance;
+- MethodApplicability;
+- substance_group_membership;
+- concrete Risk→Substance.
+
+The current `male_function → 那非类、拉非类物质` group remains unexpanded.
+
+### 10.3 Resume condition
+
+Resume BJS202602 only when at least one of the following becomes available:
+
+1. stable SAMR official Method body/attachment explicitly identifying the target; or
+2. another first-party source explicitly establishing the equivalence between O-propyl vardenafil and BJS202602's “伐地那非杂质30”.
+
+Candidate governance records this decision in `inspection_method_candidates_v2@2026.09-b13`.
+
+Next B5 target: BJS 201901, whose official SAMR `.doc` attachment is already available and should be parsed rather than continuing to weaken the provenance Gate on blocked 2026 pages.

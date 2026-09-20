@@ -94,7 +94,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b12")
+        self.assertEqual(payload["manifest_version"], "2026.09-b13")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
@@ -124,7 +124,13 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("AuthorizedRead", bjs_202602["reason"])
         self.assertIn("UPLC-MS/MS", bjs_202602["reason"])
         self.assertIn("不得治理canonical CAS", bjs_202602["correction_note"])
-        self.assertIn("substance_group_memberships仍为0", bjs_202602["correction_note"])
+        self.assertIn("不得把官方O-丙基伐地那非标准样品项目自动解释", bjs_202602["correction_note"])
+        self.assertIn("substance_group_membership", bjs_202602["correction_note"])
+        self.assertIn("明确deferred", bjs_202602["reason"])
+        self.assertTrue(any(
+            "identity_clue_only_not_bjs202602_equivalence" in source["verified_facts"]
+            for source in bjs_202602["verification_sources"]
+        ))
 
         promoted_by_no = {item["method_no"]: item for item in promoted}
         for method_no, method_id, dataset_version in (
