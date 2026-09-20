@@ -1260,17 +1260,84 @@ Risk mappings unchanged = 2026.09-c7 / 83
 Claim bridge unchanged = v2.6 / 25
 ```
 
-## 18.10A Immediate next subtask — B5-10A BJS202502
+## 18.10A B5-10A BJS202502 audit — PARTIAL VERIFIED, runtime unchanged
 
-Audit BJS 202502 independently:
+Canonical audit:
 
-1. verify official Method identity/current lifecycle;
-2. recover/verify official fulltext and attachment provenance;
-3. verify the complete 25 β-blocker analyte inventory and CAS from official text;
-4. verify determination role and formal MethodApplicability;
-5. compare only against existing governed `blood_pressure` knowledge;
-6. do not create Risk from Method title or pharmacology;
-7. keep runtime unchanged until its own Gate passes.
+```text
+docs/V2_B5_BJS_202502_ANALYTE_AUDIT.md
+```
+
+Verified from first-party / official-institution sources:
+
+```text
+SAMR 2025年第39号公告 = BJS 202502 official identity
+current SAMR database page = present
+南京市市场监督管理局 = LC-triple-quadrupole tandem MS
+南京市市场监督管理局 = qualitative + quantitative / 25 β-blocker targets
+```
+
+Secondary content cross-check:
+
+```text
+25 standard-summary analyte labels
+beverages including solid beverages
+substitute tea
+health foods: oral liquid / tablet / capsule
+25 candidate CAS values from a BJS 202502 mixed-standard page
+```
+
+Important unresolved source issues:
+
+```text
+stable SAMR formal Method body/attachment URL + hash = unresolved
+CAS table = secondary only
+formal standard material may use parent or salt forms = unresolved
+36507-48-9 label discrepancy = 喷布洛尔 / 喷布特罗
+57775-29-8 label discrepancy = 卡拉洛尔 / 咔唑心安
+```
+
+Current runtime overlap:
+
+```text
+1 / 25 existing canonical Substance:
+  阿替洛尔 / 29122-68-7
+
+exact governed Risk overlap:
+  阿替洛尔 → historical blood_pressure
+```
+
+Therefore B5-10A adds no canonical Substance, MethodSubstance, MethodApplicability, Claim→Risk, Risk→Substance or group membership.
+
+Candidate manifest:
+
+```text
+2026.09-b18
+BJS 202502 = verification / reference_only
+runtime unchanged
+```
+
+Bounded B5-10A governance Gate:
+
+```text
+candidate manifest validation/invariants = success
+inspection-reference unchanged = 2026.09-b11
+BJS202502 runtime method = absent
+Risk mappings unchanged = 2026.09-c7 / 83
+Claim bridge unchanged = v2.6 / 25
+```
+
+## 18.10B Immediate next subtask — B5-10B BJS202502
+
+Decide provenance/promotion readiness only:
+
+1. attempt stable official SAMR Method body/attachment recovery;
+2. require reproducible official URL + content hash before runtime promotion;
+3. verify whether formal Method standards are parent compounds or salt forms;
+4. close analyte/CAS/source-label normalization from official text;
+5. keep third-party PDF/summary/material pages as cross-check evidence only;
+6. preserve no-orphan-Substance and Method→Risk boundaries;
+7. defer if the official-source Gate remains unresolved.
 
 ## 18.11 Remaining verification queue
 
@@ -1439,18 +1506,19 @@ A new ChatGPT conversation should do exactly this:
    - `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202409_ANALYTE_AUDIT.md`
+   - `docs/V2_B5_BJS_202502_ANALYTE_AUDIT.md`
 5. Inspect current:
    - `config/inspection_reference.json`
    - `config/inspection_method_candidates_v2.json`
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-10A BJS 202502 deep verification**. BJS202409 B5-9B is already deferred because stable official fulltext/attachment provenance remains unavailable; do not repeat it or promote it from third-party PDFs.
+7. Resume with **B5-10B BJS 202502 provenance/promotion-readiness decision**. B5-10A is already partial-verified with runtime unchanged; do not promote from secondary CAS/scope material if stable SAMR formal fulltext/attachment provenance remains unresolved.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`，以当前代码/测试/config 为最高事实源。BJS202409 B5-9A/B已明确deferred，第三方PDF不能替代SAMR正式provenance；下一步从B5-10A BJS202502独立深核开始。不要由Method标题或β受体阻滞剂药理属性自动反推Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_202502_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202502 B5-10A已完成official identity/current page、官方机构方法角色及secondary 25-target/scope/CAS交叉核验，但SAMR正式正文/附件provenance仍缺；下一步从B5-10B promotion-readiness decision开始。不要由β阻滞剂药理类别自动扩Risk。
 
 ---
 
@@ -1465,7 +1533,7 @@ Especially stop if:
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202502 has already been promoted or audited beyond B5-10A;
+- BJS202502 has already been promoted or audited beyond B5-10B;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
