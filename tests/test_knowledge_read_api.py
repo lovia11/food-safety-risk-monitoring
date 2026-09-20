@@ -51,18 +51,18 @@ class KnowledgeReadServiceTest(unittest.TestCase):
                 "queryPendingMonitorTargets": 88,
                 "pausedMonitorTargets": 2,
                 "healthFunctions": 25,
-                "inspectionMethods": 10,
-                "recommendationReadyMethods": 9,
+                "inspectionMethods": 11,
+                "recommendationReadyMethods": 10,
                 "referenceOnlyMethods": 1,
-                "substances": 205,
+                "substances": 219,
                 "riskMappings": 83,
                 "groupMappings": 12,
-                "regulatoryDocuments": 8,
+                "regulatoryDocuments": 9,
             },
         )
         self.assertEqual(
             summary["authorities"]["inspection"]["datasetVersion"],
-            "2026.09-b10",
+            "2026.09-b11",
         )
         self.assertEqual(
             summary["authorities"]["healthFunctions"]["datasetVersion"],
@@ -173,7 +173,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
     def test_method_depth_lifecycle_pagination_and_recommendation_boundary(self):
         first = self.service.inspection_methods(limit=3, offset=0)
         second = self.service.inspection_methods(limit=3, offset=3)
-        self.assertEqual(first["total"], 10)
+        self.assertEqual(first["total"], 11)
         self.assertEqual(first["count"], 3)
         self.assertTrue(first["hasMore"])
         self.assertEqual(second["offset"], 3)
@@ -188,7 +188,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         self.assertEqual(old["knowledgeDepth"], "reference_only")
         self.assertEqual(old["applicability"]["availability"], "not_recorded")
         self.assertIn("analyte_depth_not_verified", old["knowledgeGaps"])
-        self.assertEqual(old["source"]["datasetVersion"], "2026.09-b10")
+        self.assertEqual(old["source"]["datasetVersion"], "2026.09-b11")
 
         recommendation_methods = self.store.list_substance_methods(
             "substance-cas-73-31-4", recommendation_ready_only=True
@@ -207,7 +207,7 @@ class KnowledgeReadServiceTest(unittest.TestCase):
         self.assertEqual(document["status"], "revoked")
         self.assertEqual(document["supersededBy"], ["regdoc-gbt-45443-2025"])
         self.assertTrue(document["sourceReference"].startswith("https://"))
-        self.assertEqual(document["source"]["datasetVersion"], "2026.09-b10")
+        self.assertEqual(document["source"]["datasetVersion"], "2026.09-b11")
 
     def test_invalid_filters_and_pagination_are_rejected(self):
         with self.assertRaises(KnowledgeQueryValidationError):
@@ -265,7 +265,7 @@ class KnowledgeReadHttpApiTest(unittest.TestCase):
                     with urlopen(f"{base}/api/knowledge/{endpoint}") as response:
                         self.assertEqual(response.status, 200)
                         payloads.append(json.load(response))
-                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 10)
+                self.assertEqual(payloads[0]["counts"]["inspectionMethods"], 11)
                 self.assertEqual(payloads[4]["total"], len(payloads[4]["items"]))
                 self.assertGreater(payloads[4]["total"], 0)
                 self.assertTrue(

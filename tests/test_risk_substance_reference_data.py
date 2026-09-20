@@ -199,10 +199,10 @@ CURRENT_SOURCE_EXPECTATIONS = {
     "anti-fatigue-tadalafil-cn-2025": (NAFEI_LAFEI_SOURCE, "2025-06-28"),
 }
 INSPECTION_COUNTS = {
-    "inspection_methods": 10,
-    "inspection_substances": 205,
-    "inspection_method_substances": 236,
-    "inspection_method_applicabilities": 53,
+    "inspection_methods": 11,
+    "inspection_substances": 219,
+    "inspection_method_substances": 263,
+    "inspection_method_applicabilities": 61,
     "substance_regulatory_contexts": 1,
 }
 EXPECTED_SUBSTANCE_IDENTITIES = {
