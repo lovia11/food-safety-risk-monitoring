@@ -1,6 +1,6 @@
 # V2-B5-8A BJS 201901 Official Fulltext Audit
 
-> Status: FULLTEXT VERIFIED — official SAMR legacy DOC parsed reproducibly; runtime unchanged  
+> Status: B5-8A FULLTEXT VERIFIED；B5-8B PROMOTED / ACCEPTED — `inspection-reference@2026.09-b11`  
 > Date: 2026-09-21  
 > Scope: official DOC parsing / complete analyte-CAS inventory / method role / formal scope / current Risk-Substance overlap  
 > Runtime decision: DO NOT PROMOTE in B5-8A
@@ -282,3 +282,87 @@ Do only BJS201901:
 6. add zero new Risk mappings merely because the Method detects the substance;
 7. validate that BJS201901 can reach `recommendation_ready`;
 8. run all current Gates before accepting promotion.
+
+
+## 10. B5-8B promotion result — ACCEPTED
+
+BJS 201901 is now promoted:
+
+```text
+method_id = bjs-201901
+method_status = current
+knowledge_depth = recommendation_ready
+inspection_reference = 2026.09-b11
+```
+
+Accepted runtime additions:
+
+```text
+14 new canonical Substance
+13 reused canonical Substance
+27 MethodSubstance
+8 MethodApplicability
+1 RegulatoryDocument
+```
+
+Current total inventory:
+
+```text
+methods = 11
+recommendation_ready current = 10
+revoked reference_only = 1
+substances = 219
+method_substances = 263
+method_applicabilities = 61
+regulatory_documents = 9
+substance_regulatory_contexts = 1
+substance_group_memberships = 0
+```
+
+Applicability governance:
+
+- 茶叶、奶粉、饼干、酒、饮料 are explicit `include`;
+- 特殊食品 / 片剂 and 特殊食品 / 胶囊剂 are explicit `include`;
+- 特殊食品 / 口服液 is `conditional`;
+- “等食品 / 上述类似基质 / 等形式” remains source text and never becomes an unrestricted all-food include.
+
+Identity normalization:
+
+```text
+source 格列本脲 / 10238-21-8
+→ canonical 格列苯脲 / 10238-21-8
+→ normalization_note required
+
+source 吡格列酮 / 111025-46-8
+→ existing canonical 吡格列酮 / 111025-46-8
+→ no normalization required
+```
+
+Risk boundary:
+
+```text
+14 newly governed Method analytes
+≠ 14 new blood_glucose Risk mappings
+```
+
+`risk-substance-reference@2026.09-c7` remains unchanged at 83 mappings.
+
+Candidate manifest:
+
+```text
+inspection_method_candidates_v2@2026.09-b15
+BJS 201901 = promoted / recommendation_ready
+promoted_method_id = bjs-201901
+promoted_dataset_version = 2026.09-b11
+```
+
+Accepted Gate baseline:
+
+```text
+a1fcbc9f1f8e44a8954e29cafe06a06e15d93835
+Python syntax gate = success
+B3/B4 governance regression = success
+V2 full acceptance = success
+```
+
+Next target: B5-9A BJS 202409.
