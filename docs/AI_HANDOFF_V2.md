@@ -872,19 +872,59 @@ Therefore:
 
 All four workflows at `cff95b6...` passed: syntax, B3/B4 governance, B5 research, V2 full acceptance.
 
-## 18.2 Immediate next subtask — B5-5A BJS202501
+## 18.2 B5-5A BJS202501 audit — complete, runtime unchanged
 
-Audit BJS 202501 independently:
+Canonical audit:
 
-1. official Method identity/current lifecycle;
-2. full-text content;
-3. three target analytes and CAS identities;
-4. applicability/product matrices;
-5. overlap with existing `blood_pressure` Risk/Substance knowledge;
-6. no Method→Risk inference;
-7. runtime unchanged until its own Gate is satisfied.
+```text
+docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md
+```
 
-## 18.3 Remaining queue after BJS202504 audit
+Verified/cross-checked facts:
+
+```text
+BJS 202501
+食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定
+official identity/current database presence = verified
+official SAMR dynamic body/attachment = unresolved
+complete-document mirror = available for content cross-check
+runtime = unchanged
+```
+
+Targets:
+
+| Source label | CAS | Runtime |
+|---|---:|---|
+| 坎地沙坦酯 | 145040-37-5 | missing |
+| 拉西地平 | 103890-78-4 | missing |
+| 阿齐沙坦 | 147403-03-0 | missing |
+
+Explicit applicability cross-check:
+
+- 压片糖果
+- 代用茶
+- 固体饮料
+- 茶饮料
+- 饼干
+- 果冻
+- 配制酒
+- 保健食品：口服液、茶剂、片剂、硬胶囊、软胶囊
+
+Current `risk-substance-reference@2026.09-c7` has no concrete `blood_pressure` Risk→Substance mapping for the three targets.
+
+Therefore B5-5A creates **zero** runtime Method/Risk facts.
+
+## 18.3 Immediate next subtask — B5-5B BJS202501
+
+Decide promotion readiness/source-gap handling only:
+
+1. preserve the current no-orphan-Substance invariant unless explicitly justified otherwise;
+2. decide whether canonical Substance governance is allowed before official SAMR attachment recovery;
+3. otherwise defer BJS202501 at `verification/reference_only`;
+4. do not create any Risk mapping from pharmacology or Method existence;
+5. only prepare MethodSubstance/MethodApplicability if provenance is sufficient.
+
+## 18.4 Remaining queue after BJS202501 audit
 
 Current verification queue includes methods such as:
 
@@ -1047,18 +1087,19 @@ A new ChatGPT conversation should do exactly this:
    - `docs/V2_B_METHOD_CANDIDATES.md`
    - `docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`
+   - `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`
 5. Inspect current:
    - `config/inspection_reference.json`
    - `config/inspection_method_candidates_v2.json`
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-5A BJS 202501 deep verification**. BJS202504 is intentionally deferred at verification/reference_only until a stable official attachment/body source is available.
+7. Resume with **B5-5B BJS 202501 promotion-readiness/source-gap decision**. BJS202504 remains intentionally deferred at verification/reference_only until a stable official attachment/body source is available.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202504 已完成 B5-4A 审计，B5-4B 用 Chromium 确认官方正文/附件 transport gap，故保持 verification/reference_only；下一步从 B5-5A BJS202501 深核开始。不要由 Method 自动反推 Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202501 B5-5A 已完成内容/CAS/applicability审计但runtime未改；下一步从 B5-5B promotion-readiness/source-gap decision 开始。不要由 Method 或药理用途自动反推 Risk。
 
 ---
 
@@ -1070,7 +1111,7 @@ Especially stop if:
 
 - `inspection_reference` version is newer than b10;
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
-- BJS202501 has already been promoted or audited beyond B5-5A;
+- BJS202501 has already been promoted or audited beyond B5-5B;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

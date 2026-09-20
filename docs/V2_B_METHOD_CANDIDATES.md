@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A BJS202504 CONTENT AUDIT COMPLETE；B5-4B SOURCE GAP CONFIRMED / DEFERRED；NEXT = B5-5A BJS202501 deep verification  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A BJS202501 CONTENT AUDIT COMPLETE / RUNTIME UNCHANGED；NEXT = B5-5B promotion-readiness/source-gap decision  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -68,7 +68,7 @@ runtime_consumed = false
 | KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | anti_fatigue（正式范围另含调节免疫等，但runtime不扩Risk） | SAMR 2019年第41号公告 + 正式附件1 | `promoted / recommendation_ready @ b9` |
 | KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 + 正式附件2 | `promoted / recommendation_ready @ b9` |
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
-| BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
+| BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure context only；不得由Method/药理用途反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-5A全文镜像/化学身份交叉核验 | `verification / reference_only；B5-5A audited` |
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A全文镜像/化学身份交叉核验；B5-4B Chromium确认官方动态正文仍为空 | `verification / reference_only；deferred pending official attachment` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
@@ -157,10 +157,13 @@ B5-3B 已在 `inspection-reference@2026.09-b10` 治理4个缺失母体 Substance
    - 当前 `weight_loss` 只有“酚汀（酚丁）、酚酞及其酯类衍生物或类似物”group relation，不能自动展开为这5个 concrete Substance；
    - 详见 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`。
 
-2. **BJS 202501**
-   - current；
-   - 标题明确 3 个降压相关化合物；
-   - 规模小，适合与 blood_pressure historical/current knowledge 做独立对照。
+2. **BJS 202501 — B5-5A 已完成审计，未 promotion**
+   - SAMR 第39号公告与官方方法数据库确认 Method identity/current database presence；
+   - 完整全文镜像交叉核验3个 target、LC-MS/MS外标定量与明确 applicability；
+   - AuthorizedRead 对BJS202501同样返回 `success:false`，官方附件 URL/SHA-256 尚未恢复；
+   - 3个候选 CAS 在当前 runtime 全部缺失；
+   - 当前 Risk 无这3个 concrete `blood_pressure` Risk→Substance；
+   - 详见 `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`.
 
 3. **BJS 201808 — 已完成**
    - B5-3A 正式全文 / analyte / applicability audit 已完成；
@@ -245,6 +248,50 @@ Do not create concrete Risk relations as a side effect.
 
 Canonical audit: `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`.
 
+## 5.3 B5-5A BJS 202501 audit result
+
+B5-5A 已完成 **Method identity + full-text content + analyte identity + applicability + runtime overlap** 审计，但没有 promotion。
+
+Current fact split:
+
+```text
+official SAMR announcement / method database
+→ method_no / title / issuer / official date / current database identity
+
+complete-document mirror
+→ Method body content cross-check only
+→ LC-MS/MS / external-standard quantitative
+→ 7 food categories + 5 health-food forms
+
+independent chemical-identity source
+→ 3 candidate CAS identities
+
+official SAMR attachment URL / SHA-256
+→ still unresolved
+```
+
+Three targets:
+
+```text
+坎地沙坦酯 145040-37-5
+拉西地平   103890-78-4
+阿齐沙坦   147403-03-0
+```
+
+All three are missing from `inspection-reference@2026.09-b10`, and `risk-substance-reference@2026.09-c7` has no concrete `blood_pressure` Risk→Substance mapping for them.
+
+Therefore candidate remains:
+
+```text
+verification / reference_only
+runtime unchanged
+```
+
+Next = **B5-5B BJS202501 promotion-readiness/source-gap decision**.  
+Do not create concrete Risk relations as a side effect.
+
+Canonical audit: `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`.
+
 ## 6. Deep verification Gate
 
 任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
@@ -313,4 +360,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-5A BJS202501**，先做 Method identity/full-text/analyte/CAS/applicability/lifecycle 审计；BJS202504 暂停在 verification/reference_only，不降低 provenance Gate。
+**下一验收子任务：B5-5B BJS202501**，只做 promotion-readiness/source-gap decision；在 provenance 足够前不插入孤立 Substance、不 promotion、不新增 Claim/Risk。

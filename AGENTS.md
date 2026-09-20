@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504 is deferred at verification/reference_only after B5-4B Chromium source-gap confirmation; see `docs/AI_HANDOFF_V2.md` for B5-5A BJS202501
+> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504 remains deferred; BJS202501 B5-5A content audit is complete with runtime unchanged; see `docs/AI_HANDOFF_V2.md` for B5-5B
 > Owner: Project
 
 ## Current technical baseline
