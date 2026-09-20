@@ -984,19 +984,62 @@ Current runtime has neither concrete Substance and no concrete Risk→Substance 
 
 The SAMR news article is recorded as a **future independent Risk-governance evidence candidate**, not written into Risk during B5-6A.
 
-## 18.5 Immediate next subtask — B5-6B BJS202601
+## 18.5 B5-6B BJS202601 decision — deferred, Risk evidence backlogged
 
-Decide provenance/promotion readiness only:
+Decision:
 
-1. keep the official-news regulatory scene separate from Method promotion;
-2. decide whether the news source belongs in a future Risk-governance backlog;
-3. preserve the no-orphan-Substance invariant;
-4. recover a stable official Method body/attachment if possible;
-5. otherwise defer BJS202601 at `verification/reference_only`;
-6. no MethodSubstance/MethodApplicability without verified Method content;
-7. no automatic Risk mapping from Method existence or pharmacology.
+```text
+BJS 202601
+status = verification
+expected_depth = reference_only
+runtime = unchanged
+deferred pending stable official Method body/attachment
+```
 
-## 18.6 Remaining queue after BJS202601 audit
+Why:
+
+- official announcement/database proves Method identity/current presence;
+- official SAMR news proves a real regulatory scene involving `减肥食品 / 降压食品`;
+- chemical identities for 布噻嗪 / 美布噻嗪 are independently verified;
+- but official Method body/attachment remains unavailable;
+- therefore determination role and formal MethodApplicability cannot be governed;
+- `verified_reference` still must not receive orphan Substance rows.
+
+The SAMR news article is now explicitly retained as an **independent Risk-governance backlog candidate**.
+
+This does **not** yet create:
+
+```text
+weight_loss → 布噻嗪
+weight_loss → 美布噻嗪
+blood_pressure → 布噻嗪
+blood_pressure → 美布噻嗪
+```
+
+Any future Risk mapping must independently decide:
+
+- exact risk_category;
+- exact product_scope;
+- concrete Substance vs group semantics;
+- current evidence grade/basis_type;
+- presentation boundary.
+
+Candidate manifest records this at `2026.09-b11`.
+
+## 18.6 Immediate next subtask — B5-7A BJS202602
+
+Audit BJS 202602 independently:
+
+1. official Method identity/current lifecycle;
+2. official news/regulatory scene;
+3. full-text availability/provenance;
+4. 伐地那非杂质30 chemical identity / CAS / normalization;
+5. explicit MethodApplicability if recoverable;
+6. overlap with current `male_function` governed knowledge;
+7. no Method→Risk inference;
+8. runtime unchanged until its own Gate is satisfied.
+
+## 18.7 Remaining queue after BJS202601 audit
 
 Current verification queue includes methods such as:
 
@@ -1167,12 +1210,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-6B BJS 202601 provenance/promotion-readiness decision**. BJS202504 and BJS202501 remain deferred; BJS202601 has verified identity/CAS/regulatory scene but no verified Method body/applicability.
+7. Resume with **B5-7A BJS 202602 deep verification**. BJS202504/BJS202501/BJS202601 remain deferred; BJS202601 official-news scene is retained only as a separate Risk-governance backlog candidate.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202601 B5-6A已核官方身份、减肥/降压食品场景和两个CAS，但正式Method正文/applicability仍缺；下一步从B5-6B provenance/promotion-readiness decision开始。不要由Method或药理用途自动反推Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202601 B5-6B已defer，SAMR“减肥/降压食品”新闻证据只进入独立Risk-governance backlog；下一步从B5-7A BJS202602深核开始。不要由Method或药理用途自动反推Risk。
 
 ---
 
@@ -1185,7 +1228,8 @@ Especially stop if:
 - `inspection_reference` version is newer than b10;
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202601 has already been promoted or audited beyond B5-6B;
+- BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
+- BJS202602 has already been promoted or audited beyond B5-7A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

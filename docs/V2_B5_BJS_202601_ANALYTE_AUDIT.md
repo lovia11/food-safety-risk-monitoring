@@ -1,6 +1,6 @@
 # V2-B5-6A BJS 202601 Identity / Source-Gap Audit
 
-> Status: PARTIAL VERIFIED — official identity/current regulatory scenario/chemical identities verified; official fulltext and method-level applicability unresolved; runtime unchanged  
+> Status: B5-6A PARTIAL VERIFIED；B5-6B DEFERRED — official Method body/applicability unresolved; official news scene retained as separate Risk-governance backlog; runtime unchanged  
 > Date: 2026-09-20  
 > Scope: Method identity / official source transport / analyte identity / regulatory-scene separation / runtime overlap  
 > Runtime decision: DO NOT PROMOTE in B5-6A
@@ -240,3 +240,80 @@ Do only the BJS 202601 provenance/promotion-readiness decision:
 5. do not create MethodSubstance or MethodApplicability without verified Method content;
 6. do not create Risk mappings merely because the two compounds are diuretics/antihypertensives;
 7. if future Risk governance uses the SAMR news source, do so independently of Method promotion.
+
+
+## 10. B5-6B provenance / promotion-readiness decision
+
+B5-6B separates two questions that must not be collapsed.
+
+### 10.1 Method promotion
+
+Decision:
+
+```text
+DO NOT PROMOTE BJS 202601
+```
+
+Reason:
+
+- official announcement/database prove Method identity;
+- official news proves a meaningful regulatory scene;
+- target chemical identities are independently verified;
+- but official Method body/attachment is still unavailable;
+- formal determination role and MethodApplicability are unresolved;
+- current `verified_reference` does not support preloading orphan Substance rows.
+
+Keep:
+
+```text
+status = verification
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime_consumed = false
+```
+
+Runtime remains:
+
+```text
+inspection-reference@2026.09-b10
+risk-substance-reference@2026.09-c7
+```
+
+### 10.2 Risk-governance evidence
+
+The SAMR news source is stronger than a pharmacological inference because it explicitly describes BJS 202601 as detecting diuretic/antihypertensive drugs illegally added to:
+
+```text
+减肥食品
+降压食品
+```
+
+Therefore B5-6B classifies it as:
+
+```text
+independent Risk-governance backlog candidate
+```
+
+It is **not** written into `risk-substance-reference` during B5.
+
+A future Risk-governance subphase must independently decide whether the source supports any of:
+
+```text
+weight_loss → 布噻嗪
+weight_loss → 美布噻嗪
+blood_pressure → 布噻嗪
+blood_pressure → 美布噻嗪
+```
+
+and must define exact product_scope, target semantics, evidence grade/basis type and presentation boundary.
+
+No such concrete mapping is asserted by B5-6B.
+
+### 10.3 Resume condition
+
+Resume BJS202601 Method promotion only after a stable official Method body/attachment becomes available, or after an explicit project-level provenance-policy change.
+
+Do not repeat the chemical-identity audit from scratch.
+
+Candidate governance records this decision in `inspection_method_candidates_v2@2026.09-b11`.

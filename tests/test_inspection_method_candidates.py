@@ -94,7 +94,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b10")
+        self.assertEqual(payload["manifest_version"], "2026.09-b11")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
@@ -111,7 +111,9 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("2043-38-1", bjs_202601["reason"])
         self.assertIn("3568-00-1", bjs_202601["reason"])
         self.assertIn("AuthorizedRead", bjs_202601["reason"])
-        self.assertIn("不据此修改risk-substance-reference", bjs_202601["correction_note"])
+        self.assertIn("独立Risk-governance backlog", bjs_202601["correction_note"])
+        self.assertIn("不能作为Method promotion副作用", bjs_202601["correction_note"])
+        self.assertIn("deferred", bjs_202601["reason"])
 
         promoted_by_no = {item["method_no"]: item for item in promoted}
         for method_no, method_id, dataset_version in (
