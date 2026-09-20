@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；NEXT = B5-6A BJS202601 deep verification  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A BJS202601 PARTIAL VERIFIED / RUNTIME UNCHANGED；NEXT = B5-6B provenance/promotion-readiness decision  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b9`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b10`。
 
 状态含义：
 
@@ -71,7 +71,7 @@ runtime_consumed = false
 | BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure context only；不得由Method/药理用途反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-5A全文镜像/化学身份交叉核验；B5-5B确认orphan/provenance Gate | `verification / reference_only；deferred pending official attachment` |
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A全文镜像/化学身份交叉核验；B5-4B Chromium确认官方动态正文仍为空 | `verification / reference_only；deferred pending official attachment` |
-| BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
+| BJS 202601 食品中布噻嗪和美布噻嗪的测定 | official news明确减肥/降压食品监管场景；不得自动写Risk | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻；B5-6A CAS/source-gap audit | `verification / reference_only；B5-6A partial audited` |
 | BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 201808 食品中5种α-受体阻断类药物的测定 | Method index；不得由方法反推 male_function / yohimbine Risk | SAMR 2018年第28号公告 + 正式DOCX + 独立化学身份交叉核验 | `promoted / recommendation_ready @ b10` |
 
@@ -173,10 +173,18 @@ B5-3B 已在 `inspection-reference@2026.09-b10` 治理4个缺失母体 Substance
 
 KJ201901 / KJ201902 已完成 promotion，不再属于待深核队列。
 
-4. **BJS 202601 / BJS 202602**
+4. **BJS 202601 — B5-6A partial audit complete**
+   - current Method identity/database presence verified；
+   - SAMR官方新闻明确减肥/降压食品监管场景；
+   - 布噻嗪 2043-38-1、美布噻嗪 3568-00-1 已独立核验；
+   - 官方正文/附件仍无法恢复，Method-level applicability/determination role未核；
+   - 当前runtime无两个Substance，也无concrete Risk mapping；
+   - 详见 `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`。
+
+5. **BJS 202602**
    - 2026 current；
    - 标题目标物少；
-   - 但必须特别防止用“方法存在”反推新的 Risk→Substance。
+   - 必须特别防止用“方法存在”反推新的 Risk→Substance。
 
 ### 第二批：较大 analyte 集
 
@@ -302,6 +310,44 @@ Do not create concrete Risk relations as a side effect.
 
 Canonical audit: `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`.
 
+## 5.4 B5-6A BJS 202601 audit result
+
+B5-6A 已核：
+
+```text
+official Method identity / current database presence
+official SAMR scene: 减肥食品 / 降压食品
+布噻嗪 = Butizide/Buthiazide = CAS 2043-38-1
+美布噻嗪 = Mebutizide = CAS 3568-00-1
+```
+
+但官方 Method page 的 AuthorizedRead 仍返回：
+
+```text
+success=false
+data={}
+attachment_candidates=[]
+```
+
+公开检索也未找到可稳定交叉核验的完整 Method 正文，因此：
+
+- determination role 未治理；
+- formal Method matrix/applicability 未治理；
+- 不新增 Substance/MethodSubstance/MethodApplicability；
+- 不新增 Claim→Risk/Risk→Substance；
+- SAMR官方新闻场景仅作为未来独立 Risk-governance evidence candidate。
+
+Candidate remains:
+
+```text
+verification / reference_only
+runtime unchanged
+```
+
+Next = **B5-6B BJS202601 provenance/promotion-readiness decision**.
+
+Canonical audit: `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`.
+
 ## 6. Deep verification Gate
 
 任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
@@ -370,4 +416,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-6A BJS202601**，先做 Method identity/full-text/analyte/CAS/applicability/lifecycle 审计；BJS202504/BJS202501保持deferred，不降低 provenance Gate。
+**下一验收子任务：B5-6B BJS202601**，只做 provenance/promotion-readiness decision；正式Method正文/applicability未核前不写runtime，SAMR新闻场景若进入Risk须走独立Risk治理。

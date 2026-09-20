@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504 and BJS202501 are both deferred at verification/reference_only after source-gap governance; see `docs/AI_HANDOFF_V2.md` for B5-6A BJS202601
+> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `cff95b6388774f363f7b0a60fb0049c107bee4d6`; BJS202504/BJS202501 remain deferred; BJS202601 B5-6A identity/source-gap audit is complete with runtime unchanged; see `docs/AI_HANDOFF_V2.md` for B5-6B
 > Owner: Project
 
 ## Current technical baseline

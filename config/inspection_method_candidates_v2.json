@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b9",
+  "manifest_version": "2026.09-b10",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808已promotion；BJS202504与BJS202501均已完成内容审计，但因SAMR新版正文/附件transport gap且verified_reference禁止孤立Substance，继续保持verification/reference_only。candidate manifest不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808已promotion；BJS202504与BJS202501已因官方正文/附件transport gap保持verification/reference_only；BJS202601 B5-6A已核官方身份、减肥/降压食品监管场景与两种化学身份，但正式方法正文/applicability仍不可恢复，因此继续verification/reference_only。candidate manifest不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -358,8 +358,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2026/art_9bd68f8517924598baf560008a034baf.html",
       "discovery_source_date": "2026-06-25",
       "discovery_source_record_id": "samr-announcement-2026-24-bjs-202601",
-      "reason": "一手公告和官方方法数据库已核验BJS 202601编号、正式标题和当前数据库身份；可作为blood_pressure/weight_loss相关场景候选，但不能依据药理角色反推Risk，需先核正式全文适用范围与现有Risk具体Substance是否存在独立来源关系。",
-      "correction_note": null,
+      "reason": "一手公告和官方方法数据库已核验BJS 202601编号、正式标题、发布身份及当前数据库存在；SAMR官方新闻另明确该方法用于检出违规掺入减肥、降压食品中的利尿降压类药物。B5-6A独立化学身份核验支持布噻嗪/Butizide/Buthiazide CAS 2043-38-1与美布噻嗪/Mebutizide CAS 3568-00-1；但官方方法页AuthorizedRead仍返回success=false/data={}，公开检索也未恢复正式全文，方法级determination role、完整matrix/applicability尚不能治理，因此继续verification/reference_only。",
+      "correction_note": "B5-6A boundary：SAMR官方新闻中的“减肥、降压食品”是独立于Method标题的当前监管场景证据候选，但本B5子阶段不据此修改risk-substance-reference；当前inspection-reference中两个CAS均缺失，risk-substance-reference@2026.09-c7也无对应concrete mapping。Method存在、利尿降压药理属性或新闻场景均不得在未经过独立Risk治理时自动创建Claim→Risk/Risk→Substance。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中布噻嗪和美布噻嗪的测定》等6项食品补充检验方法的公告（2026年第24号）",
@@ -377,9 +377,18 @@
           "verified_facts": [
             "current_database_identity"
           ]
+        },
+        {
+          "source_name": "市场监管总局发布6项食品补充检验方法",
+          "source_reference": "https://www.samr.gov.cn/xw/sj/art/2026/art_3d3b9f60d6d3413fa5c8cb6d0a545a1d.html",
+          "verified_facts": [
+            "weight_loss_food_regulatory_scenario",
+            "blood_pressure_food_regulatory_scenario",
+            "diuretic_antihypertensive_context"
+          ]
         }
       ],
-      "verified_at": "2026-09-18T22:00:00+08:00",
+      "verified_at": "2026-09-20T23:43:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },
