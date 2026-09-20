@@ -1105,27 +1105,68 @@ The existing `male_function → 那非类、拉非类物质` group remains unexp
 
 Candidate manifest records the defer decision at `2026.09-b13`.
 
-## 18.8 Immediate next subtask — B5-8A BJS201901 official DOC parsing
+## 18.8 B5-8A BJS201901 official DOC audit — complete, runtime unchanged
 
-BJS201901 is the next preferred target because a stable SAMR official fulltext attachment is already available:
+Canonical audit:
 
 ```text
-BJS 201901 食品中二甲双胍等非食品用化学物质的测定
-official DOC SHA-256 =
-C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9
+docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md
 ```
+
+The official legacy DOC is now reproducibly parsed by the B5 research workflow:
+
+```text
+SHA-256 =
+C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9
+bytes = 381952
+extraction = antiword
+text chars = 18305
+```
+
+Verified from official fulltext:
+
+- 27 complete analytes + CAS;
+- HPLC-MS/MS;
+- external-standard quantitative determination;
+- qualitative confirmation;
+- formal scope: 茶叶、奶粉、饼干、酒、饮料等食品；
+- similar-matrix special-food 片剂/胶囊剂;
+- sample-preparation branch also explicitly covers 口服液.
+
+Runtime overlap:
+
+```text
+27 targets total
+13 canonical Substance already exist
+14 canonical Substance missing
+13 targets have existing historical blood_glucose overlap
+14 targets have no governed Risk mapping
+```
+
+Source normalization:
+
+```text
+official source label = 格列本脲
+canonical runtime = 格列苯脲
+CAS = 10238-21-8
+future MethodSubstance requires normalization_note
+```
+
+B5-8A adds zero runtime facts and zero Risk mappings.
+
+## 18.9 Immediate next subtask — B5-8B BJS201901 promotion preparation
 
 Do only:
 
-1. parse/convert the official binary `.doc` reproducibly;
-2. verify full analyte inventory and CAS;
-3. verify Method determination role;
-4. verify formal food/product matrices and applicability;
-5. compare targets with current `blood_glucose` Risk/Substance knowledge;
-6. preserve Method→Risk separation;
-7. do not promote until parsed official fulltext facts pass the normal Gate.
+1. add/govern 14 missing canonical Substance identities from the official table;
+2. reuse 13 existing identities;
+3. preserve 格列本脲 → 格列苯脲 source-label normalization;
+4. prepare 27 MethodSubstance rows;
+5. prepare conservative MethodApplicability from formal scope/sample-preparation branches;
+6. add zero Risk mappings as a Method side effect;
+7. decide/promotion only after config validation and Gates.
 
-## 18.9 Remaining queue after BJS202602 audit
+## 18.10 Remaining queue after BJS201901 audit
 
 Current verification queue includes methods such as:
 
@@ -1291,18 +1332,19 @@ A new ChatGPT conversation should do exactly this:
    - `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`
+   - `docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`
 5. Inspect current:
    - `config/inspection_reference.json`
    - `config/inspection_method_candidates_v2.json`
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-8A BJS 201901 official DOC parsing/deep verification**. BJS202602 is now explicitly deferred; do not revisit its identity unless a stable official Method source or explicit first-party equivalence appears.
+7. Resume with **B5-8B BJS 201901 promotion preparation/decision**. Official DOC fulltext is parsed and verified; do not add Risk mappings for the 14 newly governed Method targets merely because BJS201901 detects them.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202602 B5-7B已明确defer，O-丙基伐地那非仅为identity clue；下一步从B5-8A BJS201901官方DOC解析/深核开始。不要由Method自动反推Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS201901 B5-8A已从SAMR正式DOC解析27个analyte/CAS、方法角色和范围；下一步从B5-8B promotion preparation开始。14个缺失Substance可由Method身份治理，但不得自动新增Risk。
 
 ---
 
@@ -1317,7 +1359,7 @@ Especially stop if:
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS201901 has already been parsed/promoted or audited beyond B5-8A;
+- BJS201901 has already been promoted or audited beyond B5-8B;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

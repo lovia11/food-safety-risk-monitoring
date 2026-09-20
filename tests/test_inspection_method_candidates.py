@@ -91,10 +91,27 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertEqual(predecessor["promoted_dataset_version"], "2026.09-b7")
         self.assertIn("两者保持独立身份", predecessor["correction_note"])
 
+        bjs_201901 = next(
+            item for item in verification if item["method_no"] == "BJS 201901"
+        )
+        self.assertEqual(bjs_201901["expected_depth"], "reference_only")
+        self.assertIsNone(bjs_201901["promoted_method_id"])
+        self.assertIsNone(bjs_201901["promoted_dataset_version"])
+        self.assertIn("C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9", bjs_201901["reason"])
+        self.assertIn("antiword", bjs_201901["reason"])
+        self.assertIn("27种", bjs_201901["reason"])
+        self.assertIn("另14个缺失", bjs_201901["correction_note"])
+        self.assertIn("格列本脲", bjs_201901["correction_note"])
+        self.assertIn("格列苯脲", bjs_201901["correction_note"])
+        self.assertTrue(any(
+            "official_fulltext_parsed" in source["verified_facts"]
+            for source in bjs_201901["verification_sources"]
+        ))
+
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b13")
+        self.assertEqual(payload["manifest_version"], "2026.09-b14")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])

@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED / IDENTITY UNRESOLVED；NEXT = B5-8A BJS201901 official DOC parsing  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED；B5-8A BJS201901 FULLTEXT VERIFIED / RUNTIME UNCHANGED；NEXT = B5-8B promotion preparation  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b13`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b14`。
 
 状态含义：
 
@@ -64,7 +64,7 @@ runtime_consumed = false
 
 | Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
-| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose | SAMR 2019年第4号公告 | `verification / reference_only` |
+| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose context；Method不得扩Risk | SAMR 2019年第4号公告 + 正式DOC SHA-256 + antiword全文解析 | `verification / reference_only；B5-8A fulltext verified` |
 | KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | anti_fatigue（正式范围另含调节免疫等，但runtime不扩Risk） | SAMR 2019年第41号公告 + 正式附件1 | `promoted / recommendation_ready @ b9` |
 | KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 + 正式附件2 | `promoted / recommendation_ready @ b9` |
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
@@ -406,6 +406,51 @@ Next = **B5-8A BJS201901 official DOC parsing/deep verification**.
 
 Canonical audit: `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`.
 
+## 5.6 B5-8A BJS 201901 official fulltext result
+
+SAMR正式legacy DOC已通过research workflow可复现解析：
+
+```text
+SHA-256 = C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9
+antiword
+18305 text chars
+```
+
+正式全文确认：
+
+```text
+27 analytes + CAS
+HPLC-MS/MS
+external-standard quantitative
+qualitative confirmation
+scope = 茶叶 / 奶粉 / 饼干 / 酒 / 饮料等
+special-food similar matrices = 片剂 / 胶囊剂
+sample-prep also explicitly covers 口服液
+```
+
+Current overlap:
+
+```text
+13 existing canonical Substance
+14 missing canonical Substance
+9 concrete historical blood_glucose mappings
+4 historical screening-group overlaps
+14 targets with no governed Risk relation
+```
+
+Normalization to preserve:
+
+```text
+source 格列本脲 / 10238-21-8
+→ canonical 格列苯脲 / 10238-21-8
+```
+
+B5-8A does not change runtime.
+
+Next = **B5-8B BJS201901 promotion preparation/decision**.
+
+Canonical audit: `docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`.
+
 ## 6. Deep verification Gate
 
 任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
@@ -465,7 +510,7 @@ B5-1 已完成并通过 Gate。其“候选不进入 runtime”的边界继续�
 当前 candidate manifest 为：
 
 ```text
-2026.09-b13
+2026.09-b14
 12 records
 5 promoted traces
 7 verification
@@ -474,4 +519,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-8A BJS201901**，利用已下载的SAMR正式`.doc`做可复现解析，核完整analyte/CAS/applicability；在正式全文解析完成前不promotion。
+**下一验收子任务：B5-8B BJS201901**，治理14个缺失canonical Substance、复用13个已有identity、准备27条MethodSubstance与保守MethodApplicability；不因Method新增任何Risk。
