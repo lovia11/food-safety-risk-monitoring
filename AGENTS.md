@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; BJS202409 B5-9A/B is deferred with official fulltext provenance unresolved and runtime unchanged; see `docs/AI_HANDOFF_V2.md` for B5-10A BJS202502
+> Last accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; BJS202409 B5-9A/B is deferred; BJS202502 B5-10A is partial-verified with official SAMR fulltext/attachment still unresolved and runtime unchanged; see `docs/AI_HANDOFF_V2.md` for B5-10B
 > Owner: Project
 
 ## Current technical baseline
