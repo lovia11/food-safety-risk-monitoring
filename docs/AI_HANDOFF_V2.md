@@ -914,17 +914,55 @@ Current `risk-substance-reference@2026.09-c7` has no concrete `blood_pressure` R
 
 Therefore B5-5A creates **zero** runtime Method/Risk facts.
 
-## 18.3 Immediate next subtask — B5-5B BJS202501
+## 18.3 B5-5B BJS202501 decision — deferred, runtime unchanged
 
-Decide promotion readiness/source-gap handling only:
+The decision is now explicit and code-backed.
 
-1. preserve the current no-orphan-Substance invariant unless explicitly justified otherwise;
-2. decide whether canonical Substance governance is allowed before official SAMR attachment recovery;
-3. otherwise defer BJS202501 at `verification/reference_only`;
-4. do not create any Risk mapping from pharmacology or Method existence;
-5. only prepare MethodSubstance/MethodApplicability if provenance is sufficient.
+`src/inspection_reference.py` enforces, for a `verified_reference` dataset:
 
-## 18.4 Remaining queue after BJS202501 audit
+```text
+every Substance
+→ referenced by MethodSubstance
+   OR SubstanceRegulatoryContext
+otherwise validation fails as orphan Substance
+```
+
+Therefore “preload the three canonical Substance identities now and attach them to the Method later” is not a valid current-runtime pattern.
+
+For BJS202501 the only available full Method body/CAS/applicability transport is currently a non-SAMR mirror, while the official SAMR announcement/database confirms Method identity but the AuthorizedRead body/attachment remains unavailable.
+
+Decision:
+
+```text
+BJS 202501
+status = verification
+expected_depth = reference_only
+runtime = unchanged
+deferred pending stable official SAMR body/attachment
+```
+
+Do not:
+
+- add the three Substance rows as orphan entities;
+- use the mirror alone to create runtime MethodSubstance;
+- infer three concrete `blood_pressure` Risk mappings from pharmacology;
+- promote merely to improve Method coverage.
+
+Candidate manifest records this at `2026.09-b9`.
+
+## 18.4 Immediate next subtask — B5-6A BJS202601
+
+Audit BJS 202601 independently:
+
+1. official Method identity/current lifecycle;
+2. full-text availability/provenance;
+3. 布噻嗪 / 美布噻嗪 identity and CAS;
+4. explicit applicability/product matrices;
+5. overlap with current `blood_pressure` / `weight_loss` governed knowledge;
+6. no Method→Risk inference;
+7. runtime unchanged until its own Gate is satisfied.
+
+## 18.5 Remaining queue after BJS202501 audit
 
 Current verification queue includes methods such as:
 
@@ -1094,12 +1132,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-5B BJS 202501 promotion-readiness/source-gap decision**. BJS202504 remains intentionally deferred at verification/reference_only until a stable official attachment/body source is available.
+7. Resume with **B5-6A BJS 202601 deep verification**. BJS202504 and BJS202501 are intentionally deferred at verification/reference_only until stable official attachment/body sources are available.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202501 B5-5A 已完成内容/CAS/applicability审计但runtime未改；下一步从 B5-5B promotion-readiness/source-gap decision 开始。不要由 Method 或药理用途自动反推 Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202504与BJS202501均已因官方正文/附件source gap保持verification/reference_only；下一步从B5-6A BJS202601深核开始。不要由Method或药理用途自动反推Risk。
 
 ---
 
@@ -1111,7 +1149,8 @@ Especially stop if:
 
 - `inspection_reference` version is newer than b10;
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
-- BJS202501 has already been promoted or audited beyond B5-5B;
+- BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
+- BJS202601 has already been promoted or audited beyond B5-6A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

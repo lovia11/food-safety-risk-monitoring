@@ -1,6 +1,6 @@
 # V2-B5-5A BJS 202501 Analyte / Applicability Audit
 
-> Status: CONTENT VERIFIED WITH OFFICIAL-ATTACHMENT TRANSPORT GAP — runtime unchanged  
+> Status: B5-5A CONTENT VERIFIED；B5-5B SOURCE-GAP / ORPHAN-GATE CONFIRMED — DEFERRED, runtime unchanged  
 > Date: 2026-09-20  
 > Scope: method identity / full-text content cross-check / analyte identity / applicability / lifecycle / current Risk overlap  
 > Runtime decision: DO NOT PROMOTE in B5-5A
@@ -250,3 +250,71 @@ Do only the BJS 202501 promotion-readiness/source-gap decision:
 7. decide promotion depth only after the above passes validation.
 
 Do not weaken the official-source Gate merely because a complete third-party mirror exists.
+
+
+## 10. B5-5B promotion-readiness decision
+
+B5-5B checked the data-model invariant before inserting any Substance.
+
+Current validator behavior in `src/inspection_reference.py` for `dataset_status = verified_reference` is explicit:
+
+```text
+Substance must be referenced by:
+- MethodSubstance
+or
+- SubstanceRegulatoryContext
+
+otherwise:
+InspectionConfigValidationError(... 是孤立实体)
+```
+
+So the current architecture does **not** support preloading:
+
+```text
+坎地沙坦酯
+拉西地平
+阿齐沙坦
+```
+
+as unreferenced runtime Substance rows.
+
+The alternative would be to insert the Substance rows together with BJS202501 MethodSubstance. That would make the non-SAMR mirror the decisive source for runtime analyte/CAS facts while the official SAMR dynamic body/attachment is still unavailable.
+
+That would weaken the accepted B5 provenance Gate and is not justified merely to increase method coverage.
+
+### 10.1 Decision
+
+Keep:
+
+```text
+BJS 202501
+status = verification
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime_consumed = false
+```
+
+Runtime remains:
+
+```text
+inspection-reference@2026.09-b10
+risk-substance-reference@2026.09-c7
+```
+
+No new:
+
+- Substance;
+- MethodSubstance;
+- MethodApplicability;
+- Claim→Risk;
+- Risk→Substance;
+- group membership.
+
+Candidate governance records the deferral in `inspection_method_candidates_v2@2026.09-b9`.
+
+### 10.2 Resume condition
+
+Resume BJS202501 only when a stable official SAMR Method body/attachment source is recoverable, or when the project explicitly changes its provenance policy.
+
+Do not reopen the chemical-identity audit from scratch; B5-5A already recorded the candidate identities and applicability cross-check.

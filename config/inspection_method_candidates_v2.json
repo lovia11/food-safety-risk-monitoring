@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b8",
+  "manifest_version": "2026.09-b9",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902与BJS 201808已完成正式全文/身份治理并promotion；当前Inspection Reference为b10。候选manifest仍不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808已promotion；BJS202504与BJS202501均已完成内容审计，但因SAMR新版正文/附件transport gap且verified_reference禁止孤立Substance，继续保持verification/reference_only。candidate manifest不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -253,8 +253,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
       "discovery_source_date": "2025-09-29",
       "discovery_source_record_id": "samr-announcement-2025-39-bjs-202501",
-      "reason": "一手公告和官方方法数据库已核验BJS 202501编号、正式标题和当前数据库身份；属于blood_pressure高相关现行方法，仍需全文核验目标物CAS、适用食品范围和applicability后才能promotion。",
-      "correction_note": null,
+      "reason": "一手公告和官方方法数据库已核验BJS 202501编号、正式标题、发布身份和当前数据库存在；B5-5A已用完整文档镜像交叉核验3个target、CAS、LC-MS/MS定量/确证角色及明确适用范围。B5-5B确认SAMR AuthorizedRead仍无法恢复正式附件/正文，同时inspection verified_reference禁止孤立Substance；因此不以第三方镜像单独支撑MethodSubstance/runtime promotion，继续verification/reference_only。",
+      "correction_note": "B5-5B decision：坎地沙坦酯145040-37-5、拉西地平103890-78-4、阿齐沙坦147403-03-0的化学身份已交叉核验，但当前inspection-reference中三者均缺失、risk-substance-reference@2026.09-c7也没有对应concrete blood_pressure Risk→Substance。不得由Method存在或药理用途反推Risk；在稳定官方SAMR附件/正文来源恢复前，不新增Substance、MethodSubstance、MethodApplicability，不promotion。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
@@ -274,7 +274,7 @@
           ]
         }
       ],
-      "verified_at": "2026-09-18T22:00:00+08:00",
+      "verified_at": "2026-09-20T23:29:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },

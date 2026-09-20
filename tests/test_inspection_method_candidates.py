@@ -91,6 +91,17 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertEqual(predecessor["promoted_dataset_version"], "2026.09-b7")
         self.assertIn("两者保持独立身份", predecessor["correction_note"])
 
+        bjs_202501 = next(
+            item for item in verification if item["method_no"] == "BJS 202501"
+        )
+        self.assertEqual(payload["manifest_version"], "2026.09-b9")
+        self.assertEqual(bjs_202501["expected_depth"], "reference_only")
+        self.assertIsNone(bjs_202501["promoted_method_id"])
+        self.assertIsNone(bjs_202501["promoted_dataset_version"])
+        self.assertIn("AuthorizedRead", bjs_202501["reason"])
+        self.assertIn("禁止孤立Substance", bjs_202501["reason"])
+        self.assertIn("不得由Method存在或药理用途反推Risk", bjs_202501["correction_note"])
+
         promoted_by_no = {item["method_no"]: item for item in promoted}
         for method_no, method_id, dataset_version in (
             ("KJ201901", "kj-201901", "2026.09-b9"),
