@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；NEXT = B5-4A BJS202504 official-fulltext deep verification  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A BJS202504 CONTENT AUDIT COMPLETE / RUNTIME UNCHANGED；NEXT = B5-4B identity governance + official-source gap resolution  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -70,7 +70,7 @@ runtime_consumed = false
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
 | BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
 | BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure | SAMR 2025年第39号公告 | `verification / reference_only` |
-| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss | SAMR 2025年第39号公告 | `verification / reference_only` |
+| BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A另有全文镜像/化学身份交叉核验 | `verification / reference_only；B5-4A audited` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 202602 食品中伐地那非杂质30的测定 | male_function | SAMR 2026年第24号公告 | `verification / reference_only` |
 | BJS 201808 食品中5种α-受体阻断类药物的测定 | Method index；不得由方法反推 male_function / yohimbine Risk | SAMR 2018年第28号公告 + 正式DOCX + 独立化学身份交叉核验 | `promoted / recommendation_ready @ b10` |
@@ -149,11 +149,13 @@ B5-3B 已在 `inspection-reference@2026.09-b10` 治理4个缺失母体 Substance
 
 ### 第一批：小规模、当前、能直接补现有链路
 
-1. **BJS 202504**
-   - current；
-   - 标题仅 5 个化合物；
-   - 与 B4 current weight_loss 酚丁/酚酞监管场景最直接；
-   - 适合先验证“候选 → 全文 → analyte/applicability → promotion”的 B5 流程。
+1. **BJS 202504 — B5-4A 已完成审计，未 promotion**
+   - SAMR 第39号公告与官方方法数据库已确认 Method identity/current database presence；
+   - 完整全文镜像交叉核验出5个 target、HPLC-MS/MS 外标定量和7类明确 applicability；
+   - SAMR 新版 AuthorizedRead 正文接口经 Cookie/AJAX 会话复现仍返回 `success:false`，官方附件 URL/SHA-256 尚未恢复；
+   - 5个候选 CAS 在当前 runtime 全部缺失；
+   - 当前 `weight_loss` 只有“酚汀（酚丁）、酚酞及其酯类衍生物或类似物”group relation，不能自动展开为这5个 concrete Substance；
+   - 详见 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`。
 
 2. **BJS 202501**
    - current；
@@ -204,6 +206,42 @@ KJ201902 promotion 暴露出 B4 时留下的两个身份缺口。随后 `risk-su
 这两条 Risk 的监管依据仍是2018中央抽检资料；KJ201902全文只用于名称/盐型身份归一化，不构成 Method→Risk 反推。
 
 BJS 201808 已完成 parent/salt identity 治理并 promotion 到 `inspection-reference@2026.09-b10`；该 Method 不新增任何 Risk 映射。
+
+## 5.2 B5-4A BJS 202504 audit result
+
+B5-4A 已完成 **Method identity + full-text content + analyte identity + applicability + runtime overlap** 审计，但没有 promotion。
+
+Current fact split:
+
+```text
+official SAMR announcement / method database
+→ method_no / title / issuer / official date / current database identity
+
+complete-document mirror
+→ Method body content cross-check only
+→ HPLC-MS/MS / external-standard quantitative
+→ 7 explicit applicability categories
+
+independent chemical-identity sources
+→ 5 candidate CAS identities
+
+official SAMR attachment URL / SHA-256
+→ still unresolved
+```
+
+当前5个候选 CAS 均未进入 `inspection-reference@2026.09-b10`，且没有 concrete Risk→Substance mapping。
+
+因此 candidate 保持：
+
+```text
+verification / reference_only
+runtime unchanged
+```
+
+Next = **B5-4B canonical Substance identity governance + official-source gap resolution**.  
+Do not create concrete weight_loss relations or group memberships as a side effect.
+
+Canonical audit: `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`.
 
 ## 6. Deep verification Gate
 
@@ -273,4 +311,4 @@ runtime_consumed = false
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-4A BJS202504**，先做正式全文、analyte、CAS、applicability 与 lifecycle 深核；正式事实未核清前不改 runtime，不新增 Claim/Risk。
+**下一验收子任务：B5-4B BJS202504**，只做 canonical Substance identity governance + 官方来源缺口处理；在 provenance 足够前不 promotion，不新增 Claim/Risk/group membership。

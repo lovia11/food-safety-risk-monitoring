@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; B5-3B BJS201808 promotion is accepted; see `docs/AI_HANDOFF_V2.md` for the next B5 handoff
+> Last accepted runtime code/config/test baseline: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae`; current B5 research-workflow baseline: `a8e9b78d88c4a7ea3f4eeb616be34553b7239d52`; BJS202504 B5-4A is audit-only and runtime remains unchanged; see `docs/AI_HANDOFF_V2.md` for B5-4B
 > Owner: Project
 
 ## Current technical baseline

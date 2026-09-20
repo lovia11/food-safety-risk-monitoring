@@ -2,7 +2,8 @@
 
 > Status: CANONICAL CURRENT-DEVELOPMENT HANDOFF  
 > Prepared from branch: `ux-redesign-v1`  
-> Last accepted code/config/test state: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae` (`Refresh B5 acceptance inventory contracts`)  
+> Last accepted runtime code/config/test state: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae` (`Refresh B5 acceptance inventory contracts`)  
+> Current accepted B5 research-workflow state: `a8e9b78d88c4a7ea3f4eeb616be34553b7239d52` (`Reproduce SAMR AJAX session in B5 research`)  
 > Date: 2026-09-20  
 > Important: handoff/document commits may advance HEAD after the commit above. Always refresh the branch HEAD before editing.
 
@@ -652,6 +653,8 @@ Known official files fetched/located include:
 - BJS 201808 DOCX
 - BJS 201901 DOC (downloaded; full text parsing remained a separate issue)
 
+For newer 2025/2026 SAMR method pages the workflow now also records the AuthorizedRead dynamic-body transport, session cookies, AJAX headers, raw API responses and diagnostic scripts. BJS202504 currently demonstrates an **official attachment transport gap**: the official announcement/database identity is verified, but the reconstructed official dynamic-body request still returns `success:false` with no attachment body. Do not invent an official attachment URL.
+
 The B5 candidate doc records hashes and current status.
 
 ---
@@ -781,7 +784,77 @@ Canonical Yohimbine now exists in the Method index, but there is still no concre
 
 ---
 
-# 18. B5 remaining queue after BJS201808
+# 18. BJS 202504 — B5-4A audited, runtime unchanged
+
+Canonical audit:
+
+```text
+docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md
+```
+
+Status:
+
+```text
+B5-4A CONTENT AUDIT COMPLETE
+official Method identity/current database presence verified
+full-text content cross-checked
+5 candidate chemical identities cross-checked
+official SAMR attachment URL/SHA-256 unresolved
+runtime unchanged
+candidate remains verification/reference_only
+```
+
+Verified official Method identity:
+
+```text
+BJS 202504
+食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定
+official date = 2025-09-29
+```
+
+Cross-checked Method role:
+
+```text
+HPLC-MS/MS
+external-standard quantitative determination
+```
+
+Cross-checked explicit applicability:
+
+- 糖果
+- 果冻
+- 蜜饯
+- 果蔬汁饮料
+- 固体饮料
+- 饼干
+- 代用茶
+
+Candidate chemical identities:
+
+| Method source label | Candidate CAS | Runtime status |
+|---|---:|---|
+| 酚丁 | 125-13-3 | missing |
+| 双丙酚丁 | 2943075-86-1 | missing |
+| 双酚沙丁 | 17692-24-9 | missing |
+| 双酚沙丁醋酸酯 | 14008-48-1 | missing |
+| 酚丁双环丙甲酸酯 | 2943075-87-2 | missing; source-label normalization still needs explicit governance |
+
+Current Risk has a `weight_loss` **group** reference to “酚汀（酚丁）、酚酞及其酯类衍生物或类似物”, but there are no concrete Risk→Substance mappings for these five CAS and no `substance_group_memberships`.
+
+Therefore B5-4A creates **zero** runtime Risk/Method facts.
+
+## 18.1 Immediate next subtask — B5-4B
+
+Only:
+
+1. govern/verify the five canonical Substance identities;
+2. explicitly resolve `酚丁双环丙甲酸酯` vs `双环丙酚丁` normalization;
+3. continue official attachment/Appx-A recovery when a stable SAMR source becomes available;
+4. prepare MethodSubstance/applicability only after provenance is sufficient;
+5. add zero Claim→Risk, zero Risk→Substance and zero implicit group memberships;
+6. decide promotion depth only after validation.
+
+## 18.2 Remaining queue after BJS202504 audit
 
 Current verification queue includes methods such as:
 
@@ -943,18 +1016,19 @@ A new ChatGPT conversation should do exactly this:
 4. Read:
    - `docs/V2_B_METHOD_CANDIDATES.md`
    - `docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`
+   - `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`
 5. Inspect current:
    - `config/inspection_reference.json`
    - `config/inspection_method_candidates_v2.json`
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-4A BJS 202504 official-fulltext / analyte / applicability deep verification**; do not change runtime until formal source facts are verified.
+7. Resume with **B5-4B BJS 202504 canonical Substance identity governance + official-source gap resolution**; do not promote until provenance is sufficient.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md` 和 `docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS201808 B5-3B 已完成并通过 full acceptance；下一步从 B5-4A BJS202504 正式全文深核开始，不要重复 KJ201901/KJ201902/BJS201808 promotion，也不要由 Method 反推 Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202504 B5-4A 已完成内容审计但未 promotion；下一步从 B5-4B canonical Substance identity governance + official-source gap resolution 开始。不要由 Method 或 substance group 自动反推 concrete Risk。
 
 ---
 
@@ -965,7 +1039,7 @@ If the current branch differs materially from the state above, stop and re-audit
 Especially stop if:
 
 - `inspection_reference` version is newer than b10;
-- BJS202504 has already been promoted or its official-fulltext audit has advanced beyond this handoff;
+- BJS202504 has already been promoted, its five Substance identities have already been governed, or the official-source gap has been resolved beyond this handoff;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
