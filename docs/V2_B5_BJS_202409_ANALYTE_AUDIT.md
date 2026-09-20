@@ -1,6 +1,6 @@
-# V2-B5-9A BJS 202409 Identity / Source-Gap Audit
+# V2-B5-9A/B BJS 202409 Identity / Source-Gap Audit
 
-> Status: PARTIAL VERIFIED — official identity/current page verified; secondary Method-content/CAS cross-check complete; official fulltext unresolved; runtime unchanged  
+> Status: B5-9B DEFERRED — official identity/current page verified; official Method body/attachment provenance unresolved; runtime unchanged  
 > Date: 2026-09-21  
 > Scope: official Method identity / current lifecycle / source transport / 19-analyte candidate inventory / formal scope cross-check / current Risk overlap  
 > Runtime decision: DO NOT PROMOTE in B5-9A
@@ -169,12 +169,56 @@ No new Substance, MethodSubstance, MethodApplicability, Risk mapping or group me
 
 Candidate manifest records this at `inspection_method_candidates_v2@2026.09-b16`.
 
-## 7. Next subtask — B5-9B
+## 7. B5-9B official-source recheck
 
-Decide provenance/promotion readiness only:
+B5-9B repeated the provenance check against the official publication chain:
 
-1. attempt stable official fulltext/attachment recovery;
-2. keep third-party summaries as cross-check evidence only;
-3. do not resolve the 依善利酮/依普利酮 conflict from secondary text alone;
-4. preserve no-orphan-Substance and Method→Risk boundaries;
-5. defer if the official-source Gate remains unresolved.
+1. SAMR 2024年第51号公告 still identifies BJS 202409 and states that Method text is available through the supplementary-method database;
+2. the current SAMR database still lists the Method;
+3. the specific Method page still exposes only stable title/date metadata to the public fetch path;
+4. the governed research workflow still has no official attachment candidate and its AuthorizedRead response remains `success=false / data={}`;
+5. web search can locate third-party PDF mirrors, but those are user/third-party uploads and cannot become official runtime authority.
+
+Therefore the existence of a likely full PDF outside SAMR does **not** close the provenance Gate.
+
+## 8. B5-9B decision — DEFERRED
+
+Decision:
+
+```text
+BJS 202409
+status = verification
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime = unchanged
+decision = deferred pending stable official Method body / attachment provenance
+```
+
+Do not add in B5-9B:
+
+- the 16 missing canonical Substance identities from secondary text;
+- MethodSubstance rows, including for the three already-existing overlapping Substance identities;
+- MethodApplicability rows from third-party scope summaries;
+- Claim→Risk mappings;
+- Risk→Substance mappings;
+- substance-group memberships.
+
+The `依善利酮 / 依普利酮` conflict for CAS `107724-20-9` remains unresolved rather than being normalized from secondary material.
+
+Promotion may be reconsidered only when a stable official SAMR Method body/attachment is recoverable with reproducible provenance (URL plus content hash) and the official text closes analyte identity, determination role and formal applicability.
+
+Candidate manifest records the final B5-9B decision at:
+
+```text
+inspection_method_candidates_v2@2026.09-b17
+```
+
+Runtime remains:
+
+```text
+inspection-reference@2026.09-b11
+risk-substance-reference@2026.09-c7
+```
+
+B5-9 is complete. The next independent candidate task is B5-10A / BJS 202502; it is not started by this audit.
