@@ -22,6 +22,8 @@ jobs:
 
       - name: Install research helpers
         run: |
+          sudo apt-get update
+          sudo apt-get install -y antiword
           python -m pip install "pypdf>=5,<7" "playwright>=1.55,<2"
           python -m playwright install chromium
 
@@ -37,6 +39,8 @@ jobs:
           import http.cookiejar
           import json
           import re
+          import subprocess
+          import tempfile
           import time
           import urllib.parse
           import urllib.request
@@ -133,6 +137,21 @@ jobs:
                   if text:
                       paragraphs.append(text)
               return "\n".join(paragraphs)
+
+          def extract_doc(data: bytes) -> str:
+              # Legacy Word 97-2003 binary documents are not ZIP/XML.
+              # Parse them with antiword while preserving the original bytes
+              # and recording the extraction method in metadata.
+              with tempfile.NamedTemporaryFile(suffix=".doc") as tmp:
+                  tmp.write(data)
+                  tmp.flush()
+                  completed = subprocess.run(
+                      ["antiword", "-w", "0", tmp.name],
+                      check=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE,
+                  )
+              return completed.stdout.decode("utf-8", errors="replace")
 
           def extract_pdf(data: bytes) -> str:
               import io
@@ -379,6 +398,9 @@ jobs:
                           if ext == ".docx":
                               text = extract_docx(data)
                               extraction = "docx_xml"
+                          elif ext == ".doc":
+                              text = extract_doc(data)
+                              extraction = "antiword"
                           elif ext == ".pdf":
                               text = extract_pdf(data)
                               extraction = "pypdf"
@@ -417,6 +439,9 @@ jobs:
                   if ext == ".docx":
                       text = extract_docx(data)
                       extraction = "docx_xml"
+                  elif ext == ".doc":
+                      text = extract_doc(data)
+                      extraction = "antiword"
                   elif ext == ".pdf":
                       text = extract_pdf(data)
                       extraction = "pypdf"
