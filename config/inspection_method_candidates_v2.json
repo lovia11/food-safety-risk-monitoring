@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b16",
+  "manifest_version": "2026.09-b17",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808/BJS201901已promotion；BJS202409 B5-9A已核官方身份/current page，并通过二手标准摘要交叉核到19种利尿剂、HPLC-MS/MS与9类适用食品，但SAMR正式正文/附件仍无法恢复，且二手文本存在依善利酮/依普利酮命名不一致，因此继续verification/reference_only；BJS202501/BJS202504/BJS202601/BJS202602仍deferred。candidate manifest不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808/BJS201901已promotion；BJS202409已完成B5-9A/B并因SAMR正式Method正文/附件provenance仍未闭合而明确deferred，保持verification/reference_only；第三方PDF/摘要仅作内容交叉核验，不作为runtime authority。BJS202501/BJS202504/BJS202601/BJS202602仍deferred，BJS202502尚待独立深核。candidate manifest不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -227,8 +227,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
       "discovery_source_date": "2024-12-22",
       "discovery_source_record_id": "samr-announcement-2024-51-bjs-202409",
-      "reason": "B5-9A确认SAMR 2024年第51号公告与官方方法数据库中的BJS 202409身份/current page；research workflow记录官方方法页SHA-256 1889293DAE36340D05FECE79C96ACFC3AC4C7D5E8EB4571DB201D98D8D0CD4DF，AuthorizedRead响应SHA-256 1A3EC034F40A7DA334888CF812CA09ECEC435181411545F111C278465664A1D0且success=false/data={}、无附件候选。食品伙伴网/食典通标准摘要交叉核到HPLC-MS/MS、9类适用食品和19个利尿剂名称；标准物质页面交叉核到19个CAS候选，但这些均非SAMR正式全文，故本阶段仅audit、不promotion。",
-      "correction_note": "B5-9A overlap：19个候选目标中当前inspection-reference@2026.09-b11仅已有氯噻嗪58-94-6、氢氯噻嗪58-93-5、呋塞米54-31-9三个canonical Substance；精确Risk重叠只有氢氯噻嗪→historical blood_pressure与呋塞米→historical weight_loss，氯噻嗪当前无concrete Risk mapping。其余16个不得因利尿剂药理属性或Method标题自动新增Risk。二手摘要对CAS 107724-20-9目标出现“依善利酮/依普利酮”文本不一致，正式SAMR全文未恢复前不得据二手文本治理canonical identity。",
+      "reason": "B5-9B provenance decision：SAMR 2024年第51号公告继续确认BJS 202409正式发布，并明确方法文本可在食品补充检验方法数据库查询下载；当前SAMR数据库仍列出该方法，但具体方法页公开响应仍只稳定暴露标题/日期。B5 research workflow记录官方方法页SHA-256 1889293DAE36340D05FECE79C96ACFC3AC4C7D5E8EB4571DB201D98D8D0CD4DF、AuthorizedRead响应SHA-256 1A3EC034F40A7DA334888CF812CA09ECEC435181411545F111C278465664A1D0，且AuthorizedRead仍为success=false/data={}、无attachment candidate，未恢复可哈希的SAMR正式Method正文/附件。外部可检索到第三方上传PDF及标准摘要，可用于19 analyte/HPLC-MS/MS/适用范围的内容交叉核验，但不能替代官方provenance。因此BJS 202409明确deferred，保持verification/reference_only，不promotion。",
+      "correction_note": "B5-9B decision：不以第三方PDF/摘要治理16个缺失canonical Substance，不新增MethodSubstance或MethodApplicability；不新增任何Claim→Risk、Risk→Substance或substance_group_membership。当前inspection-reference@2026.09-b11中仅已有氯噻嗪58-94-6、氢氯噻嗪58-93-5、呋塞米54-31-9三个canonical Substance，这只是overlap事实，不把它们自动挂到未promotion的BJS202409。二手文本对CAS 107724-20-9仍存在“依善利酮/依普利酮”命名冲突，继续保持unresolved。恢复promotion的前提是取得稳定SAMR正式全文/附件及可复现hash，并由官方正文闭合19 analyte identity、determination role与formal MethodApplicability。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中动物源性成分定性检测》等13项食品补充检验方法和2项修改单的公告（2024年第51号）",
@@ -273,7 +273,7 @@
           ]
         }
       ],
-      "verified_at": "2026-09-21T00:46:00+08:00",
+      "verified_at": "2026-09-21T01:03:51+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },
