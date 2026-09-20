@@ -1219,15 +1219,48 @@ Current runtime overlap:
 
 A secondary summary has a `依善利酮 / 依普利酮` inconsistency, so no canonical identity is governed from secondary text.
 
-## 18.10 Immediate next subtask — B5-9B BJS202409
+## 18.10 B5-9B BJS202409 decision — DEFERRED
 
-Decide provenance/promotion readiness only:
+B5-9B repeated the official-source Gate.
 
-1. attempt stable official fulltext/attachment recovery;
-2. keep third-party summaries as cross-check evidence only;
-3. do not resolve the 依善利酮/依普利酮 conflict from secondary text alone;
-4. preserve no-orphan-Substance and Method→Risk boundaries;
-5. defer if the official-source Gate remains unresolved.
+Confirmed:
+
+```text
+SAMR 2024年第51号公告 = official Method identity
+current SAMR database = Method still listed
+specific Method page = stable title/date only
+AuthorizedRead = success=false / data={}
+official attachment candidate = none
+third-party PDF mirrors = available, cross-check only
+```
+
+Decision:
+
+```text
+status = verification
+expected_depth = reference_only
+runtime = unchanged
+promotion = deferred
+candidate manifest = 2026.09-b17
+```
+
+No canonical Substance, MethodSubstance, MethodApplicability, Claim→Risk, Risk→Substance or group membership is added from BJS202409 in B5-9B.
+
+The secondary `依善利酮 / 依普利酮` inconsistency remains unresolved. Promotion requires stable official SAMR fulltext/attachment provenance with a reproducible content hash and official closure of analyte identity, determination role and formal applicability.
+
+B5-9 is complete.
+
+## 18.10A Immediate next subtask — B5-10A BJS202502
+
+Audit BJS 202502 independently:
+
+1. verify official Method identity/current lifecycle;
+2. recover/verify official fulltext and attachment provenance;
+3. verify the complete 25 β-blocker analyte inventory and CAS from official text;
+4. verify determination role and formal MethodApplicability;
+5. compare only against existing governed `blood_pressure` knowledge;
+6. do not create Risk from Method title or pharmacology;
+7. keep runtime unchanged until its own Gate passes.
 
 ## 18.11 Remaining verification queue
 
@@ -1402,12 +1435,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-9B BJS 202409 provenance/promotion-readiness decision**. BJS202409 has official identity/current page plus secondary target/scope/CAS cross-checks, but official fulltext remains unavailable and runtime is unchanged.
+7. Resume with **B5-10A BJS 202502 deep verification**. BJS202409 B5-9B is already deferred because stable official fulltext/attachment provenance remains unavailable; do not repeat it or promote it from third-party PDFs.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_202409_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202409 B5-9A已完成official identity/current page与secondary content/CAS交叉核验，但SAMR正式正文/附件仍缺；下一步从B5-9B provenance/promotion-readiness decision开始。不要由Method或“利尿剂”药理属性自动反推Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`，以当前代码/测试/config 为最高事实源。BJS202409 B5-9A/B已明确deferred，第三方PDF不能替代SAMR正式provenance；下一步从B5-10A BJS202502独立深核开始。不要由Method标题或β受体阻滞剂药理属性自动反推Risk。
 
 ---
 
@@ -1422,7 +1455,7 @@ Especially stop if:
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202409 has already been promoted or audited beyond B5-9B;
+- BJS202502 has already been promoted or audited beyond B5-10A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
