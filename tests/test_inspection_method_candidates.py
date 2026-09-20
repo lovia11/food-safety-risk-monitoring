@@ -133,10 +133,32 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             for source in bjs_202409["verification_sources"]
         ))
 
+        bjs_202502 = next(
+            item for item in verification if item["method_no"] == "BJS 202502"
+        )
+        self.assertEqual(bjs_202502["expected_depth"], "reference_only")
+        self.assertIsNone(bjs_202502["promoted_method_id"])
+        self.assertIsNone(bjs_202502["promoted_dataset_version"])
+        self.assertIn("B5-10A content audit", bjs_202502["reason"])
+        self.assertIn("25种β-受体阻滞剂", bjs_202502["reason"])
+        self.assertIn("液相色谱-三重四极杆串联质谱", bjs_202502["reason"])
+        self.assertIn("阿替洛尔/29122-68-7", bjs_202502["correction_note"])
+        self.assertIn("其余24个不得因“β-受体阻滞剂”药理类别", bjs_202502["correction_note"])
+        self.assertIn("喷布特罗", bjs_202502["correction_note"])
+        self.assertIn("咔唑心安", bjs_202502["correction_note"])
+        self.assertTrue(any(
+            "secondary_25_analyte_cas_crosscheck" in source["verified_facts"]
+            for source in bjs_202502["verification_sources"]
+        ))
+        self.assertTrue(any(
+            "qualitative_quantitative_25_targets" in source["verified_facts"]
+            for source in bjs_202502["verification_sources"]
+        ))
+
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b17")
+        self.assertEqual(payload["manifest_version"], "2026.09-b18")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
