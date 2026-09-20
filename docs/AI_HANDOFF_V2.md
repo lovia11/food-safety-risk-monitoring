@@ -2,9 +2,9 @@
 
 > Status: CANONICAL CURRENT-DEVELOPMENT HANDOFF  
 > Prepared from branch: `ux-redesign-v1`  
-> Last accepted runtime code/config/test state: `7e71c41ad6f7ada85df061fcbb1787e2725c2fae` (`Refresh B5 acceptance inventory contracts`)  
-> Current accepted B5 research-workflow state: `cff95b6388774f363f7b0a60fb0049c107bee4d6` (`Render SAMR BJS 202504 in B5 research browser`)  
-> Date: 2026-09-20  
+> Last accepted runtime code/config/test state: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835` (`Align BJS 201901 promoted candidate assertion`)  
+> Current accepted B5 research-workflow state: `fe1cc7ee27b7897222448dc5ba2083c1843317a1` (`Parse legacy DOC files in B5 source research`)  
+> Date: 2026-09-21  
 > Important: handoff/document commits may advance HEAD after the commit above. Always refresh the branch HEAD before editing.
 
 This is the **first document a new ChatGPT conversation or coding agent should read** before continuing development.
@@ -560,18 +560,20 @@ Do not expand Claim/Risk merely because a Method exists.
 
 ## 15.1 Inspection Reference
 
-Current:
+Current accepted runtime:
 
 ```text
 config/inspection_reference.json
-dataset_version = 2026.09-b10
-methods = 10
-recommendation_ready current methods = 9
+dataset_version = 2026.09-b11
+methods = 11
+recommendation_ready current methods = 10
 revoked reference_only methods = 1
-substances = 205
-method-substance relations = 236
-method applicability records = 53
-regulatory documents = 8
+substances = 219
+method-substance relations = 263
+method applicability records = 61
+regulatory documents = 9
+substance regulatory contexts = 1
+substance group memberships = 0
 ```
 
 Indexed methods:
@@ -586,6 +588,9 @@ Indexed methods:
 - KJ201901 — recommendation_ready
 - KJ201902 — recommendation_ready
 - BJS 201808 — recommendation_ready
+- BJS 201901 — recommendation_ready
+
+BJS201901 was promoted only after the official SAMR legacy DOC was reproducibly parsed. Its 14 newly governed Substance identities are Method analytes only; the Risk reference remains `2026.09-c7` with 83 mappings.
 
 ## 15.2 Candidate manifest
 
@@ -593,10 +598,10 @@ Current:
 
 ```text
 config/inspection_method_candidates_v2.json
-manifest_version = 2026.09-b8
+manifest_version = 2026.09-b15
 records = 12
-promoted traces = 5
-verification = 7
+promoted traces = 6
+verification = 6
 runtime_consumed = false
 ```
 
@@ -623,7 +628,7 @@ KJ201902 official full text:
 - positive result requires confirmation
 - official source salt/name normalization is preserved instead of collapsing source provenance
 
-Their production state remains part of `inspection-reference@2026.09-b10`; their individual promotion trace remains `@ b9`.
+Their production state remains part of `inspection-reference@2026.09-b11`; their individual promotion trace remains `@ b9`.
 
 ---
 
@@ -639,7 +644,8 @@ Purpose:
 
 - fetch SAMR official attachments;
 - retain SHA-256;
-- extract DOCX/PDF text when technically possible;
+- extract DOCX/PDF text;
+- parse legacy Word `.doc` reproducibly through `antiword`;
 - upload a research artifact.
 
 This workflow is **research-only**.
@@ -651,7 +657,7 @@ Known official files fetched/located include:
 - KJ201901 DOCX
 - KJ201902 DOCX
 - BJS 201808 DOCX
-- BJS 201901 DOC (downloaded; full text parsing remained a separate issue)
+- BJS 201901 legacy DOC — downloaded and reproducibly parsed with `antiword`
 
 For newer 2025/2026 SAMR method pages the workflow now also records the AuthorizedRead dynamic-body transport, session cookies, AJAX headers, raw API responses and diagnostic scripts. BJS202504 currently demonstrates an **official attachment transport gap**: the official announcement/database identity is verified, but the reconstructed official dynamic-body request still returns `success:false` with no attachment body. Do not invent an official attachment URL.
 
@@ -1105,7 +1111,7 @@ The existing `male_function → 那非类、拉非类物质` group remains unexp
 
 Candidate manifest records the defer decision at `2026.09-b13`.
 
-## 18.8 B5-8A BJS201901 official DOC audit — complete, runtime unchanged
+## 18.8 B5-8A/B BJS201901 — PROMOTED / ACCEPTED
 
 Canonical audit:
 
@@ -1113,7 +1119,7 @@ Canonical audit:
 docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md
 ```
 
-The official legacy DOC is now reproducibly parsed by the B5 research workflow:
+Official legacy DOC provenance:
 
 ```text
 SHA-256 =
@@ -1123,54 +1129,75 @@ extraction = antiword
 text chars = 18305
 ```
 
-Verified from official fulltext:
-
-- 27 complete analytes + CAS;
-- HPLC-MS/MS;
-- external-standard quantitative determination;
-- qualitative confirmation;
-- formal scope: 茶叶、奶粉、饼干、酒、饮料等食品；
-- similar-matrix special-food 片剂/胶囊剂;
-- sample-preparation branch also explicitly covers 口服液.
-
-Runtime overlap:
+B5-8B accepted runtime promotion:
 
 ```text
-27 targets total
-13 canonical Substance already exist
-14 canonical Substance missing
-13 targets have existing historical blood_glucose overlap
-14 targets have no governed Risk mapping
+BJS 201901
+→ inspection-reference@2026.09-b11
+→ current / recommendation_ready
+→ 27 MethodSubstance
+→ 8 conservative MethodApplicability
 ```
 
-Source normalization:
+Promotion facts:
+
+- reused 13 existing canonical Substance identities;
+- added 14 canonical Substance identities from official Appendix A;
+- added zero Claim→Risk / Risk→Substance mappings;
+- source `格列本脲 / 10238-21-8` normalizes to canonical `格列苯脲 / 10238-21-8` with source provenance;
+- `吡格列酮 / 111025-46-8` matches the existing canonical identity directly and requires no normalization;
+- “等食品 / 类似基质 / 等形式” was not converted into unrestricted applicability;
+- 口服液 is conservatively `conditional`.
+
+Accepted current inventory:
 
 ```text
-official source label = 格列本脲
-canonical runtime = 格列苯脲
-CAS = 10238-21-8
-future MethodSubstance requires normalization_note
+methods = 11
+recommendation_ready = 10
+reference_only revoked = 1
+substances = 219
+MethodSubstance = 263
+MethodApplicability = 61
+RegulatoryDocument = 9
+SubstanceRegulatoryContext = 1
+SubstanceGroupMembership = 0
 ```
 
-B5-8A adds zero runtime facts and zero Risk mappings.
+Candidate manifest:
 
-## 18.9 Immediate next subtask — B5-8B BJS201901 promotion preparation
+```text
+2026.09-b15
+12 records
+6 promoted
+6 verification
+runtime_consumed = false
+```
 
-Do only:
+Accepted Gate baseline:
 
-1. add/govern 14 missing canonical Substance identities from the official table;
-2. reuse 13 existing identities;
-3. preserve 格列本脲 → 格列苯脲 source-label normalization;
-4. prepare 27 MethodSubstance rows;
-5. prepare conservative MethodApplicability from formal scope/sample-preparation branches;
-6. add zero Risk mappings as a Method side effect;
-7. decide/promotion only after config validation and Gates.
+```text
+a1fcbc9f1f8e44a8954e29cafe06a06e15d93835
+Python syntax gate = success
+B3/B4 governance regression = success
+V2 full acceptance = success
+```
 
-## 18.10 Remaining queue after BJS201901 audit
+## 18.9 Immediate next subtask — B5-9A BJS202409
 
-Current verification queue includes methods such as:
+Audit BJS 202409 independently:
 
-- BJS 201901
+1. official Method identity/current lifecycle;
+2. recover/verify official fulltext and attachment provenance;
+3. verify all 19 diuretic analytes and CAS;
+4. verify determination role and formal MethodApplicability;
+5. compare with existing `blood_pressure` / `weight_loss` governed knowledge;
+6. do not create Risk from Method/pharmacology;
+7. keep runtime unchanged until its own Gate passes.
+
+## 18.10 Remaining verification queue
+
+Current verification queue:
+
 - BJS 202409
 - BJS 202501
 - BJS 202502
@@ -1339,12 +1366,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-8B BJS 201901 promotion preparation/decision**. Official DOC fulltext is parsed and verified; do not add Risk mappings for the 14 newly governed Method targets merely because BJS201901 detects them.
+7. Resume with **B5-9A BJS 202409 deep verification**. BJS201901 is already promoted at `inspection-reference@2026.09-b11`; do not repeat its promotion and do not infer Risk from BJS202409 Method/pharmacology.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS201901 B5-8A已从SAMR正式DOC解析27个analyte/CAS、方法角色和范围；下一步从B5-8B promotion preparation开始。14个缺失Substance可由Method身份治理，但不得自动新增Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS201901 B5-8B已promotion/accepted到`inspection-reference@2026.09-b11`且没有新增Risk；下一步从B5-9A BJS202409深核开始。不要由Method或药理用途自动反推Risk。
 
 ---
 
@@ -1354,12 +1381,12 @@ If the current branch differs materially from the state above, stop and re-audit
 
 Especially stop if:
 
-- `inspection_reference` version is newer than b10;
+- `inspection_reference` version is newer than b11;
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS201901 has already been promoted or audited beyond B5-8B;
+- BJS202409 has already been promoted or audited beyond B5-9A;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 
