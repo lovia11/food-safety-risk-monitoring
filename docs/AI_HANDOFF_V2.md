@@ -1026,20 +1026,53 @@ Any future Risk mapping must independently decide:
 
 Candidate manifest records this at `2026.09-b11`.
 
-## 18.6 Immediate next subtask — B5-7A BJS202602
+## 18.6 B5-7A BJS202602 audit — partial verified, runtime unchanged
 
-Audit BJS 202602 independently:
+Canonical audit:
 
-1. official Method identity/current lifecycle;
-2. official news/regulatory scene;
-3. full-text availability/provenance;
-4. 伐地那非杂质30 chemical identity / CAS / normalization;
-5. explicit MethodApplicability if recoverable;
-6. overlap with current `male_function` governed knowledge;
-7. no Method→Risk inference;
-8. runtime unchanged until its own Gate is satisfied.
+```text
+docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md
+```
 
-## 18.7 Remaining queue after BJS202601 audit
+Verified:
+
+```text
+BJS 202602
+食品中伐地那非杂质30的测定
+official identity/current database presence = verified
+official SAMR scene = 功能性食品中隐蔽添加的壮阳药物衍生物
+```
+
+Official Method transport:
+
+```text
+official page SHA-256 = 674D85F7A65D03E58939515203CCD41BF2410C4723CC3DC0C49F3C752A981F4C
+AuthorizedRead = success=false / data={}
+official attachment candidates = none
+```
+
+Third-party Method reproduction cross-checks UPLC-MS/MS and six matrices, but is not runtime authority.
+
+Chemical identity remains unresolved for governance:
+
+- commercial sources commonly use O-Propyl Vardenafil / CAS 2840532-32-1;
+- PubChem indexes that CAS under a different impurity synonym;
+- at least one supplier uses a different CAS/structure for “Vardenafil Impurity 30”;
+- an official standard-sample project exists for O-propyl vardenafil, but the visible record does not explicitly equate it with BJS202602's target.
+
+Current `male_function` already has a current group relation for `那非类、拉非类物质`, but `substance_group_memberships = 0`; B5-7A does not expand the group.
+
+## 18.7 Immediate next subtask — B5-7B BJS202602
+
+Decide promotion/identity readiness only:
+
+1. defer if stable official fulltext remains unavailable;
+2. decide whether O-propyl-vardenafil evidence is sufficient for canonical identity or remains unresolved;
+3. preserve zero automatic group membership;
+4. no concrete Risk mapping from Method/news alone;
+5. no third-party-only MethodApplicability in runtime.
+
+## 18.8 Remaining queue after BJS202602 audit
 
 Current verification queue includes methods such as:
 
@@ -1204,18 +1237,19 @@ A new ChatGPT conversation should do exactly this:
    - `docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`
    - `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`
+   - `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`
 5. Inspect current:
    - `config/inspection_reference.json`
    - `config/inspection_method_candidates_v2.json`
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-7A BJS 202602 deep verification**. BJS202504/BJS202501/BJS202601 remain deferred; BJS202601 official-news scene is retained only as a separate Risk-governance backlog candidate.
+7. Resume with **B5-7B BJS 202602 promotion-readiness / identity decision**. BJS202602 has verified official identity and male-function scene, but official fulltext and canonical impurity identity remain unresolved.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202601 B5-6B已defer，SAMR“减肥/降压食品”新闻证据只进入独立Risk-governance backlog；下一步从B5-7A BJS202602深核开始。不要由Method或药理用途自动反推Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202504_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202501_ANALYTE_AUDIT.md`、`docs/V2_B5_BJS_202601_ANALYTE_AUDIT.md` 和 `docs/V2_B5_BJS_202602_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202602 B5-7A已核官方身份与“功能性食品/壮阳药物衍生物”场景，但正式Method正文和canonical impurity身份仍未闭合；下一步从B5-7B promotion-readiness/identity decision开始。不要自动展开male_function group。
 
 ---
 
@@ -1229,7 +1263,7 @@ Especially stop if:
 - BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
 - BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
 - BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202602 has already been promoted or audited beyond B5-7A;
+- BJS202602 has already been promoted or audited beyond B5-7B;
 - current HEAD has a failing full acceptance Gate;
 - current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
 

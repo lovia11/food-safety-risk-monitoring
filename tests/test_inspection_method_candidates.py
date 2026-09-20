@@ -94,7 +94,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b11")
+        self.assertEqual(payload["manifest_version"], "2026.09-b12")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
@@ -114,6 +114,17 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("独立Risk-governance backlog", bjs_202601["correction_note"])
         self.assertIn("不能作为Method promotion副作用", bjs_202601["correction_note"])
         self.assertIn("deferred", bjs_202601["reason"])
+
+        bjs_202602 = next(
+            item for item in verification if item["method_no"] == "BJS 202602"
+        )
+        self.assertEqual(bjs_202602["expected_depth"], "reference_only")
+        self.assertIsNone(bjs_202602["promoted_method_id"])
+        self.assertIsNone(bjs_202602["promoted_dataset_version"])
+        self.assertIn("AuthorizedRead", bjs_202602["reason"])
+        self.assertIn("UPLC-MS/MS", bjs_202602["reason"])
+        self.assertIn("不得治理canonical CAS", bjs_202602["correction_note"])
+        self.assertIn("substance_group_memberships仍为0", bjs_202602["correction_note"])
 
         promoted_by_no = {item["method_no"]: item for item in promoted}
         for method_no, method_id, dataset_version in (
