@@ -6,7 +6,8 @@
 ## Active Development Snapshot
 
 - Branch: `ux-redesign-v1`
-- Current code audit baseline: `1f34dc07e1ebc8cfd09cb57513d386bbdf51284f` (handoff/docs commits may advance HEAD)
+- Current accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835` (handoff/docs commits may advance HEAD)
+- Current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`
 - SQLite schema: **14**
 - Active program: **B5 Inspection Method deep verification**
 - B3 temporal governance: implemented
@@ -14,13 +15,15 @@
 - Claim taxonomy: **7 types / 42 exact expressions**
 - Claim Inspection Bridge: `claim-inspection-bridge-v2.6` / **25 mappings**
 - Risk Reference: `2026.09-c7` / **83 mappings = 13 current + 70 historical**
-- Inspection Reference: `2026.09-b9` / **9 methods = 8 current recommendation_ready + 1 revoked reference_only**
-- Candidate manifest: `2026.09-b7` / **12 records = 4 promoted traces + 8 verification**
-- KJ201901 / KJ201902: already promoted; do not repeat
-- BJS201808: official full text parsed; **B5-3A verified, runtime unchanged**
-- Immediate next task: **B5-3B canonical parent Substance identity governance for 酚妥拉明 / 特拉唑嗪 / 育亨宾 / 妥拉唑林**, then prepare BJS201808 MethodSubstance/Applicability without creating new Risk relations.
+- Inspection Reference: `2026.09-b11` / **11 methods = 10 current recommendation_ready + 1 revoked reference_only**
+- Inspection inventory: **219 Substance / 263 MethodSubstance / 61 MethodApplicability / 9 RegulatoryDocument**
+- Candidate manifest: `2026.09-b15` / **12 records = 6 promoted traces + 6 verification**
+- KJ201901 / KJ201902 / BJS201808 / BJS201901: already promoted; do not repeat
+- BJS201901 B5-8B: **PROMOTED / ACCEPTED**, with 14 new Method-only Substance identities and zero new Risk mappings
+- BJS202504 / BJS202501 / BJS202601 / BJS202602: deferred at `verification/reference_only`
+- Immediate next task: **B5-9A BJS202409 deep verification**
 - Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
-- BJS201808 audit: [V2-B5 BJS 201808 Analyte Audit](docs/V2_B5_BJS_201808_ANALYTE_AUDIT.md)
+- BJS201901 audit: [V2-B5 BJS 201901 Analyte Audit](docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md)
 
 
 ## Baseline
@@ -136,7 +139,7 @@ V2-9 — historical roadmap state retained for traceability. Its old “NEXT” 
 
 ## Current Next Gate
 
-The active next gate is **B5-3B / BJS201808 identity normalization**, as defined in [AI Development Handoff V2](docs/AI_HANDOFF_V2.md).
+The active next gate is **B5-9A / BJS202409 deep verification**, as defined in [AI Development Handoff V2](docs/AI_HANDOFF_V2.md).
 
 Do not resume V2-9B merely because older sections below/above mention it; re-enter Analytics only after an explicit product/roadmap decision.
 
