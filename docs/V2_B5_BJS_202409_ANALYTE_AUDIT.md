@@ -222,3 +222,27 @@ risk-substance-reference@2026.09-c7
 ```
 
 B5-9 is complete. The next independent candidate task is B5-10A / BJS 202502; it is not started by this audit.
+
+## 9. B5-9B bounded governance Gate — SUCCESS
+
+Current-head deterministic checks confirm:
+
+```text
+candidate manifest = 2026.09-b17
+candidate records = 12 = 6 promoted + 6 verification
+BJS 202409 runtime method = absent
+
+inspection-reference = 2026.09-b11
+methods = 11
+Substance = 219
+MethodSubstance = 263
+MethodApplicability = 61
+
+risk-substance-reference = 2026.09-c7
+Risk mappings = 83
+
+claim-inspection-bridge = claim-inspection-bridge-v2.6
+bridge mappings = 25
+```
+
+Therefore B5-9B changes candidate governance/documentation only and does not alter the accepted runtime knowledge graph.
