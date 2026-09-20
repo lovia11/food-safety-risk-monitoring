@@ -725,8 +725,8 @@ class VerifiedInspectionReferenceDataTest(unittest.TestCase):
         self.assertEqual(substances["substance-cas-10238-21-8"]["canonical_name"], "格列苯脲")
         self.assertTrue(by_source["格列本脲"]["normalization_note"])
         self.assertEqual(by_source["吡格列酮"]["substance_id"], "substance-cas-111025-46-8")
-        self.assertEqual(substances["substance-cas-111025-46-8"]["canonical_name"], "吡咯列酮")
-        self.assertTrue(by_source["吡格列酮"]["normalization_note"])
+        self.assertEqual(substances["substance-cas-111025-46-8"]["canonical_name"], "吡格列酮")
+        self.assertEqual(by_source["吡格列酮"]["normalization_note"], "")
 
         new_cas = {
             "83480-29-9", "56180-94-0", "274901-16-5", "486460-32-6",

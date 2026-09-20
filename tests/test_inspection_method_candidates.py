@@ -105,6 +105,8 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("另14个缺失", bjs_201901["correction_note"])
         self.assertIn("格列本脲", bjs_201901["correction_note"])
         self.assertIn("格列苯脲", bjs_201901["correction_note"])
+        self.assertIn("吡格列酮", bjs_201901["correction_note"])
+        self.assertIn("无需额外normalization", bjs_201901["correction_note"])
         self.assertTrue(any(
             "official_fulltext_parsed" in source["verified_facts"]
             for source in bjs_201901["verification_sources"]

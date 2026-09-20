@@ -92,8 +92,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_a5204e5dff584b91b222bf9b47c2c92b.html",
       "discovery_source_date": "2019-01-29",
       "discovery_source_record_id": "samr-announcement-2019-4",
-      "reason": "B5-8A已由SAMR正式DOC（SHA-256 C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9）可复现解析完整27种analyte/CAS、HPLC-MS/MS外标定量与定性确证及正式范围；B5-8B复用13个existing canonical Substance、由正式附录A治理14个缺失Substance，建立27条MethodSubstance和8条保守MethodApplicability，正式promotion到inspection-reference@2026.09-b11 / recommendation_ready。",
-      "correction_note": "B5-8B保持Method→Risk边界：14个新Substance仅由官方Method分析物身份进入inspection-reference，不新增任何Claim→Risk或Risk→Substance。BJS201901来源“格列本脲”按同CAS 10238-21-8归一化到canonical“格列苯脲”；来源“吡格列酮”按同CAS 111025-46-8复用既有canonical“吡咯列酮”，均保留source_label与normalization_note。“等食品/类似基质/等形式”不编码成无条件全量适用。",
+      "reason": "B5-8A已由SAMR正式DOC（SHA-256 C4A697A35F4171516C06947C937F0C10D01FDC3AFC671D7780154A5AD9936EE9）通过antiword可复现解析完整27种analyte/CAS、HPLC-MS/MS外标定量与定性确证及正式范围；B5-8B复用13个existing canonical Substance、由正式附录A治理14个缺失Substance，建立27条MethodSubstance和8条保守MethodApplicability，正式promotion到inspection-reference@2026.09-b11 / recommendation_ready。",
+      "correction_note": "B5-8B保持Method→Risk边界：14个新Substance仅由官方Method分析物身份进入inspection-reference，不新增任何Claim→Risk或Risk→Substance。BJS201901来源“格列本脲”按同CAS 10238-21-8归一化到canonical“格列苯脲”，保留source_label与normalization_note；“吡格列酮”与当前canonical同名同CAS 111025-46-8，无需额外normalization。“等食品/类似基质/等形式”不编码成无条件全量适用。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中二甲双胍等非食品用化学物质的测定》等4项食品补充检验方法的公告（2019年第4号）",
