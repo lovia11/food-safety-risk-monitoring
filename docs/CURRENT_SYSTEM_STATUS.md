@@ -26,7 +26,7 @@ Inspection Reference      = 2026.09-b11 / 11 methods
                             1 revoked reference_only
                             219 Substance / 263 MethodSubstance
                             61 MethodApplicability / 9 RegulatoryDocument
-Method candidate manifest = 2026.09-b15 / 12 records
+Method candidate manifest = 2026.09-b16 / 12 records
                             6 promoted traces + 6 verification
 active program            = B5
 ```
@@ -38,7 +38,8 @@ Current B5 state:
 - BJS201901 added 14 Method-only canonical Substance identities, reused 13 existing identities, added 27 MethodSubstance and 8 conservative MethodApplicability; it added **zero** Risk mappings.
 - Source `格列本脲 / 10238-21-8` is normalized to canonical `格列苯脲 / 10238-21-8`; `吡格列酮 / 111025-46-8` is a direct existing canonical match.
 - BJS202504 / BJS202501 / BJS202601 / BJS202602 remain deferred at `verification/reference_only`.
-- Immediate next subtask is **B5-9A BJS202409 deep verification**, preserving Method→Risk separation.
+- BJS202409 B5-9A is partial-verified: official identity/current page plus secondary target/scope/CAS cross-check; official fulltext remains unavailable and runtime is unchanged.
+- Immediate next subtask is **B5-9B BJS202409 provenance/promotion-readiness decision**, preserving Method→Risk separation.
 
 
 This document preserves the accepted historical V2 baseline. The active B3/B4/B5 development overlay above and `AI_HANDOFF_V2.md` supersede older counts and phase-next markers elsewhere in this file.

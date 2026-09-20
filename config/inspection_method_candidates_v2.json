@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b15",
+  "manifest_version": "2026.09-b16",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808/BJS201901已promotion；BJS202504/BJS202501/BJS202601/BJS202602因正式正文/identity provenance gap保持verification/reference_only。BJS201901基于SAMR正式DOC全文完成27 analyte/CAS、MethodSubstance和保守MethodApplicability治理，进入inspection-reference@2026.09-b11；promotion不新增Risk。candidate manifest不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808/BJS201901已promotion；BJS202409 B5-9A已核官方身份/current page，并通过二手标准摘要交叉核到19种利尿剂、HPLC-MS/MS与9类适用食品，但SAMR正式正文/附件仍无法恢复，且二手文本存在依善利酮/依普利酮命名不一致，因此继续verification/reference_only；BJS202501/BJS202504/BJS202601/BJS202602仍deferred。candidate manifest不被runtime消费。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -227,8 +227,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/spcjs/xxfb/art/2024/art_4e2c7543a9d6488fa91081db6f003a36.html",
       "discovery_source_date": "2024-12-22",
       "discovery_source_record_id": "samr-announcement-2024-51-bjs-202409",
-      "reason": "一手公告和官方方法数据库已核验BJS 202409编号、正式标题和当前数据库身份；历史减肥/降压筛查资料存在利尿剂方向，但Method不能反推Risk，尚需全文核对19种目标物和适用基质后才能判断具体可达路径。",
-      "correction_note": null,
+      "reason": "B5-9A确认SAMR 2024年第51号公告与官方方法数据库中的BJS 202409身份/current page；research workflow记录官方方法页SHA-256 1889293DAE36340D05FECE79C96ACFC3AC4C7D5E8EB4571DB201D98D8D0CD4DF，AuthorizedRead响应SHA-256 1A3EC034F40A7DA334888CF812CA09ECEC435181411545F111C278465664A1D0且success=false/data={}、无附件候选。食品伙伴网/食典通标准摘要交叉核到HPLC-MS/MS、9类适用食品和19个利尿剂名称；标准物质页面交叉核到19个CAS候选，但这些均非SAMR正式全文，故本阶段仅audit、不promotion。",
+      "correction_note": "B5-9A overlap：19个候选目标中当前inspection-reference@2026.09-b11仅已有氯噻嗪58-94-6、氢氯噻嗪58-93-5、呋塞米54-31-9三个canonical Substance；精确Risk重叠只有氢氯噻嗪→historical blood_pressure与呋塞米→historical weight_loss，氯噻嗪当前无concrete Risk mapping。其余16个不得因利尿剂药理属性或Method标题自动新增Risk。二手摘要对CAS 107724-20-9目标出现“依善利酮/依普利酮”文本不一致，正式SAMR全文未恢复前不得据二手文本治理canonical identity。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中动物源性成分定性检测》等13项食品补充检验方法和2项修改单的公告（2024年第51号）",
@@ -246,9 +246,34 @@
           "verified_facts": [
             "current_database_identity"
           ]
+        },
+        {
+          "source_name": "国家市场监督管理总局食品补充检验方法数据库：食品中托拉塞米等19种利尿剂的测定",
+          "source_reference": "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/art_cdd8ef0105224416941014b8b150fa13.html",
+          "verified_facts": [
+            "current_database_page",
+            "official_page_sha256",
+            "authorized_body_unavailable"
+          ]
+        },
+        {
+          "source_name": "食品伙伴网BJS 202409标准摘要（内容交叉核验，非runtime authority）",
+          "source_reference": "https://down.foodmate.net/standard/sort/9/159910.html",
+          "verified_facts": [
+            "secondary_19_analyte_name_crosscheck",
+            "secondary_hplc_msms_crosscheck",
+            "secondary_formal_scope_crosscheck"
+          ]
+        },
+        {
+          "source_name": "19种利尿剂标准物质页面（CAS交叉核验，非runtime authority）",
+          "source_reference": "https://www.king-more.com/product/PNO106535.html",
+          "verified_facts": [
+            "secondary_19_analyte_cas_crosscheck"
+          ]
         }
       ],
-      "verified_at": "2026-09-18T22:00:00+08:00",
+      "verified_at": "2026-09-21T00:46:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },

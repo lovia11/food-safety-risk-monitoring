@@ -17,11 +17,12 @@
 - Risk Reference: `2026.09-c7` / **83 mappings = 13 current + 70 historical**
 - Inspection Reference: `2026.09-b11` / **11 methods = 10 current recommendation_ready + 1 revoked reference_only**
 - Inspection inventory: **219 Substance / 263 MethodSubstance / 61 MethodApplicability / 9 RegulatoryDocument**
-- Candidate manifest: `2026.09-b15` / **12 records = 6 promoted traces + 6 verification**
+- Candidate manifest: `2026.09-b16` / **12 records = 6 promoted traces + 6 verification**
 - KJ201901 / KJ201902 / BJS201808 / BJS201901: already promoted; do not repeat
 - BJS201901 B5-8B: **PROMOTED / ACCEPTED**, with 14 new Method-only Substance identities and zero new Risk mappings
 - BJS202504 / BJS202501 / BJS202601 / BJS202602: deferred at `verification/reference_only`
-- Immediate next task: **B5-9A BJS202409 deep verification**
+- BJS202409 B5-9A: **PARTIAL VERIFIED / RUNTIME UNCHANGED**; official Method body still unavailable
+- Immediate next task: **B5-9B BJS202409 provenance/promotion-readiness decision**
 - Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
 - BJS201901 audit: [V2-B5 BJS 201901 Analyte Audit](docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md)
 

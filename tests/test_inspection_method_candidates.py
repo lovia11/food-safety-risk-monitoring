@@ -112,10 +112,25 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
             for source in bjs_201901["verification_sources"]
         ))
 
+        bjs_202409 = next(
+            item for item in verification if item["method_no"] == "BJS 202409"
+        )
+        self.assertEqual(bjs_202409["expected_depth"], "reference_only")
+        self.assertIsNone(bjs_202409["promoted_method_id"])
+        self.assertIsNone(bjs_202409["promoted_dataset_version"])
+        self.assertIn("1889293DAE36340D05FECE79C96ACFC3AC4C7D5E8EB4571DB201D98D8D0CD4DF", bjs_202409["reason"])
+        self.assertIn("success=false/data={}", bjs_202409["reason"])
+        self.assertIn("仅已有氯噻嗪58-94-6、氢氯噻嗪58-93-5、呋塞米54-31-9", bjs_202409["correction_note"])
+        self.assertIn("依善利酮/依普利酮", bjs_202409["correction_note"])
+        self.assertTrue(any(
+            "secondary_19_analyte_cas_crosscheck" in source["verified_facts"]
+            for source in bjs_202409["verification_sources"]
+        ))
+
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b15")
+        self.assertEqual(payload["manifest_version"], "2026.09-b16")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
