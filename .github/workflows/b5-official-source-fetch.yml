@@ -20,8 +20,10 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install PDF text helper
-        run: python -m pip install "pypdf>=5,<7"
+      - name: Install research helpers
+        run: |
+          python -m pip install "pypdf>=5,<7" "playwright>=1.55,<2"
+          python -m playwright install chromium
 
       - name: Fetch and extract official SAMR sources
         shell: bash
@@ -460,6 +462,164 @@ jobs:
               if "paramsMap" in text or "paramJson" in text:
                   print(f"\n=== REQUEST CONTEXT SCRIPT {path.name} ===")
                   print(text[:30000])
+          PY
+
+      - name: Render BJS 202504 official page in Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import re
+          import urllib.parse
+          from pathlib import Path
+
+          from playwright.sync_api import sync_playwright
+
+          OUT = Path("b5_sources")
+          OUT.mkdir(parents=True, exist_ok=True)
+          URL = (
+              "https://www.samr.gov.cn/spcjs/bcjyff/art/2025/"
+              "art_ac5b02f639a7455baa31b55e60e7ce80.html"
+          )
+          USER_AGENT = (
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+              "AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/153.0.0.0 Safari/537.36"
+          )
+
+          def sha256(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest().upper()
+
+          network = []
+          dynamic_payloads = []
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              context = browser.new_context(
+                  user_agent=USER_AGENT,
+                  locale="zh-CN",
+              )
+              page = context.new_page()
+
+              def capture_response(response):
+                  url = response.url
+                  if (
+                      "api-gateway/jpaas-publish-server/front/page/build/unit"
+                      not in url
+                  ):
+                      return
+                  entry = {
+                      "url": url,
+                      "status": response.status,
+                      "content_type": response.headers.get("content-type"),
+                  }
+                  try:
+                      body = response.body()
+                      entry["bytes"] = len(body)
+                      entry["sha256"] = sha256(body)
+                      entry["preview"] = body.decode(
+                          "utf-8", errors="replace"
+                      )[:4000]
+                      dynamic_payloads.append(body)
+                  except Exception as exc:
+                      entry["body_error"] = repr(exc)
+                  network.append(entry)
+
+              page.on("response", capture_response)
+              nav = page.goto(URL, wait_until="domcontentloaded", timeout=90000)
+              page.wait_for_timeout(5000)
+              try:
+                  page.wait_for_load_state("networkidle", timeout=30000)
+              except Exception:
+                  pass
+
+              rendered_html = page.content()
+              body_text = page.locator("body").inner_text(timeout=10000)
+              hrefs = page.locator("a[href]").evaluate_all(
+                  """els => els.map(a => a.href)"""
+              )
+              attachment_links = sorted(
+                  {
+                      href
+                      for href in hrefs
+                      if re.search(
+                          r"\.(?:docx?|pdf)(?:$|\?)",
+                          urllib.parse.urlparse(href).path
+                          + (
+                              "?" + urllib.parse.urlparse(href).query
+                              if urllib.parse.urlparse(href).query
+                              else ""
+                          ),
+                          flags=re.I,
+                      )
+                  }
+              )
+
+              (OUT / "bjs-202504.browser-rendered.html").write_text(
+                  rendered_html,
+                  encoding="utf-8",
+              )
+              (OUT / "bjs-202504.browser-body.txt").write_text(
+                  body_text,
+                  encoding="utf-8",
+              )
+
+              downloaded = []
+              for idx, link in enumerate(attachment_links, start=1):
+                  try:
+                      response = context.request.get(
+                          link,
+                          headers={"Referer": URL},
+                          timeout=90000,
+                      )
+                      data = response.body()
+                      ext = Path(urllib.parse.urlparse(link).path).suffix.lower()
+                      file_name = f"bjs-202504.browser-{idx}{ext or '.bin'}"
+                      (OUT / file_name).write_bytes(data)
+                      downloaded.append({
+                          "url": link,
+                          "file": file_name,
+                          "status": response.status,
+                          "bytes": len(data),
+                          "sha256": sha256(data),
+                      })
+                  except Exception as exc:
+                      downloaded.append({
+                          "url": link,
+                          "error": repr(exc),
+                      })
+
+              meta = {
+                  "url": URL,
+                  "navigation_status": nav.status if nav else None,
+                  "title": page.title(),
+                  "rendered_html_chars": len(rendered_html),
+                  "body_text_chars": len(body_text),
+                  "body_contains_method_title": (
+                      "食品中酚丁、双丙酚丁、双酚沙丁" in body_text
+                  ),
+                  "body_contains_scope_keyword": "果蔬汁饮料" in body_text,
+                  "attachment_links": attachment_links,
+                  "downloaded_attachments": downloaded,
+                  "dynamic_api_responses": network,
+              }
+              (OUT / "bjs-202504.browser-metadata.json").write_text(
+                  json.dumps(meta, ensure_ascii=False, indent=2),
+                  encoding="utf-8",
+              )
+              for idx, body in enumerate(dynamic_payloads, start=1):
+                  (OUT / f"bjs-202504.browser-api-{idx}.json").write_bytes(body)
+
+              print("=== BJS 202504 BROWSER RESEARCH ===")
+              print(json.dumps(meta, ensure_ascii=False, indent=2))
+              print("\n=== BROWSER BODY PREVIEW ===")
+              print(body_text[:16000])
+
+              browser.close()
           PY
 
       - name: Upload official-source research artifact
