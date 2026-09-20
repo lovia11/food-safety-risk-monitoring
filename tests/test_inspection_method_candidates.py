@@ -123,7 +123,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIsNone(bjs_202602["promoted_dataset_version"])
         self.assertIn("AuthorizedRead", bjs_202602["reason"])
         self.assertIn("UPLC-MS/MS", bjs_202602["reason"])
-        self.assertIn("不得治理canonical CAS", bjs_202602["correction_note"])
+        self.assertIn("不得把商业供应商的“Vardenafil Impurity 30”编号当作稳定化学身份", bjs_202602["correction_note"])
         self.assertIn("不得把官方O-丙基伐地那非标准样品项目自动解释", bjs_202602["correction_note"])
         self.assertIn("substance_group_membership", bjs_202602["correction_note"])
         self.assertIn("明确deferred", bjs_202602["reason"])
