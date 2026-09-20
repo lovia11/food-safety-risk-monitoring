@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED；B5-8A BJS201901 FULLTEXT VERIFIED / RUNTIME UNCHANGED；NEXT = B5-8B promotion preparation  
+> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED；B5-8A/B BJS201901 PROMOTED / ACCEPTED；NEXT = B5-9A BJS202409 deep verification  
 > Date: 2026-09-18  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -24,11 +24,11 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 - 官方公告出现一个方法，只能先证明“方法身份存在”；
 - 未读取正式方法全文之前，不能声称完整 analyte、CAS、适用基质、剂型、定性/定量角色或 Recommendation-ready；
 - candidate manifest 始终 non-runtime；
-- 当前 runtime 是 `inspection-reference@2026.09-b10`：10 个索引方法，其中 9 个 current `recommendation_ready`、1 个 revoked `reference_only`；205 个 Substance、236 条 MethodSubstance、53 条 MethodApplicability、8 个 RegulatoryDocument。candidate manifest 仍是 non-runtime。
+- 当前 runtime 是 `inspection-reference@2026.09-b11`：11 个索引方法，其中 10 个 current `recommendation_ready`、1 个 revoked `reference_only`；219 个 Substance、263 条 MethodSubstance、61 条 MethodApplicability、9 个 RegulatoryDocument。candidate manifest 仍是 non-runtime。
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b14`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b15`。
 
 状态含义：
 
@@ -60,11 +60,11 @@ runtime_consumed = false
 
 ## 3. B5-1 当前 verification queue
 
-当前 manifest 共12条记录：5条 promoted trace，7条仍处于 verification。下表同时列出已 promotion 的 KJ201901/KJ201902/BJS201808，便于保持候选到runtime的完整追溯：
+当前 manifest 共12条记录：6条 promoted trace，6条仍处于 verification。下表同时列出已 promotion 的 KJ201901/KJ201902/BJS201808，便于保持候选到runtime的完整追溯：
 
 | Method | 当前关联方向 | 身份核验来源 | 当前状态 |
 |---|---|---|---|
-| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose context；Method不得扩Risk | SAMR 2019年第4号公告 + 正式DOC SHA-256 + antiword全文解析 | `verification / reference_only；B5-8A fulltext verified` |
+| BJS 201901 食品中二甲双胍等非食品用化学物质的测定 | blood_glucose context；Method不得扩Risk | SAMR 2019年第4号公告 + 正式DOC SHA-256 + antiword全文解析 | `promoted / recommendation_ready @ b11；B5-8B accepted` |
 | KJ201901 保健食品中西地那非和他达拉非的快速检测 胶体金免疫层析法 | anti_fatigue（正式范围另含调节免疫等，但runtime不扩Risk） | SAMR 2019年第41号公告 + 正式附件1 | `promoted / recommendation_ready @ b9` |
 | KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 + 正式附件2 | `promoted / recommendation_ready @ b9` |
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss 场景候选 | SAMR 2024年第51号公告 | `verification / reference_only` |
@@ -445,9 +445,40 @@ source 格列本脲 / 10238-21-8
 → canonical 格列苯脲 / 10238-21-8
 ```
 
-B5-8A does not change runtime.
+B5-8A completed the fulltext audit. B5-8B then promoted BJS201901 to `inspection-reference@2026.09-b11`.
 
-Next = **B5-8B BJS201901 promotion preparation/decision**.
+Accepted promotion:
+
+```text
+27 MethodSubstance
+8 conservative MethodApplicability
+14 new canonical Substance
+13 reused canonical Substance
+zero new Risk mappings
+```
+
+Normalization:
+
+```text
+source 格列本脲 / 10238-21-8
+→ canonical 格列苯脲 / 10238-21-8
+
+吡格列酮 / 111025-46-8
+→ existing canonical direct match; no normalization
+```
+
+Current inventory:
+
+```text
+11 methods
+219 substances
+263 MethodSubstance
+61 MethodApplicability
+9 RegulatoryDocument
+10 recommendation_ready + 1 revoked reference_only
+```
+
+Next = **B5-9A BJS202409 deep verification**.
 
 Canonical audit: `docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`.
 
@@ -510,13 +541,13 @@ B5-1 已完成并通过 Gate。其“候选不进入 runtime”的边界继续�
 当前 candidate manifest 为：
 
 ```text
-2026.09-b14
+2026.09-b15
 12 records
-5 promoted traces
-7 verification
+6 promoted traces
+6 verification
 runtime_consumed = false
 ```
 
 BJS201808 B5-3B 已通过 Python syntax、B3/B4 governance regression 和 V2 full acceptance。
 
-**下一验收子任务：B5-8B BJS201901**，治理14个缺失canonical Substance、复用13个已有identity、准备27条MethodSubstance与保守MethodApplicability；不因Method新增任何Risk。
+**下一验收子任务：B5-9A BJS202409**，先核官方全文、19个利尿剂analyte/CAS、方法角色和applicability；不因Method/药理用途新增blood_pressure或weight_loss Risk。
