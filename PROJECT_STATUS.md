@@ -23,7 +23,7 @@
 - BJS202504 / BJS202501 / BJS202601 / BJS202602: deferred at `verification/reference_only`
 - BJS202409 B5-9A/B: **DEFERRED / RUNTIME UNCHANGED**; stable official Method body/attachment provenance remains unavailable; third-party PDFs are cross-check only
 - BJS202502 B5-10A/B: **DEFERRED / RUNTIME UNCHANGED**; official identity/current page and analytical role are verified, but stable SAMR formal fulltext/attachment provenance remains unavailable
-- B5 Inspection Method governance: **COMPLETE / ACCEPTED**; all 12 candidate records have a closed promotion/defer decision
+- B5 Inspection Method governance: **COMPLETE / ACCEPTED**; all 12 candidate records have a closed promotion/defer decision; **B5 Exit Gate SUCCESS** with 0 open undecided candidates
 - Immediate next program: **post-B5 end-to-end system closure and validation** (Recommendation chain / real-sample validation / UX freeze); not started in this closeout
 - Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
 - BJS201901 audit: [V2-B5 BJS 201901 Analyte Audit](docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md)
