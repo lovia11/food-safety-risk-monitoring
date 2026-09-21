@@ -1415,6 +1415,21 @@ third-party mirror cannot replace missing first-party provenance
 deferred candidate ≠ runtime gap that must be force-filled
 ```
 
+B5 Exit Gate — **SUCCESS**:
+
+```text
+candidate manifest = 2026.09-b19
+12 = 6 promoted + 6 explicitly deferred
+open undecided candidates = 0
+inspection-reference unchanged = 2026.09-b11
+11 methods / 219 Substance / 263 MethodSubstance / 61 MethodApplicability / 9 RegulatoryDocument
+Risk unchanged = 2026.09-c7 / 83
+Claim bridge unchanged = v2.6 / 25
+all deferred B5 Method numbers absent from runtime
+```
+
+GitHub connector note: push-triggered Actions runs/statuses are not visible through the current connector, so do not claim a fresh full-suite CI run for this documentation/candidate-governance closeout. The deterministic B5 Exit Gate above is the verified current-head result.
+
 ## 18.12 Post-B5 direction
 
 The next development program is **end-to-end system closure and validation**, not further Method-count expansion.
