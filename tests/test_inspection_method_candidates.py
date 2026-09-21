@@ -142,7 +142,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertEqual(bjs_202502["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202502["promoted_method_id"])
         self.assertIsNone(bjs_202502["promoted_dataset_version"])
-        self.assertIn("B5-10A content audit", bjs_202502["reason"])
+        self.assertIn("B5-10A已由", bjs_202502["reason"])
         self.assertIn("25种β-受体阻滞剂", bjs_202502["reason"])
         self.assertIn("液相色谱-三重四极杆串联质谱", bjs_202502["reason"])
         self.assertIn("阿替洛尔/29122-68-7", bjs_202502["correction_note"])
