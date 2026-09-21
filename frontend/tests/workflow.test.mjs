@@ -406,38 +406,41 @@ test("analysis presentation distinguishes unmapped evidence and recommendation e
   });
 
   assert.equal(unmapped.code, "EVIDENCE_UNMAPPED");
-  assert.match(unmapped.message, /暂无对应的抽检建议/);
+  assert.equal(unmapped.summary, "筛查关注");
+  assert.match(unmapped.message, /页面宣传主题级筛查关注/);
+  assert.doesNotMatch(unmapped.message, /暂无对应的抽检建议/);
   assert.equal(errored.code, "RECOMMENDATION_ERROR");
   assert.match(errored.message, /抽检建议生成失败/);
 });
 
-test("analysis presentation distinguishes mapped risk without and with verified methods", () => {
+test("analysis presentation separates screening, context review, and formal recommendations", () => {
+  const baseSubstance = {
+    substance_id: "s1",
+    canonical_name: "示例物质",
+    english_name: "",
+    cas_no: "",
+    regulatory_context_note: "",
+    follow_up_status: "no_applicable_verified_method",
+    suggested_methods: [],
+    methods_needing_context: [],
+    other_known_methods: [],
+    reason: "",
+  };
   const finding = {
     risk_category: "sleep",
     risk_labels: ["助眠相关宣传线索"],
     possible_risk_summary: "",
     evidence_qualification: "seller_managed_primary",
-    substance_follow_ups: [{
-      substance_id: "s1",
-      canonical_name: "示例物质",
-      english_name: "",
-      cas_no: "",
-      regulatory_context_note: "",
-      follow_up_status: "needs_context_review",
-      suggested_methods: [],
-      methods_needing_context: [],
-      other_known_methods: [],
-      reason: "",
-    }],
+    substance_follow_ups: [baseSubstance],
   };
-  const withoutMethod = analysisStatePresentation({
+  const screening = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [],
     claimAnalysisStatus: "complete",
     claimSignals: [{ claimSignalId: "signal-test" }],
     inspection: inspection({ riskFindings: [finding] }),
   });
-  const withMethod = analysisStatePresentation({
+  const needsContext = analysisStatePresentation({
     readiness: eligibleReadiness,
     evidence: [],
     claimAnalysisStatus: "complete",
@@ -446,15 +449,36 @@ test("analysis presentation distinguishes mapped risk without and with verified 
       riskFindings: [{
         ...finding,
         substance_follow_ups: [{
-          ...finding.substance_follow_ups[0],
+          ...baseSubstance,
+          follow_up_status: "needs_context_review",
+          methods_needing_context: [{ method_id: "m-context" }],
+        }],
+      }],
+    }),
+  });
+  const formal = analysisStatePresentation({
+    readiness: eligibleReadiness,
+    evidence: [],
+    claimAnalysisStatus: "complete",
+    claimSignals: [{ claimSignalId: "signal-test" }],
+    inspection: inspection({
+      riskFindings: [{
+        ...finding,
+        substance_follow_ups: [{
+          ...baseSubstance,
+          follow_up_status: "suggest_testing",
           suggested_methods: [{ method_id: "m1" }],
         }],
       }],
     }),
   });
 
-  assert.equal(withoutMethod.code, "RISK_MAPPED_NO_METHOD");
-  assert.equal(withMethod.code, "RECOMMENDATION_AVAILABLE");
+  assert.equal(screening.code, "RISK_MAPPED_NO_METHOD");
+  assert.equal(screening.summary, "筛查关注");
+  assert.equal(needsContext.code, "RECOMMENDATION_NEEDS_CONTEXT");
+  assert.equal(needsContext.summary, "需补商品信息");
+  assert.equal(formal.code, "RECOMMENDATION_AVAILABLE");
+  assert.equal(formal.summary, "已有具体建议");
 });
 
 test("inspection presentation stays concise and exposes product-context action when required", () => {
@@ -484,6 +508,7 @@ test("inspection presentation stays concise and exposes product-context action w
   assert.match(substanceFollowUpMessage(regulatorySubstance), /商品身份、注册备案及配料信息/);
   assert.equal(needsProductContext(view), true);
   assert.match(historicalReferenceMessage(finding), /历史专项抽检\/风险监测资料/);
+  assert.equal(followUpStatusLabel("no_applicable_verified_method"), "筛查参考");
   assert.doesNotMatch(
     [
       substanceFollowUpMessage(regulatorySubstance),
@@ -1223,6 +1248,16 @@ test("knowledge workflow separates empty and error and preserves governed bounda
     detail,
     /createKnowledge|updateKnowledge|deleteKnowledge|method=["']post["']/i,
   );
+});
+
+test("recommendation panel removes the dead-end no-advice copy", () => {
+  const panel = readFileSync(
+    new URL("../src/components/RecommendationPanel.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(panel, /当前暂无对应的抽检建议/);
+  assert.match(panel, /页面宣传主题级筛查关注/);
+  assert.match(panel, /RECOMMENDATION_NEEDS_CONTEXT/);
 });
 
 test("primary analysis and recommendation copy does not leak internal architecture terms", () => {

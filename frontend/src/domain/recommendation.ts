@@ -9,7 +9,7 @@ export function followUpStatusLabel(status: string) {
   if (status === "regulatory_context_review") return "需核对商品信息";
   if (status === "auxiliary_evidence_only") return "仅辅助线索";
   if (status === "knowledge_integrity_gap") return "知识待补充";
-  if (status === "no_applicable_verified_method") return "暂无适用方法";
+  if (status === "no_applicable_verified_method") return "筛查参考";
   return "需人工判断";
 }
 
@@ -30,9 +30,18 @@ export function substanceFollowUpMessage(substance: SubstanceFollowUp) {
     return "当前知识关系不完整，暂不生成具体建议。";
   }
   if (substance.follow_up_status === "no_applicable_verified_method") {
-    return "暂未找到适用于该商品的检测方法。";
+    return `可将“${substance.canonical_name}”作为筛查关注成分；当前尚未找到满足现行状态和适用性条件的检测方法。`;
   }
   return "当前需人工判断。";
+}
+
+export function screeningAttentionLabels(inspection: InspectionView) {
+  const labels = inspection.unmappedEvidence
+    .map((item) => item.claimDisplayLabel)
+    .filter((value): value is string =>
+      typeof value === "string" && value.trim().length > 0
+    );
+  return [...new Set(labels)];
 }
 
 export function historicalReferenceMessage(

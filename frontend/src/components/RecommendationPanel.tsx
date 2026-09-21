@@ -10,6 +10,7 @@ import {
   KNOWLEDGE_GAP_MESSAGE,
   followUpStatusLabel,
   historicalReferenceMessage,
+  screeningAttentionLabels,
   substanceFollowUpMessage,
 } from "../domain/recommendation";
 import { safeHttpUrl } from "../domain/product";
@@ -144,7 +145,12 @@ export function RecommendationPanel({
       </section>
     );
   }
-  if (analysis.code !== "RECOMMENDATION_AVAILABLE" && analysis.code !== "RISK_MAPPED_NO_METHOD") {
+  if (
+    analysis.code !== "RECOMMENDATION_AVAILABLE"
+    && analysis.code !== "RECOMMENDATION_NEEDS_CONTEXT"
+    && analysis.code !== "RISK_MAPPED_NO_METHOD"
+    && analysis.code !== "EVIDENCE_UNMAPPED"
+  ) {
     return (
       <section className="detail-section">
         <h3><FlaskConical size={17} />抽检辅助建议</h3>
@@ -159,25 +165,35 @@ export function RecommendationPanel({
   const hasSubstances = inspection.riskFindings.some(
     (finding) => finding.substance_follow_ups.length > 0,
   );
+  const screeningLabels = screeningAttentionLabels(inspection);
   const hasKnowledgeGap =
     inspection.knowledgeGaps.length > 0 || inspection.compositionGaps.length > 0;
 
   return (
     <section className="detail-section recommendation-section">
       <h3><FlaskConical size={17} />抽检辅助建议</h3>
-      {analysis.code === "RISK_MAPPED_NO_METHOD" && (
-        <div className="inline-message" data-tone="warning">
+      {(analysis.code === "RISK_MAPPED_NO_METHOD"
+        || analysis.code === "RECOMMENDATION_NEEDS_CONTEXT"
+        || analysis.code === "EVIDENCE_UNMAPPED") && (
+        <div className="inline-message" data-tone={analysis.tone}>
           <BookOpenCheck size={17} />
           <span>{analysis.message}</span>
         </div>
       )}
-      {inspection.riskFindings.length === 0 ? (
-        <div className="inline-message">
-          <BookOpenCheck size={17} />
-          <span>已发现页面宣传线索，但当前暂无对应的抽检建议。</span>
+      {analysis.code === "EVIDENCE_UNMAPPED" && screeningLabels.length > 0 && (
+        <div className="risk-finding">
+          <div className="risk-labels">
+            {screeningLabels.map((label) => (
+              <StatusBadge key={label} tone="info">{label}</StatusBadge>
+            ))}
+          </div>
+          <p>
+            当前仅形成页面宣传主题级筛查关注，供人工研判使用；
+            不表示已建立正式监管风险关系，也不表示商品含有相关物质。
+          </p>
         </div>
-      ) : (
-        inspection.riskFindings.map((baseFinding) => {
+      )}
+      {inspection.riskFindings.map((baseFinding) => {
           const finding = baseFinding as TemporalRiskFinding;
           const hasHistoricalReference =
             finding.temporal_basis === "current_and_historical" ||
@@ -204,8 +220,7 @@ export function RecommendationPanel({
               ))}
             </div>
           );
-        })
-      )}
+        })}
       {(hasKnowledgeGap || (inspection.riskFindings.length > 0 && !hasSubstances)) && (
         <div className="knowledge-gap">
           <BookOpenCheck size={17} />

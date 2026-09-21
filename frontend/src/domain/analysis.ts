@@ -12,6 +12,7 @@ export type AnalysisStateCode =
   | "ANALYZED_ZERO_EVIDENCE"
   | "EVIDENCE_UNMAPPED"
   | "RISK_MAPPED_NO_METHOD"
+  | "RECOMMENDATION_NEEDS_CONTEXT"
   | "RECOMMENDATION_AVAILABLE"
   | "RECOMMENDATION_UNAVAILABLE"
   | "RECOMMENDATION_ERROR";
@@ -32,13 +33,21 @@ type AnalysisStateInput = {
   inspection: InspectionView;
 };
 
-function hasKnownMethod(inspection: InspectionView) {
+function hasSuggestedMethod(inspection: InspectionView) {
+  return inspection.riskFindings.some((finding) =>
+    finding.substance_follow_ups.some(
+      (substance) => substance.suggested_methods.length > 0,
+    ),
+  );
+}
+
+function hasContextDependentPath(inspection: InspectionView) {
   return inspection.riskFindings.some((finding) =>
     finding.substance_follow_ups.some(
       (substance) =>
-        substance.suggested_methods.length > 0
-        || substance.methods_needing_context.length > 0
-        || substance.other_known_methods.length > 0,
+        substance.methods_needing_context.length > 0
+        || substance.follow_up_status === "needs_context_review"
+        || substance.follow_up_status === "regulatory_context_review",
     ),
   );
 }
@@ -89,21 +98,30 @@ export function analysisStatePresentation(
     };
   }
   if (input.inspection.riskFindings.length > 0) {
-    if (!hasKnownMethod(input.inspection)) {
+    if (hasSuggestedMethod(input.inspection)) {
       return {
-        code: "RISK_MAPPED_NO_METHOD",
-        label: "已识别抽检关注方向",
-        summary: "暂无适用检测方法",
-        message: "已识别抽检关注方向，但暂未找到适用的检测方法。",
+        code: "RECOMMENDATION_AVAILABLE",
+        label: "已形成抽检辅助建议",
+        summary: "已有具体建议",
+        message: "已形成可供人工复核的抽检辅助建议。",
+        tone: "success",
+      };
+    }
+    if (hasContextDependentPath(input.inspection)) {
+      return {
+        code: "RECOMMENDATION_NEEDS_CONTEXT",
+        label: "候选检测路径待确认",
+        summary: "需补商品信息",
+        message: "已识别抽检关注方向并找到候选检测路径；补充商品类别、剂型或配料信息后可进一步确认适用性。",
         tone: "warning",
       };
     }
     return {
-      code: "RECOMMENDATION_AVAILABLE",
-      label: "抽检辅助建议可用",
-      summary: "已有具体建议",
-      message: "已形成抽检辅助建议。",
-      tone: "success",
+      code: "RISK_MAPPED_NO_METHOD",
+      label: "已形成筛查关注建议",
+      summary: "筛查关注",
+      message: "已识别抽检关注方向；当前尚未形成满足正式条件的检测方法建议，可作为人工筛查参考。",
+      tone: "info",
     };
   }
   if (input.inspection.available) {
@@ -113,9 +131,9 @@ export function analysisStatePresentation(
       : "页面宣传线索";
     return {
       code: "EVIDENCE_UNMAPPED",
-      label: "已发现宣传线索",
-      summary: "暂无对应抽检建议",
-      message: `已识别${subject}，但当前暂无对应的抽检建议。`,
+      label: "已形成筛查关注建议",
+      summary: "筛查关注",
+      message: `已识别${subject}，当前作为页面宣传主题级筛查关注保留；尚未形成正式的成分或检测方法建议。`,
       tone: "info",
     };
   }
