@@ -30,11 +30,11 @@
 |---|---|
 | analysis not ready | 尚未完成分析 |
 | Claim complete + zero signals | 未发现重点宣传线索 |
-| Claim exists + no Risk finding | 已发现宣传线索，暂无对应抽检建议 |
-| Risk exists + no usable Method | 已识别抽检关注方向，暂无适用检测方法 |
+| Claim exists + no governed Risk finding | 已形成筛查关注建议（页面宣传主题级） |
+| Risk exists + no formally usable Method | 已形成筛查关注建议（监管关注方向级） |
+| Risk/Method path exists but context is insufficient | 候选检测路径待确认 / 需补商品信息 |
 | Recommendation available | 已形成抽检辅助建议 |
 | Recommendation error | 抽检建议生成失败 |
-| needs context | 需补商品信息 |
 | regulatory context review | 需核对商品信息 |
 
 ## 4. 边界说明原则
@@ -56,7 +56,25 @@ claimAnalysisStatus + claimSignals
 
 `Evidence[]` 仍用于原文溯源和历史 Snapshot 兼容，不再作为 V2 Claim 是否存在的唯一判断条件。
 
-## 6. 修改边界
+## 6. 分层建议边界
+
+“筛查关注建议”是展示层状态，不是新的监管事实层。
+
+允许：
+
+- 将已有 V2 Claim 主题展示为“页面宣传主题级筛查关注”；
+- 将已有 governed Risk direction 展示为“监管关注方向级筛查关注”；
+- 当已有 Method 路径但缺商品类别/剂型/配料上下文时展示“需补商品信息”；
+- 只有现行、已治理且适用性满足的 Method 才进入正式“抽检辅助建议”。
+
+禁止：
+
+- 由 Claim-only screening 自动生成新的 Risk→Substance；
+- 由 Method 存在反推 Risk；
+- 由筛查关注文案暗示商品实际含有某物质或已违法；
+- 把历史资料展示成当前统一抽检要求。
+
+## 7. 修改边界
 
 本 Contract 只规范 Presentation 和交互入口，不改变：
 

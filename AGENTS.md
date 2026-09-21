@@ -2,7 +2,7 @@
 
 > Status: CANONICAL
 > Applies to: V2
-> Last accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; **B5 Inspection Method candidate governance is COMPLETE** at `inspection_method_candidates_v2@2026.09-b19`: 6 promoted traces + 6 explicitly deferred verification/reference_only records, zero open undecided candidates; runtime remains `inspection-reference@2026.09-b11`. See `docs/AI_HANDOFF_V2.md` before post-B5 work.
+> Last accepted runtime/code/test baseline: `b7b99405ef1546a16e9ce01162ae408d18dd2aac`; current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`; **B5 Inspection Method candidate governance is COMPLETE** at `inspection_method_candidates_v2@2026.09-b19`; runtime remains `inspection-reference@2026.09-b11`. Post-B5 Recommendation presentation closure Phase 1 is ACCEPTED: formal recommendation / screening attention / needs-context / no-clue states are separated without changing Risk knowledge. See `docs/AI_HANDOFF_V2.md` before further work.
 > Owner: Project
 
 ## Current technical baseline

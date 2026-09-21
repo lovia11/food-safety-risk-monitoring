@@ -2,7 +2,7 @@
 
 > Status: CANONICAL CURRENT-DEVELOPMENT HANDOFF  
 > Prepared from branch: `ux-redesign-v1`  
-> Last accepted runtime code/config/test state: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835` (`Align BJS 201901 promoted candidate assertion`)  
+> Last accepted runtime code/config/test state: `b7b99405ef1546a16e9ce01162ae408d18dd2aac` (`Surface layered screening recommendations`)  
 > Current accepted B5 research-workflow state: `fe1cc7ee27b7897222448dc5ba2083c1843317a1` (`Parse legacy DOC files in B5 source research`)  
 > Date: 2026-09-21  
 > Important: handoff/document commits may advance HEAD after the commit above. Always refresh the branch HEAD before editing.
@@ -1167,17 +1167,18 @@ SubstanceGroupMembership = 0
 Candidate manifest:
 
 ```text
-2026.09-b15
+2026.09-b19
 12 records
 6 promoted
 6 verification
+0 open undecided candidates
 runtime_consumed = false
 ```
 
 Accepted Gate baseline:
 
 ```text
-a1fcbc9f1f8e44a8954e29cafe06a06e15d93835
+b7b99405ef1546a16e9ce01162ae408d18dd2aac
 Python syntax gate = success
 B3/B4 governance regression = success
 V2 full acceptance = success
@@ -1434,6 +1435,41 @@ GitHub connector note: push-triggered Actions runs/statuses are not visible thro
 
 The next development program is **end-to-end system closure and validation**, not further Method-count expansion.
 
+### Recommendation presentation closure Phase 1 — ACCEPTED
+
+Accepted baseline:
+
+```text
+b7b99405ef1546a16e9ce01162ae408d18dd2aac
+```
+
+The product-level presentation now separates four user-facing states without changing governed Risk/Method knowledge:
+
+```text
+formal recommendation
+→ at least one current/applicable suggested Method
+
+needs product context
+→ a governed Risk/Method path exists but category/form/ingredient context must be confirmed
+
+screening attention
+→ a governed Risk direction exists without a formally usable Method
+   OR a V2 Claim topic exists but has no governed Claim→Risk bridge
+
+no clear direction
+→ analysis completed with zero current Claim signals
+```
+
+Important boundaries:
+
+- Claim-only screening attention is **not** a new Risk mapping.
+- Screening attention does not name a Substance unless a governed Risk→Substance relation already exists.
+- Historical references retain their disclosure and do not become current requirements.
+- `Method → Risk` reverse inference remains forbidden.
+- The old dead-end primary copy “当前暂无对应的抽检建议” is no longer used for a recognized Claim topic.
+
+Next subtask should be **representative real-sample validation of these four states** before introducing any new semantic/LLM layer.
+
 Default priorities:
 
 1. validate the governed Evidence → Claim → Risk → Substance → Method → Recommendation chain on representative real/sample cases;
@@ -1606,7 +1642,7 @@ A new ChatGPT conversation should do exactly this:
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`，以当前代码/测试/config 为最高事实源。B5检验方法治理已COMPLETE：manifest@2026.09-b19为6 promoted + 6 deferred verification/reference_only，0 open undecided candidate，runtime仍为inspection-reference@2026.09-b11。下一步应从post-B5端到端系统收束/验证开始，不要默认继续扩Method知识。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/PRESENTATION_LANGUAGE_CONTRACT_V2.md`，以当前代码/测试/config 为最高事实源。B5已COMPLETE；Recommendation presentation closure Phase 1已ACCEPTED：正式建议/筛查关注/需补商品信息/未发现重点线索已分层，且没有修改Risk知识。下一步先用代表性真实商品验证四类状态，再决定是否需要独立RiskHypothesis/LLM语义层；不要继续扩Method数量。
 
 ---
 

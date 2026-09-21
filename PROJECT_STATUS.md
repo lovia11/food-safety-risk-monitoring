@@ -6,10 +6,10 @@
 ## Active Development Snapshot
 
 - Branch: `ux-redesign-v1`
-- Current accepted runtime code/config/test baseline: `a1fcbc9f1f8e44a8954e29cafe06a06e15d93835` (handoff/docs commits may advance HEAD)
+- Current accepted runtime code/config/test baseline: `b7b99405ef1546a16e9ce01162ae408d18dd2aac` (handoff/docs commits may advance HEAD)
 - Current B5 research-workflow baseline: `fe1cc7ee27b7897222448dc5ba2083c1843317a1`
 - SQLite schema: **14**
-- Active program: **B5 Inspection Method deep verification**
+- Active program: **post-B5 Recommendation / end-to-end closure**
 - B3 temporal governance: implemented
 - B4 seven Claim→Risk→Substance directions: accepted
 - Claim taxonomy: **7 types / 42 exact expressions**
@@ -24,7 +24,8 @@
 - BJS202409 B5-9A/B: **DEFERRED / RUNTIME UNCHANGED**; stable official Method body/attachment provenance remains unavailable; third-party PDFs are cross-check only
 - BJS202502 B5-10A/B: **DEFERRED / RUNTIME UNCHANGED**; official identity/current page and analytical role are verified, but stable SAMR formal fulltext/attachment provenance remains unavailable
 - B5 Inspection Method governance: **COMPLETE / ACCEPTED**; all 12 candidate records have a closed promotion/defer decision; **B5 Exit Gate SUCCESS** with 0 open undecided candidates
-- Immediate next program: **post-B5 end-to-end system closure and validation** (Recommendation chain / real-sample validation / UX freeze); not started in this closeout
+- Recommendation presentation closure Phase 1: **ACCEPTED** at `b7b99405ef1546a16e9ce01162ae408d18dd2aac`; page states now distinguish formal recommendation / screening attention / needs-context / no-clue without changing governed Risk relations
+- Immediate next program: **representative real-sample validation of the new Recommendation states**, then decide whether an upstream semantic `RiskHypothesis` layer is justified
 - Canonical continuation instructions: [AI Development Handoff V2](docs/AI_HANDOFF_V2.md)
 - BJS201901 audit: [V2-B5 BJS 201901 Analyte Audit](docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md)
 
