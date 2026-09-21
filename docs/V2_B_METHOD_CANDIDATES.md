@@ -535,6 +535,26 @@ claim-inspection-bridge-v2.6
 
 No candidate remains as an open B5 blocker.
 
+B5 Exit Gate — **SUCCESS**:
+
+```text
+inspection_method_candidates_v2 = 2026.09-b19
+12 records = 6 promoted + 6 explicitly deferred verification/reference_only
+open undecided candidates = 0
+
+inspection-reference = 2026.09-b11
+11 methods
+219 Substance
+263 MethodSubstance
+61 MethodApplicability
+9 RegulatoryDocument
+
+risk-substance-reference = 2026.09-c7 / 83 mappings
+claim-inspection-bridge = v2.6 / 25 mappings
+```
+
+All deferred B5 Method numbers are absent from runtime.
+
 ## 6. Deep verification Gate
 
 任何 candidate 进入 `inspection_reference.json` 前，至少必须从正式方法全文确认：
