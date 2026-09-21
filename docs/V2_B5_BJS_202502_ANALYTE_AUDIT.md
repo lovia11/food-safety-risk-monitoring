@@ -1,9 +1,9 @@
-# V2-B5-10A BJS 202502 Identity / Content Audit
+# V2-B5-10A/B BJS 202502 Identity / Content Audit
 
-> Status: PARTIAL VERIFIED — official identity/current page verified; official-institution method role verified; secondary 25-target/scope/CAS cross-check complete; official SAMR fulltext/attachment unresolved; runtime unchanged  
+> Status: B5-10B DEFERRED — official identity/current page and official-institution method role verified; official SAMR fulltext/attachment provenance unresolved; runtime unchanged  
 > Date: 2026-09-21  
 > Scope: official Method identity / current database presence / method-role cross-check / 25-analyte candidate inventory / formal-scope cross-check / current Risk overlap  
-> Runtime decision: DO NOT PROMOTE in B5-10A
+> Runtime decision: DO NOT PROMOTE; B5-10B deferred
 
 ## 1. Official Method identity — VERIFIED
 
@@ -210,14 +210,60 @@ Candidate manifest records the audit at:
 inspection_method_candidates_v2@2026.09-b18
 ```
 
-## 7. Next subtask — B5-10B
+## 7. B5-10B official-source recheck
 
-Decide provenance/promotion readiness only:
+B5-10B repeated the final provenance Gate.
 
-1. attempt stable official SAMR Method body/attachment recovery;
-2. require reproducible official URL + content hash before runtime promotion;
-3. verify whether formal standard materials are parent compounds or salt forms;
-4. close the source-label/CAS normalization questions from official text;
-5. keep secondary PDF/summary/material pages as cross-check evidence only;
-6. preserve the no-orphan-Substance and Method→Risk boundaries;
-7. defer if the official-source Gate remains unresolved.
+Confirmed:
+
+1. SAMR 2025年第39号公告 formally publishes BJS 202502 and states that the six Method texts will be exposed through the supplementary-method database;
+2. the current SAMR database still exposes a dedicated BJS 202502 Method page;
+3. the public Method page still exposes stable title/date metadata only;
+4. current site search does not expose a reproducible SAMR PDF/DOC/DOCX attachment URL for BJS 202502;
+5. secondary PDF/summary/material pages remain cross-check evidence only and cannot substitute for official Method provenance.
+
+Therefore the official-source Gate remains unresolved.
+
+## 8. B5-10B decision — DEFERRED
+
+Final decision:
+
+```text
+BJS 202502
+status = verification
+expected_depth = reference_only
+promoted_method_id = null
+promoted_dataset_version = null
+runtime = unchanged
+decision = deferred pending stable official Method body / attachment provenance
+candidate manifest = 2026.09-b19
+```
+
+Do not add from BJS 202502 at this stage:
+
+- the 24 missing canonical Substance identities;
+- MethodSubstance rows;
+- MethodApplicability rows;
+- Claim→Risk mappings;
+- Risk→Substance mappings;
+- substance-group memberships.
+
+`阿替洛尔 / 29122-68-7` remains an existing overlap only. Its historical `blood_pressure` mapping does not authorize expansion to the other 24 β-blocker candidates.
+
+The `喷布洛尔 / 喷布特罗` and `卡拉洛尔 / 咔唑心安` source-label discrepancies remain source-level differences rather than canonical normalizations.
+
+Promotion may be reconsidered only when a stable SAMR formal Method body/attachment is recoverable with reproducible URL + content hash and the official text closes analyte identity, standard-material form, determination role and formal applicability.
+
+## 9. B5-10B bounded governance Gate
+
+Required end-state:
+
+```text
+inspection-reference = 2026.09-b11
+BJS 202502 runtime method = absent
+risk-substance-reference = 2026.09-c7 / 83 mappings
+claim-inspection-bridge = v2.6 / 25 mappings
+candidate manifest = 2026.09-b19
+```
+
+B5-10 is complete.
