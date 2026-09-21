@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "manifest_id": "inspection-method-candidates-v2",
-  "manifest_version": "2026.09-b18",
+  "manifest_version": "2026.09-b19",
   "status": "non_runtime_candidate_manifest",
   "runtime_consumed": false,
-  "description": "V2-B5非运行时检验方法候选治理清单。KJ201901/KJ201902/BJS201808/BJS201901已promotion；BJS202409已在B5-9B因official fulltext provenance gap明确deferred。BJS202502 B5-10A已完成官方identity/current page、官方机构方法角色与secondary 25-target/scope/CAS交叉核验，但SAMR正式Method正文/附件仍未恢复，因此继续verification/reference_only且runtime unchanged；BJS202501/BJS202504/BJS202601/BJS202602仍deferred。candidate manifest不被runtime消费。",
+  "description": "V2-B5非运行时检验方法候选治理清单（B5阶段收口版）。6条候选已promotion形成runtime trace；BJS202409/BJS202501/BJS202502/BJS202504/BJS202601/BJS202602均已完成独立provenance/promotion-readiness审计，并因正式全文/附件provenance或canonical identity Gate未闭合而明确deferred，继续保留verification/reference_only。candidate manifest不被runtime消费，不以第三方PDF/摘要、Method标题或药理属性创建runtime知识。",
   "candidates": [
     {
       "candidate_id": "candidate-bjs-202405",
@@ -322,8 +322,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
       "discovery_source_date": "2025-09-29",
       "discovery_source_record_id": "samr-announcement-2025-39-bjs-202502",
-      "reason": "B5-10A content audit：SAMR 2025年第39号公告与当前食品补充检验方法数据库已核验BJS 202502编号、正式标题及current database page（2025-10-29）。南京市市场监督管理局官方发布解读进一步确认该方法采用液相色谱-三重四极杆串联质谱，可对25种β-受体阻滞剂类化学药物进行定性、定量检测。中国食品安全网/食典通标准摘要一致交叉核到25个目标名称及饮料（含固体饮料）、代用茶、保健食品（口服液、片剂、胶囊）适用范围；标准物质页面交叉核到25个CAS候选。当前SAMR具体方法页公开抓取仍只稳定暴露标题/日期，未恢复可复现URL+hash的正式Method正文/附件，因此B5-10A只做audit、不promotion。",
-      "correction_note": "B5-10A overlap：25个候选目标中当前inspection-reference@2026.09-b11仅已有阿替洛尔/29122-68-7；其已有一条historical blood_pressure concrete Risk mapping。其余24个不得因“β-受体阻滞剂”药理类别、官方新闻中的降压语境或Method标题自动新增Risk，也不在正式SAMR Method全文缺失时新增孤立Substance。secondary CAS交叉核中CAS 36507-48-9与57775-29-8的供应商中文标签分别出现“喷布特罗”“咔唑心安”，而标准摘要使用“喷布洛尔”“卡拉洛尔”；B5-10A按CAS候选记录该差异但不治理canonical normalization。",
+      "reason": "B5-10B final provenance decision：SAMR 2025年第39号公告正式发布BJS 202502，并说明6项方法文本将在食品补充检验方法数据库公开供查询下载；当前SAMR数据库仍存在BJS 202502独立方法页，但公开页面稳定可见内容仍只有标题与发布时间，当前站内检索亦未恢复可复现的SAMR正式PDF/DOC/DOCX附件URL+content hash。B5-10A已由南京市市场监管局官方来源确认液相色谱-三重四极杆串联质谱及25种β-受体阻滞剂定性/定量角色，并由secondary摘要/标准物质页面完成25-target/scope/CAS候选交叉核验；这些证据不足以替代SAMR正式Method全文。因此BJS 202502在B5-10B明确deferred，保持verification/reference_only，不promotion。",
+      "correction_note": "B5-10B final decision：不以第三方PDF/摘要/混标页面治理24个缺失canonical Substance，不新增MethodSubstance或MethodApplicability；不新增任何Claim→Risk、Risk→Substance或substance_group_membership。阿替洛尔/29122-68-7仅作为现有overlap保留，其historical blood_pressure关系不能扩展到其余24个β阻滞剂。CAS 36507-48-9与57775-29-8的secondary中文标签差异继续保持source-level discrepancy，不做canonical normalization。恢复promotion的前提是稳定SAMR正式全文/附件provenance（可复现URL+hash）并由官方正文闭合25 analyte identity、标准物质形态、determination role与formal MethodApplicability。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
@@ -371,7 +371,7 @@
           ]
         }
       ],
-      "verified_at": "2026-09-21T01:30:00+08:00",
+      "verified_at": "2026-09-21T11:40:00+08:00",
       "promoted_method_id": null,
       "promoted_dataset_version": null
     },
