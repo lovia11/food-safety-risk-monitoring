@@ -67,6 +67,9 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertTrue(
             all(item["promoted_dataset_version"] is None for item in verification)
         )
+        self.assertTrue(
+            all("deferred" in item["reason"] for item in verification)
+        )
 
         bjs = next(item for item in promoted if item["method_no"] == "BJS 202405")
         self.assertEqual(bjs["method_no"], "BJS 202405")
