@@ -542,7 +542,7 @@ docs/PRESENTATION_LANGUAGE_CONTRACT_V2.md
 
 # 15. B5 current truth
 
-B5 is the active development program.
+B5 Inspection Method governance is **COMPLETE / ACCEPTED**. Do not reopen Method expansion by default; deferred candidates are evidence-bounded backlog items, not current blockers.
 
 Goal:
 
@@ -594,18 +594,19 @@ BJS201901 was promoted only after the official SAMR legacy DOC was reproducibly 
 
 ## 15.2 Candidate manifest
 
-Current:
+Current B5 exit state:
 
 ```text
 config/inspection_method_candidates_v2.json
-manifest_version = 2026.09-b15
+manifest_version = 2026.09-b19
 records = 12
 promoted traces = 6
-verification = 6
+deferred verification/reference_only = 6
+open undecided candidates = 0
 runtime_consumed = false
 ```
 
-The candidate manifest never becomes runtime merely because a candidate is listed.
+The candidate manifest never becomes runtime merely because a candidate is listed. All six non-promoted records now have explicit provenance/identity reasons for deferral; none is an unfinished B5 decision.
 
 ## 15.3 KJ201901 / KJ201902 are already promoted
 
@@ -1327,35 +1328,107 @@ Risk mappings unchanged = 2026.09-c7 / 83
 Claim bridge unchanged = v2.6 / 25
 ```
 
-## 18.10B Immediate next subtask — B5-10B BJS202502
+## 18.10B B5-10B BJS202502 decision — DEFERRED
 
-Decide provenance/promotion readiness only:
+Final provenance result:
 
-1. attempt stable official SAMR Method body/attachment recovery;
-2. require reproducible official URL + content hash before runtime promotion;
-3. verify whether formal Method standards are parent compounds or salt forms;
-4. close analyte/CAS/source-label normalization from official text;
-5. keep third-party PDF/summary/material pages as cross-check evidence only;
-6. preserve no-orphan-Substance and Method→Risk boundaries;
-7. defer if the official-source Gate remains unresolved.
+```text
+SAMR 2025年第39号公告 = official Method identity
+current SAMR Method page = present
+public Method page = stable title/date only
+stable official PDF/DOC/DOCX URL + content hash = unresolved
+secondary 25-target/scope/CAS sources = cross-check only
+```
 
-## 18.11 Remaining verification queue
+Decision:
 
-Current verification queue:
+```text
+BJS 202502
+status = verification
+expected_depth = reference_only
+promotion = deferred
+runtime = unchanged
+candidate manifest = 2026.09-b19
+```
 
-- BJS 202409
-- BJS 202501
-- BJS 202502
-- BJS 202504
-- BJS 202601
-- BJS 202602
+No canonical Substance, MethodSubstance, MethodApplicability, Claim→Risk, Risk→Substance or group membership is added from BJS202502. `阿替洛尔 / 29122-68-7` remains an existing overlap only; its historical `blood_pressure` mapping does not authorize expansion to the remaining β-blocker candidates.
 
-Important corrections:
+B5-10 is complete.
 
-- BJS 201805 is not a current runtime gap: BJS 202405 explicitly supersedes it.
-- BJS 202504 remains high-value for weight-loss related method coverage, but do not promote from title alone.
-- 2025 enforcement inspection methods may require a distinct method type/lifecycle decision; do not force them into `supplementary_bjs` merely to fit the existing schema.
-- BJS 201901 official `.doc` has been downloaded; parsing/normalization remains a separate subtask.
+## 18.11 B5 phase exit — COMPLETE / ACCEPTED
+
+B5 candidate governance is closed.
+
+```text
+candidate records = 12
+promoted traces = 6
+deferred verification/reference_only = 6
+open undecided candidates = 0
+runtime_consumed = false
+```
+
+Promoted traces:
+
+- BJS 202405;
+- GB/T 5009.170-2003;
+- KJ201901;
+- KJ201902;
+- BJS 201808;
+- BJS 201901.
+
+Deferred non-runtime records:
+
+- BJS 202409;
+- BJS 202501;
+- BJS 202502;
+- BJS 202504;
+- BJS 202601;
+- BJS 202602.
+
+These deferred records are **resolved B5 decisions**, not unfinished tasks. Reopen one only if its missing first-party provenance / canonical-identity condition is actually resolved.
+
+Runtime remains:
+
+```text
+inspection-reference@2026.09-b11
+11 methods
+219 Substance
+263 MethodSubstance
+61 MethodApplicability
+9 RegulatoryDocument
+10 current recommendation_ready + 1 revoked reference_only
+
+risk-substance-reference@2026.09-c7
+83 mappings
+
+claim-inspection-bridge-v2.6
+25 mappings
+```
+
+Permanent B5 exit boundary:
+
+```text
+MethodSubstance ≠ RiskSubstance
+Method cannot create Risk
+pharmacology cannot create regulatory mapping
+third-party mirror cannot replace missing first-party provenance
+deferred candidate ≠ runtime gap that must be force-filled
+```
+
+## 18.12 Post-B5 direction
+
+The next development program is **end-to-end system closure and validation**, not further Method-count expansion.
+
+Default priorities:
+
+1. validate the governed Evidence → Claim → Risk → Substance → Method → Recommendation chain on representative real/sample cases;
+2. identify remaining semantic-understanding gaps separately from knowledge-governance gaps;
+3. keep LLM/semantic interpretation upstream of governed Claim/Risk mapping rather than allowing it to invent regulatory relations;
+4. stabilize Review / 已纳入 / 暂不纳入 workflow and Recommendation explanations;
+5. freeze schema/config/API/UI once the validation corpus passes;
+6. then prepare thesis/demo/report evidence.
+
+Do not assign a new phase number until this post-B5 program is explicitly scoped.
 
 ---
 
@@ -1513,12 +1586,12 @@ A new ChatGPT conversation should do exactly this:
    - `config/risk_substance_reference.json`
    - `config/claim_inspection_bridge_v2.json`
 6. Check current GitHub Actions before claiming a Gate is closed.
-7. Resume with **B5-10B BJS 202502 provenance/promotion-readiness decision**. B5-10A is already partial-verified with runtime unchanged; do not promote from secondary CAS/scope material if stable SAMR formal fulltext/attachment provenance remains unresolved.
+7. Treat **B5 as complete**. Do not reopen deferred Method candidates unless a missing first-party provenance/identity condition is actually resolved. Resume with post-B5 end-to-end system closure/validation, scoped from current runtime rather than by adding more Method records.
 8. Do not repeat KJ201901/KJ201902/BJS201808 promotion, and do not revisit B4 unless a test or concrete bug demonstrates a B4 regression.
 
 Suggested first prompt in a new conversation:
 
-> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`、`docs/V2_B5_BJS_202502_ANALYTE_AUDIT.md`，以当前代码/测试/config 为最高事实源。BJS202502 B5-10A已完成official identity/current page、官方机构方法角色及secondary 25-target/scope/CAS交叉核验，但SAMR正式正文/附件provenance仍缺；下一步从B5-10B promotion-readiness decision开始。不要由β阻滞剂药理类别自动扩Risk。
+> 读取仓库 `ux-redesign-v1` 的 `AGENTS.md`、`docs/AI_HANDOFF_V2.md`、`docs/V2_B_METHOD_CANDIDATES.md`，以当前代码/测试/config 为最高事实源。B5检验方法治理已COMPLETE：manifest@2026.09-b19为6 promoted + 6 deferred verification/reference_only，0 open undecided candidate，runtime仍为inspection-reference@2026.09-b11。下一步应从post-B5端到端系统收束/验证开始，不要默认继续扩Method知识。
 
 ---
 
@@ -1529,12 +1602,10 @@ If the current branch differs materially from the state above, stop and re-audit
 Especially stop if:
 
 - `inspection_reference` version is newer than b11;
-- BJS202504 official-source gap has been resolved and its lifecycle has advanced beyond this handoff;
-- BJS202501 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202601 official-source gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202602 official-source/canonical-identity gap has been resolved and its lifecycle advanced beyond this handoff;
-- BJS202502 has already been promoted or audited beyond B5-10B;
+- `inspection_method_candidates_v2` is newer than b19;
+- any deferred B5 candidate has been legitimately advanced by new first-party evidence;
 - current HEAD has a failing full acceptance Gate;
-- current code/config materially changes the B5 candidate lifecycle or Method/Risk separation.
+- current code/config materially changes the B5 candidate lifecycle or Method/Risk separation;
+- a post-B5 task would implicitly reopen B5 Method expansion without an explicit scope decision.
 
 In that case, current repository truth supersedes this handoff and the handoff must be updated before continuing.
