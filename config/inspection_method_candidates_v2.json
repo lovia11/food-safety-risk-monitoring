@@ -287,7 +287,7 @@
       "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
       "discovery_source_date": "2025-09-29",
       "discovery_source_record_id": "samr-announcement-2025-39-bjs-202501",
-      "reason": "一手公告和官方方法数据库已核验BJS 202501编号、正式标题、发布身份和当前数据库存在；B5-5A已用完整文档镜像交叉核验3个target、CAS、LC-MS/MS定量/确证角色及明确适用范围。B5-5B确认SAMR AuthorizedRead仍无法恢复正式附件/正文，同时inspection verified_reference禁止孤立Substance；因此不以第三方镜像单独支撑MethodSubstance/runtime promotion，继续verification/reference_only。",
+      "reason": "B5-5A/B final decision：一手公告和官方方法数据库已核验BJS 202501编号、正式标题、发布身份和当前数据库存在；B5-5A用完整文档镜像交叉核验3个target、CAS、LC-MS/MS定量/确证角色及明确适用范围。B5-5B确认SAMR AuthorizedRead仍无法恢复正式附件/正文，同时inspection verified_reference禁止孤立Substance；因此不以第三方镜像单独支撑MethodSubstance/runtime promotion，明确deferred并继续verification/reference_only。",
       "correction_note": "B5-5B decision：坎地沙坦酯145040-37-5、拉西地平103890-78-4、阿齐沙坦147403-03-0的化学身份已交叉核验，但当前inspection-reference中三者均缺失、risk-substance-reference@2026.09-c7也没有对应concrete blood_pressure Risk→Substance。不得由Method存在或药理用途反推Risk；在稳定官方SAMR附件/正文来源恢复前，不新增Substance、MethodSubstance、MethodApplicability，不promotion。",
       "verification_sources": [
         {
@@ -385,8 +385,8 @@
       "discovery_source_reference": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/spcjs/art/2025/art_0fa91ac2c946482894bb854d4f506c24.html",
       "discovery_source_date": "2025-09-29",
       "discovery_source_record_id": "samr-announcement-2025-39-bjs-202504",
-      "reason": "一手公告和官方方法数据库已核验BJS 202504编号、正式标题和当前数据库身份；与weight_loss当前酚丁/酚酞监管场景直接相邻，且标题明确5种化合物，适合作为B5首批全文深核对象，但标题本身不能代替CAS和适用范围核验。",
-      "correction_note": null,
+      "reason": "B5-4A/B final decision：一手公告和官方方法数据库已核验BJS 202504编号、正式标题及当前数据库身份；B5-4A已通过文档镜像/独立化学身份来源交叉核验5个target、候选CAS、HPLC-MS/MS方法角色及适用范围。B5-4B进一步用静态请求和Chromium重放SAMR AuthorizedRead，正式动态正文仍为空且无稳定官方附件；为避免以非SAMR镜像创建孤立Substance或Method runtime事实，明确deferred并继续verification/reference_only。",
+      "correction_note": "B5-4B decision：不新增5个canonical Substance、MethodSubstance或MethodApplicability，不由Method标题或weight_loss邻近语义新增Risk。恢复promotion需要稳定SAMR正式正文/附件provenance，并由官方Method文本闭合target identity、CAS/标准物质形态、determination role和formal applicability；第三方镜像只作内容交叉核验。",
       "verification_sources": [
         {
           "source_name": "市场监管总局关于发布《食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定》等6项食品补充检验方法的公告（2025年第39号）",
