@@ -1,6 +1,6 @@
 # V2-B5 检验方法候选与深核队列
 
-> Status: B5-1 ACCEPTED；B5-2 KJ201901/KJ201902 PROMOTED；B5-3A VERIFIED；B5-3B BJS201808 PROMOTED / ACCEPTED；B5-4A/B BJS202504 DEFERRED；B5-5A/B BJS202501 DEFERRED；B5-6A/B BJS202601 DEFERRED / RISK EVIDENCE BACKLOGGED；B5-7A/B BJS202602 DEFERRED；B5-8A/B BJS201901 PROMOTED / ACCEPTED；B5-9A/B BJS202409 DEFERRED / RUNTIME UNCHANGED；B5-10A BJS202502 PARTIAL VERIFIED / RUNTIME UNCHANGED；NEXT = B5-10B provenance/promotion-readiness  
+> Status: **B5 COMPLETE / ACCEPTED**；KJ201901/KJ201902/BJS201808/BJS201901 promoted；BJS202409/BJS202501/BJS202502/BJS202504/BJS202601/BJS202602 promotion-readiness resolved as deferred / reference_only；runtime stabilized at inspection-reference@2026.09-b11  
 > Date: 2026-09-21  
 > Runtime boundary: candidate manifest 不被 DataStore / Recommendation 消费；只有进入 `inspection_reference.json` 且达到相应 `knowledge_depth` 的 Method 才能参与运行时。
 
@@ -28,7 +28,7 @@ B4 已经完成七个宣传方向的 Claim → Risk → source-backed Substance 
 
 ## 2. Candidate lifecycle
 
-`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b18`。
+`config/inspection_method_candidates_v2.json` 当前版本：`2026.09-b19`。
 
 状态含义：
 
@@ -69,7 +69,7 @@ runtime_consumed = false
 | KJ201902 保健食品中罗格列酮和格列苯脲的快速检测 胶体金免疫层析法 | blood_glucose | SAMR 2019年第41号公告 + 正式附件2 | `promoted / recommendation_ready @ b9` |
 | BJS 202409 食品中托拉塞米等19种利尿剂的测定 | blood_pressure / weight_loss context only；不得由利尿剂药理属性扩Risk | SAMR 2024年第51号公告 + 官方数据库/方法页 + secondary 19-target/scope/CAS cross-check；B5-9A/B provenance audit | `verification / reference_only；deferred pending stable official fulltext/attachment` |
 | BJS 202501 食品中坎地沙坦酯、拉西地平、阿齐沙坦的测定 | blood_pressure context only；不得由Method/药理用途反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-5A全文镜像/化学身份交叉核验；B5-5B确认orphan/provenance Gate | `verification / reference_only；deferred pending official attachment` |
-| BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure context only；不得由β阻滞剂药理类别扩Risk | SAMR 2025年第39号公告 + 官方数据库方法页 + 南京市市场监管局方法角色解读 + secondary 25-target/scope/CAS cross-check；B5-10A audit | `verification / reference_only；official fulltext/attachment unresolved` |
+| BJS 202502 食品中普萘洛尔等25种β-受体阻滞剂类化合物的测定 | blood_pressure context only；不得由β阻滞剂药理类别扩Risk | SAMR 2025年第39号公告 + 官方数据库方法页 + 南京市市场监管局方法角色解读 + secondary 25-target/scope/CAS cross-check；B5-10A/B audit | `verification / reference_only；deferred pending stable official fulltext/attachment` |
 | BJS 202504 食品中酚丁、双丙酚丁、双酚沙丁、双酚沙丁醋酸酯和酚丁双环丙甲酸酯的测定 | weight_loss context only；不得由Method反推Risk | SAMR 2025年第39号公告 + 官方方法数据库；B5-4A全文镜像/化学身份交叉核验；B5-4B Chromium确认官方动态正文仍为空 | `verification / reference_only；deferred pending official attachment` |
 | BJS 202601 食品中布噻嗪和美布噻嗪的测定 | official news明确减肥/降压食品监管场景；场景进入独立Risk backlog但不自动写Risk | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻；B5-6A/B provenance audit | `verification / reference_only；deferred pending official Method body` |
 | BJS 202602 食品中伐地那非杂质30的测定 | official news明确功能性食品/壮阳药物衍生物场景；现有male_function group有语义重叠但不得自动展开 | SAMR 2026年第24号公告 + 官方方法数据库 + SAMR官方新闻 + O-丙基伐地那非官方标准样品identity clue；B5-7A/B provenance/identity audit | `verification / reference_only；deferred；canonical identity unresolved` |
@@ -478,9 +478,62 @@ Current inventory:
 10 recommendation_ready + 1 revoked reference_only
 ```
 
-Next = **B5-10B BJS202502 provenance/promotion-readiness decision**. B5-10A已完成25-target/scope/CAS候选与runtime overlap审计，但SAMR正式全文/附件仍未闭合。
+**B5 candidate queue is closed.** 6条candidate已promotion；其余6条均已完成promotion-readiness decision并明确deferred。后续只有在新的稳定一手来源出现时才重新开启对应candidate，不再作为当前开发阻塞项。
 
 Canonical audits: `docs/V2_B5_BJS_201901_ANALYTE_AUDIT.md`, `docs/V2_B5_BJS_202409_ANALYTE_AUDIT.md`, `docs/V2_B5_BJS_202502_ANALYTE_AUDIT.md`.
+
+## 5.1 B5 phase closeout
+
+B5 candidate governance is complete.
+
+```text
+candidate manifest = 2026.09-b19
+records = 12
+promoted traces = 6
+deferred verification/reference_only = 6
+open undecided candidates = 0
+runtime_consumed = false
+```
+
+Promoted runtime methods in the B5 program include:
+
+- KJ201901;
+- KJ201902;
+- BJS 201808;
+- BJS 201901;
+
+alongside the previously promoted BJS 202405 / GB/T 5009.170-2003 trace already represented in the manifest.
+
+Deferred, non-runtime candidates:
+
+- BJS 202409;
+- BJS 202501;
+- BJS 202502;
+- BJS 202504;
+- BJS 202601;
+- BJS 202602.
+
+The six deferred records are not unfinished work. Each has an explicit provenance / identity Gate explaining why promotion would currently overstate the evidence. They may be reopened only when the missing first-party source condition is actually resolved.
+
+Runtime remains:
+
+```text
+inspection-reference@2026.09-b11
+11 methods
+219 Substance
+263 MethodSubstance
+61 MethodApplicability
+9 RegulatoryDocument
+10 current recommendation_ready + 1 revoked reference_only
+
+risk-substance-reference@2026.09-c7
+83 mappings
+
+claim-inspection-bridge-v2.6
+25 mappings
+```
+
+No candidate remains as an open B5 blocker.
 
 ## 6. Deep verification Gate
 
