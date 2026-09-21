@@ -146,6 +146,11 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         self.assertIn("其余24个不得因“β-受体阻滞剂”药理类别", bjs_202502["correction_note"])
         self.assertIn("喷布特罗", bjs_202502["correction_note"])
         self.assertIn("咔唑心安", bjs_202502["correction_note"])
+        self.assertIn("B5-10B final provenance decision", bjs_202502["reason"])
+        self.assertIn("明确deferred", bjs_202502["reason"])
+        self.assertIn("不新增MethodSubstance或MethodApplicability", bjs_202502["correction_note"])
+        self.assertIn("不新增任何Claim→Risk、Risk→Substance", bjs_202502["correction_note"])
+        self.assertIn("可复现URL+hash", bjs_202502["correction_note"])
         self.assertTrue(any(
             "secondary_25_analyte_cas_crosscheck" in source["verified_facts"]
             for source in bjs_202502["verification_sources"]
@@ -158,7 +163,7 @@ class InspectionMethodCandidateManifestTest(unittest.TestCase):
         bjs_202501 = next(
             item for item in verification if item["method_no"] == "BJS 202501"
         )
-        self.assertEqual(payload["manifest_version"], "2026.09-b18")
+        self.assertEqual(payload["manifest_version"], "2026.09-b19")
         self.assertEqual(bjs_202501["expected_depth"], "reference_only")
         self.assertIsNone(bjs_202501["promoted_method_id"])
         self.assertIsNone(bjs_202501["promoted_dataset_version"])
